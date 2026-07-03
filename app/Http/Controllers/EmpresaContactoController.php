@@ -72,7 +72,7 @@ class EmpresaContactoController extends Controller
         ]);
 
         $proyecto = Microproyecto::where('uuid', $data['proyecto_uuid'])
-            ->where('estado', 'publicado')
+            ->whereIn('estado', ['propuesta', 'validado'])
             ->firstOrFail();
 
         $destinatario = $empresa->email_contacto ?: $empresa->email_general;

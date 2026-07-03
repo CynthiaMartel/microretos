@@ -11,11 +11,14 @@ import StartupDayProyectos from '../views/StartupDayProyectos.vue'
 import StartupDayWizard from '../views/StartupDayWizard.vue'
 import StartupDayDetalle from '../views/StartupDayDetalle.vue'
 import StartupDayLanding from '../views/StartupDayLanding.vue'
+import UnirseEquipo from '../views/UnirseEquipo.vue'
+import EquipoWorkspace from '../views/EquipoWorkspace.vue'
 import EmpresasView from '../views/EmpresasView.vue'
 import PapeleraBaseDatos from '../views/PapeleraBaseDatos.vue'
 import GestionUsuarios from '../views/GestionUsuarios.vue'
 import InicioDocente from '../views/InicioDocente.vue'
 import MiUsuario from '../views/MiUsuario.vue'
+import WorkspaceDocente from '../views/WorkspaceDocente.vue'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth.js'
 
 const SA = ROLE_SUPERADMIN  // 1
@@ -80,6 +83,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
+      path: '/dashboard/workspace/:id',
+      name: 'workspace-docente',
+      component: WorkspaceDocente,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
       // Vista pública para alumnado — acceso mediante token temporal (QR)
       path: '/reto/:token',
       name: 'public-microreto',
@@ -114,6 +123,18 @@ const router = createRouter({
       path: '/startup/landing/:token',
       name: 'startup-day-landing',
       component: StartupDayLanding
+    },
+    {
+      // Página de entrada tipo Kahoot para el alumnado (acceso por código corto)
+      path: '/unirse',
+      name: 'unirse-equipo',
+      component: UnirseEquipo
+    },
+    {
+      // Workspace completo del equipo (F0-F4) — acceso por token de 40 chars
+      path: '/proyecto/equipo/:token',
+      name: 'equipo-workspace',
+      component: EquipoWorkspace
     },
     {
       path: '/admin/usuarios',

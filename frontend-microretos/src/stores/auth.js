@@ -136,7 +136,11 @@ export const useAuthStore = defineStore('auth', () => {
     refreshing.value = true
     try {
       const { data } = await api.post('/admin/refresh')
-      // refresh solo rota el token, mantiene el mismo rol/nombre
+      // Si el admin cambió el rol de este usuario, forzar reautenticación
+      if (data.role !== undefined && data.role !== userRole.value) {
+        logout()
+        return
+      }
       localStorage.setItem('admin_token', data.token)
       localStorage.setItem('admin_token_created_at', String(Date.now()))
       isAuthenticated.value = true

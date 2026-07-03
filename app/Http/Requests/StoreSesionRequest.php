@@ -13,13 +13,24 @@ class StoreSesionRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $textFields = ['microreto_titulo', 'centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
+        $textFields = ['microreto_titulo', 'proyecto_titulo', 'centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
 
         $sanitized = [];
         foreach ($textFields as $field) {
             if ($this->has($field) && is_string($this->input($field))) {
                 $sanitized[$field] = strip_tags($this->input($field));
             }
+        }
+
+        if ($this->has('alumnados') && is_array($this->input('alumnados'))) {
+            $sanitized['alumnados'] = collect($this->input('alumnados'))
+                ->map(fn($a) => [
+                    'nombre'     => isset($a['nombre'])     ? strip_tags($a['nombre'])     : '',
+                    'equipo_num' => isset($a['equipo_num']) ? (int) $a['equipo_num']       : null,
+                ])
+                ->filter(fn($a) => !empty($a['nombre']))
+                ->values()
+                ->toArray();
         }
 
         if ($sanitized) {
@@ -30,15 +41,21 @@ class StoreSesionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'microreto_titulo' => 'required|string|max:500',
-            'fecha'            => 'required|date',
-            'microreto_id'     => 'nullable',
-            'centro_educativo' => 'nullable|string|max:255',
-            'ciclo_formativo'  => 'nullable|string|max:255',
-            'curso'            => 'nullable|string|max:10',
-            'grupo'            => 'nullable|string|max:10',
-            'num_alumnos'      => 'nullable|integer|min:1|max:999',
-            'notas'            => 'nullable|string|max:5000',
+            'microreto_titulo'       => 'nullable|string|max:500',
+            'proyecto_titulo'        => 'nullable|string|max:500',
+            'proyecto_uuid'          => 'nullable|string|max:36',
+            'fecha'                  => 'required|date',
+            'microreto_id'           => 'nullable',
+            'centro_educativo'       => 'nullable|string|max:255',
+            'ciclo_formativo'        => 'nullable|string|max:255',
+            'curso'                  => 'nullable|string|max:10',
+            'grupo'                  => 'nullable|string|max:10',
+            'num_alumnos'            => 'nullable|integer|min:1|max:999',
+            'notas'                  => 'nullable|string|max:5000',
+            'num_equipos'            => 'nullable|integer|min:1|max:30',
+            'alumnados'              => 'nullable|array|max:200',
+            'alumnados.*.nombre'     => 'required_with:alumnados|string|max:100',
+            'alumnados.*.equipo_num' => 'nullable|integer|min:1|max:30',
         ];
     }
 }

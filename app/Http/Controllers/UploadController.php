@@ -24,7 +24,7 @@ class UploadController extends Controller
      */
     public function recurso(Request $request): JsonResponse
     {
-        $maxMb = config('services.cloudinary.upload_max_mb');
+        $maxMb = (int) config('services.cloudinary.upload_max_mb', 20);
 
         $request->validate([
             'file'               => [

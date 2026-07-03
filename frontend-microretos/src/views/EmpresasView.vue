@@ -141,7 +141,7 @@ async function cargarDatos() {
     ])
     empresas.value  = empRes.data
     familias.value  = famRes.data
-    proyectos.value = proRes.data.filter(p => p.estado === 'publicado')
+    proyectos.value = proRes.data.filter(p => p.estado === 'propuesta' || p.estado === 'validado')
     // Inicializar todos los centros cerrados por defecto
     centrosCerrados.value = new Set(empRes.data.map(e => e.centro_educativo || SIN_CENTRO))
   } finally {

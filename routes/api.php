@@ -12,6 +12,8 @@ use App\Http\Controllers\EmpresaContactoController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\PapeleraController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\EquipoPublicoController;
+use App\Http\Controllers\EquipoGestionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,9 +28,32 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/familias', [DatosFPController::class, 'getFamilias']);
 });
 
-// Acceso público por token temporal (QR para alumnado)
+// Acceso público por token temporal (QR para alumnado — ficha del microreto)
 Route::middleware('throttle:60,1')
      ->get('/public/microreto/{token}', [MicroretoTokenController::class, 'show']);
+
+// ── Workspace de equipos (alumnado) — acceso público por código o token ────
+// throttle más restrictivo para evitar fuerza bruta sobre códigos cortos
+Route::middleware('throttle:20,1')->group(function () {
+    // Código de clase → devuelve proyecto + lista de equipos para seleccionar
+    Route::get('/clase/{codigo}',          [EquipoPublicoController::class, 'porCodigoClase']);
+    // Código de equipo → acceso directo al workspace (backwards compat)
+    Route::get('/equipo/unirse/{codigo}',  [EquipoPublicoController::class, 'unirse']);
+});
+
+Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/equipo/{token}',                          [EquipoPublicoController::class, 'show']);
+    Route::put('/equipo/{token}/fase/{fase}',              [EquipoPublicoController::class, 'guardarFase'])
+        ->whereNumber('fase');
+    Route::post('/equipo/{token}/fase/{fase}/completar',   [EquipoPublicoController::class, 'completarFase'])
+        ->whereNumber('fase');
+    Route::post('/equipo/{token}/tareas',                  [EquipoPublicoController::class, 'storeTarea']);
+    Route::put('/equipo/{token}/tareas/{tarea}',           [EquipoPublicoController::class, 'updateTarea'])
+        ->whereNumber('tarea');
+    Route::delete('/equipo/{token}/tareas/{tarea}',        [EquipoPublicoController::class, 'destroyTarea'])
+        ->whereNumber('tarea');
+    Route::post('/equipo/{token}/reflexiones',             [EquipoPublicoController::class, 'storeReflexion']);
+});
 
 // Validación pública del microproyecto por parte de la empresa (acceso por token)
 Route::middleware('throttle:30,1')->group(function () {
@@ -69,29 +94,42 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/perfil',   [AdminAuthController::class, 'getPerfil']);
     Route::patch('/perfil', [AdminAuthController::class, 'updatePerfil']);
 
-    // Biblioteca de microretos (requiere login — protege contra enumeración IDOR)
-    // Los IDs en URL son UUIDs, no secuenciales
+    // Biblioteca de microretos (lectura — todos los roles autenticados)
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/microretos',      [MicroretoIAController::class, 'index']);
         Route::get('/microretos/{id}', [MicroretoIAController::class, 'show']);
     });
 
-    // Centros educativos — creación, edición y borrado protegidos
-    Route::post('/centros',           [DatosFPController::class, 'guardarCentro']);
-    Route::put('/centros/{id}',       [DatosFPController::class, 'actualizarCentro']);
-    Route::delete('/centros/{id}',    [DatosFPController::class, 'eliminarCentro']);
+    // ── Solo admin: centros, familias, ciclos, papelera ──────────────────────
+    Route::middleware('admin')->group(function () {
 
-    // Familias profesionales — CRUD protegido
-    Route::post('/familias',          [DatosFPController::class, 'storeFamilia']);
-    Route::put('/familias/{id}',      [DatosFPController::class, 'updateFamilia']);
-    Route::delete('/familias/{id}',   [DatosFPController::class, 'destroyFamilia']);
+        // Centros educativos
+        Route::post('/centros',        [DatosFPController::class, 'guardarCentro']);
+        Route::put('/centros/{id}',    [DatosFPController::class, 'actualizarCentro']);
+        Route::delete('/centros/{id}', [DatosFPController::class, 'eliminarCentro']);
 
-    // Ciclos formativos — CRUD protegido
-    Route::post('/ciclos',            [DatosFPController::class, 'storeCiclo']);
-    Route::put('/ciclos/{id}',        [DatosFPController::class, 'updateCiclo']);
-    Route::delete('/ciclos/{id}',     [DatosFPController::class, 'destroyCiclo']);
+        // Familias profesionales
+        Route::post('/familias',       [DatosFPController::class, 'storeFamilia']);
+        Route::put('/familias/{id}',   [DatosFPController::class, 'updateFamilia']);
+        Route::delete('/familias/{id}',[DatosFPController::class, 'destroyFamilia']);
 
-    // Empresas — lectura para usuarios autenticados, escritura/borrado solo admin
+        // Ciclos formativos
+        Route::post('/ciclos',         [DatosFPController::class, 'storeCiclo']);
+        Route::put('/ciclos/{id}',     [DatosFPController::class, 'updateCiclo']);
+        Route::delete('/ciclos/{id}',  [DatosFPController::class, 'destroyCiclo']);
+
+        // Papelera
+        Route::prefix('papelera')->group(function () {
+            Route::get('/',                        [PapeleraController::class, 'index']);
+            Route::delete('/',                     [PapeleraController::class, 'vaciar']);
+            Route::patch('/{tipo}/{id}/restaurar', [PapeleraController::class, 'restaurar'])
+                ->whereNumber('id');
+            Route::delete('/{tipo}/{id}',          [PapeleraController::class, 'destruir'])
+                ->whereNumber('id');
+        });
+    });
+
+    // Empresas — lectura para todos, escritura solo admin
     Route::get('/empresas',                [DatosFPController::class, 'getEmpresas']);
     Route::get('/empresas/dashboard',      [DatosFPController::class, 'getDashboardEmpresas']);
     Route::get('/empresas/{id}/familias',  [DatosFPController::class, 'getFamiliasPorEmpresa']);
@@ -102,52 +140,76 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/empresas/{id}',        [DatosFPController::class, 'eliminarEmpresa']);
     });
 
-    // Generación IA: throttle estricto (5 generaciones/minuto por usuario)
-    Route::middleware('throttle:5,1')->group(function () {
-        Route::post('/generar-microreto',      [MicroretoIAController::class, 'generar']);
-        Route::post('/simular-info-empresa',   [MicroretoIAController::class, 'simularInfoEmpresa']);
+    // ── Solo docente (+ admin): generación IA, microretos, sesiones, uploads, startup ──
+    Route::middleware('docente')->group(function () {
+
+        // Generación IA: throttle estricto (5/min por usuario)
+        Route::middleware('throttle:5,1')->group(function () {
+            Route::post('/generar-microreto',    [MicroretoIAController::class, 'generar']);
+            Route::post('/simular-info-empresa', [MicroretoIAController::class, 'simularInfoEmpresa']);
+        });
+
+        // Guardado y borrado de microretos
+        Route::post('/guardar-microreto-bd',    [MicroretoIAController::class, 'guardarEnBD']);
+        Route::post('/guardar-microretos-lote', [MicroretoIAController::class, 'guardarLote']);
+        Route::delete('/microretos/{id}',       [MicroretoIAController::class, 'destroy']);
+
+        // Tokens QR temporales
+        Route::get('/microretos/{id}/token',    [MicroretoTokenController::class, 'get']);
+        Route::post('/microretos/{id}/token',   [MicroretoTokenController::class, 'generate']);
+        Route::delete('/microretos/{id}/token', [MicroretoTokenController::class, 'destroy']);
+
+        // Sesiones
+        Route::get('/sesiones',                          [SesionController::class, 'index']);
+        Route::post('/sesiones',                         [SesionController::class, 'store']);
+        Route::post('/sesiones/lote',                    [SesionController::class, 'storeLote']);
+        Route::post('/sesiones/{id}/crear-codigo',       [SesionController::class, 'crearCodigo'])->whereNumber('id');
+        Route::get('/sesiones/{id}/workspace',           [SesionController::class, 'workspace'])->whereNumber('id');
+        Route::get('/sesiones/{id}',                     [SesionController::class, 'show']);
+        Route::delete('/sesiones/{id}',                  [SesionController::class, 'destroy']);
+
+        // Subida y gestión de recursos (Cloudinary)
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::get('/upload/recursos',   [UploadController::class, 'listar']);
+            Route::post('/upload/recurso',   [UploadController::class, 'recurso']);
+            Route::delete('/upload/recurso', [UploadController::class, 'destroy']);
+        });
+
+        // Módulo Empresas — contacto y validación
+        Route::middleware('throttle:10,1')
+            ->post('/empresas/verificar-acceso', [EmpresaContactoController::class, 'verificarAcceso']);
+        Route::post('/empresas/{id}/contactar',          [EmpresaContactoController::class, 'contactar']);
+        Route::post('/empresas/{id}/enviar-validacion',  [EmpresaContactoController::class, 'enviarValidacion']);
+
+        // StartUp Day — microproyectos
+        Route::get('/startup/proyectos',           [MicroproyectoController::class, 'index']);
+        Route::post('/startup/proyectos',          [MicroproyectoController::class, 'store']);
+        Route::get('/startup/proyectos/{uuid}',                 [MicroproyectoController::class, 'show']);
+        Route::put('/startup/proyectos/{uuid}',                 [MicroproyectoController::class, 'update']);
+        Route::post('/startup/proyectos/{uuid}/validar-docente',[MicroproyectoController::class, 'validarDocente']);
+        Route::delete('/startup/proyectos/{uuid}',              [MicroproyectoController::class, 'destroy']);
+
+        // StartUp Day — IA: sugerencia de RA/CE y KPIs
+        Route::middleware('throttle:10,1')->group(function () {
+            Route::post('/startup/sugerir-ra-ce',  [MicroproyectoController::class, 'sugerirRaCe']);
+            Route::post('/startup/sugerir-kpis',   [MicroproyectoController::class, 'sugerirKpis']);
+        });
+
+        // ── Gestión de equipos (docente) ──────────────────────────────────────
+        Route::get('/startup/proyectos/{uuid}/equipos',        [EquipoGestionController::class, 'index']);
+        Route::post('/startup/proyectos/{uuid}/equipos',       [EquipoGestionController::class, 'store']);
+        // Crea equipos desde datos del wizard + genera codigo_clase
+        Route::post('/startup/proyectos/{uuid}/crear-equipos', [EquipoGestionController::class, 'crearEquipos']);
+        Route::get('/startup/proyectos/{uuid}/pantalla-acceso',[EquipoGestionController::class, 'pantallaAcceso']);
+        Route::delete('/startup/equipos/{id}',                 [EquipoGestionController::class, 'destroy'])
+            ->whereNumber('id');
+        Route::patch('/startup/equipos/{id}/fase/{fase}/validar',  [EquipoGestionController::class, 'validarFase'])
+            ->whereNumber('id')->whereNumber('fase');
+        Route::patch('/startup/equipos/{id}/fase/{fase}/rechazar', [EquipoGestionController::class, 'rechazarFase'])
+            ->whereNumber('id')->whereNumber('fase');
+        Route::patch('/startup/equipos/{id}/evaluar',              [EquipoGestionController::class, 'evaluar'])
+            ->whereNumber('id');
     });
-
-    // Guardado y borrado de microretos
-    Route::post('/guardar-microreto-bd',      [MicroretoIAController::class, 'guardarEnBD']);
-    Route::post('/guardar-microretos-lote',   [MicroretoIAController::class, 'guardarLote']);
-    Route::delete('/microretos/{id}',         [MicroretoIAController::class, 'destroy']);
-
-    // Tokens QR temporales (gestión exclusiva de admins)
-    Route::get('/microretos/{id}/token',      [MicroretoTokenController::class, 'get']);
-    Route::post('/microretos/{id}/token',     [MicroretoTokenController::class, 'generate']);
-    Route::delete('/microretos/{id}/token',   [MicroretoTokenController::class, 'destroy']);
-
-    // Sesiones de docentes
-    Route::get('/sesiones',              [SesionController::class, 'index']);
-    Route::post('/sesiones',             [SesionController::class, 'store']);
-    Route::post('/sesiones/lote',        [SesionController::class, 'storeLote']);
-    Route::get('/sesiones/{id}',         [SesionController::class, 'show']);
-    Route::delete('/sesiones/{id}',      [SesionController::class, 'destroy']);
-
-    // Subida y gestión de recursos en Cloudinary (documentos y vídeos del microproyecto)
-    Route::middleware('throttle:30,1')->group(function () {
-        Route::get('/upload/recursos',  [UploadController::class, 'listar']);
-        Route::post('/upload/recurso',  [UploadController::class, 'recurso']);
-        Route::delete('/upload/recurso',[UploadController::class, 'destroy']);
-    });
-
-    // Módulo Empresas — verificación de acceso y contacto
-    Route::middleware('throttle:10,1')
-        ->post('/empresas/verificar-acceso', [EmpresaContactoController::class, 'verificarAcceso']);
-    Route::post('/empresas/{id}/contactar',         [EmpresaContactoController::class, 'contactar']);
-    Route::post('/empresas/{id}/enviar-validacion', [EmpresaContactoController::class, 'enviarValidacion']);
-
-    // StartUp Day — microproyectos CRUD
-    Route::get('/startup/proyectos',          [MicroproyectoController::class, 'index']);
-    Route::post('/startup/proyectos',         [MicroproyectoController::class, 'store']);
-    Route::get('/startup/proyectos/{uuid}',   [MicroproyectoController::class, 'show']);
-    Route::put('/startup/proyectos/{uuid}',   [MicroproyectoController::class, 'update']);
-    Route::delete('/startup/proyectos/{uuid}',[MicroproyectoController::class, 'destroy']);
-
-    // StartUp Day — IA: sugerencia de RA/CE
-    Route::middleware('throttle:10,1')
-        ->post('/startup/sugerir-ra-ce', [MicroproyectoController::class, 'sugerirRaCe']);
 
     // ── Gestión de usuarios (solo admin) ─────────────────────────────
     Route::middleware('admin')->prefix('admin/usuarios')->group(function () {
@@ -163,17 +225,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/{user}/centro',        [AdminUserController::class, 'asociarCentro'])->middleware('superadmin');
     });
 
-    // Papelera — gestión de elementos borrados (soft delete)
-    Route::prefix('papelera')->group(function () {
-        Route::get('/',                         [PapeleraController::class, 'index']);
-        Route::delete('/',                      [PapeleraController::class, 'vaciar']);
-        Route::patch('/{tipo}/{id}/restaurar',  [PapeleraController::class, 'restaurar'])
-            ->whereNumber('id');
-        Route::delete('/{tipo}/{id}',           [PapeleraController::class, 'destruir'])
-            ->whereNumber('id');
-    });
-
 });
+
 
 // -------- IMPORTACIONES (protegidas con auth) ---------
 Route::middleware('auth:sanctum')->get('/importar-excel', function () {

@@ -17,7 +17,7 @@ class Microproyecto extends Model
         'fundamentacion', 'diseno_reto', 'diseno_microproyecto', 'resumen',
         'objetivos', 'kpis', 'validacion_empresa',
         'paso_actual', 'estado', 'token_empresa', 'empresa_validado',
-        'empresa_no_valida_aun', 'enviado_a_empresa_mail',
+        'empresa_no_valida_aun', 'enviado_a_empresa_mail', 'docente_validado',
     ];
 
     protected $casts = [
@@ -36,6 +36,7 @@ class Microproyecto extends Model
         'empresa_validado'        => 'boolean',
         'empresa_no_valida_aun'   => 'boolean',
         'enviado_a_empresa_mail'  => 'boolean',
+        'docente_validado'        => 'boolean',
     ];
 
     protected static function booted(): void
@@ -83,5 +84,10 @@ class Microproyecto extends Model
     public function cicloFormativo()
     {
         return $this->belongsTo(CicloFormativo::class, 'ciclo_id');
+    }
+
+    public function equipos()
+    {
+        return $this->hasMany(Equipo::class)->orderBy('id');
     }
 }

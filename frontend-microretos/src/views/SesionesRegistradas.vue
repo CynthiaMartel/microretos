@@ -1,12 +1,26 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import EliminarSesionModal from '../components/EliminarSesionModal.vue'
+import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
 import api from '../api.js'
 
 const router  = useRouter()
+const route   = useRoute()
 const cargando = ref(false)
+
+// ─── Modal "¿Qué necesitas?" ──────────────────────────────────────────────────
+const guiaBienvenida = ref(false)
+
+function seleccionarOpcionBienvenida(opcion) {
+  if (opcion === 'crear') {
+    guiaBienvenida.value = false
+    router.push('/dashboard')
+  } else {
+    guiaBienvenida.value = false
+  }
+}
 
 // ─── Datos de sesiones ────────────────────────────────────────────────────────
 const sesiones = ref([])
@@ -24,7 +38,16 @@ async function cargarSesiones() {
   }
 }
 
-onMounted(cargarSesiones)
+onMounted(async () => {
+  await cargarSesiones()
+  const idParam = route.query.id
+  if (idParam) {
+    const s = sesiones.value.find(s => String(s.id) === String(idParam))
+    if (s) verSesion(s)
+  } else {
+    guiaBienvenida.value = true
+  }
+})
 
 // ── Modal eliminar sesión ─────────────────────────────────────────────────────
 const modalEliminarVisible = ref(false)
@@ -144,9 +167,89 @@ const microretoModalId = ref(null)
 function abrirMicroretoModal(id) { microretoModalId.value = id }
 function cerrarMicroretoModal()  { microretoModalId.value = null }
 
+// ─── Modal ver proyecto ───────────────────────────────────────────────────────
+const modalVerProyecto = ref(false)
+const proyectoModal    = ref(null)
+const cargandoModal    = ref(false)
+
+async function abrirModalProyecto(uuid) {
+  modalVerProyecto.value = true
+  cargandoModal.value    = true
+  proyectoModal.value    = null
+  try {
+    const res = await api.get(`/startup/proyectos/${uuid}`)
+    proyectoModal.value = res.data
+  } catch {
+    /* no crítico */
+  } finally {
+    cargandoModal.value = false
+  }
+}
+
+function cerrarModalProyecto() {
+  modalVerProyecto.value = false
+  proyectoModal.value    = null
+}
+
+function getBadgeModal(p) {
+  if (!p) return { label: '—', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-300' }
+  const e = p.estado
+  if (e === 'borrador' || e === 'en_edicion')
+    return { label: 'En edición',  cls: 'bg-amber-50 border-amber-200 text-amber-700',    dot: 'bg-amber-400' }
+  if (e === 'archivado')
+    return { label: 'Archivado',   cls: 'bg-gray-100 border-gray-200 text-gray-400',       dot: 'bg-gray-400' }
+  if (e === 'validado') {
+    if (p.empresa_validado && p.docente_validado)
+      return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
+    if (p.empresa_validado)
+      return { label: 'Validado · Empresa', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
+    if (p.docente_validado)
+      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' }
+    return { label: 'Validado', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
+  }
+  if (p.empresa_no_valida_aun)
+    return { label: 'No validar aún', cls: 'bg-red-50 border-red-300 text-red-700',         dot: 'bg-red-400' }
+  if (p.enviado_a_empresa_mail)
+    return { label: 'Enviado · Esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' }
+  return { label: 'Pendiente validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' }
+}
+
 // ─── Crear microproyecto desde sesión ────────────────────────────────────────
 function crearMicroproyecto(sesionId) {
   router.push({ name: 'startup-day-crear', query: { sesion_id: sesionId } })
+}
+
+// ─── Código de acceso para alumnado ──────────────────────────────────────────
+const creandoCodigo = ref({})
+const errorCodigo   = ref({})
+
+async function crearCodigo(sesion) {
+  creandoCodigo.value = { ...creandoCodigo.value, [sesion.id]: true }
+  errorCodigo.value   = { ...errorCodigo.value,   [sesion.id]: '' }
+  try {
+    const res = await api.post(`/sesiones/${sesion.id}/crear-codigo`)
+    const nuevoCodigo = res.data.codigo_clase
+    sesiones.value = sesiones.value.map(s =>
+      s.id === sesion.id ? { ...s, codigo_clase: nuevoCodigo } : s
+    )
+    if (sesionAbierta.value?.id === sesion.id) {
+      sesionAbierta.value = { ...sesionAbierta.value, codigo_clase: nuevoCodigo }
+    }
+    mostrarSnack(`Código ${nuevoCodigo} creado. El alumnado puede acceder desde /unirse`)
+  } catch (e) {
+    errorCodigo.value = { ...errorCodigo.value, [sesion.id]: e.response?.data?.error || 'Error al crear el código.' }
+  } finally {
+    creandoCodigo.value = { ...creandoCodigo.value, [sesion.id]: false }
+  }
+}
+
+async function copiarCodigo(codigo) {
+  try {
+    await navigator.clipboard.writeText(codigo)
+    mostrarSnack(`Código ${codigo} copiado.`)
+  } catch {
+    mostrarSnack(`Código: ${codigo}`)
+  }
 }
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -170,6 +273,9 @@ function formatFecha(isoDate) {
 
 <template>
   <div class="min-h-screen font-sans text-[#1F2937] pt-12 md:pt-12">
+
+    <!-- Modal ¿Qué necesitas? -->
+    <BienvenidaModal :show="guiaBienvenida" @seleccionar="seleccionarOpcionBienvenida" />
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
@@ -203,7 +309,7 @@ function formatFecha(isoDate) {
             <p class="text-gray-500 text-sm mt-1">Consulta y filtra todo el historial de sesiones.</p>
           </div>
 
-          <!-- Stats + Papelera -->
+          <!-- Stats + Acciones -->
           <div class="flex flex-wrap gap-3 items-center">
             <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
               <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,6 +328,19 @@ function formatFecha(isoDate) {
               <span class="font-black text-xl text-[#1F2937]">{{ stats.microretos }}</span>
               <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">retos</span>
             </div>
+            <!-- Botón Crear nueva sesión -->
+            <button
+              @click="router.push('/dashboard')"
+              class="flex items-center gap-2 px-4 py-2 bg-[#00A859] rounded-2xl border border-[#00A859]
+                     shadow-sm text-white text-xs font-black uppercase tracking-wider
+                     hover:bg-[#009950] hover:border-[#009950] transition-all"
+              title="Ir al formulario para registrar una nueva sesión"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+              </svg>
+              Nueva sesión
+            </button>
             <!-- Botón Papelera -->
             <button
               @click="router.push({ name: 'papelera' })"
@@ -471,6 +590,7 @@ function formatFecha(isoDate) {
                     <span v-if="s.curso"       class="tag tag-green">{{ s.curso }}</span>
                     <span v-if="s.grupo"       class="tag tag-lime">Grupo {{ s.grupo }}</span>
                     <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} alumnos</span>
+                    <span v-if="s.num_equipos" class="tag tag-gray">{{ s.num_equipos }} equipos</span>
                   </div>
                   <div class="space-y-1">
                     <p v-if="s.ciclo_formativo" class="text-[10px] text-gray-500 flex items-center gap-1.5">
@@ -483,6 +603,39 @@ function formatFecha(isoDate) {
                     <p v-if="s.notas" class="text-[10px] text-gray-400 leading-relaxed line-clamp-2 italic">
                       "{{ s.notas }}"
                     </p>
+                  </div>
+
+                  <!-- Código de acceso del alumnado -->
+                  <div v-if="s.codigo_clase" @click.stop
+                       class="flex items-center gap-2 pt-1">
+                    <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                 bg-[#00A859]/10 border border-[#00A859]/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
+                      <span class="text-[11px] font-black tracking-widest text-[#00A859]">{{ s.codigo_clase }}</span>
+                    </span>
+                    <button @click.stop="copiarCodigo(s.codigo_clase)"
+                            class="p-1 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-all"
+                            title="Copiar código">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div v-else-if="s.num_equipos" @click.stop class="pt-1">
+                    <button @click.stop="crearCodigo(s)"
+                            :disabled="creandoCodigo[s.id]"
+                            class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest
+                                   text-gray-400 hover:text-[#00A859] transition-colors disabled:opacity-50">
+                      <svg class="w-3 h-3" :class="creandoCodigo[s.id] ? 'animate-spin' : ''"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path v-if="!creandoCodigo[s.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+                      </svg>
+                      {{ creandoCodigo[s.id] ? 'Creando...' : 'Generar código alumnado' }}
+                    </button>
+                    <p v-if="errorCodigo[s.id]" class="text-[10px] text-red-400 mt-1">{{ errorCodigo[s.id] }}</p>
                   </div>
                 </div>
 
@@ -568,6 +721,48 @@ function formatFecha(isoDate) {
             </div>
           </div>
 
+          <!-- Código de acceso del alumnado en el modal -->
+          <div class="px-7 py-4 border-t border-gray-100">
+            <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-3">Acceso del alumnado</p>
+            <div v-if="sesionAbierta.codigo_clase"
+                 class="flex items-center gap-3 p-3 rounded-2xl bg-[#00A859]/5 border border-[#00A859]/15">
+              <span class="w-2 h-2 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
+              <span class="text-lg font-black tracking-[0.2em] text-[#1F2937] flex-1">{{ sesionAbierta.codigo_clase }}</span>
+              <button @click="copiarCodigo(sesionAbierta.codigo_clase)"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00A859] text-white
+                             text-[10px] font-black uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                Copiar
+              </button>
+              <button @click="crearCodigo(sesionAbierta)" :disabled="creandoCodigo[sesionAbierta.id]"
+                      class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
+                             text-[10px] font-black uppercase tracking-widest text-gray-500
+                             hover:bg-gray-200 transition-all disabled:opacity-50">
+                Regen.
+              </button>
+            </div>
+            <div v-else>
+              <button @click="crearCodigo(sesionAbierta)" :disabled="creandoCodigo[sesionAbierta.id]"
+                      class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
+                             border border-dashed border-[#00A859]/30 text-[#00A859] text-xs font-black
+                             uppercase tracking-widest hover:bg-[#00A859]/5 transition-all disabled:opacity-50">
+                <svg class="w-4 h-4" :class="creandoCodigo[sesionAbierta.id] ? 'animate-spin' : ''"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path v-if="!creandoCodigo[sesionAbierta.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                  <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+                </svg>
+                {{ creandoCodigo[sesionAbierta.id] ? 'Creando...' : 'Generar código para el alumnado' }}
+              </button>
+              <p v-if="errorCodigo[sesionAbierta.id]" class="text-xs text-red-400 mt-1.5 text-center">
+                {{ errorCodigo[sesionAbierta.id] }}
+              </p>
+            </div>
+          </div>
+
           <!-- Pie -->
           <div class="px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <button @click="abrirModalEliminar(sesionAbierta)"
@@ -576,16 +771,27 @@ function formatFecha(isoDate) {
               Eliminar sesión
             </button>
             <div class="flex items-center gap-2">
-              <button v-if="sesionAbierta.microreto_id"
-                      @click="abrirMicroretoModal(sesionAbierta.microreto_id); cerrarSesion()"
+              <button v-if="sesionAbierta.microproyecto_uuid"
+                      @click="router.push({ name: 'workspace-docente', params: { id: sesionAbierta.id } }); cerrarSesion()"
+                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-200
+                             bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-widest
+                             hover:bg-blue-100 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                </svg>
+                Workspace
+              </button>
+              <button v-if="sesionAbierta.microproyecto_uuid"
+                      @click="abrirModalProyecto(sesionAbierta.microproyecto_uuid); cerrarSesion()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200
                              bg-white text-gray-600 text-xs font-black uppercase tracking-widest
                              hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                 </svg>
-                Ver reto
+                Ver proyecto
               </button>
               <button @click="crearMicroproyecto(sesionAbierta.id); cerrarSesion()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A859] text-white
@@ -608,6 +814,190 @@ function formatFecha(isoDate) {
 
   <!-- Modal ficha de microreto -->
   <MicroretoModal :microreto-id="microretoModalId" @close="cerrarMicroretoModal" />
+
+  <!-- Modal ver proyecto -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="modalVerProyecto"
+           class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+           @click.self="cerrarModalProyecto">
+
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrarModalProyecto" />
+
+        <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-2xl
+                    max-h-[90vh] flex flex-col overflow-hidden">
+
+          <!-- Cabecera -->
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-7 h-7 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/20
+                          flex items-center justify-center shrink-0">
+                <svg class="w-3.5 h-3.5 text-[#5a7a00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+              <p v-if="proyectoModal" class="font-black text-[#1F2937] text-sm truncate">
+                {{ proyectoModal.titulo }}
+              </p>
+              <p v-else class="text-sm text-gray-400 font-medium">Cargando proyecto…</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button v-if="proyectoModal"
+                      @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
+                      class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
+                             text-[10px] font-black uppercase tracking-widest text-gray-500
+                             hover:border-[#99CC33] hover:text-[#5a7a00] transition-all flex items-center gap-1.5">
+                Startup Day
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+              </button>
+              <button @click="cerrarModalProyecto"
+                      class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                             text-gray-400 hover:bg-gray-200 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Contenido -->
+          <div class="flex-1 overflow-y-auto">
+
+            <!-- Spinner -->
+            <div v-if="cargandoModal" class="flex justify-center items-center py-20">
+              <svg class="animate-spin w-8 h-8 text-[#99CC33]" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+              </svg>
+            </div>
+
+            <template v-else-if="proyectoModal">
+
+              <!-- Badge estado + meta -->
+              <div class="px-6 pt-5 pb-4 border-b border-gray-50 space-y-3">
+                <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border', getBadgeModal(proyectoModal).cls]">
+                  <span :class="['w-1.5 h-1.5 rounded-full', getBadgeModal(proyectoModal).dot]" />
+                  {{ getBadgeModal(proyectoModal).label }}
+                </span>
+
+                <div class="flex flex-wrap gap-1.5">
+                  <span v-if="proyectoModal.empresa_nombre" class="tag tag-gray">
+                    <svg class="w-3 h-3 shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    {{ proyectoModal.empresa_nombre }}
+                  </span>
+                  <span v-if="proyectoModal.centro_nombre" class="tag tag-gray">{{ proyectoModal.centro_nombre }}</span>
+                  <span v-if="proyectoModal.ciclo_nombre"  class="tag tag-gray">{{ proyectoModal.ciclo_nombre }}</span>
+                  <span v-if="proyectoModal.curso"         class="tag tag-lime">{{ proyectoModal.curso }}</span>
+                </div>
+              </div>
+
+              <!-- Secciones del proyecto -->
+              <div class="px-6 py-5 space-y-4">
+
+                <div v-if="proyectoModal.diseno_reto?.descripcion || proyectoModal.diseno_reto?.pregunta_reto"
+                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">El reto</p>
+                  <p v-if="proyectoModal.diseno_reto.pregunta_reto"
+                     class="text-sm font-bold text-[#5a7a00] italic mb-2">
+                    "{{ proyectoModal.diseno_reto.pregunta_reto }}"
+                  </p>
+                  <p v-if="proyectoModal.diseno_reto.descripcion"
+                     class="text-sm text-gray-600 leading-relaxed line-clamp-4">
+                    {{ proyectoModal.diseno_reto.descripcion }}
+                  </p>
+                </div>
+
+                <div v-if="proyectoModal.equipo?.alumnos?.length"
+                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                    Equipo ({{ proyectoModal.equipo.alumnos.length }})
+                  </p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span v-for="a in proyectoModal.equipo.alumnos" :key="a.nombre"
+                          class="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
+                      {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="proyectoModal.modulos_seleccionados?.length"
+                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                    Módulos ({{ proyectoModal.modulos_seleccionados.length }})
+                  </p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span v-for="m in proyectoModal.modulos_seleccionados" :key="m.id"
+                          class="text-xs bg-[#00A859]/8 border border-[#00A859]/15 text-[#00A859]
+                                 px-2.5 py-1 rounded-full">
+                      {{ m.nombre }}
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="proyectoModal.objetivos?.lista?.length"
+                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Objetivos</p>
+                  <ul class="space-y-1">
+                    <li v-for="obj in proyectoModal.objetivos.lista.slice(0, 5)" :key="obj"
+                        class="flex items-start gap-2 text-sm text-gray-600">
+                      <span class="text-[#99CC33] shrink-0 mt-0.5 font-bold">›</span> {{ obj }}
+                    </li>
+                    <li v-if="proyectoModal.objetivos.lista.length > 5"
+                        class="text-xs text-gray-400 pl-4">
+                      + {{ proyectoModal.objetivos.lista.length - 5 }} más…
+                    </li>
+                  </ul>
+                </div>
+
+                <div v-if="proyectoModal.diseno_microproyecto?.fases?.length"
+                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                    Fases ({{ proyectoModal.diseno_microproyecto.fases.length }})
+                  </p>
+                  <ol class="space-y-1.5">
+                    <li v-for="(f, i) in proyectoModal.diseno_microproyecto.fases.slice(0, 4)" :key="i"
+                        class="flex items-center gap-2.5 text-sm">
+                      <span class="w-5 h-5 rounded-full bg-[#99CC33]/15 text-[#5a7a00] font-black text-[10px]
+                                   flex items-center justify-center shrink-0">{{ i + 1 }}</span>
+                      <span class="font-bold text-[#1F2937]">{{ f.nombre }}</span>
+                      <span v-if="f.duracion" class="text-gray-400 text-xs">· {{ f.duracion }}</span>
+                    </li>
+                    <li v-if="proyectoModal.diseno_microproyecto.fases.length > 4"
+                        class="text-xs text-gray-400 pl-7">
+                      + {{ proyectoModal.diseno_microproyecto.fases.length - 4 }} más…
+                    </li>
+                  </ol>
+                </div>
+
+                <div v-if="!proyectoModal.diseno_reto?.descripcion && !proyectoModal.equipo?.alumnos?.length
+                            && !proyectoModal.modulos_seleccionados?.length && !proyectoModal.objetivos?.lista?.length"
+                     class="text-center py-6 text-gray-400">
+                  <p class="text-xs">Este proyecto aún no tiene secciones rellenas.</p>
+                  <button @click="router.push({ name: 'startup-day-editar', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
+                          class="mt-3 text-xs font-black text-[#5a7a00] underline hover:no-underline">
+                    Ir a editar →
+                  </button>
+                </div>
+
+              </div>
+            </template>
+
+            <!-- Error carga -->
+            <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">
+              <p class="text-sm">No se pudo cargar el proyecto.</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 
   <!-- Modal eliminar sesión -->
   <EliminarSesionModal

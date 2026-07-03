@@ -14,7 +14,9 @@ const route     = useRoute()
 const authStore = useAuthStore()
 
 const isPublicRetoRoute = computed(() =>
-  route.path.startsWith('/reto/') || route.path.startsWith('/startup/landing/')
+  route.path.startsWith('/reto/') ||
+  route.path.startsWith('/startup/landing/') ||
+  route.path.startsWith('/proyecto/equipo/')
 )
 
 // ── Expiración de token (401 del servidor) ────────────────────────────────────

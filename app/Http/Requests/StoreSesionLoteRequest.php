@@ -37,7 +37,7 @@ class StoreSesionLoteRequest extends FormRequest
     {
         return [
             'sesiones'                    => 'required|array',
-            'sesiones.*.microreto_titulo' => 'required|string|max:500',
+            'sesiones.*.microreto_titulo' => 'nullable|string|max:500',
             'sesiones.*.fecha'            => 'required|date',
             'sesiones.*.microreto_id'     => 'nullable',
             'sesiones.*.centro_educativo' => 'nullable|string|max:255',

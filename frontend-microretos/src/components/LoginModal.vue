@@ -123,7 +123,7 @@ function validate() {
   if (!form.email) {
     errors.email = 'El correo es obligatorio'
     valid = false
-  } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.email = 'Formato de correo inválido'
     valid = false
   }

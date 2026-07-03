@@ -9,10 +9,15 @@ class MicroproyectoController extends Controller
 {
     public function index(Request $request)
     {
-        $proyectos = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto'])
-            ->orderByDesc('updated_at')
-            ->get()
-            ->map(fn($p) => $this->formatProyecto($p));
+        $user  = $request->user();
+        $query = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto'])
+            ->orderByDesc('updated_at');
+
+        if (!$user->isSuperAdmin()) {
+            $query->where('centro_id', $user->centro_educativo_id);
+        }
+
+        $proyectos = $query->get()->map(fn($p) => $this->formatProyecto($p));
 
         return response()->json($proyectos);
     }
@@ -30,6 +35,10 @@ class MicroproyectoController extends Controller
             'curso'        => 'nullable|string',
         ]);
 
+        if (!$request->user()->isSuperAdmin()) {
+            $data['centro_id'] = $request->user()->centro_educativo_id;
+        }
+
         $proyecto = Microproyecto::create($data);
 
         return response()->json($this->formatProyecto($proyecto->fresh()), 201);
@@ -41,12 +50,16 @@ class MicroproyectoController extends Controller
             ->where('uuid', $uuid)
             ->firstOrFail();
 
+        $this->authorize('view', $proyecto);
+
         return response()->json($this->formatProyecto($proyecto));
     }
 
     public function update(Request $request, $uuid)
     {
         $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
+
+        $this->authorize('update', $proyecto);
 
         $allowed = [
             'titulo', 'curso', 'sesion_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
@@ -58,8 +71,8 @@ class MicroproyectoController extends Controller
 
         $data = $request->only($allowed);
 
-        // Si el proyecto está validado y se modifica un campo relevante para la empresa, se invalida la validación
-        if ($proyecto->empresa_validado) {
+        // Si el proyecto está validado y se modifica un campo relevante, se invalida toda validación
+        if ($proyecto->empresa_validado || $proyecto->docente_validado) {
             $camposCriticos = [
                 'titulo', 'empresa_id', 'datos_empresa', 'datos_centro', 'equipo',
                 'modulos_seleccionados', 'ra_ce', 'fundamentacion', 'diseno_reto',
@@ -78,7 +91,11 @@ class MicroproyectoController extends Controller
 
                 if ($anterior !== $nuevo) {
                     $data['empresa_validado']   = false;
+                    $data['docente_validado']   = false;
                     $data['validacion_empresa'] = null;
+                    if (!array_key_exists('estado', $data)) {
+                        $data['estado'] = 'propuesta';
+                    }
                     break;
                 }
             }
@@ -92,6 +109,9 @@ class MicroproyectoController extends Controller
     public function destroy($uuid)
     {
         $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
+
+        $this->authorize('delete', $proyecto);
+
         $proyecto->delete();
 
         return response()->json(['ok' => true]);
@@ -103,7 +123,7 @@ class MicroproyectoController extends Controller
     {
         $proyecto = Microproyecto::with(['recursos', 'microreto'])
             ->where('token_empresa', $token)
-            ->where('estado', 'publicado')
+            ->whereIn('estado', ['propuesta', 'validado'])
             ->firstOrFail();
 
         $formato = fn($r) => [
@@ -150,7 +170,7 @@ class MicroproyectoController extends Controller
     public function validarEmpresa(Request $request, $token)
     {
         $proyecto = Microproyecto::where('token_empresa', $token)
-            ->where('estado', 'publicado')
+            ->whereIn('estado', ['propuesta', 'validado'])
             ->firstOrFail();
 
         $data = $request->validate([
@@ -160,18 +180,53 @@ class MicroproyectoController extends Controller
         ]);
 
         if ($data['decision'] === 'validar') {
-            // La empresa valida: guardar respuestas, marcar validado, limpiar flag "no validar"
+            // La empresa valida: guardar respuestas, marcar validado, avanzar estado
             $proyecto->update([
+                'estado'                => 'validado',
                 'validacion_empresa'    => ['respuestas' => $data['respuestas'], 'comentarios' => $data['comentarios'] ?? null],
                 'empresa_validado'      => true,
                 'empresa_no_valida_aun' => false,
             ]);
         } else {
-            // La empresa responde "no validar aún": guardar respuestas pero NO validar
+            // La empresa responde "no validar aún": guardar respuestas, mantener en propuesta
             $proyecto->update([
+                'estado'                => 'propuesta',
                 'validacion_empresa'    => ['respuestas' => $data['respuestas'], 'comentarios' => $data['comentarios'] ?? null],
                 'empresa_validado'      => false,
                 'empresa_no_valida_aun' => true,
+            ]);
+        }
+
+        return response()->json(['ok' => true, 'decision' => $data['decision']]);
+    }
+
+    // --- Validación docente ---
+
+    public function validarDocente(Request $request, $uuid)
+    {
+        $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
+
+        $this->authorize('update', $proyecto);
+
+        if (!in_array($proyecto->estado, ['propuesta', 'validado'])) {
+            return response()->json(['error' => 'Solo se puede validar un proyecto en estado propuesta o validado'], 422);
+        }
+
+        $data = $request->validate([
+            'decision' => 'required|in:validar,desvalidar',
+        ]);
+
+        if ($data['decision'] === 'validar') {
+            $proyecto->update([
+                'docente_validado' => true,
+                'estado'           => 'validado',
+            ]);
+        } else {
+            // Desvalidar docente: si empresa también validó, mantener 'validado'; si no, volver a 'propuesta'
+            $nuevoEstado = $proyecto->empresa_validado ? 'validado' : 'propuesta';
+            $proyecto->update([
+                'docente_validado' => false,
+                'estado'           => $nuevoEstado,
             ]);
         }
 
@@ -249,6 +304,59 @@ class MicroproyectoController extends Controller
         ]);
     }
 
+    public function sugerirKpis(Request $request)
+    {
+        $request->validate([
+            'titulo'        => 'nullable|string|max:300',
+            'pregunta_reto' => 'nullable|string|max:1000',
+            'descripcion'   => 'nullable|string|max:2000',
+            'entregables'   => 'nullable|string|max:1000',
+            'objetivos'     => 'nullable|array|max:20',
+            'objetivos.*'   => 'string|max:300',
+            'ra_ce'         => 'nullable|string|max:5000',
+        ]);
+
+        $contexto = '';
+        if ($request->filled('titulo'))        $contexto .= "Título del proyecto: {$request->titulo}\n";
+        if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
+        if ($request->filled('descripcion'))   $contexto .= "Descripción: {$request->descripcion}\n";
+        if ($request->filled('entregables'))   $contexto .= "Entregables: {$request->entregables}\n";
+        if ($request->filled('objetivos')) {
+            $lista = collect($request->objetivos)->map(fn($o) => "  - {$o}")->join("\n");
+            $contexto .= "Objetivos de aprendizaje:\n{$lista}\n";
+        }
+        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n{$request->ra_ce}\n";
+
+        if (!$contexto) {
+            return response()->json(['error' => 'Proporciona al menos un campo de contexto'], 422);
+        }
+
+        $cacheKey = 'kpis_' . md5($contexto);
+        $resultado = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($contexto) {
+            $response = \Illuminate\Support\Facades\Http::withToken(config('services.openai.key'))
+                ->timeout(60)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model'           => 'gpt-4o',
+                    'messages'        => [
+                        ['role' => 'system', 'content' => 'Eres un experto en evaluación de proyectos de Formación Profesional española. Propón KPIs (indicadores clave de rendimiento) que una empresa puede usar para evaluar si el equipo de alumnado ha resuelto correctamente el reto planteado. Los KPIs deben ser concretos, medibles y relevantes para el contexto del proyecto.'],
+                        ['role' => 'user',   'content' => "Contexto del microproyecto:\n{$contexto}\n\nDevuelve SOLO este JSON con entre 4 y 8 KPIs:\n{\"kpis\":[\"KPI concreto y medible\"]}"],
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature'     => 0.4,
+                ]);
+
+            if (!$response->successful()) return null;
+
+            return json_decode($response->json()['choices'][0]['message']['content'], true);
+        });
+
+        if (!$resultado) {
+            return response()->json(['error' => 'Error al contactar con la IA'], 500);
+        }
+
+        return response()->json(['kpis' => $resultado['kpis'] ?? []]);
+    }
+
     // --- Helper ---
 
     private function formatProyecto(Microproyecto $p): array
@@ -263,6 +371,7 @@ class MicroproyectoController extends Controller
             'empresa_validado'      => $p->empresa_validado,
             'empresa_no_valida_aun' => $p->empresa_no_valida_aun,
             'enviado_a_empresa_mail'=> $p->enviado_a_empresa_mail,
+            'docente_validado'      => $p->docente_validado,
             'token_empresa'         => $p->token_empresa,
             'empresa_id'       => $p->empresa_id,
             'empresa_nombre'   => $p->empresa?->nombre_comercial,

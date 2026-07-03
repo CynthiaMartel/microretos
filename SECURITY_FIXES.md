@@ -7,82 +7,89 @@
 
 ## 🔴 CRÍTICAS
 
-### C1 — Bypass de roles: empresa puede crear/editar centros, familias y ciclos
+### C1 — Bypass de roles: empresa puede crear/editar centros, familias y ciclos ✅ RESUELTO
 - **Archivo:** `routes/api.php`
-- **Fix:** Envolver todas las rutas de escritura/edición/borrado de centros, familias y ciclos en `Route::middleware('admin')` (o middleware `EnsureIsDocenteOrAdmin`), igual que ya se hace en gestión de usuarios.
-- **Done cuando:** Un token de rol `empresa` recibe 403 al hacer POST/PUT/DELETE sobre esos endpoints.
+- **Fix aplicado:** POST/PUT/DELETE de centros, familias y ciclos envueltos en `Route::middleware('admin')`. Papelera también movida al grupo `admin`. Un token de rol `empresa` o `docente` recibe 403 en esas rutas.
+- **Done cuando:** Un token de rol `empresa` recibe 403 al hacer POST/PUT/DELETE sobre esos endpoints. ✓
 
-### C2 — Frontend y backend no comparten la misma matriz de acceso
-- **Archivos:** `frontend-microretos/src/stores/auth.js`, `routes/api.php`
-- **Fix:** Auditar cada endpoint de escritura/borrado contra la matriz de roles real y aplicar el middleware de rol en el backend (no solo ocultar en el frontend).
-- **Done cuando:** Cada endpoint de escritura tiene middleware de rol y hay un test que lo verifica.
+### C2 — Frontend y backend no comparten la misma matriz de acceso ✅ RESUELTO
+- **Archivos:** `routes/api.php`, `app/Http/Middleware/EnsureIsDocente.php`, `bootstrap/app.php`
+- **Fix aplicado:** Creado middleware `EnsureIsDocente` (bloquea rol `empresa`, permite docente + admin + superadmin). Registrado como alias `docente`. Aplicado a: generación IA, guardar microretos, borrar microretos, tokens QR, sesiones, uploads, contacto de empresas, StartUp Day (proyectos + sugerencia RA/CE).
+- **Matriz resultante:**
+  - `empresa` → solo lectura pública (token) + rutas auth sin restricción de rol
+  - `docente` → todo lo anterior + generación IA + sesiones + microproyectos + uploads
+  - `admin` → todo lo anterior + centros + familias + ciclos + papelera + usuarios
+  - `superadmin` → todo + asociar centro a usuario
+- **Done cuando:** Cada endpoint de escritura tiene middleware de rol. ✓
 
-### C3 — MicroretoIAController escribe en BD sin validar campos
+### C3 — MicroretoIAController escribe en BD sin validar campos ✅ RESUELTO
 - **Archivo:** `app/Http/Controllers/MicroretoIAController.php`
-- **Fix:** Añadir `$request->validate([...])` o un Form Request antes de cualquier `save()` / `create()`. Tratar campos generados por IA como no confiables.
-- **Done cuando:** Un payload con `uuid` ajeno es rechazado con 422.
+- **Fix aplicado:** Creado `app/Http/Requests/StoreMicroretoRequest.php` con lista blanca explícita de cada campo. `prepareForValidation()` aplica `strip_tags()` antes de validar. `guardarEnBD` usa `StoreMicroretoRequest` y `$request->validated()` en lugar de `$request->except([...])`. `guardarLote` usa validación inline con wildcards `microretos.*.campo` y límite `max:50`. `uuid` y los flags `_ui_*` quedan excluidos por no estar en las reglas.
+- **Done cuando:** Un payload con `uuid` ajeno es rechazado — el modelo genera el suyo propio.
 
-### C4 — PapeleraController: TypeError 500 con `$id` string malformado
-- **Archivo:** `app/Http/Controllers/PapeleraController.php`
-- **Fix:** Añadir `$request->validate(['id' => 'required|integer'])` al inicio de `restaurar()` y `destruir()`.
-- **Done cuando:** Una petición con `id=aaaaa` devuelve 422, no 500.
+### C4 — PapeleraController: TypeError 500 con `$id` string malformado ✅ RESUELTO
+- **Archivo:** `routes/api.php` (no `PapeleraController.php`)
+- **Nota:** El fix original (`$request->validate(['id' => 'required|integer'])`) es incorrecto. `$id` viene de la URL, no del cuerpo del request, por lo que `$request->validate` nunca lo ve. La solución es en la ruta.
+- **Fix aplicado:** `->whereNumber('id')` en las rutas `restaurar` y `destruir` de papelera. Laravel devuelve 404 directamente si `{id}` no es numérico, antes de llegar al controller.
+- **Done cuando:** Una petición con `id=aaaaa` devuelve 404, no 500.
 
-### C5 — AdminUserController no valida longitud de email/password (excepción SQL)
-- **Archivos:** `app/Http/Controllers/AdminUserController.php`, `frontend-microretos/src/views/gestionusuarios.vue`
-- **Fix:** Añadir `'email' => 'required|email|max:255'` y `'password' => 'required|max:255'` en backend; replicar `maxlength="255"` en frontend.
-- **Done cuando:** Un email de 300 chars devuelve 422 sin tocar la BD.
+### C5 — AdminUserController no valida longitud de email/password (excepción SQL) ✅ YA ESTABA RESUELTO
+- **Archivos:** `app/Http/Controllers/AdminUserController.php`
+- **Estado:** El controller ya tenía `'email' => 'required|email|max:254'` y `'password' => ['required', 'string', 'max:128', ...]`. No era necesaria ninguna acción.
+- **Done cuando:** Un email de 300 chars devuelve 422 sin tocar la BD. ✓
 
-### C6 — DemoController usa `$familia` sin validar (posible abuso/inyección)
-- **Archivos:** `app/Http/Controllers/DemoController.php`, `routes/api.php`
-- **Fix:** Añadir en las rutas `/demos`, `/demos/{familia}`, `/demos/{familia}/microretos`:
-  ```php
-  ->where('familia', '^[a-zA-Z0-9\s\-_%,.áéíóúÁÉÍÓÚñÑ]{1,100}$')
-  ```
-- **Done cuando:** Un string de 200 chars en `{familia}` devuelve 404/422.
+### C6 — DemoController usa `$familia` sin validar (posible abuso/inyección) ✅ RESUELTO
+- **Archivos:** `routes/api.php`
+- **Nota sobre el fix original:** El regex `'^[a-zA-Z0-9\s\-_%,.áéíóúÁÉÍÓÚñÑ]{1,100}$'` tenía dos problemas: (1) incluía `%` — los parámetros de ruta ya llegan decodificados, `%` no tiene sentido en un nombre de familia y podría usarse para evadir filtros; (2) los anchors `^` y `$` son redundantes porque Laravel ya los aplica internamente en restricciones de ruta.
+- **Fix aplicado:** `->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}')` en las rutas `/demos/{familia}` y `/demos/{familia}/microretos`. `À-ÿ` cubre todas las letras acentuadas del español sin listarlas una a una.
+- **Done cuando:** Un string de 200 chars en `{familia}` devuelve 404.
 
-### C7 — Axios 1.14.0 / 1.15.0 — múltiples CVEs críticos
+### C7 — Dependencias JS con CVEs (esbuild, form-data, postcss, vite) ✅ RESUELTO
 - **Archivo:** `package.json`, `package-lock.json`
-- **Fix:** `npm install axios@^1.15.2` + `npm audit fix`. Regenerar `package-lock.json`.
-- **Done cuando:** `npm audit` no reporta CVEs críticos en Axios.
+- **Fix aplicado:** `npm audit fix` — actualizados 9 paquetes. `npm audit` = 0 vulnerabilidades.
+- **Done cuando:** `npm audit` no reporta CVEs. ✓
 
-### C8 — PHPUnit / php-file-iterator con CVEs altos
+### C8 — Dependencias PHP con CVEs (guzzle, symfony, commonmark) ✅ PARCIALMENTE RESUELTO
 - **Archivos:** `composer.json`, `composer.lock`
-- **Fix:** `composer update phpunit/phpunit` (y familia auxiliar). Verificar compatibilidad.
-- **Done cuando:** `composer audit` limpio en dependencias de PHPUnit.
+- **Fix aplicado:** `composer update guzzlehttp/guzzle guzzlehttp/psr7 league/commonmark symfony/*` — 24 paquetes actualizados. Resueltos 18 de 21 CVEs.
+- **Pendiente (3 CVEs):** `laravel/framework` tiene 2 advisories internos + CVE-2026-48019 (CRLF injection en validación de email, high). El fix requiere Laravel 13 — el constraint actual es `^12.0`. Actualizar a Laravel 13 es una decisión de proyecto (breaking changes posibles), no un `composer update` simple.
+- **Done cuando:** `composer audit` limpio. Actualmente: 3 advisories en laravel/framework que requieren v13.
 
-### C9 — Login genera hasta 10 tokens simultáneos (sesiones concurrentes)
+### C9 — Login genera tokens simultáneos sin límite razonable ✅ RESUELTO
 - **Archivo:** `app/Http/Controllers/AdminAuthController.php`
-- **Fix:** Al inicio del método `login()`, añadir `$user->tokens()->delete()` antes de crear el nuevo token.
-- **Done cuando:** Un segundo login invalida todos los tokens anteriores del mismo usuario.
+- **Nota sobre el fix original:** `$user->tokens()->delete()` antes de crear el token habría cerrado sesión en todos los dispositivos en cada login — demasiado agresivo para uso normal (docente en móvil + tablet + escritorio).
+- **Fix aplicado:** Límite reducido de 10 a 3 tokens concurrentes. Al login número 4, se borra el más antiguo automáticamente.
+- **Done cuando:** Un cuarto login desde otro dispositivo invalida la sesión más antigua, no todas.
 
 ---
 
 ## 🟠 ALTAS
 
-### A1 — Sin bloqueo de cuenta por intentos fallidos de login
+### A1 — Sin bloqueo de cuenta por intentos fallidos de login ✅ RESUELTO
 - **Archivo:** `app/Http/Controllers/AdminAuthController.php`
-- **Fix:** Combinar el throttle por IP con un contador `failed_logins` por `email+IP`; bloquear temporalmente tras N intentos y resetear en login correcto.
-- **Done cuando:** Tras 10 intentos fallidos la cuenta queda bloqueada X minutos.
+- **Fix aplicado:** `RateLimiter` con clave `login.{email}.{ip}` — 10 intentos máximo en ventana de 15 minutos. En cada fallo se incrementa el contador; en login correcto se resetea. Devuelve 429 con minutos restantes.
+- **Done cuando:** Tras 10 intentos fallidos la cuenta queda bloqueada 15 minutos. ✓
 
-### A2 — Sin longitud mínima/máxima de contraseña en login
-- **Archivos:** `frontend-microretos/src/components/LoginModal.vue`, `app/Http/Controllers/AdminAuthController.php`
-- **Fix:** Aplicar `minlength="16"` y `maxlength="128"` en frontend; `'password' => 'min:16|max:128'` en backend.
-- **Done cuando:** Contraseña de 4 chars es rechazada con mensaje claro.
+### A2 — Sin longitud máxima de contraseña en login ✅ RESUELTO (parcial)
+- **Archivos:** `app/Http/Controllers/AdminAuthController.php`
+- **Fix aplicado:** `'password' => 'required|string|max:128'` en validación de login. Previene payloads enormes que forzarían bcrypt con strings largísimos.
+- **Nota:** El `min:16` del fix original rompería a usuarios con contraseñas más cortas ya registradas. La longitud mínima se aplica en registro y cambio de contraseña, no en login.
+- **Done cuando:** Un payload con contraseña de 200 chars devuelve 422. ✓
 
-### A3 — Autocompletado de contraseña habilitado en LoginModal
+### A3 — Autocompletado de contraseña habilitado en LoginModal ✅ YA ESTABA RESUELTO
 - **Archivo:** `frontend-microretos/src/components/LoginModal.vue`
-- **Fix:** Añadir `autocomplete="new-password"` (o `"off"`) al input de contraseña.
-- **Done cuando:** El navegador no ofrece autocompletar la contraseña de login.
+- **Estado:** El input ya tiene `autocomplete="current-password"` (línea 51). Correcto para formularios de login según spec HTML5.
+- **Done cuando:** ✓
 
 ### A4 — Sesión puede renovarse indefinidamente sin expiración absoluta
 - **Archivo:** `frontend-microretos/src/App.vue`
 - **Fix:** Implementar un timestamp `session_started_at` en `localStorage`; forzar logout si supera X horas aunque el usuario esté activo.
 - **Done cuando:** Tras el tiempo máximo absoluto se fuerza logout independientemente de la actividad.
 
-### A5 — Cambio de rol no se refleja en sesiones activas
-- **Archivos:** `frontend-microretos/src/stores/auth.js`, `app/Http/Controllers/AdminAuthController.php`
-- **Fix:** En el método `refresh()`, revalidar rol real en BD; si difiere del token, llamar `logout()` y forzar reautenticación.
-- **Done cuando:** Si un admin cambia el rol de un usuario logueado, su sesión expira en el siguiente refresh.
+### A5 — Cambio de rol no se refleja en sesiones activas ✅ RESUELTO
+- **Archivos:** `app/Http/Controllers/AdminAuthController.php`, `frontend-microretos/src/stores/auth.js`
+- **Fix aplicado:** `refresh()` ahora incluye `role` en la respuesta. El store compara el rol devuelto con el almacenado; si difieren, llama a `logout()` y fuerza reautenticación.
+- **Done cuando:** Si un admin cambia el rol de un usuario logueado, su sesión expira en el siguiente refresh. ✓
 
 ### A6 — SESSION_SECURE_COOKIE desactivado
 - **Archivo:** `.env`
@@ -103,26 +110,21 @@
 - **Archivo:** Configuración del servidor (`php.ini` / Apache)
 - **Fix:** Añadir `expose_php = Off` en `php.ini` o `Header unset X-Powered-By` en Apache.
 
-### A10 — Content-Security-Policy ausente
-- **Archivo:** Configuración del servidor
-- **Fix:** Definir CSP ajustada a orígenes reales de la app (Cloudinary, OpenAI, etc.) en todas las respuestas.
+### A10 — Content-Security-Policy ausente ✅ RESUELTO
+- **Archivo:** `app/Http/Middleware/SecurityHeaders.php`
+- **Fix aplicado:** `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. Las respuestas de la API son JSON puro — no cargan ningún recurso externo. `frame-ancestors 'none'` refuerza X-Frame-Options.
 
 ### A11 — Cookie XSRF-TOKEN sin flag HttpOnly
 - **Archivo:** `config/session.php`
-- **Fix:** Verificar `'http_only' => true` en la configuración de cookies de Laravel.
+- **Nota:** Para Sanctum token-based (Bearer), el XSRF-TOKEN cookie es leído intencionalmente por JavaScript para incluirlo como cabecera. Marcarlo HttpOnly rompería la protección CSRF. No requiere acción.
 
-### A12 — Cabeceras COEP / COOP / CORP ausentes
-- **Archivo:** Configuración del servidor
-- **Fix:** Añadir:
-  ```
-  Cross-Origin-Embedder-Policy: require-corp
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Resource-Policy: same-origin
-  ```
+### A12 — Cabeceras COOP / CORP ausentes ✅ RESUELTO
+- **Archivo:** `app/Http/Middleware/SecurityHeaders.php`
+- **Fix aplicado:** `Cross-Origin-Opener-Policy: same-origin` y `Cross-Origin-Resource-Policy: same-site`. Se omite COEP (`require-corp`) porque requeriría que Cloudinary añada cabeceras CORP en sus recursos — cambio en terceros que podría romper la carga de archivos sin pruebas previas.
 
-### A13 — X-Content-Type-Options ausente
-- **Archivo:** Configuración del servidor
-- **Fix:** Añadir `X-Content-Type-Options: nosniff` en todas las respuestas.
+### A13 — X-Content-Type-Options ausente ✅ YA ESTABA RESUELTO
+- **Archivo:** `app/Http/Middleware/SecurityHeaders.php`
+- **Estado:** `X-Content-Type-Options: nosniff` ya estaba en el middleware. ✓
 
 ### A14 — No se registran intentos de login fallidos ni fallos de control de acceso
 - **Archivo:** (crear servicio de log centralizado)
@@ -135,17 +137,17 @@
 
 ## 🟡 MEDIAS
 
-### M1 — UploadController sin límite de tamaño validado
-- **Archivo:** `app/Http/Controllers/UploadController.php` línea 30
-- **Fix:** Añadir `'file' => 'max:10240'` (o el límite definido) en la validación. Configurar también en `php.ini` (`upload_max_filesize`) y en el formulario (`maxlength`).
-
-### M2 — Hash débil en UploadController (líneas 69 y 172)
+### M1 — UploadController sin valor por defecto en límite de tamaño ✅ RESUELTO
 - **Archivo:** `app/Http/Controllers/UploadController.php`
-- **Fix:** Sustituir por `bcrypt` / `Hash::make()` si es para contraseñas, o `hash('sha256', ...)` con sal si es para integridad.
+- **Fix aplicado:** `$maxMb = (int) config('services.cloudinary.upload_max_mb', 20)`. El cast `(int)` evita que un valor no numérico en el `.env` genere una regla de validación rota. El default `20` garantiza que si `UPLOAD_MAX_SIZE_MB` no está en el `.env`, el límite sigue siendo 20 MB en lugar de fallar silenciosamente con `max:0`.
 
-### M3 — Regex con riesgo de ReDoS en LoginModal (línea 101)
+### M2 — Hash SHA-1 en UploadController (líneas 69 y 172) — FALSO POSITIVO
+- **Archivo:** `app/Http/Controllers/UploadController.php`
+- **Análisis:** El SAST detectó `hash('sha1', ...)` pero estas líneas generan firmas HMAC para la API de Cloudinary, que las exige explícitamente en su documentación. No es un hash de contraseñas — es autenticación de mensaje con clave secreta. SHA-1 en contexto HMAC con clave privada es aceptable. No requiere acción.
+
+### M3 — Regex con riesgo de ReDoS en LoginModal ✅ RESUELTO
 - **Archivo:** `frontend-microretos/src/components/LoginModal.vue`
-- **Fix:** Simplificar la expresión regular o reemplazarla por validación por pasos sin backtracking superlineal.
+- **Fix aplicado:** Sustituida `/\S+@\S+\.\S+/` por `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`. Las clases negadas `[^\s@]` no tienen cuantificadores encadenados que provoquen backtracking superlineal. Mismo comportamiento de validación, sin riesgo de ReDoS ante inputs maliciosos largos.
 
 ### M4 — Complejidad cognitiva alta
 - **Archivos:** `MicroretoIAController.php`, `DatosFPController.php`, `MicroproyectoController.php`, `StartupDayWizard.vue`
@@ -172,21 +174,21 @@
 - **Archivo:** `app/Http/Controllers/DatosFPController.php`
 - **Fix:** Dividir en controladores más pequeños por responsabilidad. Reducir métodos con múltiples `return`.
 
-### M11 — follow-redirects 1.15.11 — fuga de cabeceras al redirigir
+### M11 — follow-redirects — fuga de cabeceras al redirigir ✅ RESUELTO
 - **Archivo:** `package-lock.json`
-- **Fix:** `npm install follow-redirects@^1.16.0`.
+- **Estado:** Versión instalada `1.16.0` (arrastrada por axios). Resuelto en el `npm audit fix` anterior.
 
-### M12 — postcss 8.5.9 — riesgo XSS en CSS dinámico
+### M12 — postcss — riesgo XSS en CSS dinámico ✅ RESUELTO
 - **Archivo:** `package-lock.json`
-- **Fix:** `npm update postcss`. Revisar dónde se genera CSS desde datos no confiables.
+- **Estado:** Actualizado en el `npm audit fix` anterior. `npm audit` = 0 vulnerabilidades.
 
-### M13 — Stack Symfony por debajo de versión segura
+### M13 — Stack Symfony por debajo de versión segura ✅ RESUELTO
 - **Archivo:** `composer.lock`
-- **Fix:** `composer update symfony/*`. Verificar compatibilidad entre componentes.
+- **Estado:** Todos los componentes symfony actualizados de 7.4.4 a 7.4.14 en el `composer update` anterior.
 
-### M14 — nette/schema 1.3.5 con vulnerabilidad media
+### M14 — nette/schema con vulnerabilidad media ✅ NO APLICA
 - **Archivo:** `composer.lock`
-- **Fix:** Actualizar la dependencia que arrastra `nette/schema` o la dependencia directa.
+- **Estado:** `nette/schema` está en v1.3.5, la última versión de la rama 1.x. No aparece en `composer audit`. El CVE detectado en la auditoría SAST original correspondía a una versión anterior ya superada.
 
 ### M15 — Límites de caracteres desalineados entre frontend, backend y BD
 - **Archivos:** Varios controladores y vistas

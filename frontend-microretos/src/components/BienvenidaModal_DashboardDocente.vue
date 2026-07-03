@@ -90,7 +90,7 @@ const emit = defineEmits(['seleccionar'])
 
         </div>
 
-        <button @click="emit('seleccionar', 'crear')"
+        <button @click="emit('seleccionar', 'cerrar')"
                 class="w-full text-center text-[10px] font-bold text-gray-400
                        hover:text-gray-600 transition-colors py-1">
           Saltar

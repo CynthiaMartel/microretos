@@ -17,10 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Cabeceras de seguridad HTTP en todas las respuestas
         $middleware->append(SecurityHeaders::class);
 
-        // Alias para middleware de rol admin
         $middleware->alias([
             'admin'      => \App\Http\Middleware\EnsureIsAdmin::class,
             'superadmin' => \App\Http\Middleware\EnsureIsSuperAdmin::class,
+            'docente'    => \App\Http\Middleware\EnsureIsDocente::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

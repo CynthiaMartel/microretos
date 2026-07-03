@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth';
 import LoginModal from '../components/LoginModal.vue';
 import InsertModifyEmpresa from '../components/InsertModifyEmpresa.vue';
 import { useUIState } from '../composables/useUIState.js';
+import TourPromptModal from '../components/TourPromptModal.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -484,7 +485,7 @@ onMounted(async () => {
     }
     await nextTick();
     pasoGuia.value = 1;
-    modoGuia.value = true;
+    showTourPrompt.value = true;
   }
 });
 
@@ -747,6 +748,9 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 // ─── TOUR GUIADO (tres conjuntos independientes, uno por paso) ────────────
 const { tourActivo } = useUIState()
 const modoGuia = ref(false)
+const showTourPrompt = ref(false)
+function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true }
+function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const pasoGuia = ref(1)
 
 // Refs paso 1
@@ -2341,6 +2345,15 @@ async function guardarEstadoGen(nuevoEstado) {
     @empresa-creada="onEmpresaCreada"
     @empresa-actualizada="onEmpresaActualizada"
     @necesita-login="onNecesitaLoginEmpresa"
+  />
+
+  <!-- Modal: ¿Activar guía-tour? -->
+  <TourPromptModal
+    :show="showTourPrompt"
+    titulo="¿Quieres activar la guía-tour?"
+    descripcion="Explora el generador de microretos con una guía paso a paso."
+    @activar="activarTourDesdeModal"
+    @omitir="omitirTourDesdeModal"
   />
 </template>
 

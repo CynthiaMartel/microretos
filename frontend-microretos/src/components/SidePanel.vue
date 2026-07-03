@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LoginModal from './LoginModal.vue'
-import { useAuthStore, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_ADMIN } from '../stores/auth'
+import { useAuthStore, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth'
 import { useUIState } from '../composables/useUIState.js'
 import { useCredits } from '../composables/useCredits.js'
 import { useLoginModal } from '../composables/useLoginModal.js'
@@ -53,9 +53,9 @@ const onLoginSuccess = (data) => {
 }
 
 function rolHome(role) {
-  if (role === ROLE_DOCENTE || role === ROLE_ADMIN) return '/inicio-docente'
+  if (role === ROLE_DOCENTE) return '/inicio-docente'
   if (role === ROLE_EMPRESA) return '/microretos'
-  return '/admin/usuarios'
+  return '/microretos'
 }
 
 </script>
@@ -64,181 +64,214 @@ function rolHome(role) {
   <!-- Panel lateral (también oculto durante el tour) -->
   <aside
       v-if="!tourActivo"
-      class="fixed top-12 left-0 h-[calc(100vh-5rem)] w-64 z-40 hidden lg:flex flex-col
+      class="fixed top-12 left-0 h-[calc(100vh-5rem)] w-64 max-w-[85vw] z-40 flex flex-col
              bg-[#1F2937] border-r border-[#333333]
              shadow-[6px_0_32px_rgba(0,0,0,0.25)]"
     >
       <!-- ── Navegación ── -->
       <nav class="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overscroll-contain">
 
-        <!-- ═══ Panel docente (solo ROLE_DOCENTE) ═══ -->
-        <div v-if="authStore.isDocente || authStore.isAdmin" class="group/tip relative">
-          <button
-            @click="irA('/inicio-docente')"
-            title="Panel de inicio para docentes"
-            class="nav-item w-full text-left"
-            :class="isActive('/inicio-docente') ? 'nav-item--active' : 'nav-item--idle'"
-          >
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/>
-            </svg>
-            <span>Panel docente</span>
-          </button>
-          <div class="sp-tooltip">Tu panel de inicio con resumen de actividad<div class="sp-tooltip-arrow"/></div>
+        <!-- ═══ ALUMNADO ═══ -->
+        <div class="px-3 mb-1.5 mt-0.5 flex items-center gap-1.5
+                    text-[9px] font-black uppercase tracking-[0.2em] text-white/40 select-none">
+          <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
+                       bg-white/10 text-white/50 text-[8px] font-black shrink-0">Al</span>
+          Alumnado
         </div>
 
-        <!-- ═══ Mi usuario ═══ -->
-        <div v-if="authStore.isAuthenticated" class="group/tip relative">
-          <button
-            @click="irA('/mi-usuario')"
-            title="Ver y editar mi perfil"
-            class="nav-item w-full text-left"
-            :class="isActive('/mi-usuario') ? 'nav-item--active' : 'nav-item--idle'"
-          >
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="8" r="4"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-            </svg>
-            <span>Mi usuario</span>
-          </button>
-          <div class="sp-tooltip">Edita tu nombre y contraseña<div class="sp-tooltip-arrow"/></div>
+        <div class="space-y-0.5">
+
+          <!-- Unirse a equipo -->
+          <div class="group/tip relative">
+            <button
+              @click="router.push('/unirse')"
+              title="Entra al workspace de tu proyecto con el código del docente"
+              class="nav-item w-full text-left"
+              :class="isActive('/unirse') ? 'nav-item--active' : 'nav-item--idle'"
+            >
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              <span>Unirse a equipo</span>
+            </button>
+          </div>
+
+          <!-- Workspace equipos (docentes) -->
+          <div v-if="authStore.isDocente" class="group/tip relative">
+            <button
+              @click="router.push('/unirse')"
+              title="Pantalla de acceso para proyectar QRs y códigos al alumnado"
+              class="nav-item w-full text-left"
+              :class="isActive('/proyecto/equipo') ? 'nav-item--active' : 'nav-item--idle'"
+            >
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+              <span>Workspace equipos</span>
+            </button>
+          </div>
+
         </div>
 
-        <!-- ═══ GRUPO: MICRORETOS + TALLER DE IDEAS ═══ -->
-        <div
-          v-if="authStore.canAccess('microretos') || authStore.canAccess('biblioteca') || authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')"
-          class="rounded-2xl border border-[#00A859]/20 bg-[#00A859]/5 px-2 pt-2 pb-2 space-y-1"
-        >
+        <div class="border-t border-white/10 mx-1 my-2" />
 
-          <!-- FASE 1: MICRORETOS -->
-          <div
-            v-if="authStore.canAccess('microretos') || authStore.canAccess('biblioteca')"
-            class="group/tip relative"
-          >
-            <div class="w-full flex items-center gap-2 px-3 mb-1
-                     text-[9px] font-black uppercase tracking-[0.2em]
-                     text-[#00A859]/70 select-none">
-              <span class="flex-1 text-left flex items-center gap-1.5">
-                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                             bg-[#00A859]/20 text-[#00A859] text-[8px] font-black shrink-0">1</span>
-                Retos
-              </span>
+        <!-- ═══ HERRAMIENTAS ═══ -->
+        <template v-if="authStore.isDocente || authStore.canAccess('microretos') || authStore.canAccess('z') || authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
+
+          <div class="px-3 mb-1.5 flex items-center gap-1.5
+                      text-[9px] font-black uppercase tracking-[0.2em] text-white/40 select-none">
+            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
+                         bg-white/10 text-white/50 text-[8px] font-black shrink-0">H</span>
+            Herramientas
+          </div>
+
+          <div class="rounded-2xl border border-[#00A859]/20 bg-[#00A859]/5 px-2 pt-2 pb-2 space-y-1">
+
+            <!-- Panel docente -->
+            <div v-if="authStore.isDocente" class="group/tip relative">
+              <button
+                @click="irA('/inicio-docente')"
+                title="Panel de inicio para docentes"
+                class="nav-item w-full text-left"
+                :class="isActive('/inicio-docente') ? 'nav-item--active' : 'nav-item--idle'"
+              >
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <span>Panel docente</span>
+              </button>
             </div>
-            <div class="sp-tooltip">Fase 1 — Crea retos con IA y compártelos con el alumnado<div class="sp-tooltip-arrow"/></div>
-          </div>
 
-          <div class="space-y-0.5">
+            <!-- Separador Panel / Retos -->
+            <div
+              v-if="authStore.isDocente && (authStore.canAccess('microretos') || authStore.canAccess('biblioteca'))"
+              class="border-t border-[#00A859]/15 mx-1 my-1"
+            />
 
-              <!-- Generador de microretos -->
-              <div v-if="authStore.canAccess('microretos')" class="group/tip relative">
-                <button
-                  @click="irA('/microretos')"
-                  title="Genera retos con IA a partir de una empresa y los criterios del ciclo"
-                  class="nav-item w-full text-left"
-                  :class="isActive('/microretos') ? 'nav-item--active' : 'nav-item--idle'"
-                >
-                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                  <span>Generador</span>
-                </button>
-                <div class="sp-tooltip">Genera retos con IA a partir de una empresa y los criterios del ciclo<div class="sp-tooltip-arrow"/></div>
+            <!-- RETOS -->
+            <div v-if="authStore.canAccess('microretos') || authStore.canAccess('biblioteca')">
+              <div class="w-full flex items-center gap-2 px-3 mb-1
+                          text-[9px] font-black uppercase tracking-[0.2em]
+                          text-[#00A859]/70 select-none">
+                <span class="flex-1 text-left flex items-center gap-1.5">
+                  <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
+                               bg-[#00A859]/20 text-[#00A859] text-[8px] font-black shrink-0">1</span>
+                  Retos
+                </span>
               </div>
 
-              <!-- Biblioteca de microretos -->
-              <div v-if="authStore.canAccess('biblioteca')" class="group/tip relative">
-                <button
-                  @click="irA('/biblioteca')"
-                  title="Consulta todos los retos guardados y comparte el QR con el alumnado"
-                  class="nav-item w-full text-left"
-                  :class="isActive('/biblioteca') ? 'nav-item--active' : 'nav-item--idle'"
-                >
-                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
-                    <line x1="9" y1="7" x2="15" y2="7"/>
-                    <line x1="9" y1="11" x2="15" y2="11"/>
-                  </svg>
-                  <span>Biblioteca</span>
-                </button>
-                <div class="sp-tooltip">Consulta todos los retos guardados y comparte el QR con el alumnado<div class="sp-tooltip-arrow"/></div>
+              <div class="space-y-0.5">
+
+                <!-- Generador -->
+                <div v-if="authStore.canAccess('microretos')" class="group/tip relative">
+                  <button
+                    @click="irA('/microretos')"
+                    title="Genera retos con IA a partir de una empresa y los criterios del ciclo"
+                    class="nav-item w-full text-left"
+                    :class="isActive('/microretos') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span>Generador</span>
+                  </button>
+                </div>
+
+                <!-- Biblioteca Retos -->
+                <div v-if="authStore.canAccess('biblioteca')" class="group/tip relative">
+                  <button
+                    @click="irA('/biblioteca')"
+                    title="Consulta todos los retos guardados y comparte el QR con el alumnado"
+                    class="nav-item w-full text-left"
+                    :class="isActive('/biblioteca') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
+                      <line x1="9" y1="7" x2="15" y2="7"/>
+                      <line x1="9" y1="11" x2="15" y2="11"/>
+                    </svg>
+                    <span>Biblioteca Retos</span>
+                  </button>
+                </div>
+
               </div>
-
-          </div>
-
-          <!-- Separador FASE 2 solo si hay items de ambas fases -->
-          <div
-            v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && (authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day'))"
-            class="border-t border-[#00A859]/15 mx-1 my-1"
-          />
-
-          <!-- FASE 2: TALLER DE IDEAS -->
-          <div
-            v-if="authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')"
-            class="group/tip relative"
-          >
-            <div class="w-full flex items-center gap-2 px-3 mb-1
-                     text-[9px] font-black uppercase tracking-[0.2em]
-                     text-[#00A859]/70 select-none">
-              <span class="flex-1 text-left flex items-center gap-1.5">
-                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                             bg-[#00A859]/20 text-[#00A859] text-[8px] font-black shrink-0">2</span>
-                Taller de Ideas
-              </span>
             </div>
-            <div class="sp-tooltip">Fase 2 — Registra sesiones, crea proyectos y gestiona el Taller de Ideas<div class="sp-tooltip-arrow"/></div>
-          </div>
 
-          <div class="space-y-0.5">
+            <!-- Separador Retos / Taller de Ideas -->
+            <div
+              v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && (authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day'))"
+              class="border-t border-[#00A859]/15 mx-1 my-1"
+            />
 
-              <!-- Dashboard docentes -->
-              <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
-                <button
-                  @click="irA('/dashboard')"
-                  title="Registra sesiones de trabajo con retos"
-                  class="nav-item w-full text-left"
-                  :class="isActive('/dashboard') ? 'nav-item--active' : 'nav-item--idle'"
-                >
-                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                    <rect x="9" y="3" width="6" height="4" rx="1"/>
-                    <path d="M9 12l2 2 4-4"/>
-                  </svg>
-                  <span>Sesiones</span>
-                </button>
-                <div class="sp-tooltip">Registra sesiones de trabajo con retos<div class="sp-tooltip-arrow"/></div>
+            <!-- TALLER DE IDEAS -->
+            <div v-if="authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
+              <div class="w-full flex items-center gap-2 px-3 mb-1
+                          text-[9px] font-black uppercase tracking-[0.2em]
+                          text-[#00A859]/70 select-none">
+                <span class="flex-1 text-left flex items-center gap-1.5">
+                  <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
+                               bg-[#00A859]/20 text-[#00A859] text-[8px] font-black shrink-0">2</span>
+                  Taller de Ideas
+                </span>
               </div>
 
-              <!-- Microproyectos -->
-              <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
-                <button
-                  @click="irA('/startup-day')"
-                  title="Crea y gestiona proyectos para el Taller de Ideas"
-                  class="nav-item w-full text-left"
-                  :class="$route.path.startsWith('/startup-day') ? 'nav-item--active' : 'nav-item--idle'"
-                >
-                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                    <path d="M2 17l10 5 10-5"/>
-                    <path d="M2 12l10 5 10-5"/>
-                  </svg>
-                  <span>Proyectos</span>
-                </button>
-                <div class="sp-tooltip">Crea y gestiona proyectos para el Taller de Ideas<div class="sp-tooltip-arrow"/></div>
+              <div class="space-y-0.5">
+
+                <!-- Sesiones de Trabajo -->
+                <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
+                  <button
+                    @click="irA('/dashboard/sesiones')"
+                    title="Registra sesiones de trabajo con retos"
+                    class="nav-item w-full text-left"
+                    :class="isActive('/dashboard/sesiones') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                      <rect x="9" y="3" width="6" height="4" rx="1"/>
+                      <path d="M9 12l2 2 4-4"/>
+                    </svg>
+                    <span>Sesiones de Trabajo</span>
+                  </button>
+                </div>
+
+                <!-- Biblioteca de Proyectos -->
+                <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
+                  <button
+                    @click="irA('/startup-day')"
+                    title="Crea y gestiona proyectos para el Taller de Ideas"
+                    class="nav-item w-full text-left"
+                    :class="$route.path.startsWith('/startup-day') && !isActive('/startup-day/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5"/>
+                      <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    <span>Biblioteca Proyectos</span>
+                  </button>
+                </div>
+
               </div>
+            </div>
 
           </div>
 
-        </div>
+        </template>
 
         <!-- ═══════════════ EMPRESAS ════════════════════ -->
         <template v-if="authStore.canAccess('empresas')">
@@ -357,7 +390,6 @@ function rolHome(role) {
 
           </div>
         </template>
-
 
       </nav>
 

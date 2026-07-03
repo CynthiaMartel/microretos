@@ -14,6 +14,8 @@ class Sesion extends Model
         'user_id',
         'microreto_id',
         'microreto_titulo',
+        'proyecto_titulo',
+        'proyecto_uuid',
         'fecha',
         'centro_educativo',
         'ciclo_formativo',
@@ -21,12 +23,17 @@ class Sesion extends Model
         'grupo',
         'num_alumnos',
         'notas',
+        'num_equipos',
+        'alumnados',
+        'codigo_clase',
     ];
 
     protected $casts = [
-        'fecha'         => 'date:Y-m-d',
-        'num_alumnos'   => 'integer',
-        'microreto_id'  => 'integer',
+        'fecha'        => 'date:Y-m-d',
+        'num_alumnos'  => 'integer',
+        'num_equipos'  => 'integer',
+        'microreto_id' => 'integer',
+        'alumnados'    => 'array',
     ];
 
     public function docente()

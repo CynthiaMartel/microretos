@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../api.js';
 import { useUIState } from '../composables/useUIState.js';
+import TourPromptModal from '../components/TourPromptModal.vue';
+import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
 
 const route  = useRoute();
 const router = useRouter();
@@ -35,22 +37,42 @@ function abrirRecurso(item) {
 
 // Estado del proyecto con etiqueta y color para el desplegable
 const estadoOpciones = {
-  borrador:  { label: 'Borrador',  dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50' },
-  archivado: { label: 'Archivar',  dot: 'bg-gray-400',  text: 'text-gray-500',  bg: 'bg-gray-50' },
-  publicado: { label: 'Propuesta', dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
+  en_edicion: { label: 'En edición', dot: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50' },
+  archivado:  { label: 'Archivar',   dot: 'bg-gray-400',   text: 'text-gray-500',   bg: 'bg-gray-50' },
+  propuesta:  { label: 'Propuesta',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
+  validado:   { label: 'Validado',   dot: 'bg-[#00A859]',  text: 'text-[#00A859]',  bg: 'bg-[#00A859]/10' },
 };
 
 // Label dinámico del botón de estado — distingue si ya se envió por mail o no
 const labelEstadoBtn = computed(() => {
-  if (form.value.estado !== 'publicado') return estadoOpciones[form.value.estado]?.label || 'Borrador';
-  return form.value.enviado_a_empresa_mail
-    ? 'Propuesta · SÍ enviada por mail'
-    : 'Propuesta · NO enviada por mail';
+  const e = form.value.estado;
+  if (e === 'propuesta') {
+    return form.value.enviado_a_empresa_mail
+      ? 'Propuesta · SÍ enviada por mail'
+      : 'Propuesta · NO enviada por mail';
+  }
+  return estadoOpciones[e]?.label || 'En edición';
 });
 
 const modalBorradorAviso    = ref(false);
 const modalPropuestaAviso   = ref(false);
 const modalConfirmEnvio     = ref(false);
+const modalValidarDocente   = ref(false);
+const validandoDocente      = ref(false);
+
+async function validarComoDocente() {
+  if (validandoDocente.value || !uuid.value) return;
+  validandoDocente.value = true;
+  try {
+    await api.post(`/startup/proyectos/${uuid.value}/validar-docente`, { decision: 'validar' });
+    form.value.docente_validado = true;
+    form.value.estado = 'validado';
+    modalValidarDocente.value = false;
+    modalPropuestaAviso.value = false;
+  } catch { /* no crítico */ } finally {
+    validandoDocente.value = false;
+  }
+}
 const urlCopiadaModal       = ref(false);
 const infoEmpresaAbierta    = ref(false);
 const tokenEmpresa          = ref('');
@@ -162,7 +184,7 @@ const form = ref({
   sesion_id: route.query.sesion_id ? Number(route.query.sesion_id) : null,
   datos_empresa: { nombre: '', cif: '', sector: '', actividad: '', persona_contacto: '', email: '', telefono: '', web: '', descripcion: '' },
   datos_centro: { nombre: '', municipio: '', docente_nombre: '', docente_email: '' },
-  equipo: { alumnos: [], docente_responsable: '' },
+  equipo: { docente_responsable: '' },
   modulos_seleccionados: [],
   ra_ce: '',
   fundamentacion: { contexto: '', justificacion: '', innovacion: '' },
@@ -171,7 +193,7 @@ const form = ref({
   resumen: { texto: '' },
   objetivos: { lista: [] },
   kpis: { lista: [] },
-  estado: 'borrador',
+  estado: 'en_edicion',
   enviado_a_empresa_mail: false,
 });
 
@@ -259,15 +281,6 @@ async function removeVideo(i) {
   }
 }
 
-// ── Helpers equipo ────────────────────────────────────────────────────────────
-const nuevoAlumno = ref({ nombre: '', rol: '' });
-function addAlumno() {
-  if (!nuevoAlumno.value.nombre.trim()) return;
-  form.value.equipo.alumnos.push({ ...nuevoAlumno.value });
-  nuevoAlumno.value = { nombre: '', rol: '' };
-}
-function removeAlumno(i) { form.value.equipo.alumnos.splice(i, 1); }
-
 // ── Helpers fases ────────────────────────────────────────────────────────────
 const nuevaFase = ref({ nombre: '', descripcion: '', duracion: '' });
 function addFase() {
@@ -285,6 +298,29 @@ function removeObjetivo(i) { form.value.objetivos.lista.splice(i, 1); }
 const nuevoKpi = ref('');
 function addKpi() { if (!nuevoKpi.value.trim()) return; form.value.kpis.lista.push(nuevoKpi.value.trim()); nuevoKpi.value = ''; }
 function removeKpi(i) { form.value.kpis.lista.splice(i, 1); }
+
+const sugirendoKpis = ref(false);
+const errorKpis = ref('');
+async function sugerirKpis() {
+  sugirendoKpis.value = true; errorKpis.value = '';
+  try {
+    const res = await api.post('/startup/sugerir-kpis', {
+      titulo:        form.value.titulo        || undefined,
+      pregunta_reto: form.value.diseno_reto?.pregunta_reto || undefined,
+      descripcion:   form.value.diseno_reto?.descripcion   || undefined,
+      entregables:   form.value.diseno_reto?.entregables   || undefined,
+      objetivos:     form.value.objetivos?.lista?.length ? form.value.objetivos.lista : undefined,
+      ra_ce:         form.value.ra_ce         || undefined,
+    });
+    const sugeridos = res.data.kpis ?? [];
+    const existentes = new Set(form.value.kpis.lista);
+    sugeridos.forEach(k => { if (!existentes.has(k)) form.value.kpis.lista.push(k); });
+  } catch {
+    errorKpis.value = 'Error al contactar con la IA. Inténtalo de nuevo.';
+  } finally {
+    sugirendoKpis.value = false;
+  }
+}
 
 // ── Módulos ───────────────────────────────────────────────────────────────────
 function toggleModulo(m) {
@@ -606,12 +642,12 @@ async function cargarProyecto() {
     paso.value = p.paso_actual || 1;
     pasoMaxAlcanzado.value = p.paso_actual || 1;
     proyectoValidado.value = !!p.empresa_validado;
-    if (p.estado === 'borrador') modalBorradorAviso.value = true;
+    if (p.estado === 'en_edicion') modalBorradorAviso.value = true;
     Object.assign(form.value, {
       titulo: p.titulo || '', empresa_id: p.empresa_id || '',
       centro_id: p.centro_id || '', familia_id: p.familia_id || '',
       ciclo_id: p.ciclo_id || '', curso: p.curso || '',
-      microreto_id: p.microreto_id || '', sesion_id: p.sesion_id || null, estado: p.estado || 'borrador',
+      microreto_id: p.microreto_id || '', sesion_id: p.sesion_id || null, estado: p.estado || 'en_edicion',
       enviado_a_empresa_mail: !!p.enviado_a_empresa_mail,
       ...(p.datos_empresa    && { datos_empresa: p.datos_empresa }),
       ...(p.datos_centro     && { datos_centro: p.datos_centro }),
@@ -663,7 +699,7 @@ onMounted(async () => {
     }
   }
   await nextTick();
-  if (!modalBorradorAviso.value) modoGuia.value = true;
+  if (!modalBorradorAviso.value) showTourPrompt.value = true;
 });
 
 // ── Guardar ───────────────────────────────────────────────────────────────────
@@ -701,7 +737,7 @@ function mostrarModalPublicar() {
 
 async function confirmarGuardarBorrador() {
   modalPublicarVisible.value = false;
-  form.value.estado = 'borrador';
+  form.value.estado = 'en_edicion';
   await guardar(paso.value);
 }
 
@@ -713,19 +749,19 @@ async function archivarProyecto() {
 
 async function aprobarProyecto() {
   dropdownEstadoAbierto.value = false;
-  form.value.estado = 'publicado';
+  form.value.estado = 'propuesta';
   await guardar(paso.value);
   if (!errorMsg.value) publicadoExito.value = true;
 }
 
 async function seleccionarEstado(estado) {
   dropdownEstadoAbierto.value = false;
-  if (estado === 'borrador') {
-    form.value.estado = 'borrador';
+  if (estado === 'en_edicion') {
+    form.value.estado = 'en_edicion';
     await guardar(paso.value);
   } else if (estado === 'archivado') {
     await archivarProyecto();
-  } else if (estado === 'publicado') {
+  } else if (estado === 'propuesta') {
     await aprobarProyecto();
   }
 }
@@ -741,6 +777,9 @@ const pasos = [
 // ── Tour guiado ───────────────────────────────────────────────────────────────
 const { tourActivo } = useUIState();
 const modoGuia = ref(false);
+const showTourPrompt = ref(false);
+function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true }
+function omitirTourDesdeModal()  { showTourPrompt.value = false }
 
 const guiaWizard = [
   {
@@ -1235,27 +1274,18 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
             </div>
 
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Equipo de alumnado</p>
-              <div class="flex gap-2">
-                <input v-model="nuevoAlumno.nombre" type="text" placeholder="Nombre o identificador del alumno/a"
-                       class="field-input flex-1" @keyup.enter="addAlumno" />
-                <input v-model="nuevoAlumno.rol" type="text" placeholder="Rol / función"
-                       class="field-input !w-36" @keyup.enter="addAlumno" />
-                <button @click="addAlumno"
-                        class="shrink-0 px-4 py-2.5 bg-[#00A859] text-white rounded-2xl
-                               text-sm font-black hover:bg-[#00A859]/90 transition-all active:scale-95">+</button>
-              </div>
-              <div v-if="form.equipo.alumnos.length" class="flex flex-wrap gap-2">
-                <div v-for="(a, i) in form.equipo.alumnos" :key="i"
-                     class="flex items-center gap-2 bg-gray-50 border border-gray-200
-                            px-3 py-1.5 rounded-full text-sm">
-                  <span class="text-[#1F2937] font-semibold">{{ a.nombre }}</span>
-                  <span v-if="a.rol" class="text-gray-400 text-xs">· {{ a.rol }}</span>
-                  <button @click="removeAlumno(i)" class="text-gray-400 hover:text-red-500 ml-1 font-bold">×</button>
-                </div>
-              </div>
-              <p v-else class="text-xs text-gray-400 italic">Todavía no hay alumnado en el equipo</p>
+            <div class="bg-[#F8FAFC] rounded-3xl border border-blue-100/60 px-5 py-4 flex items-start gap-3">
+              <svg class="w-4 h-4 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <p class="text-xs text-gray-500 leading-relaxed">
+                El número de equipos y el alumnado se configura en el
+                <strong class="text-[#1F2937]">registro de sesión</strong>
+                del dashboard. Desde
+                <strong class="text-[#1F2937]">Sesiones registradas</strong>
+                podrás generar el código de acceso una vez el proyecto esté publicado.
+              </p>
             </div>
           </div>
 
@@ -1736,7 +1766,22 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-3">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Indicadores de éxito (KPIs)</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Indicadores de éxito (KPIs)</p>
+                <button @click="sugerirKpis" :disabled="sugirendoKpis"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+                               bg-violet-50 border border-violet-200 text-violet-700
+                               text-[10px] font-black uppercase tracking-wider
+                               hover:bg-violet-100 transition-all active:scale-95
+                               disabled:opacity-60 disabled:cursor-not-allowed">
+                  <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugirendoKpis }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M17.657 18.364l-.707-.707M12 20v1M6.343 17.657l-.707.707M4 12H3M6.343 6.343l-.707-.707"/>
+                  </svg>
+                  {{ sugirendoKpis ? 'Generando…' : 'Sugerir con IA' }}
+                </button>
+              </div>
+              <p v-if="errorKpis" class="text-xs text-red-500">{{ errorKpis }}</p>
               <div class="flex gap-2">
                 <input v-model="nuevoKpi" type="text" placeholder="Añadir KPI o indicador…"
                        class="field-input flex-1" @keyup.enter="addKpi" />
@@ -1752,7 +1797,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   <button @click="removeKpi(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
                 </li>
               </ul>
-              <p v-else class="text-xs text-gray-400 italic">Los KPIs son opcionales pero recomendados para la validación empresa</p>
+              <p v-else class="text-xs text-gray-400 italic">Los KPIs son opcionales pero recomendados para la validación empresa. Usa la IA para generar sugerencias.</p>
             </div>
           </div>
 
@@ -1823,8 +1868,8 @@ onUnmounted(() => { tourActivo.value = false; });
                 <p class="font-bold text-[#1F2937]">{{ form.datos_empresa.nombre || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Equipo</p>
-                <p class="font-bold text-[#1F2937]">{{ form.equipo.alumnos.length }} alumno/a(s)</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Docente</p>
+                <p class="font-bold text-[#1F2937]">{{ form.equipo.docente_responsable || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
                 <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Módulos</p>
@@ -1982,9 +2027,9 @@ onUnmounted(() => { tourActivo.value = false; });
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               <p class="text-sm text-[#1F2937] leading-relaxed">
-                El proyecto se guarda como <strong>borrador</strong> por defecto. Usa el desplegable <strong>Estado del proyecto</strong> para cambiar el estado.
-                Selecciona <strong>Propuesta</strong> para generar el enlace único de validación y enviárselo a la empresa.
-                Una vez la empresa valide el enlace, el proyecto quedará marcado como <strong>Validado</strong>.
+                El proyecto se guarda como <strong>En edición</strong> por defecto. Usa el desplegable <strong>Estado del proyecto</strong> para cambiar el estado.
+                Selecciona <strong>Propuesta</strong> para generar el enlace de validación empresa o para validar directamente como docente.
+                El proyecto quedará <strong>Validado</strong> cuando lo valide la empresa, el docente, o ambos.
               </p>
             </div>
           </div>
@@ -2002,9 +2047,9 @@ onUnmounted(() => { tourActivo.value = false; });
                 >
                   <!-- Dot + label del estado actual -->
                   <span :class="['w-2 h-2 rounded-full shrink-0 transition-colors',
-                    form.estado === 'publicado' && form.enviado_a_empresa_mail ? 'bg-[#00A859]'
+                    form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-[#00A859]'
                     : estadoOpciones[form.estado]?.dot || 'bg-amber-400']" />
-                  <span :class="form.estado === 'publicado' && form.enviado_a_empresa_mail
+                  <span :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail
                     ? 'text-[#00A859]' : (estadoOpciones[form.estado]?.text || 'text-amber-700')">
                     {{ labelEstadoBtn }}
                   </span>
@@ -2022,15 +2067,15 @@ onUnmounted(() => { tourActivo.value = false; });
                        class="absolute bottom-full right-0 mb-2 bg-white border border-gray-100
                               rounded-2xl shadow-xl p-2 min-w-[190px] z-20">
 
-                    <!-- Borrador -->
-                    <button @click="seleccionarEstado('borrador')"
+                    <!-- En edición -->
+                    <button @click="seleccionarEstado('en_edicion')"
                             :class="['w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-colors',
-                                     form.estado === 'borrador'
+                                     form.estado === 'en_edicion'
                                        ? 'bg-amber-50 text-amber-700'
                                        : 'text-amber-700 hover:bg-amber-50']">
                       <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                      Borrador
-                      <svg v-if="form.estado === 'borrador'" class="w-3.5 h-3.5 ml-auto text-amber-500"
+                      En edición
+                      <svg v-if="form.estado === 'en_edicion'" class="w-3.5 h-3.5 ml-auto text-amber-500"
                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                       </svg>
@@ -2054,23 +2099,23 @@ onUnmounted(() => { tourActivo.value = false; });
 
                     <!-- Propuesta + sub-estado + (i) -->
                     <div class="flex items-center gap-1 px-1">
-                      <button @click="seleccionarEstado('publicado')"
+                      <button @click="seleccionarEstado('propuesta')"
                               :class="['flex-1 flex flex-col gap-0.5 px-2 py-2.5 rounded-xl text-xs font-bold text-left transition-colors',
-                                       form.estado === 'publicado'
+                                       form.estado === 'propuesta'
                                          ? (form.enviado_a_empresa_mail ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700')
                                          : 'text-violet-700 hover:bg-violet-50']">
                         <span class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full shrink-0"
-                                :class="form.estado === 'publicado' && form.enviado_a_empresa_mail ? 'bg-[#00A859]' : 'bg-violet-400'" />
+                                :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-[#00A859]' : 'bg-violet-400'" />
                           Propuesta
-                          <svg v-if="form.estado === 'publicado'" class="w-3.5 h-3.5 ml-auto"
+                          <svg v-if="form.estado === 'propuesta'" class="w-3.5 h-3.5 ml-auto"
                                :class="form.enviado_a_empresa_mail ? 'text-[#00A859]' : 'text-violet-400'"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                           </svg>
                         </span>
                         <!-- Sub-estado visible solo cuando está en propuesta -->
-                        <span v-if="form.estado === 'publicado'"
+                        <span v-if="form.estado === 'propuesta'"
                               class="text-[9px] font-black uppercase tracking-wider pl-4"
                               :class="form.enviado_a_empresa_mail ? 'text-[#00A859]' : 'text-violet-500'">
                           {{ form.enviado_a_empresa_mail ? '✅ SÍ enviada por mail' : '✉ NO enviada por mail' }}
@@ -2087,7 +2132,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <div class="absolute hidden group-hover/info:block bottom-full right-0 mb-2
                                     bg-[#1a2332] text-white text-[11px] rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
-                          Marca el proyecto como <strong class="text-white">Propuesta</strong> para generar el enlace de validación y enviárselo a la empresa colaboradora. Cuando la empresa acceda al enlace y valide el proyecto, pasará automáticamente a <strong class="text-[#00A859]">Validado</strong>.
+                          Marca el proyecto como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarlo directamente como docente. El proyecto pasará a <strong class="text-[#00A859]">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
                           <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-[#1a2332] rotate-45" />
                         </div>
                       </div>
@@ -2131,6 +2176,14 @@ onUnmounted(() => { tourActivo.value = false; });
     </div>
   </div>
 
+  <!-- ══ MODAL VALIDAR DOCENTE ════════════════════════════════════════════════ -->
+  <ValidarDocenteModal
+    :visible="modalValidarDocente"
+    :loading="validandoDocente"
+    @confirm="validarComoDocente"
+    @cancel="modalValidarDocente = false"
+  />
+
   <!-- ══ MODAL AVISO BORRADOR ════════════════════════════════════════════════ -->
   <Transition
     enter-active-class="transition-all duration-200 ease-out"
@@ -2155,13 +2208,13 @@ onUnmounted(() => { tourActivo.value = false; });
         </div>
 
         <h3 class="text-xl font-black text-[#121212] text-center mb-4">
-          Proyecto en borrador
+          Proyecto en edición
         </h3>
 
         <p class="text-sm text-gray-600 leading-relaxed text-center">
-          Este proyecto está marcado como <strong>borrador</strong> porque se guardó así para seguir editando.
-          Si necesitas enviarlo a la empresa, termina de editar y en el desplegable <strong>Estado del proyecto</strong>
-          selecciona <strong>Propuesta</strong> para generar el enlace de validación.
+          Este proyecto está <strong>En edición</strong> — aún no se ha enviado a validar.
+          Cuando esté listo, usa el desplegable <strong>Estado del proyecto</strong> y selecciona
+          <strong>Propuesta</strong> para enviarlo a la empresa o validarlo como docente.
         </p>
 
         <button
@@ -2204,52 +2257,24 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- Badge estado -->
         <div class="flex justify-center mb-4">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-                       bg-blue-50 border border-blue-200 text-blue-700
+                       bg-violet-50 border border-violet-200 text-violet-700
                        text-[10px] font-black uppercase tracking-widest">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            Propuesta · Pendiente de enviar a empresa
+            <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+            Propuesta · Pendiente de validar
           </span>
         </div>
 
         <h3 class="text-xl font-black text-[#121212] text-center mb-2">
-          Envía el enlace de validación a la empresa
+          Proyecto en propuesta
         </h3>
-        <p class="text-sm text-gray-500 text-center mb-3 leading-relaxed">
-          El proyecto está marcado como <strong class="text-[#1F2937]">Propuesta</strong>.
-          Ahora debes enviar el enlace de validación a la persona de contacto de la empresa colaboradora.
+        <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
+          Elige cómo validar el proyecto — puedes usar una vía o las dos.
         </p>
 
-        <!-- Empresa destinataria -->
-        <div v-if="form.datos_empresa?.nombre"
-             class="flex items-center gap-3 mb-5 px-4 py-3 rounded-2xl bg-blue-50 border border-blue-200">
-          <div class="w-8 h-8 rounded-full bg-blue-100 border border-blue-200
-                      flex items-center justify-center shrink-0 text-blue-600 font-black text-sm">
-            {{ form.datos_empresa.nombre.charAt(0).toUpperCase() }}
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-black text-blue-800">{{ form.datos_empresa.nombre }}</p>
-            <p v-if="form.datos_empresa?.persona_contacto || form.datos_empresa?.email"
-               class="text-[10px] text-blue-500 truncate">
-              {{ form.datos_empresa.persona_contacto || '' }}
-              <span v-if="form.datos_empresa.persona_contacto && form.datos_empresa.email"> · </span>
-              {{ form.datos_empresa.email || '' }}
-            </p>
-          </div>
-          <!-- Indicador ya enviado -->
-          <span v-if="form.enviado_a_empresa_mail"
-                class="shrink-0 text-[9px] font-black uppercase tracking-wider text-[#00A859]
-                       flex items-center gap-1">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-            </svg>
-            Enviado
-          </span>
-        </div>
-
-        <!-- Paso 1: Enviar enlace -->
+        <!-- Vía A: Validación empresa -->
         <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-3">
           <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-            1 · Copia y envía el enlace de validación
+            Vía A · Validación empresa
           </p>
           <div class="flex items-center gap-2 mb-3">
             <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-white border border-gray-200
@@ -2345,36 +2370,31 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
         </div>
 
-        <!-- Paso 2: Esperar validación -->
-        <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6">
-          <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-            2 · ¿Qué ocurre a continuación?
+        <!-- Vía B: Validación docente -->
+        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
+          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">
+            Vía B · Validación docente
           </p>
-          <div class="space-y-2">
-            <div class="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-500 text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">1</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                La persona de contacto de <strong class="text-[#1F2937]">{{ form.datos_empresa?.nombre || 'la empresa' }}</strong>
-                recibe el enlace y accede al formulario de validación del proyecto.
-              </p>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-500 text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">2</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                La empresa responde las preguntas de valoración y toma una decisión:
-                <strong class="text-[#00A859]">Validar</strong> o <strong class="text-red-500">No validar aún</strong>.
-              </p>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-[#00A859]/10 text-[#00A859] text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">✓</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                Si valida, el proyecto pasa automáticamente a <strong class="text-[#00A859]">Validado</strong>.
-                Si responde "no validar aún", aparecerá una alerta en la miniatura del proyecto para que puedas hacer seguimiento.
-              </p>
-            </div>
+          <p class="text-xs text-gray-600 leading-relaxed mb-3">
+            Puedes validar el proyecto directamente sin esperar a la empresa.
+            <span class="text-amber-600 font-bold">Esto no sustituye la validación empresa</span>
+            — ambas son independientes y complementarias.
+          </p>
+          <button v-if="!form.docente_validado"
+                  @click="modalValidarDocente = true; modalPropuestaAviso = false"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                         bg-emerald-600 text-white rounded-xl
+                         text-xs font-bold hover:bg-emerald-700 transition-all">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            Validar como docente
+          </button>
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-emerald-100 rounded-xl">
+            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            <p class="text-xs font-bold text-emerald-700">Ya has validado este proyecto como docente</p>
           </div>
         </div>
 
@@ -2670,6 +2690,15 @@ onUnmounted(() => { tourActivo.value = false; });
       </div>
     </div>
   </Transition>
+
+  <!-- Modal: ¿Activar guía-tour? -->
+  <TourPromptModal
+    :show="showTourPrompt"
+    titulo="¿Quieres activar la guía-tour?"
+    descripcion="Explora el wizard de Startup Day con una guía paso a paso."
+    @activar="activarTourDesdeModal"
+    @omitir="omitirTourDesdeModal"
+  />
 
 </template>
 

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '../api.js';
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js';
 import { useAuthStore } from '../stores/auth.js';
+import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
 
 const route     = useRoute();
 const router    = useRouter();
@@ -22,6 +23,24 @@ const modalRecurso       = ref(null);
 const modalBorradorAviso  = ref(false);
 const modalPropuestaAviso = ref(false);
 const urlCopiadaModal     = ref(false);
+
+// ── Validación docente ─────────────────────────────────────────────────────
+const modalValidarDocente  = ref(false);
+const validandoDocente     = ref(false);
+
+async function validarComoDocente() {
+  if (validandoDocente.value) return;
+  validandoDocente.value = true;
+  try {
+    await api.post(`/startup/proyectos/${proyecto.value.uuid}/validar-docente`, { decision: 'validar' });
+    proyecto.value.docente_validado = true;
+    proyecto.value.estado = 'validado';
+    modalValidarDocente.value = false;
+    modalPropuestaAviso.value = false;
+  } catch { /* no crítico */ } finally {
+    validandoDocente.value = false;
+  }
+}
 
 // ── Confirmación envío enlace empresa ──────────────────────────────────────
 const modalConfirmEnvio   = ref(false);
@@ -73,8 +92,8 @@ onMounted(async () => {
     proyecto.value       = proyRes.data;
     videos.value         = recRes.data.videos    || [];
     documentos.value     = recRes.data.documentos || [];
-    if (proyRes.data.estado === 'borrador') modalBorradorAviso.value = true;
-    if (proyRes.data.estado === 'publicado' && !proyRes.data.empresa_validado) modalPropuestaAviso.value = true;
+    if (proyRes.data.estado === 'en_edicion') modalBorradorAviso.value = true;
+    if (proyRes.data.estado === 'propuesta') modalPropuestaAviso.value = true;
   } catch {
     error.value = true;
   } finally {
@@ -84,24 +103,34 @@ onMounted(async () => {
 
 // ── Badge de estado principal (cubre todos los sub-estados) ────────────────
 function getEstadoBadge(p) {
-  if (!p || p.estado === 'borrador')
-    return { label: 'Borrador', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
+  if (!p) return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
+  if (p.estado === 'en_edicion')
+    return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
   if (p.estado === 'archivado')
     return { label: 'Archivado', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
-  if (p.empresa_validado)
+  if (p.estado === 'validado') {
+    if (p.empresa_validado && p.docente_validado)
+      return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
+    if (p.empresa_validado)
+      return { label: 'Validado · Empresa', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
+    if (p.docente_validado)
+      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' };
     return { label: 'Validado', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
-  // publicado sin validar
+  }
+  // propuesta: distinguir sub-estados
+  if (p.empresa_no_valida_aun)
+    return { label: 'Propuesta · No validar aún', cls: 'bg-red-50 border-red-300 text-red-700', dot: 'bg-red-400' };
   if (p.enviado_a_empresa_mail)
-    return { label: 'Propuesta · SÍ enviada por mail', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' };
-  return { label: 'Propuesta · NO enviada por mail', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
+    return { label: 'Propuesta · Enviada, esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' };
+  return { label: 'Propuesta · Pendiente enviar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
 }
 
 // Mantener compat con modal-borrador (que comprueba estado directo)
 function getEstadoKey(p) {
-  if (!p) return 'borrador';
-  if (p.estado === 'borrador')  return 'borrador';
-  if (p.estado === 'archivado') return 'archivado';
-  return p.empresa_validado ? 'proyecto' : 'propuesta';
+  if (!p) return 'en_edicion';
+  if (p.estado === 'en_edicion') return 'en_edicion';
+  if (p.estado === 'archivado')  return 'archivado';
+  return (p.estado === 'validado' || p.empresa_validado) ? 'proyecto' : 'propuesta';
 }
 
 const landingUrl = computed(() => {
@@ -166,43 +195,35 @@ async function archivar() {
 
       <template v-else-if="proyecto">
 
-        <!-- Cabecera -->
-        <header class="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <div class="flex flex-wrap items-center gap-2 mb-3">
-              <button @click="router.push({ name: 'startup-day' })"
-                      class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
-                             text-gray-400 hover:text-[#00A859] hover:border-[#00A859]/30 transition-all shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-              </button>
-              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
-                          bg-[#00A859]/10 border border-[#00A859]/20 shrink-0">
-                <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">StartUp Day</span>
-              </div>
-              <!-- Badge estado principal -->
-              <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
-                <span :class="['w-1.5 h-1.5 rounded-full shrink-0', getEstadoBadge(proyecto).dot]" />
-                {{ getEstadoBadge(proyecto).label }}
-              </span>
-              <!-- Alerta "empresa no valida aún" -->
-              <span v-if="proyecto.empresa_no_valida_aun && !proyecto.empresa_validado"
-                    class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest
-                           px-2.5 py-1 rounded-full border bg-red-50 border-red-300 text-red-700 shrink-0">
-                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Empresa contestó: No validar aún
-              </span>
+        <!-- Barra de navegación y acciones (fuera del cuaderno) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap items-center gap-2">
+            <button @click="router.push({ name: 'startup-day' })"
+                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
+                           text-gray-400 hover:text-[#00A859] hover:border-[#00A859]/30 transition-all shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+            </button>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
+                        bg-[#00A859]/10 border border-[#00A859]/20 shrink-0">
+              <span class="w-2 h-2 rounded-full bg-[#00A859]" />
+              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">StartUp Day</span>
             </div>
-            <h1 class="text-2xl md:text-3xl font-black tracking-tight text-[#121212]">{{ proyecto.titulo }}</h1>
-            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
-              <span v-if="proyecto.empresa_nombre">{{ proyecto.empresa_nombre }}</span>
-              <span v-if="proyecto.centro_nombre">· {{ proyecto.centro_nombre }}</span>
-              <span v-if="proyecto.ciclo_nombre">· {{ proyecto.ciclo_nombre }}</span>
-            </div>
+            <!-- Badge estado principal -->
+            <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
+              <span :class="['w-1.5 h-1.5 rounded-full shrink-0', getEstadoBadge(proyecto).dot]" />
+              {{ getEstadoBadge(proyecto).label }}
+            </span>
+            <!-- Alerta "empresa no valida aún" -->
+            <span v-if="proyecto.empresa_no_valida_aun && !proyecto.empresa_validado"
+                  class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest
+                         px-2.5 py-1 rounded-full border bg-red-50 border-red-300 text-red-700 shrink-0">
+              <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Empresa contestó: No validar aún
+            </span>
           </div>
 
           <div class="flex gap-2 shrink-0">
@@ -220,6 +241,18 @@ async function archivar() {
               PDF
             </button>
             <button
+              v-if="!authStore.isEmpresa && ['propuesta','validado'].includes(proyecto.estado) && !proyecto.docente_validado"
+              @click="modalValidarDocente = true"
+              class="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-black
+                     uppercase tracking-widest text-emerald-700 shadow-sm
+                     hover:bg-emerald-100 transition-all flex items-center gap-1.5"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+              Validar
+            </button>
+            <button
               v-if="!authStore.isEmpresa"
               @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
               class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
@@ -228,7 +261,7 @@ async function archivar() {
             >
               Editar
             </button>
-            <button v-if="proyecto.estado !== 'archivado' && !authStore.isEmpresa"
+            <button v-if="!['archivado', 'validado'].includes(proyecto.estado) && !authStore.isEmpresa"
                     @click="archivar"
                     class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
                            uppercase tracking-widest text-gray-400 shadow-sm
@@ -236,10 +269,77 @@ async function archivar() {
               Archivar
             </button>
           </div>
-        </header>
+        </div>
 
-        <!-- ── Panel de estado de envío / respuesta empresa (si publicado) ── -->
-        <div v-if="proyecto.estado === 'publicado'" class="mb-6 space-y-3">
+        <!-- ══ HOJA DE CUADERNO ═══════════════════════════════════════════════ -->
+        <div class="notebook-page">
+          <div class="notebook-margin" aria-hidden="true" />
+          <div class="notebook-holes" aria-hidden="true">
+            <div class="notebook-hole" />
+            <div class="notebook-hole" />
+            <div class="notebook-hole" />
+            <div class="notebook-hole" />
+            <div class="notebook-hole" />
+          </div>
+
+          <!-- Título del proyecto -->
+          <h1 class="text-2xl md:text-3xl font-black tracking-tight text-[#121212] mb-5 leading-tight">
+            {{ proyecto.titulo }}
+          </h1>
+
+          <!-- ── META HEADER: empresa / centro educativo / ciclo formativo ── -->
+          <div v-if="proyecto.empresa_nombre || proyecto.centro_nombre || proyecto.ciclo_nombre"
+               class="meta-band">
+
+            <div v-if="proyecto.empresa_nombre" class="meta-cell">
+              <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200
+                          flex items-center justify-center shrink-0">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-amber-600"
+                     style="width:1.1rem;height:1.1rem">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+              </div>
+              <div>
+                <p class="meta-label">Empresa</p>
+                <p class="meta-value">{{ proyecto.empresa_nombre }}</p>
+              </div>
+            </div>
+
+            <div v-if="proyecto.centro_nombre" class="meta-cell">
+              <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200
+                          flex items-center justify-center shrink-0">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-blue-500"
+                     style="width:1.1rem;height:1.1rem">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                </svg>
+              </div>
+              <div>
+                <p class="meta-label">Centro educativo</p>
+                <p class="meta-value">{{ proyecto.centro_nombre }}</p>
+              </div>
+            </div>
+
+            <div v-if="proyecto.ciclo_nombre" class="meta-cell">
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200
+                          flex items-center justify-center shrink-0">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-[#00A859]"
+                     style="width:1.1rem;height:1.1rem">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="meta-label">Ciclo formativo</p>
+                <p class="meta-value">{{ proyecto.ciclo_nombre }}</p>
+              </div>
+            </div>
+
+          </div><!-- /meta-band -->
+
+        <!-- ── Panel de estado de envío / respuesta empresa (si propuesta o validado) ── -->
+        <div v-if="proyecto.estado === 'propuesta' || proyecto.estado === 'validado'" class="mb-6 space-y-3">
 
           <!-- Bloque enlace -->
           <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
@@ -344,6 +444,42 @@ async function archivar() {
                     class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
                            bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 transition-all">
               Enviar
+            </button>
+          </div>
+
+          <!-- Validación docente ✅ -->
+          <div v-if="proyecto.docente_validado"
+               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
+                      bg-emerald-50 border border-emerald-200 shadow-sm">
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-200
+                        flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-black text-emerald-700">Validado por docente</p>
+              <p class="text-[10px] text-emerald-600/70 mt-0.5">Validación pedagógica aprobada por el docente responsable.</p>
+            </div>
+          </div>
+          <!-- Sin validación docente aún -->
+          <div v-else-if="!authStore.isEmpresa"
+               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
+                      bg-gray-50 border border-gray-100 shadow-sm">
+            <div class="w-9 h-9 rounded-xl bg-white border border-gray-200
+                        flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-black text-gray-500">Pendiente de validación docente</p>
+              <p class="text-[10px] text-gray-400 mt-0.5">Puedes validar el proyecto directamente como docente.</p>
+            </div>
+            <button @click="modalValidarDocente = true"
+                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
+                           bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-all">
+              Validar
             </button>
           </div>
 
@@ -706,6 +842,8 @@ async function archivar() {
         </div>
         <!-- ══ FIN FEEDBACK EMPRESA ══════════════════════════════════════════ -->
 
+        </div><!-- /notebook-page -->
+
       </template>
     </div>
   </div>
@@ -816,14 +954,13 @@ async function archivar() {
           Proyecto en propuesta
         </h3>
         <p class="text-sm text-gray-500 text-center mb-6 leading-relaxed">
-          Este proyecto está preparado para ser enviado a la empresa y que esta la valide.
-          El enlace único ya está generado — asegúrate de que la empresa lo haya recibido.
+          Este proyecto puede validarse a través de la empresa, directamente como docente, o por ambas vías.
         </p>
 
-        <!-- Paso 1: Enviar enlace -->
+        <!-- Vía A: Validación empresa -->
         <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-3">
           <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-            1 · Envía el enlace a la empresa
+            Vía A · Validación empresa
           </p>
           <div class="flex items-center gap-2 mb-3">
             <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-white border border-gray-200
@@ -917,39 +1054,31 @@ async function archivar() {
           </div>
         </div>
 
-        <!-- Paso 2: Esperar validación -->
-        <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6">
-          <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-            2 · Espera la validación
+        <!-- Vía B: Validación docente -->
+        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
+          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">
+            Vía B · Validación docente
           </p>
-          <div class="space-y-2">
-
-            <div class="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-[#00A859]/10 text-[#00A859] text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">✓</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                La empresa accede al formulario de validación a través del enlace y lo cumplimenta.
-              </p>
-            </div>
-
-            <div class="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-[#00A859]/10 text-[#00A859] text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">✓</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                Al validarlo, el proyecto cambia automáticamente a <strong class="text-[#00A859]">Validado</strong>
-                sin que tengas que hacer nada más.
-              </p>
-            </div>
-
-            <div class="flex items-start gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-              <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-[10px] font-black
-                           flex items-center justify-center shrink-0 mt-0.5">!</span>
-              <p class="text-xs text-gray-600 leading-relaxed">
-                ¿La empresa ya validó pero no aparece? Ve a <strong>Editar</strong> y comprueba el
-                desplegable <strong>Estado del proyecto</strong>.
-              </p>
-            </div>
-
+          <p class="text-xs text-gray-600 leading-relaxed mb-3">
+            Puedes validar el proyecto directamente sin esperar a la empresa.
+            <span class="text-amber-600 font-bold">Esto no sustituye la validación empresa</span>
+            — ambas son independientes y complementarias.
+          </p>
+          <button v-if="!proyecto?.docente_validado"
+                  @click="modalValidarDocente = true; modalPropuestaAviso = false"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                         bg-emerald-600 text-white rounded-xl
+                         text-xs font-bold hover:bg-emerald-700 transition-all">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            Validar como docente
+          </button>
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-emerald-100 rounded-xl">
+            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            <p class="text-xs font-bold text-emerald-700">Ya has validado este proyecto como docente</p>
           </div>
         </div>
 
@@ -1119,6 +1248,14 @@ async function archivar() {
     </div>
   </Transition>
 
+  <!-- ══ MODAL VALIDAR DOCENTE ════════════════════════════════════════════════ -->
+  <ValidarDocenteModal
+    :visible="modalValidarDocente"
+    :loading="validandoDocente"
+    @confirm="validarComoDocente"
+    @cancel="modalValidarDocente = false"
+  />
+
   <!-- ══ MODAL AVISO BORRADOR ════════════════════════════════════════════════ -->
   <Transition
     enter-active-class="transition-all duration-200 ease-out"
@@ -1143,12 +1280,12 @@ async function archivar() {
         </div>
 
         <h3 class="text-xl font-black text-[#121212] text-center mb-4">
-          Proyecto en borrador
+          Proyecto en edición
         </h3>
 
         <p class="text-sm text-gray-600 leading-relaxed text-center">
-          Este proyecto está marcado como <strong>borrador</strong> porque se guardó así para seguir editando.
-          Si necesitas enviarlo a la empresa, entra en <strong>Editar</strong> y en el desplegable
+          Este proyecto está marcado como <strong>En edición</strong> porque se guardó así para seguir construyéndolo.
+          Cuando esté listo para enviarlo a la empresa, entra en <strong>Editar</strong> y en el desplegable
           <strong>Estado del proyecto</strong> selecciona <strong>Propuesta</strong> para generar el enlace de validación.
         </p>
 
@@ -1187,10 +1324,128 @@ async function archivar() {
 <style scoped>
 @reference "../style.css";
 
+/* ── Secciones de contenido ────────────────────────────────────────────── */
 .card-section {
-  @apply bg-white border border-gray-100 rounded-[1.5rem] shadow-sm p-5 space-y-3;
+  @apply bg-white border border-gray-200 rounded-2xl shadow-sm p-5 space-y-3;
 }
 .section-label {
   @apply text-[10px] font-black uppercase tracking-[0.2em] text-gray-400;
+}
+
+/* ── Hoja de cuaderno ──────────────────────────────────────────────────── */
+.notebook-page {
+  position: relative;
+  overflow: hidden;
+  background-color: #fefef8;
+  background-image:
+    /* Zona del lomo (izquierda, gris claro) */
+    linear-gradient(90deg, #eef1f5 0, #eef1f5 3.75rem, transparent 3.75rem),
+    /* Líneas horizontales azul pálido */
+    repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      #c8d9f0 31px,
+      #c8d9f0 32px
+    );
+  padding: 2rem 1.75rem 2.5rem 5.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #dde3ed;
+  box-shadow:
+    0 4px 24px -4px rgba(0, 0, 0, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.04),
+    2px 0 0 0 #d1dae8 inset;
+  margin-bottom: 2rem;
+}
+
+/* Línea roja de margen */
+.notebook-margin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4.3rem;
+  width: 1.5px;
+  background: #fca5a5;
+  pointer-events: none;
+}
+
+/* Agujeros del espiral */
+.notebook-holes {
+  position: absolute;
+  left: 1.25rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 1.75rem 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.notebook-hole {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid #c4cdd9;
+  box-shadow: inset 0 1px 3px #b8c2cc;
+}
+
+/* ── Meta-header: empresa / centro / ciclo ─────────────────────────────── */
+.meta-band {
+  display: flex;
+  flex-wrap: wrap;
+  border-radius: 0.875rem;
+  margin-bottom: 1.75rem;
+  overflow: hidden;
+  border: 1px solid #dde3ed;
+  background: linear-gradient(135deg, #f8fafd 0%, #f1f5fb 100%);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.meta-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  flex: 1;
+  min-width: 145px;
+  border-right: 1px solid #dde3ed;
+}
+
+.meta-cell:last-child {
+  border-right: none;
+}
+
+.meta-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #9ca3af;
+  margin-bottom: 0.125rem;
+}
+
+.meta-value {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .notebook-page {
+    padding: 1.5rem 1rem 2rem 4.5rem;
+  }
+  .meta-cell {
+    flex: 1 0 100%;
+    border-right: none;
+    border-bottom: 1px solid #dde3ed;
+  }
+  .meta-cell:last-child {
+    border-bottom: none;
+  }
 }
 </style>

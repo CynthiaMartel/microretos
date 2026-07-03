@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 class AdminAuthController extends Controller
 {
@@ -15,15 +17,29 @@ class AdminAuthController extends Controller
     {
         $request->validate([
             'email'    => 'required|email',
-            'password' => 'required|string',
+            'password' => 'required|string|max:128',
         ]);
 
+        // Bloqueo por intentos fallidos: clave = email + IP (resiste rotación de IPs y de emails)
+        $throttleKey = 'login.' . Str::lower($request->input('email')) . '.' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
+            $minutos = ceil(RateLimiter::availableIn($throttleKey) / 60);
+            return response()->json([
+                'success' => false,
+                'message' => 'Demasiados intentos fallidos. Inténtalo en ' . $minutos . ' minuto(s).',
+            ], 429);
+        }
+
         if (!Auth::attempt($request->only('email', 'password'))) {
+            RateLimiter::hit($throttleKey, 900); // ventana de 15 minutos
             return response()->json([
                 'success' => false,
                 'message' => 'Credenciales incorrectas.',
             ], 401);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $user = Auth::user();
 
@@ -95,6 +111,7 @@ class AdminAuthController extends Controller
         return response()->json([
             'success' => true,
             'token'   => $token,
+            'role'    => $user->role,
         ]);
     }
 

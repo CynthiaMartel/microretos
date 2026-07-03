@@ -13,6 +13,7 @@ import CatalogoBoeIntroModal from '../components/CatalogoBoeIntroModal.vue'
 import DbSecurityModal from '../components/DbSecurityModal.vue'
 import { useUIState } from '../composables/useUIState.js'
 import { useDbSecurity } from '../composables/useDbSecurity.js'
+import TourPromptModal from '../components/TourPromptModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -213,10 +214,8 @@ onMounted(async () => {
     return
   }
   await cargarDatos()
-  // Arrancar el tour por defecto al abrir la vista
   await nextTick()
-  modoGuia.value = true
-  pasoGuia.value = 1
+  showTourPrompt.value = true
 })
 
 async function cargarDatos() {
@@ -549,6 +548,9 @@ function onEmpresaEliminada(data) {
 //  TOUR GUIADO
 // ═══════════════════════════════════════════════════════════
 const modoGuia = ref(false)
+const showTourPrompt = ref(false)
+function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true; pasoGuia.value = 1 }
+function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const pasoGuia = ref(1)
 
 const refContadores      = ref(null)
@@ -2290,6 +2292,15 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     </Transition>
 
   </div>
+
+  <!-- Modal: ¿Activar guía-tour? -->
+  <TourPromptModal
+    :show="showTourPrompt"
+    titulo="¿Quieres activar la guía-tour?"
+    descripcion="Explora la base de datos con una guía paso a paso que te muestra cada función."
+    @activar="activarTourDesdeModal"
+    @omitir="omitirTourDesdeModal"
+  />
 </template>
 
 <style scoped>

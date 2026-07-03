@@ -150,36 +150,45 @@ onBeforeRouteUpdate(async () => {
 });
 
 function getEtiqueta(p) {
-  if (p.estado === 'borrador')  return 'En edición';
-  if (p.estado === 'archivado') return 'Archivado';
-  return p.empresa_validado ? 'Validado' : 'Pendiente validar';
+  if (p.estado === 'en_edicion') return 'En edición';
+  if (p.estado === 'archivado')  return 'Archivado';
+  if (p.estado === 'validado') {
+    if (p.empresa_validado && p.docente_validado) return 'Validado · Completo';
+    if (p.empresa_validado)  return 'Validado · Empresa';
+    if (p.docente_validado)  return 'Validado · Docente';
+    return 'Validado';
+  }
+  if (p.empresa_no_valida_aun)    return 'No validar aún';
+  if (p.enviado_a_empresa_mail)   return 'Esperando respuesta';
+  return 'Pendiente enviar';
 }
 function getColor(p) {
-  if (p.estado === 'borrador')  return 'bg-amber-50 border-amber-200 text-amber-700';
-  if (p.estado === 'archivado') return 'bg-gray-100 border-gray-200 text-gray-400';
-  if (p.empresa_validado)       return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';  // Validado → verde
-  return 'bg-blue-50 border-blue-200 text-blue-700';  // Propuesta → azul
+  if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700';
+  if (p.estado === 'archivado')  return 'bg-gray-100 border-gray-200 text-gray-400';
+  if (p.estado === 'validado') {
+    if (p.docente_validado && !p.empresa_validado) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+    return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';
+  }
+  if (p.empresa_no_valida_aun)   return 'bg-red-50 border-red-300 text-red-700';
+  if (p.enviado_a_empresa_mail)  return 'bg-blue-50 border-blue-200 text-blue-700';
+  return 'bg-violet-50 border-violet-300 text-violet-700';
 }
 
-const filtroOpciones = ['proyecto', 'propuesta', 'borrador', 'archivado', 'todos'];
-const filtroLabels   = { todos: 'Todos', borrador: 'En edición', propuesta: 'Pendiente validar', proyecto: 'Validados', archivado: 'Archivado' };
+const filtroOpciones = ['validado', 'propuesta', 'en_edicion', 'archivado', 'todos'];
+const filtroLabels   = { todos: 'Todos', en_edicion: 'En edición', propuesta: 'Pendiente validar', validado: 'Validados', archivado: 'Archivado' };
 
 const conteosPorEstado = computed(() => ({
-  proyecto:  proyectos.value.filter(p => !!p.empresa_validado).length,
-  propuesta: proyectos.value.filter(p => p.estado === 'publicado' && !p.empresa_validado).length,
-  borrador:  proyectos.value.filter(p => p.estado === 'borrador').length,
-  archivado: proyectos.value.filter(p => p.estado === 'archivado').length,
-  todos:     proyectos.value.length,
+  validado:   proyectos.value.filter(p => p.estado === 'validado').length,
+  propuesta:  proyectos.value.filter(p => p.estado === 'propuesta').length,
+  en_edicion: proyectos.value.filter(p => p.estado === 'en_edicion').length,
+  archivado:  proyectos.value.filter(p => p.estado === 'archivado').length,
+  todos:      proyectos.value.length,
 }));
 
 const proyectosFiltrados = computed(() => {
   let lista = proyectos.value;
   if (filtroEstado.value !== 'todos') {
-    lista = lista.filter(p => {
-      if (filtroEstado.value === 'propuesta') return p.estado === 'publicado' && !p.empresa_validado;
-      if (filtroEstado.value === 'proyecto')  return !!p.empresa_validado;
-      return p.estado === filtroEstado.value;
-    });
+    lista = lista.filter(p => p.estado === filtroEstado.value);
   }
   if (busqueda.value.trim()) {
     const q = busqueda.value.toLowerCase();
@@ -496,7 +505,7 @@ function mostrarSnack(mensaje, accion = null) {
               </div>
 
               <!-- ── Etiquetas de sub-estado en miniatura ───────────────── -->
-              <div v-if="p.estado === 'publicado' && !p.empresa_validado"
+              <div v-if="p.estado === 'propuesta' && !p.empresa_validado"
                    class="flex flex-col gap-1.5 mt-1">
 
                 <!-- Propuesta NO enviada por mail aún -->
