@@ -12,10 +12,7 @@ class Sesion extends Model
 
     protected $fillable = [
         'user_id',
-        'microreto_id',
-        'microreto_titulo',
-        'proyecto_titulo',
-        'proyecto_uuid',
+        'microproyecto_id',
         'fecha',
         'centro_educativo',
         'ciclo_formativo',
@@ -29,11 +26,11 @@ class Sesion extends Model
     ];
 
     protected $casts = [
-        'fecha'        => 'date:Y-m-d',
-        'num_alumnos'  => 'integer',
-        'num_equipos'  => 'integer',
-        'microreto_id' => 'integer',
-        'alumnados'    => 'array',
+        'fecha'            => 'date:Y-m-d',
+        'num_alumnos'      => 'integer',
+        'num_equipos'      => 'integer',
+        'microproyecto_id' => 'integer',
+        'alumnados'        => 'array',
     ];
 
     public function docente()
@@ -41,13 +38,8 @@ class Sesion extends Model
         return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
 
-    public function microreto()
+    public function microproyecto()
     {
-        return $this->belongsTo(Microreto::class);
-    }
-
-    public function microproyectos()
-    {
-        return $this->hasMany(Microproyecto::class);
+        return $this->belongsTo(Microproyecto::class);
     }
 }

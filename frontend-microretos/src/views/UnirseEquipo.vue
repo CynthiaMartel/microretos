@@ -224,6 +224,10 @@ function continuarConEquipoGuardado() {
 
           <!-- Tarjetas de equipo -->
           <div class="space-y-2">
+            <p v-if="!resultado.equipos?.length"
+               class="text-white/40 text-sm text-center italic py-4">
+              Sin equipos configurados. Consulta al docente.
+            </p>
             <button
               v-for="equipo in resultado.equipos" :key="equipo.id"
               @click="seleccionarEquipo(equipo)"

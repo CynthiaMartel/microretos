@@ -17,7 +17,14 @@ const irHome = () => {
   }
 }
 
-const cargandoOut = ref(false)
+const cargandoOut      = ref(false)
+const refreshFeedback  = ref(null) // 'ok' | 'error' | null
+
+const extenderSesion = async () => {
+  const ok = await authStore.refresh()
+  refreshFeedback.value = ok ? 'ok' : 'error'
+  setTimeout(() => { refreshFeedback.value = null }, 3000)
+}
 
 const sectionLabels = {
   'microretos':           'Generador',
@@ -105,7 +112,7 @@ const cerrarSesion = async () => {
           {{ minutosLabel }}
         </span>
         <button
-          @click="authStore.refresh()"
+          @click="extenderSesion"
           :disabled="authStore.refreshing"
           class="hidden md:block px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest
                  bg-white/8 hover:bg-white/15 text-white/60 hover:text-white
@@ -113,6 +120,15 @@ const cerrarSesion = async () => {
         >
           {{ authStore.refreshing ? '...' : 'Extender' }}
         </button>
+        <Transition name="fade">
+          <span
+            v-if="refreshFeedback"
+            class="hidden md:block text-[10px] font-bold leading-none"
+            :class="refreshFeedback === 'ok' ? 'text-green-400' : 'text-red-400'"
+          >
+            {{ refreshFeedback === 'ok' ? '✓ Extendida' : 'Error' }}
+          </span>
+        </Transition>
       </div>
 
       <!-- Nombre y rol -->
@@ -160,3 +176,8 @@ const cerrarSesion = async () => {
     </template>
   </header>
 </template>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
+.fade-enter-from, .fade-leave-to       { opacity: 0; }
+</style>

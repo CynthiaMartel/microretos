@@ -55,6 +55,12 @@ Route::middleware('throttle:120,1')->group(function () {
     Route::post('/equipo/{token}/reflexiones',             [EquipoPublicoController::class, 'storeReflexion']);
 });
 
+Route::middleware('throttle:30,1')->group(function () {
+    Route::post('/equipo/{token}/prototipos',       [EquipoPublicoController::class, 'storePrototipo']);
+    Route::delete('/equipo/{token}/prototipos/{id}', [EquipoPublicoController::class, 'destroyPrototipo'])
+        ->whereNumber('id');
+});
+
 // Validación pública del microproyecto por parte de la empresa (acceso por token)
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/startup/landing/{token}',          [MicroproyectoController::class, 'showByToken']);

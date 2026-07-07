@@ -23,8 +23,7 @@ const form = ref({
   num_equipos:      3,
   alumnados:        [],
   notas:            '',
-  proyecto_titulo:  '',
-  proyecto_uuid:    '',
+  microproyecto_id: null,
 })
 
 // ─── Buscador de proyectos ─────────────────────────────────────────────────────
@@ -85,15 +84,17 @@ function cerrarBuscadorProy() {
 
 function seleccionarProyecto(p) {
   proyectoSeleccionado.value   = p
-  form.value.proyecto_uuid     = p.uuid
-  form.value.proyecto_titulo   = p.titulo
+  form.value.microproyecto_id  = p.id
+  if (p.ciclo_nombre) form.value.ciclo_formativo = p.ciclo_nombre
+  if (p.curso)        form.value.curso           = p.curso
   mostrarBuscadorProy.value    = false
 }
 
 function limpiarProyecto() {
-  proyectoSeleccionado.value = null
-  form.value.proyecto_uuid   = ''
-  form.value.proyecto_titulo = ''
+  proyectoSeleccionado.value   = null
+  form.value.microproyecto_id  = null
+  form.value.ciclo_formativo   = ''
+  form.value.curso             = ''
 }
 
 function estadoProyectoBadge(proyectoOEstado) {
@@ -167,9 +168,19 @@ function getBadgeModal(p) {
 const nuevoAlumnadoNombre = ref('')
 const nuevoAlumnadoEquipo = ref(1)
 
+const limiteAlumnados = computed(() => {
+  const n = Number(form.value.num_alumnos)
+  return n > 0 ? n : null
+})
+
+const limiteAlcanzado = computed(() =>
+  limiteAlumnados.value !== null && form.value.alumnados.length >= limiteAlumnados.value
+)
+
 function addAlumnadoSesion() {
   const nombre = nuevoAlumnadoNombre.value.trim()
   if (!nombre) return
+  if (limiteAlcanzado.value) return
   form.value.alumnados.push({ nombre, equipo_num: nuevoAlumnadoEquipo.value })
   nuevoAlumnadoNombre.value = ''
 }
@@ -318,7 +329,7 @@ const sesionesFiltradas = computed(() => {
     lista = lista.filter(s => s.fecha === filtroSes.value.fecha)
   if (filtroSes.value.titulo.trim()) {
     const q = filtroSes.value.titulo.trim().toLowerCase()
-    lista = lista.filter(s => (s.microreto_titulo || '').toLowerCase().includes(q))
+    lista = lista.filter(s => (s.proyecto_titulo || '').toLowerCase().includes(q))
   }
   if (filtroSes.value.curso) lista = lista.filter(s => s.curso === filtroSes.value.curso)
   if (filtroSes.value.grupo) lista = lista.filter(s => s.grupo === filtroSes.value.grupo)
@@ -970,6 +981,10 @@ function formatFecha(isoDate) {
                   <label class="field-label">
                     Alumnado por equipos
                     <span class="text-gray-300 font-normal normal-case ml-1">(opcional)</span>
+                    <span v-if="limiteAlumnados" class="ml-2 text-xs font-semibold"
+                          :class="limiteAlcanzado ? 'text-red-400' : 'text-gray-400'">
+                      {{ form.alumnados.length }}/{{ limiteAlumnados }}
+                    </span>
                   </label>
 
                   <!-- Formulario añadir alumno/a -->
@@ -984,8 +999,10 @@ function formatFecha(isoDate) {
                       </option>
                     </select>
                     <button @click="addAlumnadoSesion"
+                            :disabled="limiteAlcanzado"
                             class="shrink-0 px-3 py-2 bg-[#00A859] text-white rounded-xl
-                                   text-xs font-black hover:bg-[#00A859]/90 transition-all">
+                                   text-xs font-black hover:bg-[#00A859]/90 transition-all
+                                   disabled:opacity-40 disabled:cursor-not-allowed">
                       + Añadir
                     </button>
                   </div>
@@ -1257,7 +1274,7 @@ function formatFecha(isoDate) {
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black text-[#1F2937] leading-snug truncate
                               group-hover:text-[#00A859] transition-colors">
-                      {{ s.microreto_titulo || '(sin título)' }}
+                      {{ s.proyecto_titulo || '(sin título)' }}
                     </p>
                     <p class="text-[10px] text-[#00A859] font-bold mt-0.5">
                       {{ formatFecha(s.fecha) }}
@@ -1342,7 +1359,7 @@ function formatFecha(isoDate) {
                   </p>
                 </div>
                 <h2 class="text-lg font-black text-[#1F2937] leading-snug">
-                  {{ sesionAbierta.microreto_titulo || '(sin título)' }}
+                  {{ sesionAbierta.proyecto_titulo || '(sin título)' }}
                 </h2>
               </div>
               <button @click="cerrarSesionModal()"

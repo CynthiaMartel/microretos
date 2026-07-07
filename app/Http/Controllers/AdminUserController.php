@@ -42,7 +42,7 @@ class AdminUserController extends Controller
             $user = User::create([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
-                'password'            => $data['password'],
+                'password'            => Hash::make($data['password']),
                 'role'                => User::ROLE_DOCENTE,
                 'is_blocked'          => false,
                 'email_verified_at'   => null,
@@ -62,7 +62,7 @@ class AdminUserController extends Controller
             $user = User::create([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
-                'password'            => $data['password'],
+                'password'            => Hash::make($data['password']),
                 'role'                => (int) $data['role'],
                 'is_blocked'          => false,
                 'email_verified_at'   => null,
@@ -155,7 +155,7 @@ class AdminUserController extends Controller
         }
 
         if ($request->filled('password')) {
-            $user->password = $data['password'];
+            $user->password = Hash::make($data['password']);
         }
 
         $user->save();

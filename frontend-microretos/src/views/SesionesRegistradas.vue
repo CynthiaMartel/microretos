@@ -102,7 +102,7 @@ const sesionesFiltradas = computed(() => {
 
   if (filtros.value.titulo.trim()) {
     const q = filtros.value.titulo.trim().toLowerCase()
-    lista = lista.filter(s => (s.microreto_titulo || '').toLowerCase().includes(q))
+    lista = lista.filter(s => (s.proyecto_titulo || '').toLowerCase().includes(q))
   }
   if (filtros.value.desde)
     lista = lista.filter(s => s.fecha >= filtros.value.desde)
@@ -544,7 +544,7 @@ function formatFecha(isoDate) {
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-black text-[#1F2937] leading-snug line-clamp-2
                                 group-hover:text-[#00A859] transition-colors">
-                        {{ s.microreto_titulo || '(sin título)' }}
+                        {{ s.proyecto_titulo || '(sin título)' }}
                       </p>
                       <p class="text-[10px] font-bold text-[#00A859] mt-1">
                         {{ formatFecha(s.fecha) }}
@@ -672,7 +672,7 @@ function formatFecha(isoDate) {
                   </p>
                 </div>
                 <h2 class="text-lg font-black text-[#1F2937] leading-snug">
-                  {{ sesionAbierta.microreto_titulo || '(sin título)' }}
+                  {{ sesionAbierta.proyecto_titulo || '(sin título)' }}
                 </h2>
               </div>
               <button @click="cerrarSesion"

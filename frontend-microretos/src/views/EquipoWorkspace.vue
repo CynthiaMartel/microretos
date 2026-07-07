@@ -199,6 +199,67 @@ async function completarF1() {
   await completarFase(1)
 }
 
+// ── F1 Prototipos — archivos Cloudinary ───────────────────────────────────
+const prototipos       = ref([])
+const subiendoArchivo  = ref(false)
+const errorArchivo     = ref('')
+
+function inicializarPrototipos() {
+  prototipos.value = workspace.value?.prototipos ?? []
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function iconoMime(mime) {
+  if (mime?.startsWith('image/'))  return '🖼️'
+  if (mime?.startsWith('video/'))  return '🎬'
+  if (mime === 'application/pdf')  return '📄'
+  return '📎'
+}
+
+async function subirArchivo(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  const maxMb = 20
+  if (file.size > maxMb * 1024 * 1024) {
+    errorArchivo.value = `El archivo supera el límite de ${maxMb} MB.`
+    return
+  }
+
+  errorArchivo.value  = ''
+  subiendoArchivo.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post(`/equipo/${token}/prototipos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    prototipos.value.push(res.data)
+    mostrarOk('Archivo subido correctamente')
+  } catch (e) {
+    errorArchivo.value = e.response?.data?.message
+      ?? e.response?.data?.errors?.file?.[0]
+      ?? 'Error al subir el archivo.'
+  } finally {
+    subiendoArchivo.value = false
+  }
+}
+
+async function eliminarPrototipo(prototipo, idx) {
+  try {
+    await api.delete(`/equipo/${token}/prototipos/${prototipo.id}`)
+    prototipos.value.splice(idx, 1)
+  } catch {
+    errorArchivo.value = 'No se pudo eliminar el archivo.'
+  }
+}
+
 // ── F2: Tareas de desarrollo ───────────────────────────────────────────────
 const nuevaTarea = ref({ descripcion: '', responsable: '', estado: 'pendiente' })
 const cargandoTarea = ref(false)
@@ -321,6 +382,7 @@ watch(workspace, (val) => {
     inicializarF0()
     inicializarF1()
     inicializarF3()
+    inicializarPrototipos()
   }
 }, { once: true })
 </script>
@@ -673,15 +735,56 @@ watch(workspace, (val) => {
                   </div>
                 </div>
 
-                <div>
-                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
+                <!-- Enlace al prototipo + subida de archivos a Cloudinary -->
+                <div class="space-y-3">
+                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider">
                     Enlace al prototipo
                   </label>
+
+                  <!-- URL manual (Figma, Drive, Canva…) -->
                   <input v-model="f1.prototipo_url" type="url"
                          placeholder="https://figma.com/... o https://drive.google.com/..."
                          class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
                                 focus:outline-none focus:border-blue-400 bg-gray-50"/>
-                  <p class="text-[10px] text-gray-400 mt-1">Pegad el enlace a vuestro prototipo digital, o dejad vacío si es físico.</p>
+                  <p class="text-[10px] text-gray-400">Pega un enlace externo (Figma, Drive, Canva…) o sube archivos directamente.</p>
+
+                  <!-- Subir archivo -->
+                  <div>
+                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl
+                                  border border-dashed border-blue-300 bg-blue-50 text-blue-700
+                                  text-xs font-black uppercase tracking-wider hover:bg-blue-100 transition-all
+                                  select-none"
+                           :class="subiendoArchivo ? 'opacity-50 pointer-events-none' : ''">
+                      <span v-if="subiendoArchivo">Subiendo…</span>
+                      <span v-else>📎 Subir archivo</span>
+                      <input type="file" class="hidden"
+                             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm,.zip"
+                             :disabled="subiendoArchivo"
+                             @change="subirArchivo"/>
+                    </label>
+                    <p class="text-[10px] text-gray-400 mt-1">PDF, imágenes, vídeos, documentos Office, ZIP — máx. 20 MB</p>
+                  </div>
+
+                  <!-- Error de subida -->
+                  <p v-if="errorArchivo" class="text-xs text-red-500 font-semibold">{{ errorArchivo }}</p>
+
+                  <!-- Lista de archivos subidos -->
+                  <ul v-if="prototipos.length" class="space-y-2">
+                    <li v-for="(p, idx) in prototipos" :key="p.id"
+                        class="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                      <span class="text-xl shrink-0">{{ iconoMime(p.mime) }}</span>
+                      <div class="flex-1 min-w-0">
+                        <a :href="p.url" target="_blank" rel="noopener"
+                           class="text-sm font-semibold text-blue-700 hover:underline truncate block">
+                          {{ p.filename }}
+                        </a>
+                        <p class="text-[10px] text-gray-400">{{ formatBytes(p.size) }}</p>
+                      </div>
+                      <button @click="eliminarPrototipo(p, idx)"
+                              class="shrink-0 text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
+                              title="Eliminar archivo">×</button>
+                    </li>
+                  </ul>
                 </div>
 
                 <div class="flex items-center gap-4">

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
 use App\Models\EquipoMiembro;
+use App\Models\EquipoPrototipo;
 use App\Models\EquipoTarea;
 use App\Models\EquipoReflexion;
 use App\Models\Sesion;
@@ -39,12 +42,13 @@ class EquipoPublicoController extends Controller
 
         $proyecto = $sesion->microproyectos()
             ->whereIn('estado', ['propuesta', 'validado'])
+            ->whereHas('equipos')
             ->with('equipos.miembros')
             ->latest()
             ->first();
 
         if (!$proyecto) {
-            return response()->json(['error' => 'El proyecto no está activo todavía.'], 403);
+            return response()->json(['error' => 'El docente aún no ha creado los equipos. Pídele que regenere el código de acceso desde "Mis sesiones".'], 403);
         }
 
         return response()->json([
@@ -102,6 +106,7 @@ class EquipoPublicoController extends Controller
             'fases',
             'tareas',
             'reflexiones',
+            'prototipos',
         ])->where('token', $token)->first();
 
         if (!$equipo) {
@@ -241,6 +246,124 @@ class EquipoPublicoController extends Controller
         return response()->json($reflexion, 201);
     }
 
+    // ── Prototipos — archivos subidos a Cloudinary ───────────────────────────
+
+    /**
+     * POST /api/equipo/{token}/prototipos
+     * Sube un archivo a Cloudinary y guarda sus metadatos en equipo_prototipos.
+     */
+    public function storePrototipo(Request $request, $token): JsonResponse
+    {
+        $maxMb = (int) config('services.cloudinary.upload_max_mb', 20);
+
+        $request->validate([
+            'file'  => [
+                'required', 'file', "max:{$maxMb}000",
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,png,jpg,jpeg,gif,webp,mp4,mov,avi,mkv,webm,zip',
+            ],
+            'label' => 'nullable|string|max:200',
+        ], [
+            'file.mimes' => 'Tipo no permitido. Sube PDF, documentos Office, imágenes, vídeos o ZIP.',
+            'file.max'   => "El archivo supera el límite de {$maxMb} MB.",
+        ]);
+
+        $equipo = Equipo::where('token', $token)->firstOrFail();
+
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+        $folder    = config('services.cloudinary.folder', 'dualab/recursos');
+
+        if (!$cloudName || !$apiKey || !$apiSecret) {
+            return response()->json(['error' => 'Cloudinary no configurado.'], 503);
+        }
+
+        $file = $request->file('file');
+        $mime = $file->getMimeType() ?? '';
+
+        $resourceType = match(true) {
+            str_starts_with($mime, 'video/') => 'video',
+            str_starts_with($mime, 'image/') => 'image',
+            default                           => 'raw',
+        };
+
+        $timestamp    = time();
+        $paramsToSign = "folder={$folder}&timestamp={$timestamp}";
+        $signature    = hash('sha1', $paramsToSign . $apiSecret);
+
+        $response = Http::attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/{$resourceType}/upload", [
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'signature' => $signature,
+                'folder'    => $folder,
+            ]);
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Error al subir el archivo a Cloudinary.'], 502);
+        }
+
+        $data = $response->json();
+
+        $prototipo = EquipoPrototipo::create([
+            'equipo_id'     => $equipo->id,
+            'filename'      => $file->getClientOriginalName(),
+            'url'           => $data['secure_url'],
+            'public_id'     => $data['public_id'],
+            'resource_type' => $resourceType,
+            'mime'          => $mime,
+            'size'          => $data['bytes'] ?? 0,
+            'label'         => $request->input('label'),
+        ]);
+
+        return response()->json([
+            'id'            => $prototipo->id,
+            'url'           => $prototipo->url,
+            'public_id'     => $prototipo->public_id,
+            'resource_type' => $prototipo->resource_type,
+            'filename'      => $prototipo->filename,
+            'label'         => $prototipo->label,
+            'size'          => $prototipo->size,
+            'mime'          => $prototipo->mime,
+        ], 201);
+    }
+
+    /**
+     * DELETE /api/equipo/{token}/prototipos/{id}
+     * Elimina el archivo de Cloudinary y su registro en BD.
+     */
+    public function destroyPrototipo($token, int $id): JsonResponse
+    {
+        $equipo    = Equipo::where('token', $token)->firstOrFail();
+        $prototipo = EquipoPrototipo::where('id', $id)
+            ->where('equipo_id', $equipo->id)
+            ->firstOrFail();
+
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+
+        // Eliminar de BD primero; si falla Cloudinary el registro no queda huérfano
+        $publicId     = $prototipo->public_id;
+        $resourceType = $prototipo->resource_type;
+        $prototipo->delete();
+
+        if ($cloudName && $apiKey && $apiSecret) {
+            $timestamp    = time();
+            $paramsToSign = "public_id={$publicId}&timestamp={$timestamp}";
+            $signature    = hash('sha1', $paramsToSign . $apiSecret);
+
+            Http::post("https://api.cloudinary.com/v1_1/{$cloudName}/{$resourceType}/destroy", [
+                'public_id' => $publicId,
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'signature' => $signature,
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     // ── Helpers privados ─────────────────────────────────────────────────────
 
     private function formatWorkspace(Equipo $equipo): array
@@ -300,6 +423,17 @@ class EquipoPublicoController extends Controller
                 'autor_nombre' => $r->autor_nombre,
                 'respuestas'   => $r->respuestas,
                 'created_at'   => $r->created_at,
+            ]),
+            // Archivos de prototipo subidos a Cloudinary (F1)
+            'prototipos' => $equipo->prototipos->map(fn($p) => [
+                'id'            => $p->id,
+                'url'           => $p->url,
+                'public_id'     => $p->public_id,
+                'resource_type' => $p->resource_type,
+                'filename'      => $p->filename,
+                'label'         => $p->label,
+                'size'          => $p->size,
+                'mime'          => $p->mime,
             ]),
         ];
     }

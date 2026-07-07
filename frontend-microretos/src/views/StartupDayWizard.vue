@@ -5,6 +5,7 @@ import api from '../api.js';
 import { useUIState } from '../composables/useUIState.js';
 import TourPromptModal from '../components/TourPromptModal.vue';
 import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
+import MicroretoModal from '../components/MicroretoModal.vue';
 
 const route  = useRoute();
 const router = useRouter();
@@ -130,25 +131,29 @@ const modulosAutocompletados = ref(false);  // para mostrar callout en paso 4
 const raCeAutocompletado     = ref(false);  // para mostrar callout en paso 4
 const mrEvalOficial          = ref([]);     // evaluacion_oficial del microreto vinculado
 
-// ── Sesiones ──────────────────────────────────────────────────────────────────
-const sesiones           = ref([])
-const sesionSeleccionada = ref(null)
-const sesionBusqueda     = ref('')
-
-const sesionesFiltradas = computed(() => {
-  if (!sesionBusqueda.value.trim()) return sesiones.value
-  const q = sesionBusqueda.value.trim().toLowerCase()
-  return sesiones.value.filter(s =>
-    (s.microreto_titulo || '').toLowerCase().includes(q) ||
-    (s.centro_educativo || '').toLowerCase().includes(q) ||
-    (s.ciclo_formativo  || '').toLowerCase().includes(q)
-  )
-})
-
 const microretoVinculado = computed(() =>
   form.value.microreto_id
     ? microretos.value.find(m => m.id == form.value.microreto_id)
     : null
+)
+
+const retoEmpresaNombre = computed(() =>
+  empresas.value.find(e => e.id == form.value.empresa_id)?.nombre_comercial
+  || microretoVinculado.value?.empresa?.nombre_comercial
+  || ''
+)
+const empresaDesdeReto = computed(() =>
+  !!(microretoVinculado.value?.empresa_id && microretoVinculado.value.empresa_id == form.value.empresa_id)
+)
+const retoFamiliaNombre = computed(() =>
+  microretoVinculado.value?.familia
+  || familias.value.find(f => f.id == form.value.familia_id)?.nombre
+  || ''
+)
+const retoCicloNombre = computed(() =>
+  ciclos.value.find(c => c.id == form.value.ciclo_id)?.nombre
+  || microretoVinculado.value?.ciclo
+  || ''
 )
 
 function formatFecha(isoDate) {
@@ -157,31 +162,56 @@ function formatFecha(isoDate) {
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-async function seleccionarSesion(s) {
-  sesionSeleccionada.value = s
-  form.value.sesion_id     = s.id
-  form.value.microreto_id  = s.microreto_id
-  // Usar microreto eager-loaded de la sesión; fallback al array local
-  const mr = s.microreto || (s.microreto_id ? microretos.value.find(m => m.id == s.microreto_id) : null)
-  if (mr) await autocompletarDesdeMicroreto(mr, s)
+// ── Picker de reto ────────────────────────────────────────────────────────────
+const microretoModalId  = ref(null)
+const retoBusqueda      = ref('')
+const retoFiltroFamilia = ref('')
+const retoFiltroCiclo   = ref('')
+const retoFiltroCurso   = ref('')
+
+const familiasFiltroRetos = computed(() =>
+  [...new Set(microretos.value.map(m => m.familia).filter(Boolean))].sort()
+)
+const ciclosFiltroRetos = computed(() =>
+  [...new Set(microretos.value.map(m => m.ciclo || '').filter(Boolean))].sort()
+)
+const retosFiltrados = computed(() => {
+  let list = microretos.value
+  const q = retoBusqueda.value.trim().toLowerCase()
+  if (q) list = list.filter(m =>
+    m.titulo?.toLowerCase().includes(q) ||
+    m.empresa?.nombre_comercial?.toLowerCase().includes(q) ||
+    m.pregunta_reto?.toLowerCase().includes(q)
+  )
+  if (retoFiltroFamilia.value) list = list.filter(m => m.familia === retoFiltroFamilia.value)
+  if (retoFiltroCiclo.value)   list = list.filter(m => (m.ciclo || '') === retoFiltroCiclo.value)
+  if (retoFiltroCurso.value) {
+    const target = retoFiltroCurso.value === '1º' ? '1' : '2'
+    list = list.filter(m => String(m.curso ?? '') === target)
+  }
+  return list.slice(0, 60)
+})
+
+async function seleccionarReto(mr) {
+  form.value.microreto_id = mr.id
+  await autocompletarDesdeMicroreto(mr, null)
 }
 
-function limpiarSesion() {
-  sesionSeleccionada.value = null
-  sesionBusqueda.value     = ''
-  form.value.sesion_id     = null
-  form.value.microreto_id  = ''
-  form.value.empresa_id    = ''
-  form.value.centro_id     = ''
-  form.value.familia_id    = ''
-  form.value.ciclo_id      = ''
-  form.value.curso         = ''
+function limpiarReto() {
+  form.value.microreto_id = ''
+  form.value.empresa_id   = ''
+  form.value.familia_id   = ''
+  form.value.ciclo_id     = ''
+  form.value.curso        = ''
+  retoBusqueda.value      = ''
+  retoFiltroFamilia.value = ''
+  retoFiltroCiclo.value   = ''
+  retoFiltroCurso.value   = ''
 }
 
 const form = ref({
   titulo: '', empresa_id: '', centro_id: '', familia_id: '', ciclo_id: '',
   curso: '', microreto_id: '',
-  sesion_id: route.query.sesion_id ? Number(route.query.sesion_id) : null,
   datos_empresa: { nombre: '', cif: '', sector: '', actividad: '', persona_contacto: '', email: '', telefono: '', web: '', descripcion: '' },
   datos_centro: { nombre: '', municipio: '', docente_nombre: '', docente_email: '' },
   equipo: { docente_responsable: '' },
@@ -463,16 +493,14 @@ const totalRaSeleccionados = computed(() =>
 
 // ── Catálogos ─────────────────────────────────────────────────────────────────
 async function cargarCatalogos() {
-  const [rE, rC, rF, rM, rS] = await Promise.all([
+  const [rE, rC, rF, rM] = await Promise.all([
     api.get('/empresas'), api.get('/centros'),
     api.get('/familias'), api.get('/microretos'),
-    api.get('/sesiones'),
   ]);
   empresas.value   = rE.data;
   centros.value    = rC.data;
   familias.value   = rF.data;
   microretos.value = rM.data;
-  sesiones.value   = rS.data;
 }
 
 watch(() => form.value.familia_id, async (id) => {
@@ -647,7 +675,7 @@ async function cargarProyecto() {
       titulo: p.titulo || '', empresa_id: p.empresa_id || '',
       centro_id: p.centro_id || '', familia_id: p.familia_id || '',
       ciclo_id: p.ciclo_id || '', curso: p.curso || '',
-      microreto_id: p.microreto_id || '', sesion_id: p.sesion_id || null, estado: p.estado || 'en_edicion',
+      microreto_id: p.microreto_id || '', estado: p.estado || 'en_edicion',
       enviado_a_empresa_mail: !!p.enviado_a_empresa_mail,
       ...(p.datos_empresa    && { datos_empresa: p.datos_empresa }),
       ...(p.datos_centro     && { datos_centro: p.datos_centro }),
@@ -686,18 +714,6 @@ onMounted(async () => {
   setTimeout(() => { isLoaded.value = true; }, 80);
   await cargarCatalogos();
   await cargarProyecto();
-  // Restaurar o preseleccionar sesión
-  const targetSesionId = form.value.sesion_id
-  if (targetSesionId) {
-    const s = sesiones.value.find(x => x.id === targetSesionId)
-    if (s) {
-      if (!uuid.value) {
-        await seleccionarSesion(s) // creación desde dashboard: autocompletar todo
-      } else {
-        sesionSeleccionada.value = s // edición: solo restaurar estado visual
-      }
-    }
-  }
   await nextTick();
   if (!modalBorradorAviso.value) showTourPrompt.value = true;
 });
@@ -713,9 +729,8 @@ async function guardar(siguientePaso) {
       if (res.data.token_empresa) tokenEmpresa.value = res.data.token_empresa;
     } else {
       const res = await api.post('/startup/proyectos', {
-        titulo:        form.value.titulo,
-        microreto_id:  form.value.microreto_id,
-        sesion_id:     form.value.sesion_id || null,
+        titulo:       form.value.titulo,
+        microreto_id: form.value.microreto_id,
       });
       uuid.value = res.data.uuid;
       const upd = await api.put(`/startup/proyectos/${uuid.value}`, payload);
@@ -784,7 +799,7 @@ function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const guiaWizard = [
   {
     titulo: 'Paso 1 · Datos básicos',
-    texto: 'Selecciona la sesión de trabajo que origina este proyecto. La sesión proviene del Dashboard Docente y ya tiene un reto asignado, por lo que autocompleta automáticamente empresa, centro y ciclo. Después escribe un título descriptivo y confirma familia, ciclo y curso del grupo de alumnado.',
+    texto: 'Elige el reto de la biblioteca al que responde este proyecto. Si ya tienes una sesión registrada, puedes vincularla para autocompletar empresa, centro y ciclo. La sesión es opcional: también puedes crear el proyecto directamente desde el reto.',
   },
   {
     titulo: 'Paso 2 · Datos de la empresa',
@@ -948,7 +963,9 @@ onUnmounted(() => { tourActivo.value = false; });
     </Transition>
 
     <!-- Contenido -->
-    <div class="relative z-10 max-w-3xl mx-auto px-4 py-8">
+    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8">
+      <div class="flex gap-8 items-start">
+      <div class="flex-1 min-w-0">
 
       <!-- Error -->
       <div v-if="errorMsg"
@@ -991,162 +1008,196 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Datos básicos</h2>
             <p class="text-gray-500 text-sm mt-1">
-              {{ uuid ? 'Revisa los datos de base del proyecto.' : 'Selecciona la sesión de trabajo — el proyecto hereda el reto que contiene.' }}
+              {{ uuid ? 'Revisa los datos de base del proyecto.' : 'Elige el reto de la biblioteca al que responde este proyecto y completa los datos de base.' }}
             </p>
           </div>
 
-          <!-- Sin sesiones (solo en creación) -->
-          <div v-if="!uuid && !sesiones.length"
-               class="bg-amber-50 border border-amber-200 rounded-4xl p-6 flex items-start gap-4">
-            <svg class="w-6 h-6 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <div>
-              <p class="text-sm font-bold text-amber-800 mb-1">No hay sesiones registradas</p>
-              <p class="text-xs text-amber-700 leading-relaxed">
-                Para crear un proyecto es necesario haber registrado primero una sesión con un reto en el
-                <button @click="router.push({ name: 'dashboard-docente' })"
-                        class="underline font-black hover:text-amber-900 transition-colors">
-                  Dashboard docente
-                </button>.
-              </p>
-            </div>
-          </div>
+            <!-- Selector de reto (creación) -->
+            <div v-if="!uuid"
+                 class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4 mb-4">
 
-          <template v-else>
-            <!-- ── Selector / info de sesión ───────────────────────────────── -->
-
-            <!-- Modo edición: sesión vinculada (read-only) -->
-            <div v-if="uuid && sesionSeleccionada"
-                 class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 mb-4">
-              <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-3">Sesión de trabajo vinculada</p>
-              <div class="rounded-2xl border border-[#99CC33]/30 bg-[#99CC33]/5 p-4">
-                <p class="text-sm font-black text-[#1F2937]">{{ sesionSeleccionada.microreto_titulo }}</p>
-                <div class="flex flex-wrap gap-1.5 mt-2">
-                  <span class="tag tag-green">{{ formatFecha(sesionSeleccionada.fecha) }}</span>
-                  <span v-if="sesionSeleccionada.curso"           class="tag tag-green">{{ sesionSeleccionada.curso }}</span>
-                  <span v-if="sesionSeleccionada.grupo"           class="tag tag-lime">Gr. {{ sesionSeleccionada.grupo }}</span>
-                  <span v-if="sesionSeleccionada.centro_educativo" class="tag tag-gray">{{ sesionSeleccionada.centro_educativo }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Modo edición sin sesión (proyecto legacy) -->
-            <div v-else-if="uuid && !sesionSeleccionada && form.microreto_id"
-                 class="bg-amber-50 border border-amber-100 rounded-4xl p-5 mb-4 flex items-start gap-3">
-              <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <div>
-                <p class="text-xs font-bold text-amber-800">Proyecto sin sesión vinculada</p>
-                <p class="text-xs text-amber-600 mt-0.5">Reto: {{ microretoVinculado?.titulo || '#' + form.microreto_id }}</p>
-              </div>
-            </div>
-
-            <!-- Modo creación: selector de sesión -->
-            <div v-else-if="!uuid"
-                 class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-3 mb-4">
-              <div class="flex items-start gap-3 pb-3 border-b border-gray-100">
-                <div class="w-8 h-8 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/30
-                            flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 text-[#5a7a00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                             M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-xs font-black text-[#121212]">Sesión de trabajo <span class="text-red-500">*</span></p>
-                  <p class="text-[11px] text-gray-400 mt-0.5">El proyecto hereda el reto de la sesión y autocompleta empresa, centro y ciclo.</p>
-                </div>
-              </div>
-
-              <!-- Sesión ya seleccionada -->
-              <div v-if="sesionSeleccionada" class="rounded-2xl border border-[#99CC33]/30 bg-[#99CC33]/5 p-4">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-[9px] font-black uppercase tracking-widest text-[#5a7a00] mb-1">Seleccionada</p>
-                    <p class="text-sm font-black text-[#1F2937] leading-snug">{{ sesionSeleccionada.microreto_titulo }}</p>
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                      <span class="tag tag-green">{{ formatFecha(sesionSeleccionada.fecha) }}</span>
-                      <span v-if="sesionSeleccionada.curso"            class="tag tag-green">{{ sesionSeleccionada.curso }}</span>
-                      <span v-if="sesionSeleccionada.grupo"            class="tag tag-lime">Gr. {{ sesionSeleccionada.grupo }}</span>
-                      <span v-if="sesionSeleccionada.centro_educativo" class="tag tag-gray">{{ sesionSeleccionada.centro_educativo }}</span>
-                    </div>
+              <!-- Header -->
+              <div class="flex items-start justify-between gap-3 pb-3 border-b border-gray-100">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-[#00A859]/15 border border-[#00A859]/30
+                              flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a.5.5 0 01-.354.146H9.88a.5.5 0 01-.354-.146l-.345-.346z"/>
+                    </svg>
                   </div>
-                  <button @click="limpiarSesion"
-                          class="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-gray-200
-                                 text-[10px] font-black uppercase tracking-widest text-gray-400
-                                 hover:border-[#99CC33] hover:text-[#5a7a00] transition-all">
-                    Cambiar
-                  </button>
-                </div>
-                <div v-if="microretoVinculado" class="mt-3 pt-3 border-t border-[#99CC33]/20">
-                  <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Reto</p>
-                  <div class="flex flex-wrap gap-1.5 items-center">
-                    <span class="text-xs font-black text-[#1F2937]">{{ microretoVinculado.titulo }}</span>
-                    <span v-if="microretoVinculado.familia" class="tag tag-gray">{{ microretoVinculado.familia }}</span>
-                    <span v-if="microretoVinculado.ciclo"   class="tag tag-gray">{{ microretoVinculado.ciclo }}</span>
+                  <div>
+                    <p class="text-xs font-black text-[#121212]">Reto <span class="text-red-500">*</span></p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Selecciona el reto de la biblioteca al que responde este proyecto.</p>
                   </div>
                 </div>
+                <button v-if="microretoVinculado" @click="limpiarReto"
+                        class="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-gray-200
+                               text-[10px] font-black uppercase tracking-widest text-gray-400
+                               hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                  Cambiar
+                </button>
               </div>
 
-              <!-- Lista de sesiones para elegir -->
+              <!-- Reto seleccionado -->
+              <div v-if="microretoVinculado"
+                   class="rounded-2xl border border-[#00A859]/30 bg-[#00A859]/5 p-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-1">Seleccionado</p>
+                <p class="text-sm font-black text-[#1F2937] leading-snug mb-2">{{ microretoVinculado.titulo }}</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <span v-if="microretoVinculado.empresa?.nombre_comercial"
+                        class="tag tag-gray">{{ microretoVinculado.empresa.nombre_comercial }}</span>
+                  <span v-if="microretoVinculado.familia" class="tag tag-gray">{{ microretoVinculado.familia }}</span>
+                  <span v-if="microretoVinculado.ciclo"   class="tag tag-gray">{{ microretoVinculado.ciclo }}</span>
+                  <span v-if="microretoVinculado.curso"
+                        class="tag tag-lime">{{ microretoVinculado.curso == 1 ? '1º' : '2º' }}</span>
+                </div>
+              </div>
+
+              <!-- Buscador + filtros + grid -->
               <div v-else class="space-y-3">
+
+                <!-- Buscador -->
                 <div class="relative">
                   <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
-                  <input v-model="sesionBusqueda" type="text"
-                         placeholder="Buscar por reto, centro o ciclo..."
+                  <input v-model="retoBusqueda" type="text"
+                         placeholder="Buscar por título, empresa o pregunta del reto…"
                          class="field-input pl-10" />
                 </div>
-                <p v-if="!sesionesFiltradas.length" class="text-xs text-gray-400 font-medium text-center py-6">
-                  Sin resultados.
+
+                <!-- Filtros -->
+                <div class="flex flex-wrap gap-2">
+                  <select v-model="retoFiltroFamilia"
+                          class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
+                                 bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
+                                 focus:ring-1 focus:ring-[#00A859]/40">
+                    <option value="">Familia</option>
+                    <option v-for="f in familiasFiltroRetos" :key="f" :value="f">{{ f }}</option>
+                  </select>
+                  <select v-model="retoFiltroCiclo"
+                          class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
+                                 bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
+                                 focus:ring-1 focus:ring-[#00A859]/40">
+                    <option value="">Ciclo</option>
+                    <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                  <div class="flex rounded-xl border border-gray-200 overflow-hidden text-[11px] font-black uppercase tracking-widest">
+                    <button v-for="op in ['', '1º', '2º']" :key="op"
+                            @click="retoFiltroCurso = op"
+                            :class="['px-3 py-1.5 transition-colors',
+                                     retoFiltroCurso === op
+                                       ? 'bg-[#00A859] text-white'
+                                       : 'bg-white text-gray-400 hover:bg-gray-50']">
+                      {{ op === '' ? 'Todos' : op }}
+                    </button>
+                  </div>
+                  <button v-if="retoBusqueda || retoFiltroFamilia || retoFiltroCiclo || retoFiltroCurso"
+                          @click="retoBusqueda = ''; retoFiltroFamilia = ''; retoFiltroCiclo = ''; retoFiltroCurso = ''"
+                          class="text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl
+                                 border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400
+                                 transition-colors">
+                    Limpiar
+                  </button>
+                </div>
+
+                <!-- Contador -->
+                <p class="text-[10px] text-gray-400 font-medium">
+                  {{ retosFiltrados.length }} reto{{ retosFiltrados.length !== 1 ? 's' : '' }}
                 </p>
-                <ul v-else class="space-y-2 max-h-72 overflow-y-auto pr-1 -mr-1">
-                  <li v-for="s in sesionesFiltradas" :key="s.id">
-                    <button @click="seleccionarSesion(s)"
-                            class="w-full text-left px-4 py-3 rounded-xl border border-gray-100
-                                   bg-gray-50 hover:border-[#99CC33]/40 hover:bg-[#99CC33]/5
-                                   transition-all group">
-                      <p class="text-sm font-black text-[#1F2937] leading-snug
-                                group-hover:text-[#5a7a00] transition-colors line-clamp-2">
-                        {{ s.microreto_titulo }}
+
+                <!-- Sin resultados -->
+                <p v-if="!retosFiltrados.length"
+                   class="text-xs text-gray-400 font-medium text-center py-8">
+                  Sin resultados para los filtros actuales.
+                </p>
+
+                <!-- Grid de miniaturas -->
+                <div v-else class="grid sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+                  <div v-for="mr in retosFiltrados" :key="mr.id"
+                       class="relative rounded-2xl border border-gray-100 bg-gray-50
+                              hover:border-[#00A859]/40 hover:bg-[#00A859]/5 hover:shadow-sm
+                              transition-all group">
+                    <button @click="seleccionarReto(mr)"
+                            class="text-left w-full px-4 pt-3.5 pb-10">
+                      <div class="flex items-start justify-between gap-2 mb-1.5">
+                        <p class="text-sm font-black text-[#1F2937] leading-snug line-clamp-2
+                                  group-hover:text-[#005c2e] transition-colors">
+                          {{ mr.titulo }}
+                        </p>
+                        <span v-if="mr.curso"
+                              class="shrink-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full
+                                     bg-[#99CC33]/20 text-[#4a6600] border border-[#99CC33]/30">
+                          {{ mr.curso == 1 ? '1º' : '2º' }}
+                        </span>
+                      </div>
+                      <p v-if="mr.pregunta_reto"
+                         class="text-[11px] text-gray-400 leading-relaxed line-clamp-2 mb-2">
+                        {{ mr.pregunta_reto }}
                       </p>
-                      <div class="flex flex-wrap gap-1.5 mt-1.5">
-                        <span class="tag tag-green">{{ formatFecha(s.fecha) }}</span>
-                        <span v-if="s.curso"            class="tag tag-green">{{ s.curso }}</span>
-                        <span v-if="s.grupo"            class="tag tag-lime">Gr. {{ s.grupo }}</span>
-                        <span v-if="s.centro_educativo" class="tag tag-gray">{{ s.centro_educativo }}</span>
-                        <span v-if="s.ciclo_formativo"  class="tag tag-gray">{{ s.ciclo_formativo }}</span>
+                      <div class="flex flex-wrap gap-1">
+                        <span v-if="mr.empresa?.nombre_comercial"
+                              class="tag tag-gray">{{ mr.empresa.nombre_comercial }}</span>
+                        <span v-if="mr.familia" class="tag tag-gray">{{ mr.familia }}</span>
+                        <span v-if="mr.ciclo"   class="tag tag-gray text-[9px]">{{ mr.ciclo }}</span>
                       </div>
                     </button>
-                  </li>
-                </ul>
-                <p class="text-[11px] text-red-500 font-medium">Debes seleccionar una sesión para continuar.</p>
+                    <button @click.stop="microretoModalId = mr.id"
+                            class="absolute bottom-2.5 right-3 flex items-center gap-1
+                                   text-[10px] font-black uppercase tracking-widest
+                                   text-gray-400 hover:text-[#00A859] transition-colors">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
+                                 -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      Ver reto
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-5"
-                 :class="(!uuid && !sesionSeleccionada) ? 'opacity-50 pointer-events-none select-none' : ''">
+            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-5">
               <div>
                 <label class="field-label">Título del proyecto *</label>
                 <input v-model="form.titulo" type="text" required class="field-input"
                        placeholder="Ej: Rediseño de packaging sostenible para EcoFab" />
               </div>
               <div class="grid sm:grid-cols-2 gap-4">
+
+                <!-- Empresa: read-only del reto -->
                 <div>
-                  <label class="field-label">Empresa colaboradora</label>
-                  <select v-model="form.empresa_id" class="field-input">
+                  <label class="field-label flex items-center gap-1.5">
+                    Empresa colaboradora
+                    <span v-if="microretoVinculado"
+                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                      Del reto
+                    </span>
+                  </label>
+                  <div v-if="microretoVinculado"
+                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
+                              border border-gray-100 text-sm font-medium text-[#1F2937]">
+                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    {{ retoEmpresaNombre || '—' }}
+                  </div>
+                  <select v-else v-model="form.empresa_id" class="field-input">
                     <option value="">— Seleccionar empresa —</option>
                     <option v-for="e in empresas" :key="e.id" :value="e.id">{{ e.nombre_comercial }}</option>
                   </select>
                 </div>
+
+                <!-- Centro: siempre editable (no viene del reto) -->
                 <div>
                   <label class="field-label">Centro educativo</label>
                   <select v-model="form.centro_id" class="field-input">
@@ -1154,69 +1205,92 @@ onUnmounted(() => { tourActivo.value = false; });
                     <option v-for="c in centros" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                   </select>
                 </div>
+
+                <!-- Familia: read-only del reto -->
                 <div>
-                  <label class="field-label">Familia profesional</label>
-                  <select v-model="form.familia_id" class="field-input">
+                  <label class="field-label flex items-center gap-1.5">
+                    Familia profesional
+                    <span v-if="microretoVinculado"
+                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                      Del reto
+                    </span>
+                  </label>
+                  <div v-if="microretoVinculado"
+                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
+                              border border-gray-100 text-sm font-medium text-[#1F2937]">
+                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    {{ retoFamiliaNombre || '—' }}
+                  </div>
+                  <select v-else v-model="form.familia_id" class="field-input">
                     <option value="">— Seleccionar familia —</option>
                     <option v-for="f in familias" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                   </select>
                 </div>
+
+                <!-- Ciclo: read-only del reto -->
                 <div>
-                  <label class="field-label">Ciclo formativo</label>
-                  <select v-model="form.ciclo_id" class="field-input" :disabled="!ciclos.length">
+                  <label class="field-label flex items-center gap-1.5">
+                    Ciclo formativo
+                    <span v-if="microretoVinculado"
+                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                      Del reto
+                    </span>
+                  </label>
+                  <div v-if="microretoVinculado"
+                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
+                              border border-gray-100 text-sm font-medium text-[#1F2937]">
+                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    {{ retoCicloNombre || '—' }}
+                  </div>
+                  <select v-else v-model="form.ciclo_id" class="field-input" :disabled="!ciclos.length">
                     <option value="">— Seleccionar ciclo —</option>
                     <option v-for="c in ciclos" :key="c.id" :value="c.id">{{ c.nombre }}</option>
                   </select>
                 </div>
-                <div class="relative">
-                  <label class="field-label flex items-center gap-2">
+
+                <!-- Curso: read-only del reto -->
+                <div>
+                  <label class="field-label flex items-center gap-1.5">
                     Curso
-                    <Transition enter-active-class="transition-all duration-300"
-                                enter-from-class="opacity-0 scale-75"
-                                leave-active-class="transition-all duration-300"
-                                leave-to-class="opacity-0 scale-75">
-                      <span v-if="cursoAutocompletado"
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                                   bg-[#00A859]/15 border border-[#00A859]/30 text-[#00A859]
-                                   text-[9px] font-black uppercase tracking-widest">
-                        <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-ping" />
-                        Del reto
-                      </span>
-                    </Transition>
+                    <span v-if="microretoVinculado"
+                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                      Del reto
+                    </span>
                   </label>
-                  <select v-model="form.curso"
-                          :class="['field-input transition-all duration-500',
-                                   cursoAutocompletado ? 'ring-2 ring-[#00A859]/40 border-[#00A859]/50' : '']">
+                  <div v-if="microretoVinculado"
+                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
+                              border border-gray-100 text-sm font-medium text-[#1F2937]">
+                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    {{ form.curso || '—' }}
+                  </div>
+                  <select v-else v-model="form.curso" class="field-input">
                     <option value="">— Curso —</option>
                     <option>1º</option><option>2º</option>
                   </select>
-                  <!-- Toast bocadillo -->
-                  <Transition enter-active-class="transition-all duration-300"
-                              enter-from-class="opacity-0 translate-y-1"
-                              leave-active-class="transition-all duration-300"
-                              leave-to-class="opacity-0 translate-y-1">
-                    <div v-if="cursoAutocompletado"
-                         class="absolute -bottom-8 left-0 z-10 flex items-center gap-1.5
-                                bg-[#00A859] text-white px-3 py-1 rounded-full shadow-md
-                                text-[10px] font-bold whitespace-nowrap pointer-events-none">
-                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                      </svg>
-                      Rellenado automáticamente desde el reto
-                    </div>
-                  </Transition>
                 </div>
+
               </div>
             </div>
 
             <div class="flex justify-end mt-5">
               <button @click="guardar(2)"
-                      :disabled="!form.titulo.trim() || (!uuid && !sesionSeleccionada) || !form.microreto_id || guardando"
+                      :disabled="!form.titulo.trim() || !form.microreto_id || guardando"
                       class="btn-primary">
                 {{ guardando ? 'Guardando…' : 'Siguiente →' }}
               </button>
             </div>
-          </template>
         </div>
 
         <!-- ═══ PASO 2: Empresa ═══ -->
@@ -1226,25 +1300,78 @@ onUnmounted(() => { tourActivo.value = false; });
               <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 2</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Datos de la empresa</h2>
-            <p class="text-gray-500 text-sm mt-1">Confirma o completa la información de la empresa colaboradora.</p>
+            <p class="text-gray-500 text-sm mt-1">
+              {{ empresaDesdeReto ? 'Información autocompleta desde el reto. Solo lectura.' : 'Confirma o completa la información de la empresa colaboradora.' }}
+            </p>
           </div>
 
           <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <div class="grid sm:grid-cols-2 gap-4">
-              <div><label class="field-label">Nombre / Razón social</label><input v-model="form.datos_empresa.nombre" type="text" class="field-input" /></div>
-              <div><label class="field-label">CIF</label><input v-model="form.datos_empresa.cif" type="text" class="field-input" /></div>
-              <div><label class="field-label">Sector</label><input v-model="form.datos_empresa.sector" type="text" class="field-input" /></div>
-              <div><label class="field-label">Actividad principal</label><input v-model="form.datos_empresa.actividad" type="text" class="field-input" /></div>
-              <div><label class="field-label">Persona de contacto</label><input v-model="form.datos_empresa.persona_contacto" type="text" class="field-input" /></div>
-              <div><label class="field-label">Email de contacto</label><input v-model="form.datos_empresa.email" type="email" class="field-input" /></div>
-              <div><label class="field-label">Teléfono</label><input v-model="form.datos_empresa.telefono" type="tel" class="field-input" /></div>
-              <div><label class="field-label">Web</label><input v-model="form.datos_empresa.web" type="url" placeholder="https://" class="field-input" /></div>
+
+            <!-- Cabecera "Del reto" cuando es read-only -->
+            <div v-if="empresaDesdeReto"
+                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#00A859]/8
+                        border border-[#00A859]/20 text-[11px] font-bold text-[#00A859]">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              Datos heredados del reto — no editables
             </div>
-            <div>
-              <label class="field-label">Descripción breve</label>
-              <textarea v-model="form.datos_empresa.descripcion" rows="3" class="field-input resize-none"
-                        placeholder="Qué hace la empresa, cuál es su propuesta de valor…" />
-            </div>
+
+            <!-- Read-only (empresa del reto) -->
+            <template v-if="empresaDesdeReto">
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div v-for="[label, val] in [
+                  ['Nombre / Razón social', form.datos_empresa.nombre],
+                  ['CIF',                  form.datos_empresa.cif],
+                  ['Sector',               form.datos_empresa.sector],
+                  ['Actividad principal',  form.datos_empresa.actividad],
+                  ['Persona de contacto',  form.datos_empresa.persona_contacto],
+                  ['Email de contacto',    form.datos_empresa.email],
+                  ['Teléfono',             form.datos_empresa.telefono],
+                  ['Web',                  form.datos_empresa.web],
+                ]" :key="label">
+                  <div>
+                    <p class="field-label">{{ label }}</p>
+                    <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
+                                border border-gray-100 text-sm text-[#1F2937] min-h-[2.5rem]">
+                      <svg class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                      </svg>
+                      <span class="truncate">{{ val || '—' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="form.datos_empresa.descripcion">
+                <p class="field-label">Descripción breve</p>
+                <div class="px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100
+                            text-sm text-[#1F2937] leading-relaxed">
+                  {{ form.datos_empresa.descripcion }}
+                </div>
+              </div>
+            </template>
+
+            <!-- Editable (sin reto o empresa diferente) -->
+            <template v-else>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div><label class="field-label">Nombre / Razón social</label><input v-model="form.datos_empresa.nombre" type="text" class="field-input" /></div>
+                <div><label class="field-label">CIF</label><input v-model="form.datos_empresa.cif" type="text" class="field-input" /></div>
+                <div><label class="field-label">Sector</label><input v-model="form.datos_empresa.sector" type="text" class="field-input" /></div>
+                <div><label class="field-label">Actividad principal</label><input v-model="form.datos_empresa.actividad" type="text" class="field-input" /></div>
+                <div><label class="field-label">Persona de contacto</label><input v-model="form.datos_empresa.persona_contacto" type="text" class="field-input" /></div>
+                <div><label class="field-label">Email de contacto</label><input v-model="form.datos_empresa.email" type="email" class="field-input" /></div>
+                <div><label class="field-label">Teléfono</label><input v-model="form.datos_empresa.telefono" type="tel" class="field-input" /></div>
+                <div><label class="field-label">Web</label><input v-model="form.datos_empresa.web" type="url" placeholder="https://" class="field-input" /></div>
+              </div>
+              <div>
+                <label class="field-label">Descripción breve</label>
+                <textarea v-model="form.datos_empresa.descripcion" rows="3" class="field-input resize-none"
+                          placeholder="Qué hace la empresa, cuál es su propuesta de valor…" />
+              </div>
+            </template>
+
           </div>
 
           <div class="flex justify-between mt-5">
@@ -2173,6 +2300,61 @@ onUnmounted(() => { tourActivo.value = false; });
         </div>
 
       </template>
+      </div><!-- /flex-1 wizard -->
+
+      <!-- ── Panel lateral: info del reto ─────────────────────────────────── -->
+      <aside v-if="microretoVinculado"
+             class="hidden lg:flex flex-col gap-4 w-72 shrink-0 sticky self-start rounded-3xl
+                    border border-gray-100 bg-white shadow-sm p-5 overflow-hidden"
+             style="top: 7.5rem">
+
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-2">
+          <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]">Reto del proyecto</span>
+          <button v-if="!uuid" @click="limpiarReto"
+                  class="text-[9px] font-black uppercase tracking-widest text-gray-400
+                         hover:text-red-400 transition-colors shrink-0">
+            Cambiar
+          </button>
+        </div>
+
+        <!-- Titulo -->
+        <div>
+          <p class="text-sm font-black text-[#121212] leading-snug">{{ microretoVinculado.titulo }}</p>
+          <p v-if="microretoVinculado.pregunta_reto"
+             class="text-[11px] text-gray-500 mt-2 leading-relaxed line-clamp-4 italic">
+            "{{ microretoVinculado.pregunta_reto }}"
+          </p>
+        </div>
+
+        <!-- Chips -->
+        <div class="flex flex-wrap gap-1.5">
+          <span v-if="retoEmpresaNombre" class="tag tag-gray">{{ retoEmpresaNombre }}</span>
+          <span v-if="microretoVinculado.familia" class="tag tag-gray">{{ microretoVinculado.familia }}</span>
+          <span v-if="microretoVinculado.ciclo"
+                class="tag tag-gray text-[9px] max-w-full truncate">{{ microretoVinculado.ciclo }}</span>
+          <span v-if="microretoVinculado.curso"
+                class="tag tag-lime">{{ microretoVinculado.curso == 1 ? '1º' : '2º' }}</span>
+        </div>
+
+        <!-- Ver ficha completa -->
+        <button @click="microretoModalId = microretoVinculado.id"
+                class="flex items-center justify-center gap-1.5 w-full py-2 rounded-2xl
+                       border border-gray-200 text-[10px] font-black uppercase tracking-widest
+                       text-gray-500 hover:border-[#00A859] hover:text-[#00A859] transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
+                     -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          Ver ficha completa
+        </button>
+
+      </aside>
+
+      </div><!-- /flex gap-8 -->
     </div>
   </div>
 
@@ -2699,6 +2881,8 @@ onUnmounted(() => { tourActivo.value = false; });
     @activar="activarTourDesdeModal"
     @omitir="omitirTourDesdeModal"
   />
+
+  <MicroretoModal :microreto-id="microretoModalId" @close="microretoModalId = null" />
 
 </template>
 

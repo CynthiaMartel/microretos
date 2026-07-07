@@ -18,7 +18,7 @@ class StoreSesionLoteRequest extends FormRequest
             return;
         }
 
-        $textFields = ['microreto_titulo', 'centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
+        $textFields = ['centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
 
         $sanitized = array_map(function (mixed $s) use ($textFields) {
             if (!is_array($s)) return $s;
@@ -37,9 +37,7 @@ class StoreSesionLoteRequest extends FormRequest
     {
         return [
             'sesiones'                    => 'required|array',
-            'sesiones.*.microreto_titulo' => 'nullable|string|max:500',
             'sesiones.*.fecha'            => 'required|date',
-            'sesiones.*.microreto_id'     => 'nullable',
             'sesiones.*.centro_educativo' => 'nullable|string|max:255',
             'sesiones.*.ciclo_formativo'  => 'nullable|string|max:255',
             'sesiones.*.curso'            => 'nullable|string|max:10',

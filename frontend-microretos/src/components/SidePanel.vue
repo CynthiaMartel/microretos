@@ -184,7 +184,7 @@ function rolHome(role) {
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
-                    <span>Generador</span>
+                    <span>Generador Retos</span>
                   </button>
                 </div>
 
@@ -230,25 +230,25 @@ function rolHome(role) {
 
               <div class="space-y-0.5">
 
-                <!-- Sesiones de Trabajo -->
-                <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
+                <!-- Generar Proyecto -->
+                <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
                   <button
-                    @click="irA('/dashboard/sesiones')"
-                    title="Registra sesiones de trabajo con retos"
+                    @click="irA('/startup-day/crear')"
+                    title="Crea un nuevo proyecto para el Taller de Ideas"
                     class="nav-item w-full text-left"
-                    :class="isActive('/dashboard/sesiones') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/startup-day/crear') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                      <rect x="9" y="3" width="6" height="4" rx="1"/>
-                      <path d="M9 12l2 2 4-4"/>
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="16"/>
+                      <line x1="8" y1="12" x2="16" y2="12"/>
                     </svg>
-                    <span>Sesiones de Trabajo</span>
+                    <span>Generar Proyecto</span>
                   </button>
                 </div>
 
-                <!-- Biblioteca de Proyectos -->
+                <!-- Biblioteca Proyectos -->
                 <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
                   <button
                     @click="irA('/startup-day')"
@@ -263,6 +263,24 @@ function rolHome(role) {
                       <path d="M2 12l10 5 10-5"/>
                     </svg>
                     <span>Biblioteca Proyectos</span>
+                  </button>
+                </div>
+
+                <!-- Crear/Ver Sesiones -->
+                <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
+                  <button
+                    @click="irA('/dashboard/sesiones')"
+                    title="Registra sesiones de trabajo con retos"
+                    class="nav-item w-full text-left"
+                    :class="isActive('/dashboard/sesiones') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                      <rect x="9" y="3" width="6" height="4" rx="1"/>
+                      <path d="M9 12l2 2 4-4"/>
+                    </svg>
+                    <span>Crear/Ver Sesiones</span>
                   </button>
                 </div>
 

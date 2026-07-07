@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreSesionLoteRequest;
 use App\Http\Requests\StoreSesionRequest;
 use App\Models\Equipo;
-use App\Models\Microreto;
 use App\Models\Sesion;
 use Illuminate\Http\Request;
 
@@ -16,27 +15,27 @@ class SesionController extends Controller
         $user  = $request->user();
         $query = Sesion::with([
             'docente:id,name',
-            'microreto.empresa.centroEducativo',
-            'microreto.empresa.familias',
-            'microproyectos:id,sesion_id,uuid,titulo',
+            'microproyecto:id,uuid,titulo,microreto_id,estado',
+            'microproyecto.microreto:id,titulo,empresa_nombre',
         ])->orderBy('created_at', 'desc');
 
         if ($user?->isDocente()) {
-            // Docente: solo sus propias sesiones
             $query->where('user_id', $user->id);
         } elseif ($user?->isAdmin() && $user->centro_educativo_id) {
-            // Admin: todas las sesiones de su centro educativo
             $nombreCentro = $user->centroEducativo?->nombre;
             if ($nombreCentro) {
                 $query->where('centro_educativo', $nombreCentro);
             }
         }
-        // Superadmin: sin filtro, ve todo
+        // Superadmin: sin filtro
 
         return $query->get()->map(function ($sesion) {
             $data = $sesion->toArray();
-            $data['microproyecto_uuid'] = $sesion->microproyectos->sortByDesc('id')->first()?->uuid;
-            unset($data['microproyectos']);
+            $data['microproyecto_uuid']   = $sesion->microproyecto?->uuid;
+            $data['proyecto_titulo']      = $sesion->microproyecto?->titulo;
+            $data['microreto_id']         = $sesion->microproyecto?->microreto_id;
+            $data['microreto_titulo']     = $sesion->microproyecto?->microreto?->titulo;
+            unset($data['microproyecto']);
             return $data;
         });
     }
@@ -44,12 +43,10 @@ class SesionController extends Controller
     public function store(StoreSesionRequest $request)
     {
         $validated = $request->validated();
-        $validated['microreto_id'] = $this->resolverMicroretoId($validated['microreto_id'] ?? null);
 
         $user = $request->user();
         $validated['user_id'] = $user->id;
 
-        // Forzar el centro del usuario autenticado — el frontend no puede sobreescribirlo
         if ($user->centro_educativo_id && $user->centroEducativo) {
             $validated['centro_educativo'] = $user->centroEducativo->nombre;
         }
@@ -61,8 +58,7 @@ class SesionController extends Controller
     {
         $userId = $request->user()->id;
         foreach ($request->validated()['sesiones'] as $s) {
-            $s['microreto_id'] = $this->resolverMicroretoId($s['microreto_id'] ?? null);
-            $s['user_id']      = $userId;
+            $s['user_id'] = $userId;
             Sesion::create($s);
         }
 
@@ -71,7 +67,7 @@ class SesionController extends Controller
 
     public function show($id)
     {
-        return Sesion::findOrFail($id);
+        return Sesion::with(['microproyecto:id,uuid,titulo,estado'])->findOrFail($id);
     }
 
     public function destroy($id)
@@ -83,7 +79,7 @@ class SesionController extends Controller
 
     /**
      * POST /api/sesiones/{id}/crear-codigo
-     * Crea equipos en el microproyecto publicado de la sesión y genera un codigo_clase.
+     * Crea equipos en el microproyecto de la sesión y genera un codigo_clase.
      */
     public function crearCodigo(Request $request, $id)
     {
@@ -91,21 +87,17 @@ class SesionController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        $proyecto = $sesion->microproyectos()
-            ->whereIn('estado', ['propuesta', 'validado'])
-            ->latest()
-            ->first();
+        $proyecto = $sesion->microproyecto;
 
-        if (!$proyecto) {
+        if (!$proyecto || !in_array($proyecto->estado, ['propuesta', 'validado'])) {
             return response()->json([
-                'error' => 'Esta sesión no tiene ningún proyecto publicado. Crea el proyecto desde el Startup Day y márcalo como Propuesta primero.',
+                'error' => 'Esta sesión no tiene ningún proyecto publicado. Asocia un proyecto a la sesión y márcalo como Propuesta primero.',
             ], 422);
         }
 
         $numEquipos = max(1, min(30, (int) ($sesion->num_equipos ?? 3)));
         $alumnados  = $sesion->alumnados ?? [];
 
-        // Eliminar equipos existentes y recrear
         $proyecto->equipos()->delete();
 
         for ($n = 1; $n <= $numEquipos; $n++) {
@@ -142,8 +134,8 @@ class SesionController extends Controller
     }
 
     /**
-     * GET /api/startup/sesiones/{id}/workspace
-     * Dashboard docente de workspace: progreso de todos los equipos de una sesión.
+     * GET /api/sesiones/{id}/workspace
+     * Dashboard docente: progreso de todos los equipos de la sesión.
      */
     public function workspace(Request $request, $id)
     {
@@ -151,14 +143,11 @@ class SesionController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        $proyecto = $sesion->microproyectos()
-            ->with([
-                'equipos.miembros',
-                'equipos.fases',
-                'equipos.reflexiones',
-            ])
-            ->latest()
-            ->first();
+        $proyecto = $sesion->microproyecto?->load([
+            'equipos.miembros',
+            'equipos.fases',
+            'equipos.reflexiones',
+        ]);
 
         $equipos = $proyecto?->equipos->map(function ($equipo) {
             $fasesCompletas = $equipo->fases->filter(fn($f) => $f->completada)->count();
@@ -188,7 +177,7 @@ class SesionController extends Controller
                     'nombre' => $m->nombre,
                     'rol'    => $m->rol,
                 ]),
-                'fases' => $fases,
+                'fases'      => $fases,
                 'reflexiones' => $equipo->reflexiones->map(fn($r) => [
                     'id'           => $r->id,
                     'tipo'         => $r->tipo,
@@ -216,14 +205,6 @@ class SesionController extends Controller
             ] : null,
             'equipos' => $equipos,
         ]);
-    }
-
-    // Acepta tanto UUID string (migración desde localStorage) como ID entero
-    private function resolverMicroretoId(mixed $value): ?int
-    {
-        if (!$value) return null;
-        if (is_numeric($value)) return (int) $value;
-        return Microreto::where('uuid', $value)->value('id');
     }
 
     private function generarCodigoClase(): string

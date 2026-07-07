@@ -11,7 +11,7 @@ class Microproyecto extends Model
 {
     use SoftDeletes;
     protected $fillable = [
-        'uuid', 'microreto_id', 'sesion_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
+        'uuid', 'microreto_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
         'titulo', 'curso',
         'datos_empresa', 'datos_centro', 'equipo', 'modulos_seleccionados', 'ra_ce',
         'fundamentacion', 'diseno_reto', 'diseno_microproyecto', 'resumen',
@@ -61,9 +61,9 @@ class Microproyecto extends Model
         return $this->belongsTo(Microreto::class);
     }
 
-    public function sesion()
+    public function sesiones()
     {
-        return $this->belongsTo(Sesion::class);
+        return $this->hasMany(Sesion::class);
     }
 
     public function empresa()

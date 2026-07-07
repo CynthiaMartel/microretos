@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateMicroproyectoRequest;
 use Illuminate\Http\Request;
 use App\Models\Microproyecto;
 
@@ -27,7 +28,6 @@ class MicroproyectoController extends Controller
         $data = $request->validate([
             'titulo'       => 'required|string|max:255',
             'microreto_id' => 'required|exists:microretos,id',
-            'sesion_id'    => 'nullable|exists:sesiones,id',
             'empresa_id'   => 'nullable|exists:empresas,id',
             'centro_id'    => 'nullable|exists:centros_educativos,id',
             'familia_id'   => 'nullable|exists:familias,id',
@@ -55,21 +55,15 @@ class MicroproyectoController extends Controller
         return response()->json($this->formatProyecto($proyecto));
     }
 
-    public function update(Request $request, $uuid)
+    public function update(UpdateMicroproyectoRequest $request, $uuid)
     {
         $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
 
         $this->authorize('update', $proyecto);
 
-        $allowed = [
-            'titulo', 'curso', 'sesion_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
-            'datos_empresa', 'datos_centro', 'equipo', 'modulos_seleccionados', 'ra_ce',
-            'fundamentacion', 'diseno_reto', 'diseno_microproyecto', 'resumen',
-            'objetivos', 'kpis', 'validacion_empresa',
-            'paso_actual', 'estado', 'enviado_a_empresa_mail',
-        ];
+        $sesionId = $request->input('sesion_id');
 
-        $data = $request->only($allowed);
+        $data = $request->validated();
 
         // Si el proyecto está validado y se modifica un campo relevante, se invalida toda validación
         if ($proyecto->empresa_validado || $proyecto->docente_validado) {
@@ -102,6 +96,11 @@ class MicroproyectoController extends Controller
         }
 
         $proyecto->update($data);
+
+        if ($sesionId) {
+            \App\Models\Sesion::where('id', $sesionId)
+                ->update(['microproyecto_id' => $proyecto->id]);
+        }
 
         return response()->json($this->formatProyecto($proyecto->fresh()));
     }
@@ -382,7 +381,7 @@ class MicroproyectoController extends Controller
             'familia_id'       => $p->familia_id,
             'microreto_id'     => $p->microreto_id,
             'microreto_titulo' => $p->microreto?->titulo,
-            'sesion_id'        => $p->sesion_id,
+            'sesion_id'        => $p->sesiones()->value('id'),
             'datos_empresa'    => $p->datos_empresa,
             'datos_centro'     => $p->datos_centro,
             'equipo'           => $p->equipo,

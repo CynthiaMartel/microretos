@@ -79,6 +79,11 @@ class Equipo extends Model
         return $this->hasMany(EquipoReflexion::class)->orderBy('created_at');
     }
 
+    public function prototipos()
+    {
+        return $this->hasMany(EquipoPrototipo::class)->orderBy('created_at');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function getFase(int $numero): ?EquipoFase

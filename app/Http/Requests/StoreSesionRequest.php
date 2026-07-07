@@ -13,7 +13,7 @@ class StoreSesionRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $textFields = ['microreto_titulo', 'proyecto_titulo', 'centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
+        $textFields = ['centro_educativo', 'ciclo_formativo', 'curso', 'grupo', 'notas'];
 
         $sanitized = [];
         foreach ($textFields as $field) {
@@ -27,6 +27,7 @@ class StoreSesionRequest extends FormRequest
                 ->map(fn($a) => [
                     'nombre'     => isset($a['nombre'])     ? strip_tags($a['nombre'])     : '',
                     'equipo_num' => isset($a['equipo_num']) ? (int) $a['equipo_num']       : null,
+                    'rol'        => isset($a['rol'])        ? strip_tags($a['rol'])        : null,
                 ])
                 ->filter(fn($a) => !empty($a['nombre']))
                 ->values()
@@ -41,11 +42,8 @@ class StoreSesionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'microreto_titulo'       => 'nullable|string|max:500',
-            'proyecto_titulo'        => 'nullable|string|max:500',
-            'proyecto_uuid'          => 'nullable|string|max:36',
+            'microproyecto_id'       => 'nullable|integer|exists:microproyectos,id',
             'fecha'                  => 'required|date',
-            'microreto_id'           => 'nullable',
             'centro_educativo'       => 'nullable|string|max:255',
             'ciclo_formativo'        => 'nullable|string|max:255',
             'curso'                  => 'nullable|string|max:10',
@@ -56,6 +54,7 @@ class StoreSesionRequest extends FormRequest
             'alumnados'              => 'nullable|array|max:200',
             'alumnados.*.nombre'     => 'required_with:alumnados|string|max:100',
             'alumnados.*.equipo_num' => 'nullable|integer|min:1|max:30',
+            'alumnados.*.rol'        => 'nullable|string|max:50',
         ];
     }
 }

@@ -132,18 +132,20 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const refresh = async () => {
-    if (refreshing.value) return
+    if (refreshing.value) return false
     refreshing.value = true
     try {
       const { data } = await api.post('/admin/refresh')
-      // Si el admin cambió el rol de este usuario, forzar reautenticación
       if (data.role !== undefined && data.role !== userRole.value) {
         logout()
-        return
+        return false
       }
       localStorage.setItem('admin_token', data.token)
       localStorage.setItem('admin_token_created_at', String(Date.now()))
       isAuthenticated.value = true
+      return true
+    } catch {
+      return false
     } finally {
       refreshing.value = false
     }
