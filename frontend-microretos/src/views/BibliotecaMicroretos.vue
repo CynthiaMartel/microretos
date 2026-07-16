@@ -54,7 +54,16 @@ const ciclosDisponibles = computed(() => {
 const cursosDisponibles = computed(() => {
   let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
-  return [...new Set(d.map(m => m.curso).filter(v => v != null))].sort((a, b) => a - b);
+  // 'transversal' se muestra aparte (botón fijo), no mezclado en el orden numérico 1º/2º.
+  return [...new Set(d.map(m => m.curso).filter(v => v != null && v !== 'transversal'))].sort((a, b) => a - b);
+});
+
+// Un reto transversal vale para 1º y 2º a la vez (módulo presente en ambos
+// cursos, o reto generado para encajar con varios módulos del ciclo).
+const hayRetosTransversales = computed(() => {
+  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
+  return d.some(m => m.curso === 'transversal');
 });
 
 // Conteo por nivel dentro de familia+centro (sin aplicar otros filtros activos)
@@ -112,7 +121,7 @@ const microretosFiltrados = computed(() => {
       (filtroCentro.value === '' || centro === filtroCentro.value) &&
       (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
       (filtroNivel.value  === '' || reto.nivel_grupo === filtroNivel.value) &&
-      (filtroCurso.value  === '' || String(reto.curso) === filtroCurso.value) &&
+      (filtroCurso.value  === '' || String(reto.curso) === filtroCurso.value || (filtroCurso.value !== 'transversal' && reto.curso === 'transversal')) &&
       infoOk && empresaOk &&
       (!q || [reto.titulo, reto.pregunta_reto, reto.empresa_nombre, reto.ciclo]
         .some(f => f && f.toLowerCase().includes(q)))
@@ -944,6 +953,16 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                         : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-400 hover:text-[#1F2937]'">
                       {{ curso }}º
                     </button>
+                    <button
+                      v-if="hayRetosTransversales"
+                      @click="filtroCurso = filtroCurso === 'transversal' ? '' : 'transversal'"
+                      title="Transversal: posibilidad 1º y/o 2º"
+                      class="flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all border"
+                      :class="filtroCurso === 'transversal'
+                        ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-sm'
+                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-400 hover:text-[#1F2937]'">
+                      Transversal
+                    </button>
                   </div>
                 </div>
 
@@ -1096,8 +1115,9 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     <span class="inline-block bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium truncate max-w-full shadow-sm" :title="reto.ciclo">
                       {{ reto.ciclo }}
                     </span>
-                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0">
-                      {{ reto.curso }}º curso
+                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0"
+                          :title="reto.curso === 'transversal' ? 'Transversal: posibilidad 1º y/o 2º' : ''">
+                      {{ reto.curso === 'transversal' ? 'Transversal' : reto.curso + 'º curso' }}
                     </span>
                   </div>
                 </div>

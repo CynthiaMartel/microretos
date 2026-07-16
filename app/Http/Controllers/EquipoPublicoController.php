@@ -11,7 +11,7 @@ use App\Models\EquipoMiembro;
 use App\Models\EquipoPrototipo;
 use App\Models\EquipoTarea;
 use App\Models\EquipoReflexion;
-use App\Models\Sesion;
+use App\Models\Encuentro;
 
 class EquipoPublicoController extends Controller
 {
@@ -34,21 +34,22 @@ class EquipoPublicoController extends Controller
      */
     public function porCodigoClase($codigo)
     {
-        $sesion = Sesion::where('codigo_clase', strtoupper($codigo))->first();
+        $encuentro = Encuentro::where('codigo_clase', strtoupper($codigo))->first();
 
-        if (!$sesion) {
+        if (!$encuentro) {
             return response()->json(['error' => 'Código no válido.'], 404);
         }
 
-        $proyecto = $sesion->microproyectos()
+        // Encuentro belongsTo Microproyecto (singular) — se consulta como query builder
+        // sobre esa única relación, no como colección.
+        $proyecto = $encuentro->microproyecto()
             ->whereIn('estado', ['propuesta', 'validado'])
             ->whereHas('equipos')
             ->with('equipos.miembros')
-            ->latest()
             ->first();
 
         if (!$proyecto) {
-            return response()->json(['error' => 'El docente aún no ha creado los equipos. Pídele que regenere el código de acceso desde "Mis sesiones".'], 403);
+            return response()->json(['error' => 'El docente aún no ha creado los equipos. Pídele que regenere el código de acceso desde "Mis encuentros".'], 403);
         }
 
         return response()->json([
@@ -391,6 +392,7 @@ class EquipoPublicoController extends Controller
                 'docente_nombre' => $mp->datos_centro['docente_nombre'] ?? null,
                 'objetivos'     => $mp->objetivos['lista'] ?? [],
                 'kpis'          => $mp->kpis['lista'] ?? [],
+                'diseno_microproyecto' => $mp->diseno_microproyecto,
             ],
             // Diagnóstico de empresa del microreto origen (solo lectura en F0)
             'diagnostico' => $mr ? [

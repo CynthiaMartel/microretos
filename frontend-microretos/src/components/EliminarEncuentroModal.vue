@@ -3,17 +3,17 @@ import { ref, computed, watch } from 'vue'
 import api from '../api.js'
 
 const props = defineProps({
-  visible: { type: Boolean, default: false },
-  sesion:  { type: Object,  default: null  },
+  visible:   { type: Boolean, default: false },
+  encuentro: { type: Object,  default: null  },
 })
-const emit = defineEmits(['sesion-eliminada', 'cerrar'])
+const emit = defineEmits(['encuentro-eliminado', 'cerrar'])
 
 const fase          = ref(1)
 const confirmTexto  = ref('')
 const eliminando    = ref(false)
 const error         = ref('')
 
-const nombreConfirm = computed(() => props.sesion?.microreto_titulo || `Sesión #${props.sesion?.id}`)
+const nombreConfirm = computed(() => props.encuentro?.microreto_titulo || `Encuentro #${props.encuentro?.id}`)
 const textoValido   = computed(() => confirmTexto.value === nombreConfirm.value)
 
 watch(() => props.visible, (v) => {
@@ -35,15 +35,15 @@ async function confirmarEliminacion() {
   eliminando.value = true
   error.value = ''
   try {
-    await api.delete(`/sesiones/${props.sesion.id}`)
-    emit('sesion-eliminada', { id: props.sesion.id, titulo: props.sesion.microreto_titulo })
+    await api.delete(`/encuentros/${props.encuentro.id}`)
+    emit('encuentro-eliminado', { id: props.encuentro.id, titulo: props.encuentro.microreto_titulo })
   } catch (e) {
     if (e.response?.status === 404) {
-      error.value = 'La sesión no se encontró. Es posible que ya haya sido eliminada.'
+      error.value = 'El encuentro no se encontró. Es posible que ya haya sido eliminado.'
     } else if (e.response?.status === 401) {
       error.value = 'Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.'
     } else {
-      error.value = 'Error al eliminar la sesión. Inténtalo de nuevo.'
+      error.value = 'Error al eliminar el encuentro. Inténtalo de nuevo.'
     }
   } finally {
     eliminando.value = false
@@ -67,27 +67,27 @@ async function confirmarEliminacion() {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="esm-title">Eliminar sesión</h2>
-                <p class="esm-sub">La sesión se moverá a la <span class="font-black text-amber-600">papelera</span> y podrá restaurarse desde allí</p>
+                <h2 class="esm-title">Eliminar encuentro</h2>
+                <p class="esm-sub">El encuentro se moverá a la <span class="font-black text-amber-600">papelera</span> y podrá restaurarse desde allí</p>
               </div>
             </div>
 
-            <!-- Identificación de la sesión -->
+            <!-- Identificación del encuentro -->
             <div class="mt-5 px-4 py-3 bg-gray-50 rounded-2xl border border-gray-100">
-              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Sesión a eliminar</p>
-              <p class="font-black text-[#1F2937] text-sm leading-snug">{{ sesion?.microreto_titulo || '(sin título)' }}</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Encuentro a eliminar</p>
+              <p class="font-black text-[#1F2937] text-sm leading-snug">{{ encuentro?.microreto_titulo || '(sin título)' }}</p>
               <div class="flex flex-wrap gap-1.5 mt-2">
-                <span v-if="sesion?.fecha"
+                <span v-if="encuentro?.fecha"
                   class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                  {{ sesion.fecha }}
+                  {{ encuentro.fecha }}
                 </span>
-                <span v-if="sesion?.centro_educativo"
+                <span v-if="encuentro?.centro_educativo"
                   class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full">
-                  {{ sesion.centro_educativo }}
+                  {{ encuentro.centro_educativo }}
                 </span>
-                <span v-if="sesion?.ciclo_formativo"
+                <span v-if="encuentro?.ciclo_formativo"
                   class="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                  {{ sesion.ciclo_formativo }}
+                  {{ encuentro.ciclo_formativo }}
                 </span>
               </div>
             </div>
@@ -96,7 +96,7 @@ async function confirmarEliminacion() {
             <Transition name="esm-fase" mode="out-in">
               <div v-if="fase === 1" key="f1" class="mt-5 space-y-3">
 
-                <p class="text-sm font-semibold text-gray-600">Al eliminar esta sesión ocurrirá lo siguiente:</p>
+                <p class="text-sm font-semibold text-gray-600">Al eliminar este encuentro ocurrirá lo siguiente:</p>
 
                 <!-- Movido a papelera -->
                 <div class="esm-impact-row esm-impact-warn">
@@ -107,7 +107,7 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-amber-800">La sesión se moverá a la papelera</p>
+                    <p class="font-black text-sm text-amber-800">El encuentro se moverá a la papelera</p>
                     <p class="text-xs text-amber-600 mt-0.5">Podrás recuperarla desde la sección Papelera si lo necesitas.</p>
                   </div>
                 </div>
@@ -121,8 +121,8 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-red-700">Dejará de aparecer en el historial de sesiones</p>
-                    <p class="text-xs text-red-500 mt-0.5">La sesión no será visible mientras esté en la papelera.</p>
+                    <p class="font-black text-sm text-red-700">Dejará de aparecer en el historial de encuentros</p>
+                    <p class="text-xs text-red-500 mt-0.5">El encuentro no será visible mientras esté en la papelera.</p>
                   </div>
                 </div>
 
@@ -136,7 +136,7 @@ async function confirmarEliminacion() {
                   </div>
                   <div class="flex-1">
                     <p class="font-black text-sm text-blue-700">Los proyectos StartUp Day vinculados no se eliminarán</p>
-                    <p class="text-xs text-blue-500 mt-0.5">Los proyectos creados a partir de esta sesión permanecen en la biblioteca.</p>
+                    <p class="text-xs text-blue-500 mt-0.5">Los proyectos creados a partir de este encuentro permanecen en la biblioteca.</p>
                   </div>
                 </div>
 
@@ -147,7 +147,7 @@ async function confirmarEliminacion() {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    Entiendo, quiero eliminarla
+                    Entiendo, quiero eliminarlo
                   </button>
                 </div>
               </div>
@@ -185,7 +185,7 @@ async function confirmarEliminacion() {
                     El título no coincide. Comprueba mayúsculas, espacios y caracteres especiales.
                   </p>
                   <p v-if="confirmTexto && textoValido" class="esm-hint-ok">
-                    Título confirmado. Ya puedes mover la sesión a la papelera.
+                    Título confirmado. Ya puedes mover el encuentro a la papelera.
                   </p>
                 </div>
 

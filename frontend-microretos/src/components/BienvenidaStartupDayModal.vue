@@ -45,12 +45,12 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear un proyecto</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Empieza el wizard guiado para registrar un nuevo proyecto StartUp Day.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear una propuesta</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Empieza el wizard guiado para registrar una nueva propuesta StartUp Day.</p>
             </div>
           </button>
 
-          <!-- b) Continuar con un proyecto -->
+          <!-- b) Continuar con una propuesta o proyecto -->
           <button @click="emit('seleccionar', 'trabajar')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
                          bg-gray-50 hover:bg-[#99CC33]/8 hover:border-[#99CC33]/40
@@ -66,8 +66,8 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Continuar con un proyecto</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Accede a la biblioteca y continúa editando un proyecto existente.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Continuar con una propuesta o proyecto</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Accede a la biblioteca y continúa editando una propuesta o proyecto existente.</p>
             </div>
           </button>
 

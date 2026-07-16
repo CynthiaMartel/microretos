@@ -2232,30 +2232,57 @@ async function guardarEstadoGen(nuevoEstado) {
                   <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
                   RA/CE Seleccionados
                 </h3>
-                
-                <div class="space-y-6">
-                  <div v-for="evalObj in reto.evaluacion_oficial" :key="evalObj.modulo" class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
-                    <p class="text-xs uppercase font-bold text-gray-400 mb-1">Módulo</p>
-                    <p class="font-black text-[#1F2937] text-lg mb-4">{{ evalObj.modulo }}</p>
-                    <div class="mb-4">
-                      <p class="text-xs uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg> Resultado de Aprendizaje
-                      </p>
-                      <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">{{ evalObj.ra }}</p>
-                    </div>
-                    <div class="mb-4">
-                      <p class="text-xs uppercase font-bold text-gray-500 mb-2">Criterios de Evaluación:</p>
-                      <ul class="space-y-2">
-                        <li v-for="(ce, i) in evalObj.ce" :key="i" class="text-sm text-gray-600 flex items-start gap-2">
-                          <span class="text-[#00A859] font-bold mt-0.5">✓</span> {{ ce }}
-                        </li>
-                      </ul>
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-gray-100">
-                      <p class="text-sm text-gray-500 italic"><span class="font-bold not-italic text-[#1F2937]">Aplicación:</span> {{ evalObj.aplicacion }}</p>
+
+                <!-- Aviso: no se pudo asignar ningún RA/CE -->
+                <div v-if="!reto.evaluacion_oficial || !reto.evaluacion_oficial.length"
+                     class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                  <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  </svg>
+                  <p class="text-sm text-amber-700 leading-relaxed">
+                    No se ha podido asignar ningún RA/CE a este reto: los módulos elegidos todavía no tienen
+                    currículo cargado en la base de datos (pendiente de importar del BOE). Asígnalos manualmente
+                    antes de publicar el reto.
+                  </p>
+                </div>
+
+                <template v-else>
+                  <!-- Aviso: selección hecha por IA, revisar -->
+                  <div class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 mb-4">
+                    <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-sm text-blue-700 leading-relaxed">
+                      Esta selección de RA/CE la ha hecho la IA a partir del currículo oficial — revísala antes de publicar el reto.
+                    </p>
+                  </div>
+
+                  <div class="space-y-6">
+                    <div v-for="evalObj in reto.evaluacion_oficial" :key="evalObj.modulo" class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
+                      <p class="text-xs uppercase font-bold text-gray-400 mb-1">Módulo</p>
+                      <p class="font-black text-[#1F2937] text-lg mb-4">{{ evalObj.modulo }}</p>
+                      <div class="mb-4">
+                        <p class="text-xs uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg> Resultado de Aprendizaje
+                        </p>
+                        <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">{{ evalObj.ra }}</p>
+                      </div>
+                      <div class="mb-4">
+                        <p class="text-xs uppercase font-bold text-gray-500 mb-2">Criterios de Evaluación:</p>
+                        <ul class="space-y-2">
+                          <li v-for="(ce, i) in evalObj.ce" :key="i" class="text-sm text-gray-600 flex items-start gap-2">
+                            <span class="text-[#00A859] font-bold mt-0.5">✓</span> {{ ce }}
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="mt-4 pt-4 border-t border-gray-100">
+                        <p class="text-sm text-gray-500 italic"><span class="font-bold not-italic text-[#1F2937]">Aplicación:</span> {{ evalObj.aplicacion }}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </template>
               </div>
 
               <div v-if="reto.variantes && reto.variantes.length > 0" class="pt-6">

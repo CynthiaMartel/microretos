@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Microproyecto;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreSesionRequest extends FormRequest
+class StoreEncuentroRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -41,8 +42,18 @@ class StoreSesionRequest extends FormRequest
 
     public function rules(): array
     {
+        $numEquipos = (int) $this->input('num_equipos', 0);
+
         return [
-            'microproyecto_id'       => 'nullable|integer|exists:microproyectos,id',
+            'microproyecto_id'       => ['required', 'integer', 'exists:microproyectos,id', function ($attribute, $value, $fail) {
+                $user = $this->user();
+                if ($user->isSuperAdmin()) return;
+
+                $proyecto = Microproyecto::find($value);
+                if ($proyecto && $proyecto->centro_id !== $user->centro_educativo_id) {
+                    $fail('El proyecto seleccionado no pertenece a tu centro educativo.');
+                }
+            }],
             'fecha'                  => 'required|date',
             'centro_educativo'       => 'nullable|string|max:255',
             'ciclo_formativo'        => 'nullable|string|max:255',
@@ -50,11 +61,26 @@ class StoreSesionRequest extends FormRequest
             'grupo'                  => 'nullable|string|max:10',
             'num_alumnos'            => 'nullable|integer|min:1|max:999',
             'notas'                  => 'nullable|string|max:5000',
-            'num_equipos'            => 'nullable|integer|min:1|max:30',
-            'alumnados'              => 'nullable|array|max:200',
-            'alumnados.*.nombre'     => 'required_with:alumnados|string|max:100',
-            'alumnados.*.equipo_num' => 'nullable|integer|min:1|max:30',
+            'num_equipos'            => 'required|integer|min:1|max:30',
+            'alumnados'              => 'required|array|min:1|max:200',
+            'alumnados.*.nombre'     => 'required|string|max:100',
+            'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
+                if ($numEquipos > 0 && $value > $numEquipos) {
+                    $fail("El equipo asignado ({$value}) supera el número de equipos del encuentro ({$numEquipos}).");
+                }
+            }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'microproyecto_id.required' => 'Debes asociar un proyecto al encuentro antes de guardarlo.',
+            'num_equipos.required'      => 'Indica el número de equipos del encuentro.',
+            'alumnados.required'        => 'Reparte el alumnado en equipos antes de guardar el encuentro.',
+            'alumnados.min'             => 'Reparte el alumnado en equipos antes de guardar el encuentro.',
+            'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un equipo asignado.',
         ];
     }
 }

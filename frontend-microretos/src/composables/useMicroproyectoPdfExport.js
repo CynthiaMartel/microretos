@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { duracionPorFase } from '../config/fasesProyecto.js';
 
 const GREEN  = [0, 168, 89];
 const DARK   = [31, 41, 55];
@@ -244,9 +245,11 @@ function makeRenderer(doc) {
     const fases = p.diseno_microproyecto?.fases;
     if (fases?.length) {
       addSectionTitle('Fases del proyecto', BLUE);
+      const clases = p.diseno_microproyecto?.clases;
       fases.forEach((f, i) => {
-        const nombre   = f.nombre || `Fase ${i + 1}`;
-        const duracion = f.duracion ? ` (${f.duracion})` : '';
+        const nombre     = f.nombre || `Fase ${i + 1}`;
+        const numClases  = duracionPorFase(clases, i);
+        const duracion   = numClases ? ` (${numClases} clase${numClases > 1 ? 's' : ''})` : '';
 
         // Calcular descripción con el font correcto ANTES de splitTextToSize
         setFont(7.5, 'normal', LGRAY);

@@ -29,6 +29,13 @@ function getFase(n) {
   return workspace.value?.fases?.[n] ?? { numero_fase: n, datos: null, completada: false, validado_docente: false }
 }
 
+// Duración real (en clases) — nº de clases del calendario que cubren esta fase
+function duracionFase(n) {
+  const clases = proyecto.value?.diseno_microproyecto?.clases || []
+  const count = clases.filter(c => (c.fases || []).includes(n)).length
+  return count || null
+}
+
 // ── Definición visual de fases ─────────────────────────────────────────────
 const fasesConfig = [
   { num: 0, label: 'Inicio del equipo',  shortLabel: 'Inicio',     icono: '👥', color: 'slate',  desc: 'Constitución del equipo',    descLarga: 'Conóceos, estableced roles y acordad cómo vais a trabajar juntos durante el reto. Esta fase no se evalúa, pero es clave para que todo lo demás funcione.' },
@@ -516,7 +523,10 @@ watch(workspace, (val) => {
             <div class="bg-[#F0FDF4] border border-[#00A859]/20 rounded-2xl px-5 py-4 flex gap-3 items-start">
               <span class="text-2xl mt-0.5 shrink-0">{{ fasesConfig[faseVista].icono }}</span>
               <div>
-                <p class="text-sm font-black text-[#065F46] mb-0.5">{{ fasesConfig[faseVista].label }}</p>
+                <p class="text-sm font-black text-[#065F46] mb-0.5">
+                  {{ fasesConfig[faseVista].label }}
+                  <span v-if="duracionFase(faseVista)" class="font-normal text-[#047857]/80"> · {{ duracionFase(faseVista) }} clase(s)</span>
+                </p>
                 <p class="text-sm text-[#047857] leading-relaxed">{{ fasesConfig[faseVista].descLarga }}</p>
               </div>
             </div>

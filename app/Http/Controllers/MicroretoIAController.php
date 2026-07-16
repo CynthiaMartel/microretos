@@ -315,17 +315,15 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         }
         $modulos = $query->get();
 
-        $curriculumTexto = "--- INICIO CURRÍCULO DE {$request->cursoSeleccionado}º CURSO ---\n";
-        foreach ($modulos as $modulo) {
-            $curriculumTexto .= "\n[MÓDULO]: {$modulo->nombre}\n";
-            foreach ($modulo->ras as $ra) {
-                $curriculumTexto .= "  - [RA]: {$ra->descripcion}\n";
-                foreach ($ra->criteriosEvaluacion as $ce) {
-                    $curriculumTexto .= "    * [CE]: {$ce->descripcion}\n";
-                }
-            }
-        }
-        $curriculumTexto .= "\n--- FIN CURRÍCULO ---";
+        // Índice ra_id -> {ra, modulo} + texto de currículo con ids reales embebidos.
+        // Lógica compartida con MicroproyectoController::sugerirRaCe() — mismo
+        // enfoque closed-book en ambos flujos (ver RaCeCatalogoService).
+        $raCeCatalogo = app(\App\Services\RaCeCatalogoService::class);
+        [$raIndex, $curriculumCuerpo, $hayCurriculumDisponible] = $raCeCatalogo->construirIndiceYTexto($modulos);
+
+        $curriculumTexto = "--- INICIO CURRÍCULO DE {$request->cursoSeleccionado}º CURSO ---\n"
+            . $curriculumCuerpo
+            . "\n--- FIN CURRÍCULO ---";
 
         $esBasica    = ($request->nivelGrupo === 'Bajo');
         $reglaExtra  = $esBasica
@@ -361,7 +359,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         REGLAS ESTRICTAS:
         1. NO proponer soluciones cerradas. Puedes sugerir el tipo de prototipo a entregar. El alumno debe idear la solución final.
         2. Genera EXACTAMENTE {$request->cantidad} microreto(s) totalmente distintos entre sí para la misma empresa.
-        3. Para lograr variedad, selecciona diferentes Resultados de Aprendizaje (RA) y Criterios de Evaluación (CE) para cada reto.
+        3. Para \"evaluacion_oficial\": SELECCIONA únicamente ids de RA y CE que aparezcan literalmente en el currículo proporcionado (marcados como [RA id=...] y [CE id=...]). NUNCA inventes un id ni redactes tú el texto del RA o el CE — el sistema recupera el texto real de la base de datos a partir del id que elijas. Si el currículo proporcionado no tiene RA/CE disponibles, devuelve evaluacion_oficial como array vacío []. Para lograr variedad entre retos, elige distintos RA/CE de la lista para cada uno.
         {$familiaRegla}";
 
         $prototiposHint = $familia
@@ -400,9 +398,8 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
                     \"ods_sugeridos\": [\"ODS X: Nombre completo del ODS\"],
                     \"evaluacion_oficial\": [
                         {
-                            \"modulo\": \"Nombre exacto del Módulo 1\",
-                            \"ra\": \"Texto del RA asociado\",
-                            \"ce\": [\"Texto CE 1\"],
+                            \"ra_id\": 123,
+                            \"ce_ids\": [45, 46],
                             \"aplicacion\": \"Breve frase explicando cómo se aterriza este aprendizaje en el contexto de la Familia Profesional.\"
                         }
                     ],
@@ -429,7 +426,17 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             ]);
 
         if ($response->successful()) {
-            return response()->json(json_decode($response->json()['choices'][0]['message']['content'], true));
+            $data = json_decode($response->json()['choices'][0]['message']['content'], true);
+            if (isset($data['microretos']) && is_array($data['microretos'])) {
+                foreach ($data['microretos'] as &$reto) {
+                    $reto['evaluacion_oficial'] = $raCeCatalogo->resolver(
+                        $reto['evaluacion_oficial'] ?? [],
+                        $raIndex
+                    );
+                }
+                unset($reto);
+            }
+            return response()->json($data);
         }
 
         return response()->json(['error' => 'Error al contactar con la IA'], 500);
@@ -491,12 +498,19 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'microretos.*.ods_sugeridos.*'      => 'nullable|string|max:255',
             'microretos.*.soft_skills'          => 'nullable|array',
             'microretos.*.soft_skills.*'        => 'nullable|string|max:255',
-            'microretos.*.evaluacion_oficial'   => 'nullable|array',
-            'microretos.*.evaluacion_oficial.*' => 'nullable|string|max:2000',
+            'microretos.*.evaluacion_oficial'              => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.modulo'     => 'nullable|string|max:255',
+            'microretos.*.evaluacion_oficial.*.ra_id'      => 'nullable|integer|exists:resultados_aprendizaje,id',
+            'microretos.*.evaluacion_oficial.*.ra'         => 'nullable|string|max:2000',
+            'microretos.*.evaluacion_oficial.*.ce_ids'     => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.ce_ids.*'   => 'integer|exists:criterios_evaluacion,id',
+            'microretos.*.evaluacion_oficial.*.ce'         => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.ce.*'       => 'nullable|string|max:1000',
+            'microretos.*.evaluacion_oficial.*.aplicacion' => 'nullable|string|max:1000',
             'microretos.*.tips_profesorado'     => 'nullable|array',
             'microretos.*.tips_profesorado.*'   => 'nullable|string|max:2000',
             'microretos.*.nivel_grupo'          => 'nullable|string|max:100',
-            'microretos.*.curso'                => 'nullable|string|max:100',
+            'microretos.*.curso'                => 'nullable|integer',
             'microretos.*.ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',
             'microretos.*.ciclo'                => 'nullable|string|max:255',
             'microretos.*.modulo'               => 'nullable|string|max:255',
@@ -505,7 +519,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         ]);
 
         $textFields = ['empresa_nombre', 'titulo', 'quien_es', 'dia_a_dia', 'pregunta_reto',
-                       'ciclo', 'modulo', 'duracion', 'nivel_grupo', 'curso'];
+                       'ciclo', 'modulo', 'duracion', 'nivel_grupo'];
         $arrayFields = ['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
                         'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado'];
 
@@ -538,7 +552,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
                 }
                 foreach ($arrayFields as $field) {
                     if (isset($retoData[$field]) && is_array($retoData[$field])) {
-                        $retoData[$field] = array_map('strip_tags', $retoData[$field]);
+                        $retoData[$field] = $this->sanitizeRecursively($retoData[$field]);
                     }
                 }
 
@@ -555,6 +569,23 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al guardar el lote en BD: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * evaluacion_oficial contiene objetos anidados (modulo, ra, ce[], aplicacion),
+     * a diferencia del resto de campos array que son listas planas de strings.
+     */
+    private function sanitizeRecursively(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            return strip_tags($value);
+        }
+
+        if (is_array($value)) {
+            return array_map(fn ($item) => $this->sanitizeRecursively($item), $value);
+        }
+
+        return $value;
     }
 
     public function destroy($id)

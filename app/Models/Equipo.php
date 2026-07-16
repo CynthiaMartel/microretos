@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use App\Models\Sesion;
+use App\Models\Encuentro;
 
 class Equipo extends Model
 {
     protected $fillable = [
-        'microproyecto_id', 'sesion_id', 'nombre', 'token', 'codigo_acceso', 'fase_actual',
+        'microproyecto_id', 'encuentro_id', 'nombre', 'token', 'codigo_acceso', 'fase_actual',
     ];
 
     protected $casts = [
@@ -54,9 +54,9 @@ class Equipo extends Model
         return $this->belongsTo(Microproyecto::class);
     }
 
-    public function sesion()
+    public function encuentro()
     {
-        return $this->belongsTo(Sesion::class);
+        return $this->belongsTo(Encuentro::class);
     }
 
     public function miembros()

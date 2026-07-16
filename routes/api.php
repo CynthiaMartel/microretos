@@ -7,7 +7,7 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\MicroretoTokenController;
 use App\Http\Controllers\MicroproyectoController;
-use App\Http\Controllers\SesionController;
+use App\Http\Controllers\EncuentroController;
 use App\Http\Controllers\EmpresaContactoController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\PapeleraController;
@@ -165,14 +165,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/microretos/{id}/token',   [MicroretoTokenController::class, 'generate']);
         Route::delete('/microretos/{id}/token', [MicroretoTokenController::class, 'destroy']);
 
-        // Sesiones
-        Route::get('/sesiones',                          [SesionController::class, 'index']);
-        Route::post('/sesiones',                         [SesionController::class, 'store']);
-        Route::post('/sesiones/lote',                    [SesionController::class, 'storeLote']);
-        Route::post('/sesiones/{id}/crear-codigo',       [SesionController::class, 'crearCodigo'])->whereNumber('id');
-        Route::get('/sesiones/{id}/workspace',           [SesionController::class, 'workspace'])->whereNumber('id');
-        Route::get('/sesiones/{id}',                     [SesionController::class, 'show']);
-        Route::delete('/sesiones/{id}',                  [SesionController::class, 'destroy']);
+        // Encuentros
+        Route::get('/encuentros',                          [EncuentroController::class, 'index']);
+        Route::post('/encuentros',                         [EncuentroController::class, 'store']);
+        Route::post('/encuentros/lote',                    [EncuentroController::class, 'storeLote']);
+        Route::post('/encuentros/{id}/crear-codigo',       [EncuentroController::class, 'crearCodigo'])->whereNumber('id');
+        Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
+        Route::get('/encuentros/{id}',                     [EncuentroController::class, 'show']);
+        Route::put('/encuentros/{id}',                     [EncuentroController::class, 'update'])->whereNumber('id');
+        Route::delete('/encuentros/{id}',                  [EncuentroController::class, 'destroy']);
 
         // Subida y gestión de recursos (Cloudinary)
         Route::middleware('throttle:30,1')->group(function () {
@@ -197,8 +198,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // StartUp Day — IA: sugerencia de RA/CE y KPIs
         Route::middleware('throttle:10,1')->group(function () {
-            Route::post('/startup/sugerir-ra-ce',  [MicroproyectoController::class, 'sugerirRaCe']);
-            Route::post('/startup/sugerir-kpis',   [MicroproyectoController::class, 'sugerirKpis']);
+            Route::post('/startup/sugerir-ra-ce',           [MicroproyectoController::class, 'sugerirRaCe']);
+            Route::post('/startup/sugerir-kpis',            [MicroproyectoController::class, 'sugerirKpis']);
+            Route::post('/startup/sugerir-objetivos',       [MicroproyectoController::class, 'sugerirObjetivos']);
+            Route::post('/startup/sugerir-fundamentacion',  [MicroproyectoController::class, 'sugerirFundamentacion']);
+            Route::post('/startup/sugerir-metodologia',     [MicroproyectoController::class, 'sugerirMetodologia']);
         });
 
         // ── Gestión de equipos (docente) ──────────────────────────────────────

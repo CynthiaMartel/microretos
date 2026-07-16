@@ -424,7 +424,7 @@ async function copiarUrl() {
                              14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247
                              18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                   </svg>
-                  {{ reto.curso }}º Curso
+                  {{ reto.curso === 'transversal' ? 'Transversal: 1º y/o 2º' : reto.curso + 'º Curso' }}
                 </span>
               </div>
             </div>

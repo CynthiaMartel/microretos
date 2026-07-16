@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
 use App\Models\Microproyecto;
-use App\Models\Sesion;
+use App\Models\Encuentro;
 use Illuminate\Support\Str;
 
 class EquipoGestionController extends Controller
@@ -43,11 +43,11 @@ class EquipoGestionController extends Controller
             'equipos.*.nombre' => 'required|string|max:50',
         ]);
 
-        $sesionId = Sesion::where('microproyecto_id', $proyecto->id)->value('id');
+        $encuentroId = Encuentro::where('microproyecto_id', $proyecto->id)->value('id');
 
         $created = collect($data['equipos'])->map(fn($e) => Equipo::create([
             'microproyecto_id' => $proyecto->id,
-            'sesion_id'        => $sesionId,
+            'encuentro_id'     => $encuentroId,
             'nombre'           => $e['nombre'],
         ]));
 
@@ -175,17 +175,17 @@ class EquipoGestionController extends Controller
         $numEquipos = (int) ($equipoData['num_equipos'] ?? 0);
         $nombres    = $equipoData['nombres_equipos'] ?? [];
 
-        // Fuente canónica: sesion.alumnados (la sesión es donde vive el alumnado real)
-        $sesion = Sesion::where('microproyecto_id', $proyecto->id)->first();
-        if (!$alumnos && $sesion) {
-            $alumnos = $sesion->alumnados ?? [];
+        // Fuente canónica: encuentro.alumnados (el encuentro es donde vive el alumnado real)
+        $encuentro = Encuentro::where('microproyecto_id', $proyecto->id)->first();
+        if (!$alumnos && $encuentro) {
+            $alumnos = $encuentro->alumnados ?? [];
             if (!$numEquipos) {
-                $numEquipos = (int) ($sesion->num_equipos ?? 1);
+                $numEquipos = (int) ($encuentro->num_equipos ?? 1);
             }
         }
 
         if (!$alumnos && !$numEquipos) {
-            return response()->json(['error' => 'El proyecto no tiene alumnado definido. Configúralo en la sesión asociada.'], 422);
+            return response()->json(['error' => 'El proyecto no tiene alumnado definido. Configúralo en el encuentro asociado.'], 422);
         }
 
         // Eliminar equipos existentes (regeneración)
@@ -200,7 +200,7 @@ class EquipoGestionController extends Controller
 
             $equipo = Equipo::create([
                 'microproyecto_id' => $proyecto->id,
-                'sesion_id'        => $sesion?->id,
+                'encuentro_id'     => $encuentro?->id,
                 'nombre'           => $nombre,
             ]);
 
@@ -212,10 +212,10 @@ class EquipoGestionController extends Controller
             }
         }
 
-        // Generar código de clase único y guardarlo en la sesión
+        // Generar código de clase único y guardarlo en el encuentro
         $codigoClase = $this->generarCodigoClase();
-        if ($sesion) {
-            $sesion->update(['codigo_clase' => $codigoClase]);
+        if ($encuentro) {
+            $encuentro->update(['codigo_clase' => $codigoClase]);
         }
 
         $equipos = $proyecto->equipos()->with('miembros')->get()
@@ -236,7 +236,7 @@ class EquipoGestionController extends Controller
                      . $charset[random_int(0, strlen($charset) - 1)];
             $numeros = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
             $codigo  = $letras . '-' . $numeros;
-        } while (Sesion::where('codigo_clase', $codigo)->exists());
+        } while (Encuentro::where('codigo_clase', $codigo)->exists());
         return $codigo;
     }
 

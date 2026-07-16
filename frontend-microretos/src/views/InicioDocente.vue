@@ -10,14 +10,14 @@ const authStore = useAuthStore()
 const isLoaded  = ref(false)
 
 // ── Datos ─────────────────────────────────────────────────────────────────────
-const sesiones          = ref([])
+const encuentros          = ref([])
 const proyectos         = ref([])
-const cargandoSesiones  = ref(true)
+const cargandoEncuentros  = ref(true)
 const cargandoProyectos = ref(true)
 
 // ── Listas derivadas ──────────────────────────────────────────────────────────
-const ultimasSesiones = computed(() =>
-  [...sesiones.value]
+const ultimosEncuentros = computed(() =>
+  [...encuentros.value]
     .filter(s => s.fecha)
     .sort((a, b) => _pf(b.fecha) - _pf(a.fecha))
     .slice(0, 3)
@@ -82,7 +82,7 @@ function formatFecha(isoDate) {
 }
 
 const totalAlumnos = computed(() =>
-  sesiones.value.reduce((sum, s) => sum + (s.num_alumnos || 0), 0)
+  encuentros.value.reduce((sum, s) => sum + (s.num_alumnos || 0), 0)
 )
 
 const primerNombre = computed(() => {
@@ -96,16 +96,16 @@ const userCentroImg    = computed(() => authStore.userCentroImg || '')
 // ── Carga ──────────────────────────────────────────────────────────────────────
 onMounted(() => {
   setTimeout(() => { isLoaded.value = true }, 100)
-  cargarSesiones()
+  cargarEncuentros()
   cargarProyectos()
 })
 
-async function cargarSesiones() {
+async function cargarEncuentros() {
   try {
-    const { data } = await api.get('/sesiones')
-    sesiones.value = data
+    const { data } = await api.get('/encuentros')
+    encuentros.value = data
   } catch { /* silencioso */ } finally {
-    cargandoSesiones.value = false
+    cargandoEncuentros.value = false
   }
 }
 
@@ -120,7 +120,7 @@ async function cargarProyectos() {
 
 // ── Navegación ─────────────────────────────────────────────────────────────────
 const irA = (path) => router.push(path)
-const irAStartupFiltrado = (filtro) => router.push({ path: '/startup-day', query: { filtro } })
+const irAStartupFiltrado = (filtro) => router.push({ path: '/proyectos', query: { filtro } })
 
 // ── Calendario ─────────────────────────────────────────────────────────────────
 const calendarDate = ref(new Date())
@@ -197,20 +197,20 @@ const isDaySelected = (day) =>
   selectedDate.value?.month === calendarDate.value.getMonth() &&
   selectedDate.value?.year  === calendarDate.value.getFullYear()
 
-// ── Sesiones en el calendario ──────────────────────────────────────────────────
-const sesionesDelDia = (day) => {
+// ── Encuentros en el calendario ──────────────────────────────────────────────────
+const encuentrosDelDia = (day) => {
   if (!day) return []
   const y = calendarDate.value.getFullYear()
   const m = calendarDate.value.getMonth()
-  return sesiones.value.filter(s => {
+  return encuentros.value.filter(s => {
     if (!s.fecha) return false
     const d = _pf(s.fecha)
     return d.getFullYear() === y && d.getMonth() === m && d.getDate() === day
   })
 }
 
-const sesionesDelMes = computed(() =>
-  sesiones.value
+const encuentrosDelMes = computed(() =>
+  encuentros.value
     .filter(s => {
       if (!s.fecha) return false
       const d = _pf(s.fecha)
@@ -230,8 +230,8 @@ const hexToRgba = (hex, alpha = 0.13) => {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-// Comprueba si una sesión debe destacarse porque su día coincide con hoveredDay
-// y el calendario está en el mismo mes/año que la sesión
+// Comprueba si un encuentro debe destacarse porque su día coincide con hoveredDay
+// y el calendario está en el mismo mes/año que el encuentro
 const isSessionHovered = (s) => {
   if (hoveredDay.value === null || !s.fecha) return false
   const d = _pf(s.fecha)
@@ -247,26 +247,26 @@ const setHoveredFromSession = (s) => {
 // Color de fondo transparente de la celda del día según sus eventos
 const dayAccentBg = (day) => {
   if (!day) return {}
-  const ses = sesionesDelDia(day)
+  const ses = encuentrosDelDia(day)
   if (ses.length) return { backgroundColor: 'rgba(59,130,246,0.10)' }
   const evs = dayEvents(day)
   if (evs.length) return { backgroundColor: hexToRgba(evs[0].color, 0.12) }
   return { backgroundColor: 'rgba(243,244,246,1)' } // gray-50 neutro
 }
 
-// Lista combinada sesiones + eventos personales del mes, ordenada por día
+// Lista combinada encuentros + eventos personales del mes, ordenada por día
 const todoDelMes = computed(() => {
   const evs = eventosDelMes.value.map(e => ({ tipo: 'evento', dia: e.day, label: e.text, color: e.color, _ref: e }))
-  const ses = sesionesDelMes.value.map(s => {
+  const ses = encuentrosDelMes.value.map(s => {
     const dia = _pf(s.fecha).getDate()
-    return { tipo: 'sesion', dia, label: s.microreto_titulo || 'Sesión', sub: [s.ciclo_formativo, s.grupo].filter(Boolean).join(' · '), _ref: s }
+    return { tipo: 'encuentro', dia, label: s.microreto_titulo || 'Encuentro', sub: [s.ciclo_formativo, s.grupo].filter(Boolean).join(' · '), _ref: s }
   })
   return [...evs, ...ses].sort((a, b) => a.dia - b.dia)
 })
 
 // ── Alertas inteligentes ───────────────────────────────────────────────────────
 const alertas = computed(() => {
-  if (cargandoProyectos.value && cargandoSesiones.value) return []
+  if (cargandoProyectos.value && cargandoEncuentros.value) return []
 
   const now = Date.now()
   const diasDesde = (iso) => Math.floor((now - new Date(iso).getTime()) / 86_400_000)
@@ -280,7 +280,7 @@ const alertas = computed(() => {
     lista.push({
       nivel: 'warning',
       texto: `${estancados.length} proyecto${estancados.length > 1 ? 's llevan' : ' lleva'} más de 14 días en edición sin actualizar`,
-      ruta: '/startup-day',
+      ruta: '/proyectos',
     })
 
   // Propuestas enviadas a empresa sin validar +10 días
@@ -292,7 +292,7 @@ const alertas = computed(() => {
     lista.push({
       nivel: 'warning',
       texto: `${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's llevan' : ' lleva'} más de 10 días sin responder`,
-      ruta: '/startup-day',
+      ruta: '/proyectos',
     })
 
   // Empresa respondió "aún no puede validar"
@@ -301,13 +301,13 @@ const alertas = computed(() => {
     lista.push({
       nivel: 'info',
       texto: `${noAun.length} empresa${noAun.length > 1 ? 's indicaron' : ' indicó'} que aún no puede${noAun.length > 1 ? 'n' : ''} validar`,
-      ruta: '/startup-day',
+      ruta: '/proyectos',
     })
 
-  // Sin sesiones este mes (solo si hay historial de sesiones)
-  if (sesiones.value.length > 0 && !cargandoSesiones.value) {
+  // Sin encuentros este mes (solo si hay historial de encuentros)
+  if (encuentros.value.length > 0 && !cargandoEncuentros.value) {
     const hoy = new Date()
-    const hayEsteMes = sesiones.value.some(s => {
+    const hayEsteMes = encuentros.value.some(s => {
       if (!s.fecha) return false
       const d = _pf(s.fecha)
       return d.getMonth() === hoy.getMonth() && d.getFullYear() === hoy.getFullYear()
@@ -315,7 +315,7 @@ const alertas = computed(() => {
     if (!hayEsteMes)
       lista.push({
         nivel: 'info',
-        texto: 'No has registrado ninguna sesión este mes',
+        texto: 'No has registrado ningún encuentro este mes',
         ruta: '/dashboard',
       })
   }
@@ -328,7 +328,7 @@ const alertas = computed(() => {
     lista.push({
       nivel: 'success',
       texto: `${validadosRecientes.length} proyecto${validadosRecientes.length > 1 ? 's validados' : ' validado'} esta semana`,
-      ruta: '/startup-day',
+      ruta: '/proyectos',
     })
 
   return lista
@@ -451,30 +451,30 @@ function removeNota(id) {
                     group-hover:text-blue-500 transition-colors">Ver todos →</p>
         </button>
 
-        <!-- Alumnado total de sesiones -->
-        <button @click="irA('/dashboard/sesiones')"
+        <!-- Alumnado total de encuentros -->
+        <button @click="irA('/dashboard/encuentros')"
                 class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
                        hover:border-purple-300/50 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoSesiones" class="text-2xl font-black text-purple-500 tabular-nums leading-none mb-1">
+          <div v-if="!cargandoEncuentros" class="text-2xl font-black text-purple-500 tabular-nums leading-none mb-1">
             {{ totalAlumnos }}
           </div>
           <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Alumnado</p>
           <p class="text-[9px] font-black text-purple-400/60 uppercase tracking-widest mt-1
-                    group-hover:text-purple-500 transition-colors">Ver sesiones →</p>
+                    group-hover:text-purple-500 transition-colors">Ver encuentros →</p>
         </button>
 
       </div>
 
-      <!-- ── Fila superior: izq (Calendario) | der (Mis sesiones · Agenda · Notas) ── -->
+      <!-- ── Fila superior: izq (Calendario) | der (Mis encuentros · Agenda · Notas) ── -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start
                   transition-all duration-700 delay-150"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
 
-        <!-- ── Columna izquierda (Mis sesiones · Agenda · Notas → orden visual derecha) ── -->
+        <!-- ── Columna izquierda (Mis encuentros · Agenda · Notas → orden visual derecha) ── -->
         <div class="flex flex-col gap-4 lg:order-2">
 
-        <!-- Mis sesiones -->
+        <!-- Mis encuentros -->
         <section class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
           <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
             <div class="w-7 h-7 rounded-lg bg-blue-400/20 border border-blue-400/25
@@ -485,16 +485,16 @@ function removeNota(id) {
                      M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
             </div>
-            <h3 class="text-white font-black text-sm truncate min-w-0">Mis sesiones</h3>
+            <h3 class="text-white font-black text-sm truncate min-w-0">Mis encuentros</h3>
           </div>
 
-          <div v-if="cargandoSesiones" class="p-6 flex justify-center">
+          <div v-if="cargandoEncuentros" class="p-6 flex justify-center">
             <svg class="animate-spin w-5 h-5 text-[#00A859]" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
             </svg>
           </div>
 
-          <div v-else-if="sesiones.length === 0" class="px-5 py-8 text-center">
+          <div v-else-if="encuentros.length === 0" class="px-5 py-8 text-center">
             <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100
                         flex items-center justify-center mx-auto mb-3">
               <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,22 +503,22 @@ function removeNota(id) {
                      M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
             </div>
-            <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay sesiones registradas.</p>
+            <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay encuentros registrados.</p>
             <button @click="irA('/dashboard')"
                     class="text-[10px] font-black uppercase tracking-widest text-[#00A859]
                            hover:text-[#00A859]/70 transition-colors">
-              Registrar primera sesión →
+              Registrar primer encuentro →
             </button>
           </div>
 
           <template v-else>
             <ul class="divide-y divide-gray-50">
-              <li v-for="s in ultimasSesiones" :key="s.id"
+              <li v-for="s in ultimosEncuentros" :key="s.id"
                   class="px-4 py-3 transition-all duration-150 group cursor-pointer"
                   :class="isSessionHovered(s) ? 'bg-blue-50 ring-inset ring-1 ring-blue-100' : 'hover:bg-gray-50/60'"
                   @mouseenter="setHoveredFromSession(s)"
                   @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/dashboard/sesiones', query: { id: s.id } })">
+                  @click="router.push({ path: '/dashboard/encuentros', query: { id: s.id } })">
                 <div class="flex items-start gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black leading-snug truncate transition-colors"
@@ -556,11 +556,11 @@ function removeNota(id) {
               </li>
             </ul>
             <div class="px-4 py-3 border-t border-gray-50 bg-blue-50/50">
-              <button @click="irA('/dashboard/sesiones')"
+              <button @click="irA('/dashboard/encuentros')"
                       class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
                              uppercase tracking-widest text-blue-500 hover:text-blue-600
                              transition-colors py-0.5">
-                Ver todas las sesiones
+                Ver todos los encuentros
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -583,7 +583,7 @@ function removeNota(id) {
           </div>
 
           <!-- Sin alertas -->
-          <div v-if="alertas.length === 0 && !cargandoProyectos && !cargandoSesiones"
+          <div v-if="alertas.length === 0 && !cargandoProyectos && !cargandoEncuentros"
                class="flex flex-col items-center justify-center py-6 px-4 gap-2 text-center">
             <div class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
               <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -594,7 +594,7 @@ function removeNota(id) {
           </div>
 
           <!-- Cargando -->
-          <div v-else-if="cargandoProyectos || cargandoSesiones" class="px-5 py-4 space-y-2">
+          <div v-else-if="cargandoProyectos || cargandoEncuentros" class="px-5 py-4 space-y-2">
             <div v-for="n in 2" :key="n" class="h-3 rounded bg-gray-100 animate-pulse" :class="n === 2 ? 'w-2/3' : 'w-full'" />
           </div>
 
@@ -744,9 +744,9 @@ function removeNota(id) {
                        :style="{ backgroundColor: ev.color }">
                     {{ ev.text }}
                   </div>
-                  <div v-for="(s, si) in sesionesDelDia(day)" :key="'s-'+si"
+                  <div v-for="(s, si) in encuentrosDelDia(day)" :key="'s-'+si"
                        class="rounded px-1 py-px text-[8px] font-bold text-white leading-tight truncate bg-blue-500">
-                    {{ s.microreto_titulo || 'Sesión' }}
+                    {{ s.microreto_titulo || 'Encuentro' }}
                   </div>
                 </div>
               </div>
@@ -785,20 +785,20 @@ function removeNota(id) {
           <div class="border-t border-gray-100 px-4 pt-3 pb-1">
             <p class="text-[9px] font-black uppercase tracking-widest text-blue-400/80 mb-2 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
-              Sesiones este mes
+              Encuentros este mes
             </p>
-            <div v-if="sesionesDelMes.length === 0"
+            <div v-if="encuentrosDelMes.length === 0"
                  class="text-[10px] text-gray-300 font-medium text-center py-1.5">
-              Sin sesiones este mes
+              Sin encuentros este mes
             </div>
             <ul v-else class="space-y-0.5">
-              <li v-for="s in sesionesDelMes" :key="s.id"
+              <li v-for="s in encuentrosDelMes" :key="s.id"
                   class="flex items-start gap-2 rounded-lg px-2 -mx-2 py-1 transition-colors duration-150 cursor-pointer"
                   :class="hoveredDay === _pf(s.fecha).getDate()
                     ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'"
                   @mouseenter="setHoveredFromSession(s)"
                   @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/dashboard/sesiones', query: { id: s.id } })">
+                  @click="router.push({ path: '/dashboard/encuentros', query: { id: s.id } })">
                 <div class="w-2 h-2 rounded shrink-0 mt-1 transition-colors duration-150"
                      :class="hoveredDay === _pf(s.fecha).getDate()
                        ? 'bg-blue-600' : 'bg-blue-500'"></div>
@@ -810,7 +810,7 @@ function removeNota(id) {
                       ? 'text-blue-400' : 'text-gray-400'">
                       {{ _pf(s.fecha).getDate() }} —
                     </span>
-                    {{ s.microreto_titulo || 'Sesión' }}
+                    {{ s.microreto_titulo || 'Encuentro' }}
                   </p>
                   <p v-if="s.ciclo_formativo || s.grupo" class="text-[9px] text-gray-400 font-medium truncate">
                     {{ [s.ciclo_formativo, s.grupo].filter(Boolean).join(' · ') }}
@@ -944,7 +944,7 @@ function removeNota(id) {
                 </svg>
               </div>
               <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay proyectos creados.</p>
-              <button @click="irA('/startup-day')"
+              <button @click="irA('/proyectos')"
                       class="text-[10px] font-black uppercase tracking-widest text-orange-500
                              hover:text-orange-400 transition-colors">
                 Ir a Startup Day →
@@ -976,7 +976,7 @@ function removeNota(id) {
                     </svg>
                   </div>
                   <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay proyectos validados.</p>
-                  <button @click="irA('/startup-day')"
+                  <button @click="irA('/proyectos')"
                           class="text-[10px] font-black uppercase tracking-widest text-[#00A859]
                                  hover:text-[#00A859]/70 transition-colors">
                     Ver proyectos →
@@ -987,7 +987,7 @@ function removeNota(id) {
                   <ul class="divide-y divide-gray-50">
                     <li v-for="(p, idx) in ultimosProyectosEnCurso" :key="p.id"
                         class="px-4 py-3 hover:bg-gray-50/60 transition-colors group cursor-pointer"
-                        @click="irA('/startup-day/' + p.uuid)">
+                        @click="irA('/proyectos/' + p.uuid)">
                       <div class="flex items-start gap-3">
                         <div class="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                           <img :src="proyectoImgs[idx % proyectoImgs.length]"
@@ -1049,7 +1049,7 @@ function removeNota(id) {
                   <ul class="space-y-2 px-4 py-3">
                     <li v-for="p in proyectosPendientes.slice(0, 4)" :key="p.id"
                         class="flex items-center gap-2.5 cursor-pointer group"
-                        @click="irA('/startup-day/' + p.uuid)">
+                        @click="irA('/proyectos/' + p.uuid)">
                       <div class="flex-1 min-w-0">
                         <p class="text-xs font-bold text-[#1F2937] truncate group-hover:text-orange-600 transition-colors">
                           {{ p.titulo || 'Sin título' }}
@@ -1074,7 +1074,7 @@ function removeNota(id) {
                   <ul class="space-y-2 px-4 py-3">
                     <li v-for="p in proyectosEnEdicion.slice(0, 4)" :key="p.id"
                         class="flex items-center gap-2.5 cursor-pointer group"
-                        @click="irA('/startup-day/' + p.uuid)">
+                        @click="irA('/proyectos/' + p.uuid)">
                       <div class="flex-1 min-w-0">
                         <p class="text-xs font-bold text-[#1F2937] truncate group-hover:text-gray-600 transition-colors">
                           {{ p.titulo || 'Sin título' }}
@@ -1139,7 +1139,7 @@ function removeNota(id) {
                   </div>
                   <span class="text-xs font-black text-[#1F2937] group-hover:text-[#00A859] transition-colors leading-tight">Nuevo reto</span>
                 </button>
-                <button @click="irA('/startup-day/crear')"
+                <button @click="irA('/proyectos/crear')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
                          bg-orange-400/5 border border-orange-400/15
                          hover:bg-orange-400/10 hover:border-orange-400/35 hover:shadow-sm transition-all duration-200">
@@ -1375,8 +1375,8 @@ function removeNota(id) {
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-[#1F2937] font-black text-sm leading-tight">Consultar / Crear sesiones</p>
-                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Registra sesiones de trabajo con retos</p>
+                  <p class="text-[#1F2937] font-black text-sm leading-tight">Consultar / Crear encuentros</p>
+                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Registra encuentros de trabajo con retos</p>
                 </div>
                 <svg class="w-4 h-4 text-amber-400/30 shrink-0 group-hover:text-amber-500/70
                             group-hover:translate-x-0.5 transition-all duration-200"
@@ -1385,7 +1385,7 @@ function removeNota(id) {
                 </svg>
               </button>
 
-              <button @click="irA('/startup-day')"
+              <button @click="irA('/proyectos')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
                        bg-orange-400/5 border border-orange-400/15
                        hover:bg-orange-400/10 hover:border-orange-400/35 hover:shadow-sm

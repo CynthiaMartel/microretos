@@ -1,18 +1,20 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter, onBeforeRouteUpdate } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
-import EliminarSesionModal from '../components/EliminarSesionModal.vue'
+import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
 import { useUIState } from '../composables/useUIState.js'
 import { useAuthStore } from '../stores/auth.js'
+import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase } from '../config/fasesProyecto.js'
 
 const { tourActivo } = useUIState()
 const authStore = useAuthStore()
 
 const router = useRouter()
+const route  = useRoute()
 
-// ─── Formulario de sesión ──────────────────────────────────────────────────────
+// ─── Formulario de encuentro ──────────────────────────────────────────────────────
 const form = ref({
   fecha:            new Date().toISOString().slice(0, 10),
   centro_educativo: authStore.userCentroNombre || '',
@@ -44,14 +46,12 @@ const ciclosDisponiblesProy = computed(() => {
 })
 
 const proyectosFiltrados = computed(() => {
-  let base = todosMisProyectos.value
+  // Solo propuestas ya publicadas o proyectos validados pueden asociarse a un
+  // encuentro — un borrador o un archivado no tiene sentido programarlo en clase.
+  let base = todosMisProyectos.value.filter(p => p.estado === 'propuesta' || p.estado === 'validado')
   if (filtroProyCurso.value)  base = base.filter(p => p.curso === filtroProyCurso.value)
   if (filtroProyCiclo.value)  base = base.filter(p => p.ciclo_nombre === filtroProyCiclo.value)
-  if (filtroProyEstado.value === 'en_edicion') base = base.filter(p => p.estado === 'borrador' || p.estado === 'en_edicion')
-  else if (filtroProyEstado.value === 'propuesta') base = base.filter(p => (p.estado === 'publicado' || p.estado === 'propuesta') && !p.empresa_validado)
-  else if (filtroProyEstado.value === 'validado')  base = base.filter(p => !!p.empresa_validado || p.estado === 'validado')
-  else if (filtroProyEstado.value === 'archivado') base = base.filter(p => p.estado === 'archivado')
-  else if (filtroProyEstado.value) base = base.filter(p => p.estado === filtroProyEstado.value)
+  if (filtroProyEstado.value) base = base.filter(p => p.estado === filtroProyEstado.value)
   if (busquedaProy.value.trim()) {
     const q = busquedaProy.value.trim().toLowerCase()
     base = base.filter(p =>
@@ -95,7 +95,21 @@ function limpiarProyecto() {
   form.value.microproyecto_id  = null
   form.value.ciclo_formativo   = ''
   form.value.curso             = ''
+  // El reparto de equipos se hizo pensando en el proyecto anterior — no tiene
+  // sentido mantenerlo al asociar uno distinto.
+  form.value.num_equipos       = 3
+  form.value.alumnados         = []
 }
+
+// Duración total (en clases) del calendario del proyecto elegido — el backend
+// calcula la fecha_fin real con la misma heurística centralizada (fasesProyecto.js).
+const totalClasesProyectoSeleccionado = computed(() => {
+  return proyectoSeleccionado.value?.diseno_microproyecto?.clases?.length || 0
+})
+
+const fechaFinEstimada = computed(() => {
+  return calcularFechaFinEstimada(form.value.fecha, totalClasesProyectoSeleccionado.value)
+})
 
 function estadoProyectoBadge(proyectoOEstado) {
   const estado          = typeof proyectoOEstado === 'object' ? proyectoOEstado?.estado : proyectoOEstado
@@ -177,7 +191,7 @@ const limiteAlcanzado = computed(() =>
   limiteAlumnados.value !== null && form.value.alumnados.length >= limiteAlumnados.value
 )
 
-function addAlumnadoSesion() {
+function addAlumnadoEncuentro() {
   const nombre = nuevoAlumnadoNombre.value.trim()
   if (!nombre) return
   if (limiteAlcanzado.value) return
@@ -185,7 +199,7 @@ function addAlumnadoSesion() {
   nuevoAlumnadoNombre.value = ''
 }
 
-function removeAlumnadoSesion(i) {
+function removeAlumnadoEncuentro(i) {
   form.value.alumnados.splice(i, 1)
 }
 
@@ -201,43 +215,60 @@ const alumnadosSinEquipo = computed(() =>
     .filter(a => !a.equipo_num || a.equipo_num < 1)
 )
 
-const guardando  = ref(false)
-const guardadoOk = ref(false)
+const guardando     = ref(false)
+const guardadoOk    = ref(false)
+const errorGuardado = ref('')
 
-// ─── Historial de sesiones (API) ─────────────────────────────────────────────
-const sesiones         = ref([])
-const cargandoSesiones = ref(false)
+// ─── Historial de encuentros (API) ────────────────────────────────────────────
+const encuentros         = ref([])
+const cargandoEncuentros = ref(false)
 
-async function cargarSesiones() {
-  cargandoSesiones.value = true
+async function cargarEncuentros() {
+  cargandoEncuentros.value = true
   try {
-    const res = await api.get('/sesiones')
-    sesiones.value = res.data
+    const res = await api.get('/encuentros')
+    encuentros.value = res.data
   } catch (e) {
-    console.error('Error cargando sesiones:', e)
+    console.error('Error cargando encuentros:', e)
   } finally {
-    cargandoSesiones.value = false
+    cargandoEncuentros.value = false
   }
 }
 
-// ─── Opciones para datalist (desde historial de sesiones) ────────────────────
+// ─── Opciones para datalist (desde historial de encuentros) ──────────────────
 const centrosParaAutocompletar = computed(() => {
   const set = new Set()
-  sesiones.value.forEach(s => { if (s.centro_educativo) set.add(s.centro_educativo) })
+  encuentros.value.forEach(s => { if (s.centro_educativo) set.add(s.centro_educativo) })
   return [...set].sort()
 })
 
 const ciclosParaAutocompletar = computed(() => {
   const set = new Set()
-  sesiones.value.forEach(s => { if (s.ciclo_formativo) set.add(s.ciclo_formativo) })
+  encuentros.value.forEach(s => { if (s.ciclo_formativo) set.add(s.ciclo_formativo) })
   return [...set].sort()
 })
 
 onMounted(async () => {
-  await cargarSesiones()
+  await cargarEncuentros()
+
+  // Preselecciona el proyecto si venimos del botón "Crear encuentro" del detalle
+  // de un proyecto validado (StartupDayDetalle.vue).
+  if (route.query.microproyecto_id) {
+    try {
+      const res = await api.get('/startup/proyectos')
+      todosMisProyectos.value = res.data
+      proyectosCargados.value = true
+      const p = todosMisProyectos.value.find(pr => String(pr.id) === String(route.query.microproyecto_id))
+      if (p) seleccionarProyecto(p)
+    } catch (e) {
+      console.error('Error preseleccionando proyecto desde query param:', e)
+    }
+  }
 
   // Migración silenciosa desde localStorage (una sola vez)
   try {
+    // Clave heredada de cuando los encuentros se llamaban "sesiones" — no renombrar,
+    // ya está persistida en navegadores de docentes reales.
     const LEGACY_KEY = 'dualab_sesiones'
     const local = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]')
     if (local.length > 0) {
@@ -252,12 +283,12 @@ onMounted(async () => {
         num_alumnos:      s.num_alumnos ? Number(s.num_alumnos) : null,
         notas:            s.notas            || null,
       }))
-      await api.post('/sesiones/lote', { sesiones: payload })
+      await api.post('/encuentros/lote', { encuentros: payload })
       localStorage.removeItem(LEGACY_KEY)
-      await cargarSesiones()
+      await cargarEncuentros()
     }
   } catch (e) {
-    console.error('Error migrando sesiones desde localStorage:', e)
+    console.error('Error migrando encuentros desde localStorage:', e)
   }
 })
 
@@ -266,29 +297,31 @@ onUnmounted(() => {
   window.removeEventListener('scroll', onScrollGuia)
 })
 
-// ─── Guardar sesión ───────────────────────────────────────────────────────────
-async function guardarSesion() {
-  if (!form.value.fecha) return
+// ─── Guardar encuentro ─────────────────────────────────────────────────────────
+async function guardarEncuentro() {
+  if (!formularioValido.value) return
   guardando.value = true
+  errorGuardado.value = ''
   try {
     const payload = {
       ...form.value,
       num_alumnos: form.value.num_alumnos !== '' ? Number(form.value.num_alumnos) : null,
     }
-    const res = await api.post('/sesiones', payload)
-    sesiones.value = [res.data, ...sesiones.value]
+    const res = await api.post('/encuentros', payload)
+    encuentros.value = [res.data, ...encuentros.value]
     guardadoOk.value = true
     setTimeout(() => { guardadoOk.value = false }, 2500)
   } catch (e) {
-    console.error('Error guardando sesión:', e)
+    console.error('Error guardando encuentro:', e)
+    errorGuardado.value = e.response?.data?.message || 'No se pudo guardar el encuentro. Revisa los datos e inténtalo de nuevo.'
   } finally {
     guardando.value = false
   }
 }
 
-// ─── Eliminar sesión (modal dos fases) ───────────────────────────────────────
+// ─── Eliminar encuentro (modal dos fases) ────────────────────────────────────
 const modalEliminarVisible = ref(false)
-const sesionAEliminar      = ref(null)
+const encuentroAEliminar   = ref(null)
 const snackbar = ref({ visible: false, mensaje: '', accion: null })
 let   snackTimer = null
 
@@ -298,33 +331,33 @@ function mostrarSnack(mensaje, accion = null) {
   snackTimer = setTimeout(() => { snackbar.value.visible = false }, 5000)
 }
 
-function abrirModalEliminar(sesion) {
-  sesionAEliminar.value = sesion
+function abrirModalEliminar(encuentro) {
+  encuentroAEliminar.value = encuentro
   modalEliminarVisible.value = true
 }
 
 function cerrarModalEliminar() {
   modalEliminarVisible.value = false
-  sesionAEliminar.value = null
+  encuentroAEliminar.value = null
 }
 
-function onSesionEliminada({ id, titulo }) {
-  sesiones.value = sesiones.value.filter(s => s.id !== id)
-  cerrarSesionModal()
+function onEncuentroEliminado({ id, titulo }) {
+  encuentros.value = encuentros.value.filter(s => s.id !== id)
+  cerrarEncuentroModal()
   cerrarModalEliminar()
   mostrarSnack(
-    `"${titulo}" movida a la papelera.`,
+    `"${titulo}" movido a la papelera.`,
     { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) }
   )
 }
 
-// ─── Filtros y paginación del panel de sesiones ───────────────────────────────
-const filtroSes      = ref({ fecha: '', titulo: '', curso: '', grupo: '' })
-const paginaSesiones = ref(1)
-const SESIONES_POR_PAGINA = 5
+// ─── Filtros y paginación del panel de encuentros ────────────────────────────
+const filtroSes        = ref({ fecha: '', titulo: '', curso: '', grupo: '' })
+const paginaEncuentros  = ref(1)
+const ENCUENTROS_POR_PAGINA = 5
 
-const sesionesFiltradas = computed(() => {
-  let lista = [...sesiones.value]
+const encuentrosFiltrados = computed(() => {
+  let lista = [...encuentros.value]
   if (filtroSes.value.fecha)
     lista = lista.filter(s => s.fecha === filtroSes.value.fecha)
   if (filtroSes.value.titulo.trim()) {
@@ -336,29 +369,29 @@ const sesionesFiltradas = computed(() => {
   return lista
 })
 
-const sesionesVisibles = computed(() => {
-  const start = (paginaSesiones.value - 1) * SESIONES_POR_PAGINA
-  return sesionesFiltradas.value.slice(start, start + SESIONES_POR_PAGINA)
+const encuentrosVisibles = computed(() => {
+  const start = (paginaEncuentros.value - 1) * ENCUENTROS_POR_PAGINA
+  return encuentrosFiltrados.value.slice(start, start + ENCUENTROS_POR_PAGINA)
 })
 
 const totalPaginasSes = computed(() =>
-  Math.ceil(sesionesFiltradas.value.length / SESIONES_POR_PAGINA)
+  Math.ceil(encuentrosFiltrados.value.length / ENCUENTROS_POR_PAGINA)
 )
 
-watch(filtroSes, () => { paginaSesiones.value = 1 }, { deep: true })
+watch(filtroSes, () => { paginaEncuentros.value = 1 }, { deep: true })
 
 // ─── Tour guía paso a paso ────────────────────────────────────────────────────
 const modoGuia       = ref(false)
 const pasoGuia       = ref(1)
 
 const guiaPasosData = [
-  { ref: 'refCampoFecha',    seccion: 'datos', texto: 'Indica la fecha en la que se realizó la sesión.' },
+  { ref: 'refCampoFecha',    seccion: 'datos', texto: 'Indica la fecha en la que se realizó el encuentro.' },
   { ref: 'refCampoCentro',   seccion: 'datos', texto: 'Indica el centro educativo.' },
   { ref: 'refCampoAlumnado', seccion: 'datos', texto: 'Indica la información del alumnado: curso, grupo y número de alumnos.' },
   { ref: 'refCampoEquipos',  seccion: 'datos', texto: 'Configura los equipos y añade el alumnado asignado a cada uno.' },
-  { ref: 'refCampoNotas',    seccion: 'datos', texto: 'Indica cualquier nota relevante sobre la sesión.' },
-  { ref: 'refBtnGuardar',    seccion: 'datos', texto: 'Pulsa guardar sesión para registrar la información.' },
-  { ref: 'refSesiones',      seccion: 'sesiones', texto: 'Quedará disponible para crear el proyecto y comenzar el taller de ideas, o consultar esta info más adelante.' },
+  { ref: 'refCampoNotas',    seccion: 'datos', texto: 'Indica cualquier nota relevante sobre el encuentro.' },
+  { ref: 'refBtnGuardar',    seccion: 'datos', texto: 'Pulsa guardar encuentro para registrar la información.' },
+  { ref: 'refEncuentros',    seccion: 'encuentros', texto: 'Quedará disponible para crear el proyecto y comenzar el taller de ideas, o consultar esta info más adelante.' },
   { ref: 'refBtnGuia',       seccion: null,    texto: 'Pincha aquí para volver a activar la guía cuando quieras.' },
 ]
 
@@ -371,10 +404,10 @@ const refCampoAlumnado = ref(null)
 const refCampoEquipos  = ref(null)
 const refCampoNotas    = ref(null)
 const refBtnGuardar    = ref(null)
-const refSesiones      = ref(null)
+const refEncuentros    = ref(null)
 const refBtnGuia       = ref(null)
 
-const tourRefs = { refCampoFecha, refCampoCentro, refCampoAlumnado, refCampoEquipos, refCampoNotas, refBtnGuardar, refSesiones, refBtnGuia }
+const tourRefs = { refCampoFecha, refCampoCentro, refCampoAlumnado, refCampoEquipos, refCampoNotas, refBtnGuardar, refEncuentros, refBtnGuia }
 
 const tourTargetActivo = computed(() => {
   if (!modoGuia.value) return null
@@ -479,18 +512,42 @@ function cerrarMicroretoModal() {
   microretoModalId.value = null
 }
 
-// ─── Modal de detalle de sesión ───────────────────────────────────────────────
-const sesionAbierta = ref(null)
+// ─── Modal de detalle de encuentro ────────────────────────────────────────────
+const encuentroAbierto = ref(null)
 
-function verSesion(s) {
-  sesionAbierta.value = s
+function verEncuentro(s) {
+  encuentroAbierto.value = s
 }
 
-function cerrarSesionModal() {
-  sesionAbierta.value = null
+function cerrarEncuentroModal() {
+  encuentroAbierto.value = null
 }
 
-const formularioValido = computed(() => form.value.fecha !== '')
+// El flujo es secuencial: 1) proyecto asociado → 2) fecha de trabajo →
+// 3) equipos repartidos → 4) guardar. Cada paso exige el anterior.
+const proyectoAsociado  = computed(() => !!form.value.microproyecto_id)
+const fechaEstablecida  = computed(() => proyectoAsociado.value && form.value.fecha !== '')
+const equiposRepartidos = computed(() =>
+  fechaEstablecida.value &&
+  (form.value.num_equipos || 0) >= 1 &&
+  form.value.alumnados.length > 0 &&
+  alumnadosSinEquipo.value.length === 0
+)
+
+const formularioValido = computed(() => equiposRepartidos.value)
+
+const requisitosFaltantes = computed(() => {
+  const faltantes = []
+  if (!proyectoAsociado.value) {
+    faltantes.push('Asocia un proyecto al encuentro.')
+    return faltantes
+  }
+  if (!form.value.fecha) faltantes.push('Establece la fecha de trabajo.')
+  if ((form.value.num_equipos || 0) < 1) faltantes.push('Indica el número de equipos.')
+  if (form.value.alumnados.length === 0) faltantes.push('Reparte el alumnado en los equipos.')
+  else if (alumnadosSinEquipo.value.length > 0) faltantes.push('Hay alumnado sin equipo asignado.')
+  return faltantes
+})
 
 function formatFecha(isoDate) {
   if (!isoDate) return ''
@@ -583,9 +640,9 @@ function formatFecha(isoDate) {
               <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Dashboard docente</span>
             </div>
             <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-              Sesiones <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">DuaLab</span>
+              Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">DuaLab</span>
             </h1>
-            <p class="text-gray-500 text-sm mt-1">Registra y consulta tus sesiones de trabajo con retos.</p>
+            <p class="text-gray-500 text-sm mt-1">Registra y consulta tus encuentros de trabajo con retos.</p>
           </div>
 
           <!-- Stats chips -->
@@ -596,8 +653,8 @@ function formatFecha(isoDate) {
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
                          M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
               </svg>
-              <span class="font-black text-xl text-[#1F2937]">{{ sesiones.length }}</span>
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">sesiones</span>
+              <span class="font-black text-xl text-[#1F2937]">{{ encuentros.length }}</span>
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">encuentros</span>
             </div>
 
             <!-- Botón activar guía -->
@@ -640,20 +697,20 @@ function formatFecha(isoDate) {
                 <div>
                   <div class="flex items-center gap-2 mb-1">
                     <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-                    <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Nueva sesión</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Nuevo encuentro</span>
                   </div>
-                  <h2 class="text-xl font-black text-[#1F2937] tracking-tight leading-tight">Creación de sesión</h2>
+                  <h2 class="text-xl font-black text-[#1F2937] tracking-tight leading-tight">Creación de encuentro</h2>
                   <p class="text-xs text-gray-500 mt-0.5 font-medium">Selecciona un reto y registra los datos del grupo</p>
                 </div>
               </div>
             </div>
           </Transition>
 
-          <!-- ══ PROYECTO ASOCIADO ═══════════════════════════════════════════ -->
+          <!-- ══ PROPUESTA-PROYECTO ASOCIADO ═══════════════════════════════════ -->
           <div class="overflow-hidden border-b border-gray-100">
             <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
               <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
-                Proyecto asociado
+                Propuesta-Proyecto asociado
               </p>
               <button v-if="!mostrarBuscadorProy && !proyectoSeleccionado"
                       @click="abrirBuscadorProy"
@@ -664,7 +721,7 @@ function formatFecha(isoDate) {
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
-                Buscar proyecto
+                Buscar propuesta o proyecto
               </button>
             </div>
 
@@ -734,11 +791,9 @@ function formatFecha(isoDate) {
 
                   <!-- Filtro estado -->
                   <select v-model="filtroProyEstado" class="field-input !w-auto !text-xs cursor-pointer">
-                    <option value="">Todos los estados</option>
-                    <option value="en_edicion">En edición</option>
+                    <option value="">Todos (propuesta o validado)</option>
                     <option value="propuesta">Pendiente validar</option>
                     <option value="validado">Validado</option>
-                    <option value="archivado">Archivado</option>
                   </select>
                 </div>
 
@@ -857,7 +912,7 @@ function formatFecha(isoDate) {
                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
                   <p class="text-xs text-gray-500 font-medium leading-relaxed">
-                    Opcional — asocia un proyecto existente a esta sesión para tenerlo
+                    Asocia un proyecto existente a este encuentro para tenerlo
                     vinculado desde el registro. Los proyectos se crean en
                     <button @click="router.push({ name: 'startup-day-crear' })"
                             class="underline font-black hover:text-[#5a7a00] transition-colors">
@@ -873,18 +928,18 @@ function formatFecha(isoDate) {
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
-                  Buscar proyecto
+                  Buscar propuesta o proyecto
                 </button>
               </div>
 
             </div>
           </div>
 
-          <!-- ══ DATOS DE LA SESIÓN ══════════════════════════════════════════ -->
+          <!-- ══ DATOS DEL ENCUENTRO ══════════════════════════════════════════ -->
           <div :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'datos' }">
             <div class="px-6 py-4 border-b border-gray-50">
               <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
-                Datos de la sesión
+                Datos del encuentro
               </p>
             </div>
             <div class="px-6 py-5 space-y-4">
@@ -892,7 +947,15 @@ function formatFecha(isoDate) {
               <div ref="refCampoFecha" :class="{ 'tour-active': tourTargetActivo === 'refCampoFecha' }"
                    class="rounded-xl transition-all">
                 <label class="field-label">Fecha de trabajo <span class="text-red-400">*</span></label>
-                <input v-model="form.fecha" type="date" class="field-input" />
+                <input v-model="form.fecha" type="date" class="field-input"
+                       :disabled="!proyectoAsociado" />
+                <p v-if="!proyectoAsociado" class="text-xs text-amber-500 font-medium mt-1.5">
+                  Asocia primero un proyecto para poder establecer la fecha de trabajo.
+                </p>
+                <p v-else-if="fechaFinEstimada" class="text-xs text-gray-500 mt-1.5">
+                  Fecha fin estimada: <span class="font-bold text-[#1F2937]">{{ fechaFinEstimada }}</span>
+                  ({{ totalClasesProyectoSeleccionado }} clase(s) del proyecto). Podrás ajustarla luego en el detalle del encuentro.
+                </p>
               </div>
 
               <div ref="refCampoCentro" :class="{ 'tour-active': tourTargetActivo === 'refCampoCentro' }"
@@ -961,26 +1024,33 @@ function formatFecha(isoDate) {
 
                 <!-- Número de equipos -->
                 <div>
-                  <label class="field-label">Número de equipos</label>
+                  <label class="field-label">Número de equipos <span class="text-red-400">*</span></label>
                   <div class="flex items-center gap-2 mt-1">
                     <button @click="form.num_equipos = Math.max(1, (form.num_equipos || 3) - 1)"
+                            :disabled="!fechaEstablecida"
                             class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200
-                                   text-gray-600 font-black text-sm hover:bg-gray-200 transition-all">−</button>
+                                   text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
+                                   disabled:opacity-40 disabled:cursor-not-allowed">−</button>
                     <span class="w-8 text-center text-base font-black text-[#1F2937]">{{ form.num_equipos || 3 }}</span>
                     <button @click="form.num_equipos = Math.min(20, (form.num_equipos || 3) + 1)"
+                            :disabled="!fechaEstablecida"
                             class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200
-                                   text-gray-600 font-black text-sm hover:bg-gray-200 transition-all">+</button>
+                                   text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
+                                   disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                     <span class="text-[10px] text-gray-400 font-medium ml-1">equipos · se crearán al generar el código</span>
                   </div>
                 </div>
+
+                <p v-if="!fechaEstablecida" class="text-xs text-amber-500 font-medium">
+                  Establece la fecha de trabajo para repartir el alumnado en equipos.
+                </p>
 
                 <!-- Alumnado por equipos — siempre visible -->
                 <div ref="refCampoEquipos" class="space-y-3 rounded-xl transition-all"
                      :class="{ 'tour-active': tourTargetActivo === 'refCampoEquipos' }">
 
                   <label class="field-label">
-                    Alumnado por equipos
-                    <span class="text-gray-300 font-normal normal-case ml-1">(opcional)</span>
+                    Alumnado por equipos <span class="text-red-400">*</span>
                     <span v-if="limiteAlumnados" class="ml-2 text-xs font-semibold"
                           :class="limiteAlcanzado ? 'text-red-400' : 'text-gray-400'">
                       {{ form.alumnados.length }}/{{ limiteAlumnados }}
@@ -991,15 +1061,17 @@ function formatFecha(isoDate) {
                   <div class="flex flex-wrap gap-2">
                     <input v-model="nuevoAlumnadoNombre" type="text" placeholder="Nombre del alumno/a"
                            class="field-input flex-1 min-w-32 !text-sm"
-                           @keyup.enter="addAlumnadoSesion" />
+                           :disabled="!fechaEstablecida"
+                           @keyup.enter="addAlumnadoEncuentro" />
                     <select v-model="nuevoAlumnadoEquipo"
-                            class="field-input !w-auto pr-8 cursor-pointer !text-sm">
+                            class="field-input !w-auto pr-8 cursor-pointer !text-sm"
+                            :disabled="!fechaEstablecida">
                       <option v-for="n in (form.num_equipos || 3)" :key="n" :value="n">
                         Equipo {{ n }}
                       </option>
                     </select>
-                    <button @click="addAlumnadoSesion"
-                            :disabled="limiteAlcanzado"
+                    <button @click="addAlumnadoEncuentro"
+                            :disabled="limiteAlcanzado || !fechaEstablecida"
                             class="shrink-0 px-3 py-2 bg-[#00A859] text-white rounded-xl
                                    text-xs font-black hover:bg-[#00A859]/90 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">
@@ -1025,7 +1097,7 @@ function formatFecha(isoDate) {
                         <div v-for="a in alumnadosDeEquipo(n)" :key="a._i"
                              class="flex items-center gap-1 text-xs">
                           <span class="flex-1 truncate font-medium text-[#1F2937]">{{ a.nombre }}</span>
-                          <button @click="removeAlumnadoSesion(a._i)"
+                          <button @click="removeAlumnadoEncuentro(a._i)"
                                   class="text-gray-300 hover:text-red-400 font-black transition-colors
                                          text-sm leading-none flex-shrink-0">×</button>
                         </div>
@@ -1044,7 +1116,7 @@ function formatFecha(isoDate) {
                       <div v-for="a in alumnadosSinEquipo" :key="a._i"
                            class="flex items-center gap-1 text-xs">
                         <span class="flex-1 truncate font-medium text-amber-700">{{ a.nombre }}</span>
-                        <button @click="removeAlumnadoSesion(a._i)"
+                        <button @click="removeAlumnadoEncuentro(a._i)"
                                 class="text-amber-300 hover:text-red-400 font-black transition-colors
                                        text-sm leading-none flex-shrink-0">×</button>
                       </div>
@@ -1085,13 +1157,26 @@ function formatFecha(isoDate) {
 
             </div>
 
+            <div v-if="requisitosFaltantes.length || errorGuardado"
+                 class="px-6 py-3 bg-amber-50 border-t border-amber-100">
+              <ul class="space-y-0.5">
+                <li v-for="(msg, i) in requisitosFaltantes" :key="i"
+                    class="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
+                  <span class="w-1 h-1 rounded-full bg-amber-400 flex-shrink-0" /> {{ msg }}
+                </li>
+              </ul>
+              <p v-if="errorGuardado" class="text-xs font-semibold text-red-500 mt-1">
+                {{ errorGuardado }}
+              </p>
+            </div>
+
             <div ref="refBtnGuardar"
                  class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4 transition-all"
                  :class="{ 'tour-active': tourTargetActivo === 'refBtnGuardar' }">
               <p class="text-[10px] text-gray-400 font-medium">
-                La sesión se guarda en la base de datos.
+                El encuentro se guarda en la base de datos.
               </p>
-              <button @click="guardarSesion"
+              <button @click="guardarEncuentro"
                       :disabled="!formularioValido || guardando"
                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
                              text-xs font-black uppercase tracking-widest
@@ -1110,7 +1195,7 @@ function formatFecha(isoDate) {
                         d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3
                            m-4 0V3m0 4l-2-2m2 2l2-2"/>
                 </svg>
-                {{ guardadoOk ? '¡Guardado!' : guardando ? 'Guardando...' : 'Guardar sesión' }}
+                {{ guardadoOk ? '¡Guardado!' : guardando ? 'Guardando...' : 'Guardar encuentro' }}
               </button>
             </div>
           </div>
@@ -1120,11 +1205,11 @@ function formatFecha(isoDate) {
 
         <!-- ─── COLUMNA DERECHA: Historial ──────────────────────────────── -->
         <div class="lg:col-span-2 transition-all"
-             :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'sesiones' }">
+             :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'encuentros' }">
 
-          <div ref="refSesiones"
+          <div ref="refEncuentros"
                class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden sticky top-[4.5rem]"
-               :class="{ 'tour-active': tourTargetActivo === 'refSesiones' }">
+               :class="{ 'tour-active': tourTargetActivo === 'refEncuentros' }">
 
             <!-- Cabecera — banner azul -->
             <div class="relative overflow-hidden border-b border-blue-100
@@ -1146,20 +1231,20 @@ function formatFecha(isoDate) {
                     <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">Historial</span>
                   </div>
                   <h2 class="text-base font-black text-[#1F2937] tracking-tight leading-tight truncate">
-                    Resumen de sesiones
+                    Resumen de encuentros
                   </h2>
                 </div>
                 <span class="flex-shrink-0 text-[10px] font-black bg-blue-100 text-blue-600
                              px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  {{ sesiones.length }}
+                  {{ encuentros.length }}
                 </span>
               </div>
             </div>
 
             <!-- Acciones rápidas -->
             <div class="px-5 py-3 border-b border-gray-100">
-              <!-- Botón Ver sesiones — prominente -->
-              <button @click="router.push('/dashboard/sesiones')"
+              <!-- Botón Ver encuentros — prominente -->
+              <button @click="router.push('/dashboard/encuentros')"
                       class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
                              bg-[#00A859] text-white
                              text-[10px] font-black uppercase tracking-widest
@@ -1168,7 +1253,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                 </svg>
-                Ver todas las sesiones
+                Ver todos los encuentros
               </button>
               <button @click="router.push({ name: 'startup-day-crear' })"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
@@ -1178,19 +1263,19 @@ function formatFecha(isoDate) {
                 <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Nuevo proyecto
+                Nueva propuesta
               </button>
             </div>
 
             <!-- Filtros compactos -->
-            <div v-if="sesiones.length > 0" class="px-4 py-3 border-b border-gray-50 space-y-2">
+            <div v-if="encuentros.length > 0" class="px-4 py-3 border-b border-gray-50 space-y-2">
               <!-- Búsqueda por título -->
               <div class="relative">
                 <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
-                <input v-model="filtroSes.titulo" type="text" placeholder="Buscar sesión..."
+                <input v-model="filtroSes.titulo" type="text" placeholder="Buscar encuentro..."
                        class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-7 pr-3 py-1.5
                               text-xs font-medium text-gray-700 placeholder-gray-300
                               focus:outline-none focus:border-[#00A859]/50 focus:ring-1 focus:ring-[#00A859]/20" />
@@ -1239,15 +1324,15 @@ function formatFecha(isoDate) {
               </div>
             </div>
 
-            <!-- Cargando sesiones -->
-            <div v-if="cargandoSesiones" class="px-5 py-10 flex justify-center">
+            <!-- Cargando encuentros -->
+            <div v-if="cargandoEncuentros" class="px-5 py-10 flex justify-center">
               <svg class="animate-spin w-5 h-5 text-[#00A859]" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
               </svg>
             </div>
 
             <!-- Estado vacío -->
-            <div v-else-if="sesiones.length === 0" class="px-5 py-10 text-center">
+            <div v-else-if="encuentros.length === 0" class="px-5 py-10 text-center">
               <div class="w-12 h-12 rounded-full bg-gray-50 border border-gray-100
                           flex items-center justify-center mx-auto mb-3">
                 <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1256,20 +1341,20 @@ function formatFecha(isoDate) {
                 </svg>
               </div>
               <p class="text-xs text-gray-400 font-medium leading-relaxed">
-                Aún no hay sesiones.<br>¡Registra la primera!
+                Aún no hay encuentros.<br>¡Registra el primero!
               </p>
             </div>
 
             <!-- Sin resultados tras filtrar -->
-            <div v-else-if="!cargandoSesiones && sesionesFiltradas.length === 0" class="px-5 py-8 text-center">
+            <div v-else-if="!cargandoEncuentros && encuentrosFiltrados.length === 0" class="px-5 py-8 text-center">
               <p class="text-xs text-gray-400 font-medium">Sin resultados para esos filtros.</p>
             </div>
 
-            <!-- Lista de sesiones (miniaturas) -->
-            <ul v-else-if="!cargandoSesiones" class="divide-y divide-gray-50">
-              <li v-for="s in sesionesVisibles" :key="s.id"
+            <!-- Lista de encuentros (miniaturas) -->
+            <ul v-else-if="!cargandoEncuentros" class="divide-y divide-gray-50">
+              <li v-for="s in encuentrosVisibles" :key="s.id"
                   class="px-4 py-3 hover:bg-gray-50/60 transition-colors group cursor-pointer"
-                  @click="verSesion(s)">
+                  @click="verEncuentro(s)">
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black text-[#1F2937] leading-snug truncate
@@ -1285,13 +1370,13 @@ function formatFecha(isoDate) {
                       <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} al.</span>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                  <div class="flex flex-col items-end gap-1 flex-shrink-0">
                     <button @click.stop="abrirModalEliminar(s)"
                             class="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
                             title="Eliminar">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                              d="M6 18L18 6M6 6l12 12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                       </svg>
                     </button>
                   </div>
@@ -1302,8 +1387,8 @@ function formatFecha(isoDate) {
             <!-- Paginación -->
             <div v-if="totalPaginasSes > 1"
                  class="px-4 py-3 border-t border-gray-50 flex items-center justify-between gap-2">
-              <button @click="paginaSesiones--"
-                      :disabled="paginaSesiones === 1"
+              <button @click="paginaEncuentros--"
+                      :disabled="paginaEncuentros === 1"
                       class="p-1.5 rounded-lg border border-gray-200 text-gray-400
                              hover:border-[#00A859] hover:text-[#00A859]
                              disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -1312,10 +1397,10 @@ function formatFecha(isoDate) {
                 </svg>
               </button>
               <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                {{ paginaSesiones }} / {{ totalPaginasSes }}
+                {{ paginaEncuentros }} / {{ totalPaginasSes }}
               </span>
-              <button @click="paginaSesiones++"
-                      :disabled="paginaSesiones === totalPaginasSes"
+              <button @click="paginaEncuentros++"
+                      :disabled="paginaEncuentros === totalPaginasSes"
                       class="p-1.5 rounded-lg border border-gray-200 text-gray-400
                              hover:border-[#00A859] hover:text-[#00A859]
                              disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -1333,15 +1418,15 @@ function formatFecha(isoDate) {
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- MODAL DETALLE DE SESIÓN                                                -->
+  <!-- MODAL DETALLE DE ENCUENTRO                                                -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="sesionAbierta"
+      <div v-if="encuentroAbierto"
            class="fixed inset-0 z-50 flex items-center justify-center p-4">
 
         <!-- Backdrop -->
-        <div @click="cerrarSesionModal()"
+        <div @click="cerrarEncuentroModal()"
              class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
         <!-- Panel -->
@@ -1355,14 +1440,14 @@ function formatFecha(isoDate) {
                 <div class="flex items-center gap-2 mb-2">
                   <span class="w-2 h-2 rounded-full bg-[#00A859] flex-shrink-0" />
                   <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[#00A859]">
-                    Sesión · {{ formatFecha(sesionAbierta.fecha) }}
+                    Encuentro · {{ formatFecha(encuentroAbierto.fecha) }}
                   </p>
                 </div>
                 <h2 class="text-lg font-black text-[#1F2937] leading-snug">
-                  {{ sesionAbierta.proyecto_titulo || '(sin título)' }}
+                  {{ encuentroAbierto.proyecto_titulo || '(sin título)' }}
                 </h2>
               </div>
-              <button @click="cerrarSesionModal()"
+              <button @click="cerrarEncuentroModal()"
                       class="flex-shrink-0 p-2 rounded-xl hover:bg-gray-100 text-gray-400
                              hover:text-gray-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1373,9 +1458,9 @@ function formatFecha(isoDate) {
 
             <!-- Tags rápidos -->
             <div class="flex flex-wrap gap-1.5 mt-3">
-              <span v-if="sesionAbierta.curso"           class="tag tag-green">{{ sesionAbierta.curso }}</span>
-              <span v-if="sesionAbierta.grupo"           class="tag tag-lime">Grupo {{ sesionAbierta.grupo }}</span>
-              <span v-if="sesionAbierta.num_alumnos"     class="tag tag-gray">{{ sesionAbierta.num_alumnos }} alumnos</span>
+              <span v-if="encuentroAbierto.curso"           class="tag tag-green">{{ encuentroAbierto.curso }}</span>
+              <span v-if="encuentroAbierto.grupo"           class="tag tag-lime">Grupo {{ encuentroAbierto.grupo }}</span>
+              <span v-if="encuentroAbierto.num_alumnos"     class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
           </div>
 
@@ -1384,46 +1469,46 @@ function formatFecha(isoDate) {
 
             <!-- Grid de datos -->
             <div class="grid grid-cols-2 gap-3">
-              <div v-if="sesionAbierta.centro_educativo"
+              <div v-if="encuentroAbierto.centro_educativo"
                    class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Centro</p>
-                <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ sesionAbierta.centro_educativo }}</p>
+                <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ encuentroAbierto.centro_educativo }}</p>
               </div>
-              <div v-if="sesionAbierta.ciclo_formativo"
+              <div v-if="encuentroAbierto.ciclo_formativo"
                    class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Ciclo</p>
-                <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ sesionAbierta.ciclo_formativo }}</p>
+                <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ encuentroAbierto.ciclo_formativo }}</p>
               </div>
-              <div v-if="sesionAbierta.fecha"
+              <div v-if="encuentroAbierto.fecha"
                    class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Fecha</p>
-                <p class="text-sm font-bold text-[#1F2937]">{{ formatFecha(sesionAbierta.fecha) }}</p>
+                <p class="text-sm font-bold text-[#1F2937]">{{ formatFecha(encuentroAbierto.fecha) }}</p>
               </div>
-              <div v-if="sesionAbierta.num_alumnos"
+              <div v-if="encuentroAbierto.num_alumnos"
                    class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Alumnos</p>
-                <p class="text-sm font-bold text-[#1F2937]">{{ sesionAbierta.num_alumnos }}</p>
+                <p class="text-sm font-bold text-[#1F2937]">{{ encuentroAbierto.num_alumnos }}</p>
               </div>
             </div>
 
             <!-- Notas -->
-            <div v-if="sesionAbierta.notas"
+            <div v-if="encuentroAbierto.notas"
                  class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-100">
               <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Notas adicionales</p>
-              <p class="text-sm text-[#1F2937] leading-relaxed">{{ sesionAbierta.notas }}</p>
+              <p class="text-sm text-[#1F2937] leading-relaxed">{{ encuentroAbierto.notas }}</p>
             </div>
 
           </div>
 
           <!-- Pie -->
           <div class="px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 flex items-center justify-between gap-4">
-            <button @click="abrirModalEliminar(sesionAbierta)"
+            <button @click="abrirModalEliminar(encuentroAbierto)"
                     class="text-xs text-gray-400 hover:text-red-400 font-black uppercase
                            tracking-widest transition-colors">
-              Eliminar sesión
+              Eliminar encuentro
             </button>
-            <div v-if="sesionAbierta.microreto_id" class="flex items-center gap-2">
-              <button @click="abrirMicroretoModal(sesionAbierta.microreto_id); cerrarSesionModal()"
+            <div v-if="encuentroAbierto.microreto_id" class="flex items-center gap-2">
+              <button @click="abrirMicroretoModal(encuentroAbierto.microreto_id); cerrarEncuentroModal()"
                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
@@ -1434,14 +1519,14 @@ function formatFecha(isoDate) {
                 </svg>
                 Ver ficha
               </button>
-              <button @click="router.push({ name: 'startup-day-crear', query: { microreto_id: sesionAbierta.microreto_id, sesion_id: sesionAbierta.id } }); cerrarSesionModal()"
+              <button @click="router.push({ name: 'startup-day-crear', query: { microreto_id: encuentroAbierto.microreto_id, encuentro_id: encuentroAbierto.id } }); cerrarEncuentroModal()"
                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#99CC33] text-white
                              text-xs font-black uppercase tracking-widest hover:bg-[#99CC33]/90
                              transition-all shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Crear proyecto
+                Crear propuesta
               </button>
             </div>
           </div>
@@ -1459,11 +1544,11 @@ function formatFecha(isoDate) {
     @close="cerrarMicroretoModal"
   />
 
-  <!-- Modal eliminar sesión -->
-  <EliminarSesionModal
+  <!-- Modal eliminar encuentro -->
+  <EliminarEncuentroModal
     :visible="modalEliminarVisible"
-    :sesion="sesionAEliminar"
-    @sesion-eliminada="onSesionEliminada"
+    :encuentro="encuentroAEliminar"
+    @encuentro-eliminado="onEncuentroEliminado"
     @cerrar="cerrarModalEliminar"
   />
 
@@ -1683,7 +1768,9 @@ function formatFecha(isoDate) {
                       <span class="w-5 h-5 rounded-full bg-[#99CC33]/15 text-[#5a7a00] font-black text-[10px]
                                    flex items-center justify-center shrink-0">{{ i + 1 }}</span>
                       <span class="font-bold text-[#1F2937]">{{ f.nombre }}</span>
-                      <span v-if="f.duracion" class="text-gray-400 text-xs">· {{ f.duracion }}</span>
+                      <span v-if="duracionPorFase(proyectoModal.diseno_microproyecto.clases, i)" class="text-gray-400 text-xs">
+                        · {{ duracionPorFase(proyectoModal.diseno_microproyecto.clases, i) }} clase(s)
+                      </span>
                     </li>
                     <li v-if="proyectoModal.diseno_microproyecto.fases.length > 4"
                         class="text-xs text-gray-400 pl-7">
@@ -1736,7 +1823,7 @@ function formatFecha(isoDate) {
 </template>
 
 <style scoped>
-/* ── Animación de entrada del banner "Creación de sesión" ── */
+/* ── Animación de entrada del banner "Creación de encuentro" ── */
 .creation-hero-enter-active {
   transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);

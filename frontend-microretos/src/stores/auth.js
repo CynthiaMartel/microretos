@@ -13,15 +13,15 @@ export const ROLE_ADMIN      = 4
 // Rutas permitidas por rol (nombre de ruta de Vue Router)
 export const ROLE_ROUTES = {
   [ROLE_SUPERADMIN]: ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'sesiones-registradas', 'startup-day', 'startup-day-crear',
+                      'encuentros-registrados', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'base-datos', 'papelera',
                       'empresas', 'gestion-usuarios', 'inicio-docente', 'mi-usuario'],
   [ROLE_ADMIN]:      ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'sesiones-registradas', 'startup-day', 'startup-day-crear',
+                      'encuentros-registrados', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'gestion-usuarios',
                       'papelera', 'inicio-docente', 'mi-usuario'],
   [ROLE_DOCENTE]:    ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'sesiones-registradas', 'startup-day', 'startup-day-crear',
+                      'encuentros-registrados', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'empresas', 'inicio-docente',
                       'mi-usuario'],
   [ROLE_EMPRESA]:    ['biblioteca', 'detalle-microreto',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -10,10 +11,15 @@ use App\Models\MicroproyectoRecurso;
 class Microproyecto extends Model
 {
     use SoftDeletes;
+
+    // Heurística única para convertir "clases" (duración de fase) en calendario —
+    // toda sugerencia/validación de fecha_fin de sesiones pasa por aquí.
+    public const SEMANAS_POR_CLASE = 1;
     protected $fillable = [
         'uuid', 'microreto_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
         'titulo', 'curso',
         'datos_empresa', 'datos_centro', 'equipo', 'modulos_seleccionados', 'ra_ce',
+        'evaluacion_oficial',
         'fundamentacion', 'diseno_reto', 'diseno_microproyecto', 'resumen',
         'objetivos', 'kpis', 'validacion_empresa',
         'paso_actual', 'estado', 'token_empresa', 'empresa_validado',
@@ -26,6 +32,7 @@ class Microproyecto extends Model
         'equipo'                 => 'array',
         'modulos_seleccionados'  => 'array',
         'ra_ce'                  => 'string',
+        'evaluacion_oficial'     => 'array',
         'fundamentacion'         => 'array',
         'diseno_reto'            => 'array',
         'diseno_microproyecto'   => 'array',
@@ -61,9 +68,27 @@ class Microproyecto extends Model
         return $this->belongsTo(Microreto::class);
     }
 
-    public function sesiones()
+    public function encuentros()
     {
-        return $this->hasMany(Sesion::class);
+        return $this->hasMany(Encuentro::class);
+    }
+
+    // Nº de clases del calendario definido en el paso 5 del wizard (una clase
+    // puede cubrir varias fases a la vez) — se usa para sugerir/validar la
+    // fecha_fin de las sesiones asociadas.
+    public function totalClasesEstimadas(): int
+    {
+        return count($this->diseno_microproyecto['clases'] ?? []);
+    }
+
+    // Fecha fin sugerida/mínima a partir de una fecha de inicio, según el total de
+    // clases estimadas. Null si el proyecto no tiene fases con duración definida.
+    public function fechaFinSugerida(Carbon $fechaInicio): ?Carbon
+    {
+        $totalClases = $this->totalClasesEstimadas();
+        if ($totalClases <= 0) return null;
+
+        return $fechaInicio->copy()->addWeeks($totalClases * self::SEMANAS_POR_CLASE);
     }
 
     public function empresa()

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../api.js';
+import { duracionPorFase } from '../config/fasesProyecto.js';
 
 const route = useRoute();
 const proyecto  = ref(null);
@@ -380,7 +381,9 @@ function youtubeId(url) {
                                flex items-center justify-center shrink-0 mt-0.5">{{ i + 1 }}</span>
                   <div>
                     <p class="text-sm font-bold text-[#1F2937]">{{ f.nombre }}
-                      <span v-if="f.duracion" class="text-gray-400 font-normal text-xs"> · {{ f.duracion }}</span>
+                      <span v-if="duracionPorFase(proyecto.diseno_microproyecto.clases, i)" class="text-gray-400 font-normal text-xs">
+                        · {{ duracionPorFase(proyecto.diseno_microproyecto.clases, i) }} clase(s)
+                      </span>
                     </p>
                     <p v-if="f.descripcion" class="text-xs text-gray-400 mt-0.5 leading-snug">{{ f.descripcion }}</p>
                   </div>

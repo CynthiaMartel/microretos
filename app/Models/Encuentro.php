@@ -5,15 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Sesion extends Model
+class Encuentro extends Model
 {
     use SoftDeletes;
-    protected $table = 'sesiones';
+    protected $table = 'encuentros';
 
     protected $fillable = [
         'user_id',
         'microproyecto_id',
         'fecha',
+        'fecha_fin',
         'centro_educativo',
         'ciclo_formativo',
         'curso',
@@ -27,6 +28,7 @@ class Sesion extends Model
 
     protected $casts = [
         'fecha'            => 'date:Y-m-d',
+        'fecha_fin'        => 'date:Y-m-d',
         'num_alumnos'      => 'integer',
         'num_equipos'      => 'integer',
         'microproyecto_id' => 'integer',

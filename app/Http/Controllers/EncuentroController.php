@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreSesionLoteRequest;
-use App\Http\Requests\StoreSesionRequest;
+use App\Http\Requests\StoreEncuentroLoteRequest;
+use App\Http\Requests\StoreEncuentroRequest;
+use App\Http\Requests\UpdateEncuentroRequest;
 use App\Models\Equipo;
-use App\Models\Sesion;
+use App\Models\Microproyecto;
+use App\Models\Encuentro;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-class SesionController extends Controller
+class EncuentroController extends Controller
 {
     public function index(\Illuminate\Http\Request $request)
     {
         $user  = $request->user();
-        $query = Sesion::with([
+        $query = Encuentro::with([
             'docente:id,name',
             'microproyecto:id,uuid,titulo,microreto_id,estado',
             'microproyecto.microreto:id,titulo,empresa_nombre',
@@ -29,18 +32,10 @@ class SesionController extends Controller
         }
         // Superadmin: sin filtro
 
-        return $query->get()->map(function ($sesion) {
-            $data = $sesion->toArray();
-            $data['microproyecto_uuid']   = $sesion->microproyecto?->uuid;
-            $data['proyecto_titulo']      = $sesion->microproyecto?->titulo;
-            $data['microreto_id']         = $sesion->microproyecto?->microreto_id;
-            $data['microreto_titulo']     = $sesion->microproyecto?->microreto?->titulo;
-            unset($data['microproyecto']);
-            return $data;
-        });
+        return $query->get()->map(fn($encuentro) => $this->conTituloProyecto($encuentro));
     }
 
-    public function store(StoreSesionRequest $request)
+    public function store(StoreEncuentroRequest $request)
     {
         $validated = $request->validated();
 
@@ -51,59 +46,103 @@ class SesionController extends Controller
             $validated['centro_educativo'] = $user->centroEducativo->nombre;
         }
 
-        return response()->json(Sesion::create($validated), 201);
+        if (!empty($validated['microproyecto_id'])) {
+            $proyecto = Microproyecto::find($validated['microproyecto_id']);
+            $validated['fecha_fin'] = $this->fechaFinSugerida($validated['fecha'], $proyecto);
+        }
+
+        $encuentro = Encuentro::create($validated);
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
+
+        return response()->json($this->conTituloProyecto($encuentro), 201);
     }
 
-    public function storeLote(StoreSesionLoteRequest $request)
+    public function update(UpdateEncuentroRequest $request, $id)
+    {
+        $encuentro = Encuentro::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $encuentro->update($request->validated());
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
+
+        return response()->json($this->conTituloProyecto($encuentro));
+    }
+
+    // Sugiere fecha_fin a partir de las clases estimadas en las fases del proyecto
+    // (heurística centralizada en Microproyecto::fechaFinSugerida). Es solo una
+    // sugerencia editable, nunca un límite duro en creación.
+    private function fechaFinSugerida(string $fecha, ?Microproyecto $proyecto): ?string
+    {
+        return $proyecto?->fechaFinSugerida(Carbon::parse($fecha))?->toDateString();
+    }
+
+    private function conTituloProyecto(Encuentro $encuentro): array
+    {
+        $data = $encuentro->toArray();
+        $data['microproyecto_uuid'] = $encuentro->microproyecto?->uuid;
+        $data['proyecto_titulo']    = $encuentro->microproyecto?->titulo;
+        $data['microreto_id']       = $encuentro->microproyecto?->microreto_id;
+        $data['microreto_titulo']   = $encuentro->microproyecto?->microreto?->titulo;
+        unset($data['microproyecto']);
+        return $data;
+    }
+
+    public function storeLote(StoreEncuentroLoteRequest $request)
     {
         $userId = $request->user()->id;
-        foreach ($request->validated()['sesiones'] as $s) {
+        foreach ($request->validated()['encuentros'] as $s) {
             $s['user_id'] = $userId;
-            Sesion::create($s);
+            Encuentro::create($s);
         }
 
         return response()->noContent();
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        return Sesion::with(['microproyecto:id,uuid,titulo,estado'])->findOrFail($id);
+        return Encuentro::with(['microproyecto:id,uuid,titulo,estado'])
+            ->where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $sesion = Sesion::findOrFail($id);
-        $sesion->delete();
+        $encuentro = Encuentro::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+        $encuentro->delete();
         return response()->noContent();
     }
 
     /**
-     * POST /api/sesiones/{id}/crear-codigo
-     * Crea equipos en el microproyecto de la sesión y genera un codigo_clase.
+     * POST /api/encuentros/{id}/crear-codigo
+     * Crea equipos en el microproyecto del encuentro y genera un codigo_clase.
      */
     public function crearCodigo(Request $request, $id)
     {
-        $sesion = Sesion::where('id', $id)
+        $encuentro = Encuentro::where('id', $id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        $proyecto = $sesion->microproyecto;
+        $proyecto = $encuentro->microproyecto;
 
         if (!$proyecto || !in_array($proyecto->estado, ['propuesta', 'validado'])) {
             return response()->json([
-                'error' => 'Esta sesión no tiene ningún proyecto publicado. Asocia un proyecto a la sesión y márcalo como Propuesta primero.',
+                'error' => 'Este encuentro no tiene ningún proyecto publicado. Asocia un proyecto al encuentro y márcalo como Propuesta primero.',
             ], 422);
         }
 
-        $numEquipos = max(1, min(30, (int) ($sesion->num_equipos ?? 3)));
-        $alumnados  = $sesion->alumnados ?? [];
+        $numEquipos = max(1, min(30, (int) ($encuentro->num_equipos ?? 3)));
+        $alumnados  = $encuentro->alumnados ?? [];
 
         $proyecto->equipos()->delete();
 
         for ($n = 1; $n <= $numEquipos; $n++) {
             $equipo = Equipo::create([
                 'microproyecto_id' => $proyecto->id,
-                'sesion_id'        => $sesion->id,
+                'encuentro_id'     => $encuentro->id,
                 'nombre'           => "Equipo {$n}",
             ]);
 
@@ -118,7 +157,7 @@ class SesionController extends Controller
         }
 
         $codigo = $this->generarCodigoClase();
-        $sesion->update(['codigo_clase' => $codigo]);
+        $encuentro->update(['codigo_clase' => $codigo]);
 
         $equipos = $proyecto->equipos()->with('miembros')->get()->map(fn($e) => [
             'id'       => $e->id,
@@ -134,16 +173,16 @@ class SesionController extends Controller
     }
 
     /**
-     * GET /api/sesiones/{id}/workspace
-     * Dashboard docente: progreso de todos los equipos de la sesión.
+     * GET /api/encuentros/{id}/workspace
+     * Dashboard docente: progreso de todos los equipos del encuentro.
      */
     public function workspace(Request $request, $id)
     {
-        $sesion = Sesion::where('id', $id)
+        $encuentro = Encuentro::where('id', $id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        $proyecto = $sesion->microproyecto?->load([
+        $proyecto = $encuentro->microproyecto?->load([
             'equipos.miembros',
             'equipos.fases',
             'equipos.reflexiones',
@@ -189,14 +228,14 @@ class SesionController extends Controller
         }) ?? collect();
 
         return response()->json([
-            'sesion' => [
-                'id'               => $sesion->id,
-                'centro_educativo' => $sesion->centro_educativo,
-                'ciclo_formativo'  => $sesion->ciclo_formativo,
-                'curso'            => $sesion->curso,
-                'grupo'            => $sesion->grupo,
-                'fecha'            => $sesion->fecha,
-                'num_alumnos'      => $sesion->num_alumnos,
+            'encuentro' => [
+                'id'               => $encuentro->id,
+                'centro_educativo' => $encuentro->centro_educativo,
+                'ciclo_formativo'  => $encuentro->ciclo_formativo,
+                'curso'            => $encuentro->curso,
+                'grupo'            => $encuentro->grupo,
+                'fecha'            => $encuentro->fecha,
+                'num_alumnos'      => $encuentro->num_alumnos,
             ],
             'proyecto' => $proyecto ? [
                 'uuid'   => $proyecto->uuid,
@@ -216,7 +255,7 @@ class SesionController extends Controller
                      . $charset[random_int(0, strlen($charset) - 1)];
             $numeros = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
             $codigo  = $letras . '-' . $numeros;
-        } while (Sesion::where('codigo_clase', $codigo)->exists());
+        } while (Encuentro::where('codigo_clase', $codigo)->exists());
         return $codigo;
     }
 }

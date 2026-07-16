@@ -9,11 +9,12 @@ use App\Models\CicloFormativo;
 use App\Models\Familia;
 use App\Models\CentroEducativo;
 use App\Models\Microproyecto;
-use App\Models\Sesion;
+use App\Models\Encuentro;
 
 class PapeleraController extends Controller
 {
-    // Mapa tipo → modelo y etiqueta legible
+    // Mapa tipo → modelo y etiqueta legible. Claves ('sesiones', etc.) son el
+    // contrato con PapeleraBaseDatos.vue — no renombrar sin actualizar el frontend.
     private array $tipos = [
         'empresas'    => Empresa::class,
         'microretos'  => Microreto::class,
@@ -21,7 +22,7 @@ class PapeleraController extends Controller
         'familias'    => Familia::class,
         'centros'     => CentroEducativo::class,
         'proyectos'   => Microproyecto::class,
-        'sesiones'    => Sesion::class,
+        'sesiones'    => Encuentro::class,
     ];
 
     /**
@@ -178,7 +179,9 @@ class PapeleraController extends Controller
             'empresas'  => $this->limpiarEmpresa($item),
             'centros'   => $this->limpiarCentro($item),
             'proyectos' => $this->limpiarProyecto($item),
-            'sesiones'  => $this->limpiarSesion($item),
+            // 'sesiones' (Encuentro) no necesita limpieza manual: equipos.encuentro_id
+            // ya tiene ON DELETE SET NULL, y microproyectos ya no apunta a encuentros
+            // (ver 2026_07_16_000003_drop_sesion_id_from_microproyectos).
             default     => null,
         };
     }
@@ -212,10 +215,4 @@ class PapeleraController extends Controller
         $proyecto->recursos()->forceDelete();
     }
 
-    private function limpiarSesion(Sesion $sesion): void
-    {
-        // Desvincula microproyectos de la sesión antes del borrado permanente
-        Microproyecto::where('sesion_id', $sesion->id)
-            ->update(['sesion_id' => null]);
-    }
 }

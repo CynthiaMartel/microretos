@@ -29,7 +29,7 @@ const emit = defineEmits(['seleccionar'])
         <!-- Opciones -->
         <div class="space-y-3 mb-6">
 
-          <!-- a) Crear sesión -->
+          <!-- a) Crear encuentro -->
           <button @click="emit('seleccionar', 'crear')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
                          bg-gray-50 hover:bg-[#00A859]/8 hover:border-[#00A859]/30
@@ -42,13 +42,13 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear una sesión</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Registra una nueva sesión de trabajo con un reto.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear un encuentro</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Registra un nuevo encuentro de trabajo con un reto.</p>
             </div>
           </button>
 
-          <!-- b) Ver sesiones creadas -->
-          <button @click="emit('seleccionar', 'sesiones')"
+          <!-- b) Ver encuentros creados -->
+          <button @click="emit('seleccionar', 'encuentros')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
                          bg-gray-50 hover:bg-[#99CC33]/8 hover:border-[#99CC33]/40
                          transition-all duration-200 text-left group">
@@ -61,8 +61,8 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Ver sesiones creadas</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Consulta el historial de sesiones ya registradas.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Ver encuentros creados</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Consulta el historial de encuentros ya registrados.</p>
             </div>
           </button>
 

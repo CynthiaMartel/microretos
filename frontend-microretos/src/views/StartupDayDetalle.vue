@@ -5,6 +5,7 @@ import api from '../api.js';
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js';
 import { useAuthStore } from '../stores/auth.js';
 import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
+import { duracionPorFase, FASES_PROYECTO, COLOR_MAP_FASES } from '../config/fasesProyecto.js';
 
 const route     = useRoute();
 const router    = useRouter();
@@ -14,6 +15,9 @@ const cargando = ref(true);
 const error    = ref(false);
 const isLoaded = ref(false);
 const urlCopiada = ref(false);
+
+// ── Desplegables de secciones largas ────────────────────────────────────────
+const raCeAbierto = ref(false);
 
 // ── Recursos adjuntos ───────────────────────────────────────────────────────
 const recursosAbierto    = ref(false);
@@ -253,6 +257,20 @@ async function archivar() {
               Validar
             </button>
             <button
+              v-if="!authStore.isEmpresa && proyecto.estado === 'validado'"
+              @click="router.push({ name: 'dashboard-docente', query: { microproyecto_id: proyecto.id } })"
+              class="px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-xs font-black
+                     uppercase tracking-widest text-blue-700 shadow-sm
+                     hover:bg-blue-100 transition-all flex items-center gap-1.5"
+              title="Crear un encuentro asociado a este proyecto"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              Crear encuentro
+            </button>
+            <button
               v-if="!authStore.isEmpresa"
               @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
               class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
@@ -485,9 +503,11 @@ async function archivar() {
 
         </div>
 
-        <!-- Secciones del proyecto -->
-        <div class="grid gap-4 sm:grid-cols-2">
+        <!-- Secciones del proyecto — agrupadas igual que los pasos del wizard -->
 
+        <!-- ═══ Empresa ═══ -->
+        <p class="group-header">Empresa</p>
+        <div class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Empresa -->
           <div v-if="proyecto.datos_empresa?.nombre" class="card-section">
             <p class="section-label">Empresa</p>
@@ -525,7 +545,7 @@ async function archivar() {
           </div>
 
           <!-- Equipo -->
-          <div v-if="proyecto.equipo?.alumnos?.length" class="card-section">
+          <div v-if="proyecto.equipo?.alumnos?.length" class="card-section sm:col-span-2">
             <p class="section-label">Equipo ({{ proyecto.equipo.alumnos.length }} personas)</p>
             <div class="flex flex-wrap gap-1.5">
               <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
@@ -534,23 +554,15 @@ async function archivar() {
               </span>
             </div>
           </div>
+        </div>
 
-          <!-- El reto -->
-          <div v-if="proyecto.diseno_reto?.descripcion" class="card-section sm:col-span-2">
-            <p class="section-label">El reto</p>
-            <p v-if="proyecto.diseno_reto.pregunta_reto"
-               class="text-sm font-bold text-[#00A859] mb-2 italic">
-              "{{ proyecto.diseno_reto.pregunta_reto }}"
-            </p>
-            <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.diseno_reto.descripcion }}</p>
-            <div v-if="proyecto.diseno_reto.entregables" class="mt-3 pt-3 border-t border-gray-100">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Entregables</p>
-              <p class="text-xs text-gray-500">{{ proyecto.diseno_reto.entregables }}</p>
-            </div>
-          </div>
-
+        <!-- ═══ Currículo ═══ -->
+        <p v-if="proyecto.modulos_seleccionados?.length || raCeBlocks.length || proyecto.ra_ce?.trim()"
+           class="group-header">Currículo</p>
+        <div v-if="proyecto.modulos_seleccionados?.length || raCeBlocks.length || proyecto.ra_ce?.trim()"
+             class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Módulos -->
-          <div v-if="proyecto.modulos_seleccionados?.length" class="card-section">
+          <div v-if="proyecto.modulos_seleccionados?.length" class="card-section sm:col-span-2">
             <p class="section-label">Módulos ({{ proyecto.modulos_seleccionados.length }})</p>
             <div class="flex flex-wrap gap-1.5">
               <span v-for="m in proyecto.modulos_seleccionados" :key="m.id"
@@ -560,29 +572,83 @@ async function archivar() {
             </div>
           </div>
 
-          <!-- RA/CE -->
-          <div v-if="raCeBlocks.length" class="card-section sm:col-span-2">
-            <p class="section-label">Resultados de Aprendizaje y Criterios de Evaluación</p>
-            <div class="space-y-4">
-              <div v-for="(block, i) in raCeBlocks" :key="i" class="border border-gray-100 rounded-xl p-3.5">
-                <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-1">{{ block.modulo }}</p>
-                <p class="text-sm font-semibold text-[#1F2937] mb-2">{{ block.ra }}</p>
-                <ul v-if="block.ces.length" class="space-y-1 pl-1">
-                  <li v-for="(ce, j) in block.ces" :key="j"
-                      class="flex items-start gap-2 text-xs text-gray-500">
-                    <span class="text-amber-400 shrink-0 font-bold mt-0.5">•</span>{{ ce }}
-                  </li>
-                </ul>
+          <!-- RA/CE — desplegable (puede ser una lista larga) -->
+          <div v-if="raCeBlocks.length || proyecto.ra_ce?.trim()" class="card-section sm:col-span-2">
+            <button @click="raCeAbierto = !raCeAbierto" type="button" class="w-full flex items-center justify-between text-left">
+              <p class="section-label">Resultados de Aprendizaje y Criterios de Evaluación</p>
+              <svg :class="['w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0', raCeAbierto ? 'rotate-180' : '']"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <Transition enter-active-class="transition-all duration-200 ease-out" enter-from-class="opacity-0 -translate-y-1"
+                        leave-active-class="transition-all duration-150 ease-in" leave-to-class="opacity-0 -translate-y-1">
+              <div v-if="raCeAbierto" class="pt-3">
+                <div v-if="raCeBlocks.length" class="space-y-4">
+                  <div v-for="(block, i) in raCeBlocks" :key="i" class="border border-gray-100 rounded-xl p-3.5">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-1">{{ block.modulo }}</p>
+                    <p class="text-sm font-semibold text-[#1F2937] mb-2">{{ block.ra }}</p>
+                    <ul v-if="block.ces.length" class="space-y-1 pl-1">
+                      <li v-for="(ce, j) in block.ces" :key="j"
+                          class="flex items-start gap-2 text-xs text-gray-500">
+                        <span class="text-amber-400 shrink-0 font-bold mt-0.5">•</span>{{ ce }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <p v-else class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{{ proyecto.ra_ce }}</p>
               </div>
+            </Transition>
+          </div>
+        </div>
+
+        <!-- ═══ El reto ═══ -->
+        <p v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto" class="group-header">El reto</p>
+        <div v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto"
+             class="grid gap-4 sm:grid-cols-2 mb-6">
+          <!-- Fundamentación -->
+          <div v-if="proyecto.fundamentacion?.contexto || proyecto.fundamentacion?.justificacion || proyecto.fundamentacion?.innovacion"
+               class="card-section sm:col-span-2">
+            <p class="section-label">Fundamentación</p>
+            <div v-if="proyecto.fundamentacion.contexto" class="mb-3">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Contexto de partida</p>
+              <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.contexto }}</p>
+            </div>
+            <div v-if="proyecto.fundamentacion.justificacion" class="mb-3">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Justificación pedagógica</p>
+              <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.justificacion }}</p>
+            </div>
+            <div v-if="proyecto.fundamentacion.innovacion">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Elemento innovador</p>
+              <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.innovacion }}</p>
             </div>
           </div>
-          <!-- Si ra_ce es texto libre sin formato estructurado -->
-          <div v-else-if="proyecto.ra_ce?.trim()" class="card-section sm:col-span-2">
-            <p class="section-label">Resultados de Aprendizaje y Criterios de Evaluación</p>
-            <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{{ proyecto.ra_ce }}</p>
-          </div>
 
-          <!-- Fases -->
+          <!-- El reto -->
+          <div v-if="proyecto.diseno_reto?.descripcion" class="card-section sm:col-span-2">
+            <p class="section-label">Diseño del reto</p>
+            <p v-if="proyecto.diseno_reto.pregunta_reto"
+               class="text-sm font-bold text-[#00A859] mb-2 italic">
+              "{{ proyecto.diseno_reto.pregunta_reto }}"
+            </p>
+            <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.diseno_reto.descripcion }}</p>
+            <div v-if="proyecto.diseno_reto.restricciones" class="mt-3 pt-3 border-t border-gray-100">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Restricciones</p>
+              <p class="text-xs text-gray-500">{{ proyecto.diseno_reto.restricciones }}</p>
+            </div>
+            <div v-if="proyecto.diseno_reto.entregables" class="mt-3 pt-3 border-t border-gray-100">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Entregables</p>
+              <p class="text-xs text-gray-500">{{ proyecto.diseno_reto.entregables }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Propuesta ═══ -->
+        <p v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
+           class="group-header">Propuesta</p>
+        <div v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
+             class="grid gap-4 sm:grid-cols-2 mb-6">
+          <!-- Fases — duración siempre visible, no desplegable -->
           <div v-if="proyecto.diseno_microproyecto?.fases?.length" class="card-section">
             <p class="section-label">Fases del proyecto</p>
             <ol class="space-y-2.5">
@@ -592,7 +658,9 @@ async function archivar() {
                              flex items-center justify-center shrink-0 mt-0.5">{{ i + 1 }}</span>
                 <div>
                   <p class="font-bold text-[#1F2937]">{{ f.nombre }}
-                    <span v-if="f.duracion" class="text-gray-400 font-normal text-xs"> · {{ f.duracion }}</span>
+                    <span v-if="duracionPorFase(proyecto.diseno_microproyecto.clases, i)" class="text-gray-400 font-normal text-xs">
+                      · {{ duracionPorFase(proyecto.diseno_microproyecto.clases, i) }} sesión(es)
+                    </span>
                   </p>
                   <p v-if="f.descripcion" class="text-gray-400 text-xs mt-0.5">{{ f.descripcion }}</p>
                 </div>
@@ -600,7 +668,46 @@ async function archivar() {
             </ol>
           </div>
 
-          <!-- Objetivos -->
+          <!-- Calendario de sesiones — también siempre visible -->
+          <div v-if="proyecto.diseno_microproyecto?.clases?.length" class="card-section">
+            <p class="section-label">Calendario de sesiones ({{ proyecto.diseno_microproyecto.clases.length }})</p>
+            <ol class="space-y-1.5">
+              <li v-for="(c, i) in proyecto.diseno_microproyecto.clases" :key="i" class="text-sm text-gray-600">
+                <span class="font-bold text-[#1F2937]">Sesión {{ i + 1 }}:</span>
+                {{ (c.fases || []).map(n => proyecto.diseno_microproyecto.fases?.[n]?.nombre).filter(Boolean).join(' + ') || 'Sin fase asignada' }}
+              </li>
+            </ol>
+          </div>
+
+          <!-- Cronograma — hitos por fase -->
+          <div v-if="proyecto.diseno_microproyecto?.clases?.length" class="card-section sm:col-span-2">
+            <p class="section-label">Cronograma — hitos por fase</p>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-2">
+              <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3" :class="COLOR_MAP_FASES[f.color]">
+                <div class="flex items-center gap-1.5 mb-1">
+                  <span class="text-base leading-none">{{ f.icono }}</span>
+                  <p class="font-black text-xs text-[#1F2937]">{{ f.label }}</p>
+                </div>
+                <p class="text-[9px] font-bold uppercase tracking-wide opacity-70">
+                  {{ duracionPorFase(proyecto.diseno_microproyecto.clases, f.num) }} sesión(es)
+                </p>
+                <p class="text-xs text-gray-600 leading-snug mt-1">🎯 {{ f.desc }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metodología -->
+          <div v-if="proyecto.diseno_microproyecto?.metodologia" class="card-section sm:col-span-2">
+            <p class="section-label">Metodología</p>
+            <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.diseno_microproyecto.metodologia }}</p>
+          </div>
+        </div>
+
+        <!-- ═══ Objetivos ═══ -->
+        <p v-if="proyecto.objetivos?.lista?.length || proyecto.kpis?.lista?.length" class="group-header">Objetivos</p>
+        <div v-if="proyecto.objetivos?.lista?.length || proyecto.kpis?.lista?.length"
+             class="grid gap-4 sm:grid-cols-2 mb-6">
+          <!-- Objetivos — siempre visibles -->
           <div v-if="proyecto.objetivos?.lista?.length" class="card-section">
             <p class="section-label">Objetivos</p>
             <ul class="space-y-1.5">
@@ -611,17 +718,21 @@ async function archivar() {
             </ul>
           </div>
 
-          <!-- KPIs -->
+          <!-- KPIs — fijo, siempre visible -->
           <div v-if="proyecto.kpis?.lista?.length" class="card-section">
-            <p class="section-label">KPIs</p>
-            <ul class="space-y-1.5">
+            <p class="section-label">KPIs ({{ proyecto.kpis.lista.length }})</p>
+            <ul class="space-y-1.5 pt-1">
               <li v-for="kpi in proyecto.kpis.lista" :key="kpi"
                   class="flex items-start gap-2 text-sm text-gray-600">
                 <span class="text-[#00A859] shrink-0 mt-0.5">✓</span> {{ kpi }}
               </li>
             </ul>
           </div>
+        </div>
 
+        <!-- ═══ Publicar ═══ -->
+        <p v-if="proyecto.resumen?.texto" class="group-header">Publicar</p>
+        <div class="grid gap-4 sm:grid-cols-2">
           <!-- (feedback empresa — movido debajo del grid) -->
 
           <!-- Resumen -->
@@ -1330,6 +1441,9 @@ async function archivar() {
 }
 .section-label {
   @apply text-[10px] font-black uppercase tracking-[0.2em] text-gray-400;
+}
+.group-header {
+  @apply text-xs font-black uppercase tracking-[0.25em] text-[#00A859] mb-3 pl-3 border-l-4 border-[#00A859]/40;
 }
 
 /* ── Hoja de cuaderno ──────────────────────────────────────────────────── */

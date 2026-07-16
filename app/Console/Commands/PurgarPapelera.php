@@ -12,7 +12,7 @@ use App\Models\CicloFormativo;
 use App\Models\Familia;
 use App\Models\CentroEducativo;
 use App\Models\Microproyecto;
-use App\Models\Sesion;
+use App\Models\Encuentro;
 use App\Models\User;
 
 class PurgarPapelera extends Command
@@ -30,7 +30,7 @@ class PurgarPapelera extends Command
         'familias'   => Familia::class,
         'centros'    => CentroEducativo::class,
         'proyectos'  => Microproyecto::class,
-        'sesiones'   => Sesion::class,
+        'sesiones'   => Encuentro::class,
         'usuarios'   => User::class,
     ];
 
@@ -86,7 +86,9 @@ class PurgarPapelera extends Command
             'empresas'  => $this->limpiarEmpresa($item),
             'centros'   => $this->limpiarCentro($item),
             'proyectos' => $this->limpiarProyecto($item),
-            'sesiones'  => $this->limpiarSesion($item),
+            // 'sesiones' (Encuentro) no necesita limpieza manual: equipos.encuentro_id
+            // ya tiene ON DELETE SET NULL, y microproyectos ya no apunta a encuentros
+            // (ver 2026_07_16_000003_drop_sesion_id_from_microproyectos).
             'usuarios'  => $this->limpiarUsuario($item),
             default     => null,
         };
@@ -111,11 +113,6 @@ class PurgarPapelera extends Command
     {
         // MicroproyectoRecurso no usa SoftDeletes: delete() es borrado permanente
         $proyecto->recursos()->delete();
-    }
-
-    private function limpiarSesion(Sesion $sesion): void
-    {
-        Microproyecto::withTrashed()->where('sesion_id', $sesion->id)->update(['sesion_id' => null]);
     }
 
     private function limpiarUsuario(User $user): void

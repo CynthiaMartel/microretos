@@ -6,7 +6,7 @@ import DetalleMicroreto from '../views/DetalleMicroreto.vue'
 import BaseDatosDashboard from '../views/BaseDatosDashboard.vue'
 import PublicMicroreto from '../views/PublicMicroreto.vue'
 import DashboardDocente from '../views/DashboardDocente.vue'
-import SesionesRegistradas from '../views/SesionesRegistradas.vue'
+import EncuentrosRegistrados from '../views/EncuentrosRegistrados.vue'
 import StartupDayProyectos from '../views/StartupDayProyectos.vue'
 import StartupDayWizard from '../views/StartupDayWizard.vue'
 import StartupDayDetalle from '../views/StartupDayDetalle.vue'
@@ -77,11 +77,13 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/dashboard/sesiones',
-      name: 'sesiones-registradas',
-      component: SesionesRegistradas,
+      path: '/dashboard/encuentros',
+      name: 'encuentros-registrados',
+      component: EncuentrosRegistrados,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
+    // Compatibilidad: enlaces antiguos con el nombre "sesiones"
+    { path: '/dashboard/sesiones', redirect: to => ({ path: '/dashboard/encuentros', query: to.query }) },
     {
       path: '/dashboard/workspace/:id',
       name: 'workspace-docente',
@@ -95,25 +97,25 @@ const router = createRouter({
       component: PublicMicroreto
     },
     {
-      path: '/startup-day',
+      path: '/proyectos',
       name: 'startup-day',
       component: StartupDayProyectos,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {
-      path: '/startup-day/crear',
+      path: '/proyectos/crear',
       name: 'startup-day-crear',
       component: StartupDayWizard,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/startup-day/:uuid/editar',
+      path: '/proyectos/:uuid/editar',
       name: 'startup-day-editar',
       component: StartupDayWizard,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/startup-day/:uuid',
+      path: '/proyectos/:uuid',
       name: 'startup-day-detalle',
       component: StartupDayDetalle,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
@@ -124,6 +126,11 @@ const router = createRouter({
       name: 'startup-day-landing',
       component: StartupDayLanding
     },
+    // ── Compatibilidad: enlaces antiguos con el prefijo /startup-day ──────────
+    { path: '/startup-day', redirect: '/proyectos' },
+    { path: '/startup-day/crear', redirect: '/proyectos/crear' },
+    { path: '/startup-day/:uuid/editar', redirect: to => `/proyectos/${to.params.uuid}/editar` },
+    { path: '/startup-day/:uuid', redirect: to => `/proyectos/${to.params.uuid}` },
     {
       // Página de entrada tipo Kahoot para el alumnado (acceso por código corto)
       path: '/unirse',

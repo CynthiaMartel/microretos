@@ -8,7 +8,7 @@ const router = useRouter()
 
 const cargando  = ref(true)
 const error     = ref('')
-const sesion    = ref(null)
+const encuentro = ref(null)
 const proyecto  = ref(null)
 const equipos   = ref([])
 
@@ -49,13 +49,13 @@ const progresoMedio   = computed(() => {
 async function cargar() {
   cargando.value = true; error.value = ''
   try {
-    const res = await api.get(`/startup/sesiones/${route.params.id}/workspace`)
-    sesion.value   = res.data.sesion
+    const res = await api.get(`/encuentros/${route.params.id}/workspace`)
+    encuentro.value = res.data.encuentro
     proyecto.value = res.data.proyecto
     equipos.value  = res.data.equipos
   } catch (e) {
     error.value = e.response?.status === 404
-      ? 'Sesión no encontrada o sin acceso.'
+      ? 'Encuentro no encontrado o sin acceso.'
       : 'Error al cargar el workspace.'
   } finally {
     cargando.value = false
@@ -116,7 +116,7 @@ onMounted(cargar)
       <div class="flex-1 min-w-0">
         <p class="text-xs font-black uppercase tracking-widest text-[#00A859]">Workspace docente</p>
         <p class="text-sm font-bold text-[#121212] truncate">
-          {{ sesion?.grupo || sesion?.ciclo_formativo || 'Cargando…' }}
+          {{ encuentro?.grupo || encuentro?.ciclo_formativo || 'Cargando…' }}
         </p>
       </div>
       <button v-if="proyecto?.uuid"
@@ -142,24 +142,24 @@ onMounted(cargar)
 
       <template v-else>
 
-        <!-- Resumen sesión + proyecto -->
+        <!-- Resumen encuentro + proyecto -->
         <div class="grid sm:grid-cols-2 gap-4">
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
-            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Sesión</p>
-            <p class="text-lg font-black text-[#121212]">{{ sesion.grupo || '—' }}</p>
-            <p class="text-sm text-gray-500">{{ sesion.ciclo_formativo }}</p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Encuentro</p>
+            <p class="text-lg font-black text-[#121212]">{{ encuentro.grupo || '—' }}</p>
+            <p class="text-sm text-gray-500">{{ encuentro.ciclo_formativo }}</p>
             <div class="flex flex-wrap gap-2 pt-1">
-              <span v-if="sesion.centro_educativo"
+              <span v-if="encuentro.centro_educativo"
                     class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                {{ sesion.centro_educativo }}
+                {{ encuentro.centro_educativo }}
               </span>
-              <span v-if="sesion.fecha"
+              <span v-if="encuentro.fecha"
                     class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                {{ sesion.fecha }}
+                {{ encuentro.fecha }}
               </span>
-              <span v-if="sesion.num_alumnos"
+              <span v-if="encuentro.num_alumnos"
                     class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                {{ sesion.num_alumnos }} alumnos
+                {{ encuentro.num_alumnos }} alumnos
               </span>
             </div>
           </div>
