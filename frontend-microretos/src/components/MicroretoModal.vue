@@ -5,23 +5,28 @@ import { usePdfExport } from '../composables/usePdfExport.js'
 
 const props = defineProps({
   microretoId: { type: [String, Number], default: null },
+  // Acceso público alternativo (workspace de alumnado): ficha del reto de un equipo por su token,
+  // sin necesitar sesión Sanctum. Tiene prioridad sobre microretoId si ambos llegan informados.
+  token: { type: String, default: null },
 })
 const emit = defineEmits(['close'])
 
+const abierto  = computed(() => Boolean(props.microretoId || props.token))
 const reto     = ref(null)
 const cargando = ref(false)
 const error    = ref(false)
 
 const { descargarPDF } = usePdfExport()
 
-// Carga cuando cambia el ID
-watch(() => props.microretoId, async (id) => {
-  if (!id) return
+// Carga cuando cambia el ID o el token
+watch([() => props.microretoId, () => props.token], async ([id, token]) => {
+  if (!id && !token) return
   reto.value    = null
   error.value   = false
   cargando.value = true
   try {
-    const res = await api.get(`/microretos/${id}`)
+    const url  = token ? `/equipo/${token}/reto` : `/microretos/${id}`
+    const res  = await api.get(url)
     reto.value = res.data
   } catch (e) {
     console.error('Error cargando microreto en modal:', e)
@@ -50,7 +55,7 @@ function cerrar() {
 <template>
   <Teleport to="body">
     <Transition name="microreto-modal">
-      <div v-if="microretoId"
+      <div v-if="abierto"
            class="fixed inset-0 z-[60] flex items-start justify-center p-4 overflow-y-auto">
 
         <!-- Backdrop -->

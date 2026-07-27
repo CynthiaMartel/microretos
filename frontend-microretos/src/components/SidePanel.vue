@@ -28,6 +28,25 @@ const mostrarInfo = ref(false)
 const isActive = (path) =>
   path === '/' ? route.path === '/' : route.path.startsWith(path)
 
+// ─── Tooltip flotante (Teleport a body: el nav recorta con overflow-y:auto) ──
+const tooltip = ref({ visible: false, text: '', top: 0, left: 0 })
+let tooltipTimer = null
+
+const showTooltip = (event) => {
+  const text = event.currentTarget.dataset.tip
+  if (!text) return
+  const rect = event.currentTarget.getBoundingClientRect()
+  clearTimeout(tooltipTimer)
+  tooltipTimer = setTimeout(() => {
+    tooltip.value = { visible: true, text, top: rect.top + rect.height / 2, left: rect.right + 10 }
+  }, 200)
+}
+
+const hideTooltip = () => {
+  clearTimeout(tooltipTimer)
+  tooltip.value.visible = false
+}
+
 watch(
   () => route.query.redirect,
   (redirect) => {
@@ -64,71 +83,21 @@ function rolHome(role) {
   <!-- Panel lateral (también oculto durante el tour) -->
   <aside
       v-if="!tourActivo"
-      class="fixed top-12 left-0 h-[calc(100vh-5rem)] w-64 max-w-[85vw] z-40 flex flex-col
+      class="fixed top-12 left-0 h-[calc(100vh-5rem)] w-72 max-w-[85vw] z-40 flex flex-col
              bg-[#1F2937] border-r border-[#333333]
              shadow-[6px_0_32px_rgba(0,0,0,0.25)]"
     >
       <!-- ── Navegación ── -->
-      <nav class="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overscroll-contain">
+      <nav class="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overscroll-contain" @scroll.passive="hideTooltip">
 
-        <!-- ═══ ALUMNADO ═══ -->
-        <div class="px-3 mb-1.5 mt-0.5 flex items-center gap-1.5
-                    text-[9px] font-black uppercase tracking-[0.2em] text-white/40 select-none">
-          <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                       bg-white/10 text-white/50 text-[8px] font-black shrink-0">Al</span>
-          Alumnado
-        </div>
-
-        <div class="space-y-0.5">
-
-          <!-- Unirse a equipo -->
-          <div class="group/tip relative">
-            <button
-              @click="router.push('/unirse')"
-              title="Entra al workspace de tu proyecto con el código del docente"
-              class="nav-item w-full text-left"
-              :class="isActive('/unirse') ? 'nav-item--active' : 'nav-item--idle'"
-            >
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
-              </svg>
-              <span>Unirse a equipo</span>
-            </button>
-          </div>
-
-          <!-- Workspace equipos (docentes) -->
-          <div v-if="authStore.isDocente" class="group/tip relative">
-            <button
-              @click="router.push('/unirse')"
-              title="Pantalla de acceso para proyectar QRs y códigos al alumnado"
-              class="nav-item w-full text-left"
-              :class="isActive('/proyecto/equipo') ? 'nav-item--active' : 'nav-item--idle'"
-            >
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2"/>
-                <path d="M7 11V7a5 5 0 0110 0v4"/>
-                <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
-              </svg>
-              <span>Workspace equipos</span>
-            </button>
-          </div>
-
-        </div>
-
-        <div class="border-t border-white/10 mx-1 my-2" />
-
-        <!-- ═══ HERRAMIENTAS ═══ -->
+        <!-- ═══ DOCENTE ═══ -->
         <template v-if="authStore.isDocente || authStore.canAccess('microretos') || authStore.canAccess('z') || authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
 
           <div class="px-3 mb-1.5 flex items-center gap-1.5
                       text-[9px] font-black uppercase tracking-[0.2em] text-white/40 select-none">
             <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                         bg-white/10 text-white/50 text-[8px] font-black shrink-0">H</span>
-            Herramientas
+                         bg-white/10 text-white/50 text-[8px] font-black shrink-0">D</span>
+            Docente
           </div>
 
           <div class="rounded-2xl border border-[#00A859]/20 bg-[#00A859]/5 px-2 pt-2 pb-2 space-y-1">
@@ -137,8 +106,10 @@ function rolHome(role) {
             <div v-if="authStore.isDocente" class="group/tip relative">
               <button
                 @click="irA('/inicio-docente')"
-                title="Panel de inicio para docentes"
+                data-tip="Panel de inicio para docentes"
                 class="nav-item w-full text-left"
+                @mouseenter="showTooltip"
+                @mouseleave="hideTooltip"
                 :class="isActive('/inicio-docente') ? 'nav-item--active' : 'nav-item--idle'"
               >
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -176,8 +147,10 @@ function rolHome(role) {
                 <div v-if="authStore.canAccess('microretos')" class="group/tip relative">
                   <button
                     @click="irA('/microretos')"
-                    title="Genera retos con IA a partir de una empresa y los criterios del ciclo"
+                    data-tip="Genera retos con IA a partir de una empresa y los criterios del ciclo"
                     class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
                     :class="isActive('/microretos') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -192,8 +165,10 @@ function rolHome(role) {
                 <div v-if="authStore.canAccess('biblioteca')" class="group/tip relative">
                   <button
                     @click="irA('/biblioteca')"
-                    title="Consulta todos los retos guardados y comparte el QR con el alumnado"
+                    data-tip="Consulta todos los retos guardados y comparte el QR con el alumnado"
                     class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
                     :class="isActive('/biblioteca') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -212,12 +187,12 @@ function rolHome(role) {
 
             <!-- Separador Retos / Taller de Ideas -->
             <div
-              v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && (authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day'))"
+              v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && authStore.canAccess('startup-day')"
               class="border-t border-[#00A859]/15 mx-1 my-1"
             />
 
             <!-- TALLER DE IDEAS -->
-            <div v-if="authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
+            <div v-if="authStore.canAccess('startup-day')">
               <div class="w-full flex items-center gap-2 px-3 mb-1
                           text-[9px] font-black uppercase tracking-[0.2em]
                           text-[#00A859]/70 select-none">
@@ -234,8 +209,10 @@ function rolHome(role) {
                 <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
                   <button
                     @click="irA('/proyectos/crear')"
-                    title="Crea una nueva propuesta para el Taller de Ideas"
+                    data-tip="Crea una nueva propuesta para el Taller de Ideas"
                     class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
                     :class="isActive('/proyectos/crear') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -252,8 +229,10 @@ function rolHome(role) {
                 <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
                   <button
                     @click="irA('/proyectos')"
-                    title="Crea y gestiona propuestas y proyectos del Taller de Ideas"
+                    data-tip="Crea y gestiona propuestas y proyectos del Taller de Ideas"
                     class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
                     :class="$route.path.startsWith('/proyectos') && !isActive('/proyectos/crear') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -266,12 +245,34 @@ function rolHome(role) {
                   </button>
                 </div>
 
+              </div>
+            </div>
+
+            <!-- Separador Taller de Ideas / Encuentro con alumnado -->
+            <div class="border-t border-[#00A859]/15 mx-1 my-1" />
+
+            <!-- ENCUENTRO CON ALUMNADO -->
+            <div>
+              <div class="w-full flex items-center gap-2 px-3 mb-1
+                          text-[9px] font-black uppercase tracking-[0.2em]
+                          text-[#00A859]/70 select-none">
+                <span class="flex-1 text-left flex items-center gap-1.5">
+                  <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
+                               bg-[#00A859]/20 text-[#00A859] text-[8px] font-black shrink-0">3</span>
+                  Encuentro con alumnado
+                </span>
+              </div>
+
+              <div class="space-y-0.5">
+
                 <!-- Crear/Ver Encuentros -->
                 <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
                   <button
                     @click="irA('/dashboard/encuentros')"
-                    title="Registra encuentros de trabajo con retos"
+                    data-tip="Registra encuentros de trabajo con retos"
                     class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
                     :class="isActive('/dashboard/encuentros') ? 'nav-item--active' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -280,7 +281,90 @@ function rolHome(role) {
                       <rect x="9" y="3" width="6" height="4" rx="1"/>
                       <path d="M9 12l2 2 4-4"/>
                     </svg>
-                    <span>Crear/Ver Encuentros</span>
+                    <span>Docente: crear/ver encuentros</span>
+                  </button>
+                </div>
+
+                <!-- Dar acceso alumnado (docentes) — elige el encuentro y abre su QR/código -->
+                <div v-if="authStore.isDocente" class="group/tip relative">
+                  <button
+                    @click="irA('/dashboard/pantalla-acceso')"
+                    data-tip="Elige un encuentro y proyecta su QR y código para el alumnado"
+                    class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
+                    :class="isActive('/dashboard/pantalla-acceso') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <span>Docente: dar acceso al encuentro</span>
+                  </button>
+                </div>
+
+                <!-- Separador docente / alumnado -->
+                <div v-if="authStore.isDocente" class="border-t border-[#00A859]/15 mx-1 my-1" />
+
+                <!-- Unirse a equipo -->
+                <div class="group/tip relative">
+                  <button
+                    @click="router.push('/unirse')"
+                    data-tip="Primera vez: elige tu clase y tu equipo"
+                    class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
+                    :class="isActive('/unirse') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                      <polyline points="10 17 15 12 10 7"/>
+                      <line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                    <span>Alumnado: unirse a equipo</span>
+                  </button>
+                </div>
+
+                <!-- Workspace proyecto: reentrada directa con el código del equipo -->
+                <div class="group/tip relative">
+                  <button
+                    @click="router.push('/workspace-proyecto')"
+                    data-tip="Mete tu código para ver tu flujo de trabajo"
+                    class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
+                    :class="isActive('/workspace-proyecto') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>Alumnado: retomar workspace</span>
+                  </button>
+                </div>
+
+                <!-- Separador alumnado / docente -->
+                <div v-if="authStore.isDocente" class="border-t border-[#00A859]/15 mx-1 my-1" />
+
+                <!-- Mis grupos — seguimiento del avance del alumnado (docentes) -->
+                <div v-if="authStore.isDocente" class="group/tip relative">
+                  <button
+                    @click="irA('/dashboard/mis-grupos')"
+                    data-tip="Seguimiento del avance de todos tus equipos y encuentros"
+                    class="nav-item w-full text-left"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
+                    :class="isActive('/dashboard/mis-grupos') ? 'nav-item--active' : 'nav-item--idle'"
+                  >
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 3v18h18"/>
+                      <path d="M7 15l4-6 4 4 5-8"/>
+                    </svg>
+                    <span>Docente: seguimiento de equipos</span>
                   </button>
                 </div>
 
@@ -290,6 +374,8 @@ function rolHome(role) {
           </div>
 
         </template>
+
+        <div class="border-t border-white/10 mx-1 my-2" />
 
         <!-- ═══════════════ EMPRESAS ════════════════════ -->
         <template v-if="authStore.canAccess('empresas')">
@@ -317,8 +403,10 @@ function rolHome(role) {
               <div class="group/tip relative">
                 <button
                   @click="irA('/empresas')"
-                  title="Consulta y contacta con las empresas de la base de datos (requiere contraseña especial)"
+                  data-tip="Consulta y contacta con las empresas de la base de datos (requiere contraseña especial)"
                   class="nav-item w-full text-left"
+                  @mouseenter="showTooltip"
+                  @mouseleave="hideTooltip"
                   :class="isActive('/empresas') ? 'nav-item--active' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -352,8 +440,10 @@ function rolHome(role) {
               <div v-if="authStore.canAccess('gestion-usuarios')" class="group/tip relative">
                 <button
                   @click="irA('/admin/usuarios')"
-                  title="Gestiona las cuentas de docentes y empresas"
+                  data-tip="Gestiona las cuentas de docentes y empresas"
                   class="nav-item w-full text-left"
+                  @mouseenter="showTooltip"
+                  @mouseleave="hideTooltip"
                   :class="isActive('/admin/usuarios') ? 'nav-item--active' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -371,8 +461,10 @@ function rolHome(role) {
               <div v-if="authStore.canAccess('base-datos')" class="group/tip relative">
                 <button
                   @click="irA('/base-datos')"
-                  title="Empresas, centros educativos, familias y ciclos del ecosistema DuaLab"
+                  data-tip="Empresas, centros educativos, familias y ciclos del ecosistema DuaLab"
                   class="nav-item w-full text-left"
+                  @mouseenter="showTooltip"
+                  @mouseleave="hideTooltip"
                   :class="isActive('/base-datos') ? 'nav-item--active' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -390,8 +482,10 @@ function rolHome(role) {
               <div v-if="authStore.canAccess('papelera')" class="group/tip relative">
                 <button
                   @click="irA('/papelera')"
-                  title="Elementos eliminados — restáuralos o bórralos definitivamente"
+                  data-tip="Elementos eliminados — restáuralos o bórralos definitivamente"
                   class="nav-item w-full text-left"
+                  @mouseenter="showTooltip"
+                  @mouseleave="hideTooltip"
                   :class="isActive('/papelera') ? 'nav-item--active' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -475,6 +569,17 @@ function rolHome(role) {
 
   </aside>
 
+  <!-- ── Tooltip flotante de los items del nav (fuera del overflow del aside) ── -->
+  <Teleport to="body">
+    <div
+      v-if="tooltip.visible"
+      class="sp-floating-tooltip"
+      :style="{ top: tooltip.top + 'px', left: tooltip.left + 'px' }"
+    >
+      {{ tooltip.text }}
+    </div>
+  </Teleport>
+
   <!-- ══════════════ MODAL: ¿QUÉ ES DUALAB? ══════════════════ -->
   <Transition name="sp-fade">
     <div
@@ -531,15 +636,20 @@ function rolHome(role) {
 
           <div class="rounded-2xl bg-white/5 border border-white/8 p-4">
             <p class="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Taller de Ideas</p>
-            <p class="text-xs text-white/60"><span class="text-white font-bold">Microproyectos</span> — Diseña y gestiona proyectos Taller de Ideas equipo, módulos, objetivos y validación por empresa.</p>
+            <div class="space-y-2 text-xs text-white/60">
+              <p><span class="text-white font-bold">Generar Proyecto</span> — Crea una nueva propuesta para el Taller de Ideas.</p>
+              <p><span class="text-white font-bold">Biblioteca Proyectos</span> — Gestiona las propuestas y proyectos generados por los equipos, módulos, objetivos y validación por empresa.</p>
+            </div>
           </div>
 
           <div class="rounded-2xl bg-white/5 border border-white/8 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Herramientas</p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Encuentro con alumnado</p>
             <div class="space-y-2 text-xs text-white/60">
-              <p><span class="text-white font-bold">Dashboard docentes</span> — Panel de seguimiento del alumnado: proyectos activos, progreso y retos asignados.</p>
-              <p><span class="text-white font-bold">Biblioteca retos</span> — Acceso directo a la colección completa de retos para gestión docente.</p>
-              <p><span class="text-white font-bold">Base de datos</span> — Gestión de empresas, centros educativos, familias profesionales y ciclos formativos.</p>
+              <p><span class="text-white font-bold">Docente: crear/ver encuentros</span> — Registra los encuentros de trabajo con retos.</p>
+              <p><span class="text-white font-bold">Docente: dar acceso al encuentro</span> — Elige un encuentro y proyecta su QR y código para el alumnado.</p>
+              <p><span class="text-white font-bold">Alumnado: unirse a equipo</span> — Primera vez: el alumnado elige su clase y su equipo.</p>
+              <p><span class="text-white font-bold">Alumnado: retomar workspace</span> — Reentrada directa con el código de equipo al flujo de trabajo.</p>
+              <p><span class="text-white font-bold">Docente: seguimiento de equipos</span> — Sigue el avance de todos los equipos y encuentros.</p>
             </div>
           </div>
 
@@ -671,6 +781,25 @@ function rolHome(role) {
    que crea un scroll container y recorta los children absolutos */
 .sp-tooltip       { display: none; }
 .sp-tooltip-arrow { display: none; }
+
+/* Tooltip flotante de los items del nav — se renderiza vía Teleport a <body>
+   para escapar del overflow-y:auto del nav (ver comentario arriba) */
+.sp-floating-tooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  z-index: 9999;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
 
 /* Scrollbar discreta para el nav */
 nav::-webkit-scrollbar        { width: 3px; }

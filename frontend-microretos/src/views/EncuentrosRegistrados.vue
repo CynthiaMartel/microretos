@@ -831,6 +831,17 @@ function formatFecha(isoDate) {
                 </svg>
                 Workspace
               </button>
+              <button v-if="encuentroAbierto.codigo_clase && encuentroAbierto.microproyecto_uuid"
+                      @click="router.push({ name: 'pantalla-acceso', params: { uuid: encuentroAbierto.microproyecto_uuid } }); cerrarEncuentro()"
+                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-violet-200
+                             bg-violet-50 text-violet-700 text-xs font-black uppercase tracking-widest
+                             hover:bg-violet-100 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2m-6 0H4m2-11H4m10.828 6.828a4 4 0 10-5.656-5.656 4 4 0 005.656 5.656zM7 20l1.5-1.5M17 20l-1.5-1.5"/>
+                </svg>
+                Pantalla de acceso
+              </button>
               <button v-if="encuentroAbierto.microproyecto_uuid"
                       @click="abrirModalProyecto(encuentroAbierto.microproyecto_uuid); cerrarEncuentro()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200

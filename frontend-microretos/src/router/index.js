@@ -19,6 +19,10 @@ import GestionUsuarios from '../views/GestionUsuarios.vue'
 import InicioDocente from '../views/InicioDocente.vue'
 import MiUsuario from '../views/MiUsuario.vue'
 import WorkspaceDocente from '../views/WorkspaceDocente.vue'
+import PantallaAcceso from '../views/PantallaAcceso.vue'
+import PantallaAccesoLista from '../views/PantallaAccesoLista.vue'
+import MisGrupos from '../views/MisGrupos.vue'
+import EntrarWorkspace from '../views/EntrarWorkspace.vue'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth.js'
 
 const SA = ROLE_SUPERADMIN  // 1
@@ -91,6 +95,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
+      path: '/dashboard/mis-grupos',
+      name: 'mis-grupos',
+      component: MisGrupos,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
       // Vista pública para alumnado — acceso mediante token temporal (QR)
       path: '/reto/:token',
       name: 'public-microreto',
@@ -121,6 +131,20 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {
+      // Pantalla para proyectar en clase: QR + código corto por equipo
+      path: '/proyectos/:uuid/pantalla-acceso',
+      name: 'pantalla-acceso',
+      component: PantallaAcceso,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
+      // Elegir qué encuentro proyectar antes de abrir su pantalla de acceso
+      path: '/dashboard/pantalla-acceso',
+      name: 'pantalla-acceso-lista',
+      component: PantallaAccesoLista,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
       // Vista pública para validación por parte de la empresa
       path: '/startup/landing/:token',
       name: 'startup-day-landing',
@@ -136,6 +160,12 @@ const router = createRouter({
       path: '/unirse',
       name: 'unirse-equipo',
       component: UnirseEquipo
+    },
+    {
+      // Reentrada directa al workspace propio con el código del equipo
+      path: '/workspace-proyecto',
+      name: 'entrar-workspace',
+      component: EntrarWorkspace
     },
     {
       // Workspace completo del equipo (F0-F4) — acceso por token de 40 chars

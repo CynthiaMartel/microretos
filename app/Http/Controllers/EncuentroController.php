@@ -178,9 +178,20 @@ class EncuentroController extends Controller
      */
     public function workspace(Request $request, $id)
     {
-        $encuentro = Encuentro::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
+        $user  = $request->user();
+        $query = Encuentro::where('id', $id);
+
+        if ($user->isDocente()) {
+            $query->where('user_id', $user->id);
+        } elseif ($user->isAdmin() && $user->centro_educativo_id) {
+            $nombreCentro = $user->centroEducativo?->nombre;
+            if ($nombreCentro) {
+                $query->where('centro_educativo', $nombreCentro);
+            }
+        }
+        // Superadmin: sin filtro
+
+        $encuentro = $query->firstOrFail();
 
         $proyecto = $encuentro->microproyecto?->load([
             'equipos.miembros',
@@ -188,7 +199,79 @@ class EncuentroController extends Controller
             'equipos.reflexiones',
         ]);
 
-        $equipos = $proyecto?->equipos->map(function ($equipo) {
+        return response()->json([
+            'encuentro' => [
+                'id'               => $encuentro->id,
+                'centro_educativo' => $encuentro->centro_educativo,
+                'ciclo_formativo'  => $encuentro->ciclo_formativo,
+                'curso'            => $encuentro->curso,
+                'grupo'            => $encuentro->grupo,
+                'fecha'            => $encuentro->fecha,
+                'num_alumnos'      => $encuentro->num_alumnos,
+            ],
+            'proyecto' => $proyecto ? [
+                'uuid'               => $proyecto->uuid,
+                'titulo'             => $proyecto->titulo,
+                'estado'             => $proyecto->estado,
+                'evaluacion_oficial' => $proyecto->evaluacion_oficial,
+            ] : null,
+            'equipos' => $proyecto ? $this->formatEquiposConProgreso($proyecto->equipos) : collect(),
+        ]);
+    }
+
+    /**
+     * GET /api/encuentros/mis-grupos
+     * Vista agregada: todos los encuentros del docente (o del centro, para admin)
+     * que ya tienen equipos, con el mismo detalle de progreso que /workspace
+     * pero para todos a la vez — pensada para "Mis grupos" (seguimiento sin
+     * entrar encuentro por encuentro).
+     */
+    public function misGrupos(Request $request)
+    {
+        $user  = $request->user();
+        $query = Encuentro::with([
+            'microproyecto.equipos.miembros',
+            'microproyecto.equipos.fases',
+            'microproyecto.equipos.reflexiones',
+        ])->whereHas('microproyecto.equipos')->orderBy('created_at', 'desc');
+
+        if ($user->isDocente()) {
+            $query->where('user_id', $user->id);
+        } elseif ($user->isAdmin() && $user->centro_educativo_id) {
+            $nombreCentro = $user->centroEducativo?->nombre;
+            if ($nombreCentro) {
+                $query->where('centro_educativo', $nombreCentro);
+            }
+        }
+        // Superadmin: sin filtro
+
+        $grupos = $query->get()->map(function ($encuentro) {
+            $proyecto = $encuentro->microproyecto;
+
+            return [
+                'encuentro' => [
+                    'id'               => $encuentro->id,
+                    'grupo'            => $encuentro->grupo,
+                    'ciclo_formativo'  => $encuentro->ciclo_formativo,
+                    'centro_educativo' => $encuentro->centro_educativo,
+                    'fecha'            => $encuentro->fecha,
+                ],
+                'proyecto' => $proyecto ? [
+                    'uuid'               => $proyecto->uuid,
+                    'titulo'             => $proyecto->titulo,
+                    'estado'             => $proyecto->estado,
+                    'evaluacion_oficial' => $proyecto->evaluacion_oficial,
+                ] : null,
+                'equipos' => $proyecto ? $this->formatEquiposConProgreso($proyecto->equipos) : collect(),
+            ];
+        });
+
+        return response()->json($grupos->values());
+    }
+
+    private function formatEquiposConProgreso($equipos)
+    {
+        return $equipos->map(function ($equipo) {
             $fasesCompletas = $equipo->fases->filter(fn($f) => $f->completada)->count();
 
             $fases = collect(range(0, 4))->map(function ($n) use ($equipo) {
@@ -212,11 +295,13 @@ class EncuentroController extends Controller
                 'fase_actual'     => $equipo->fase_actual,
                 'fases_completas' => $fasesCompletas,
                 'miembros'        => $equipo->miembros->map(fn($m) => [
-                    'id'     => $m->id,
-                    'nombre' => $m->nombre,
-                    'rol'    => $m->rol,
+                    'id'         => $m->id,
+                    'nombre'     => $m->nombre,
+                    'rol'        => $m->rol,
+                    'fortalezas' => $m->fortalezas,
+                    'dafo'       => $m->dafo,
                 ]),
-                'fases'      => $fases,
+                'fases'       => $fases,
                 'reflexiones' => $equipo->reflexiones->map(fn($r) => [
                     'id'           => $r->id,
                     'tipo'         => $r->tipo,
@@ -225,25 +310,7 @@ class EncuentroController extends Controller
                     'created_at'   => $r->created_at,
                 ]),
             ];
-        }) ?? collect();
-
-        return response()->json([
-            'encuentro' => [
-                'id'               => $encuentro->id,
-                'centro_educativo' => $encuentro->centro_educativo,
-                'ciclo_formativo'  => $encuentro->ciclo_formativo,
-                'curso'            => $encuentro->curso,
-                'grupo'            => $encuentro->grupo,
-                'fecha'            => $encuentro->fecha,
-                'num_alumnos'      => $encuentro->num_alumnos,
-            ],
-            'proyecto' => $proyecto ? [
-                'uuid'   => $proyecto->uuid,
-                'titulo' => $proyecto->titulo,
-                'estado' => $proyecto->estado,
-            ] : null,
-            'equipos' => $equipos,
-        ]);
+        });
     }
 
     private function generarCodigoClase(): string

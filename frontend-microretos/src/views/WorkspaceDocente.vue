@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
+import { FASES_PROYECTO } from '../config/fasesProyecto.js'
 
 const route  = useRoute()
 const router = useRouter()
@@ -15,13 +16,8 @@ const equipos   = ref([])
 const equipoAbierto = ref(null)
 const faseAbierta   = ref(null)
 
-const FASES = [
-  { num: 0, label: 'Organización', icono: '👥', color: 'slate',  desc: 'Equipo + análisis del reto' },
-  { num: 1, label: 'Diseño',       icono: '💡', color: 'blue',   desc: 'Prototipo + propuesta' },
-  { num: 2, label: 'Desarrollo',   icono: '🔨', color: 'amber',  desc: 'Tareas y progreso' },
-  { num: 3, label: 'Entrega',      icono: '📦', color: 'orange', desc: 'Entregable final' },
-  { num: 4, label: 'Cierre',       icono: '🎓', color: 'green',  desc: 'Reflexión y evaluación' },
-]
+// Mismas 5 fases que ve el alumnado en su workspace (fuente única: fasesProyecto.js)
+const FASES = FASES_PROYECTO
 
 const ROLES = {
   portavoz:       { label: 'Portavoz',       color: 'bg-blue-100 text-blue-700' },
@@ -72,6 +68,64 @@ function toggleFase(equipoId, faseNum) {
   faseAbierta.value = faseAbierta.value === key ? null : key
 }
 
+function abrirFase(equipo, faseNum) {
+  toggleFase(equipo.id, faseNum)
+  if (faseNum === 4) initEvaluacionForm(equipo)
+}
+
+// ── Evaluación curricular RA/CE (F4) ────────────────────────────────────────
+const NIVEL_OPCIONES = [
+  { value: 'no_alcanzado', label: 'No alcanzado' },
+  { value: 'en_proceso',   label: 'En proceso' },
+  { value: 'alcanzado',    label: 'Alcanzado' },
+  { value: 'superado',     label: 'Superado' },
+]
+const evaluacionForms   = ref({})
+const guardandoEval     = ref(false)
+const errorEval         = ref('')
+
+function initEvaluacionForm(equipo) {
+  if (evaluacionForms.value[equipo.id]) return
+
+  const existentes = equipo.fases[4]?.datos?.evaluacion_docente?.ras ?? []
+  const catalogo    = proyecto.value?.evaluacion_oficial ?? []
+
+  evaluacionForms.value[equipo.id] = {
+    ras: catalogo.map(item => {
+      const previa = existentes.find(e => e.ra === item.ra)
+      return { ra: item.ra, nivel: previa?.nivel ?? '', observaciones: previa?.observaciones ?? '' }
+    }),
+    nota_docente:          equipo.fases[4]?.nota_docente ?? null,
+    observaciones_docente: equipo.fases[4]?.observaciones_docente ?? '',
+  }
+}
+
+function puedeEnviarEvaluacion(equipoId) {
+  const form = evaluacionForms.value[equipoId]
+  return form && form.ras.some(r => r.nivel)
+}
+
+async function enviarEvaluacion(equipo) {
+  const form = evaluacionForms.value[equipo.id]
+  guardandoEval.value = true
+  errorEval.value = ''
+  try {
+    await api.patch(`/startup/equipos/${equipo.id}/evaluar`, {
+      evaluacion: {
+        ras:           form.ras.filter(r => r.nivel),
+        nota_opcional: form.nota_docente,
+      },
+      nota_docente:          form.nota_docente,
+      observaciones_docente: form.observaciones_docente,
+    })
+    await cargar()
+  } catch (e) {
+    errorEval.value = e.response?.data?.error ?? 'No se pudo guardar la evaluación.'
+  } finally {
+    guardandoEval.value = false
+  }
+}
+
 function faseEstaAbierta(equipoId, faseNum) {
   return faseAbierta.value === `${equipoId}-${faseNum}`
 }
@@ -119,6 +173,11 @@ onMounted(cargar)
           {{ encuentro?.grupo || encuentro?.ciclo_formativo || 'Cargando…' }}
         </p>
       </div>
+      <button @click="router.push({ name: 'mis-grupos' })"
+              class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700
+                     hover:bg-violet-100 transition-colors text-xs font-black uppercase tracking-wider">
+        Mis grupos
+      </button>
       <button v-if="proyecto?.uuid"
               @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })"
               class="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors
@@ -267,7 +326,7 @@ onMounted(cargar)
                 <div v-for="f in FASES" :key="f.num"
                      class="rounded-2xl border border-gray-100 overflow-hidden">
 
-                  <button @click="toggleFase(equipo.id, f.num)"
+                  <button @click="abrirFase(equipo, f.num)"
                           class="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left">
                     <span :class="[
                             'w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0',
@@ -319,6 +378,52 @@ onMounted(cargar)
                          class="mt-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
                       <p class="text-[10px] font-black uppercase tracking-wider text-amber-600 mb-1">Observaciones docente</p>
                       <p class="text-xs text-amber-800">{{ equipo.fases[f.num].observaciones_docente }}</p>
+                    </div>
+
+                    <!-- Evaluación curricular RA/CE — solo en Cierre (F4) -->
+                    <div v-if="f.num === 4 && evaluacionForms[equipo.id]" class="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                      <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Evaluación curricular (RA/CE)</p>
+
+                      <p v-if="!evaluacionForms[equipo.id].ras.length" class="text-xs text-gray-400 italic">
+                        El proyecto no tiene RA/CE oficiales asignados todavía.
+                      </p>
+
+                      <div v-for="(r, idx) in evaluacionForms[equipo.id].ras" :key="idx"
+                           class="bg-gray-50 rounded-xl p-3 space-y-2">
+                        <p class="text-xs font-semibold text-[#1F2937]">{{ r.ra }}</p>
+                        <div class="flex flex-wrap gap-1.5">
+                          <button v-for="op in NIVEL_OPCIONES" :key="op.value"
+                                  @click="r.nivel = op.value"
+                                  :class="['px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all',
+                                           r.nivel === op.value ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-emerald-300']">
+                            {{ op.label }}
+                          </button>
+                        </div>
+                        <input v-model="r.observaciones" type="text" placeholder="Observaciones (opcional)"
+                               class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white
+                                      focus:outline-none focus:border-emerald-400"/>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        <label class="text-xs font-black text-gray-500 uppercase tracking-wider shrink-0">Nota</label>
+                        <input v-model.number="evaluacionForms[equipo.id].nota_docente" type="number" min="0" max="10" step="0.1"
+                               class="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5
+                                      focus:outline-none focus:border-emerald-400"/>
+                        <span class="text-xs text-gray-400">/ 10 (opcional)</span>
+                      </div>
+                      <textarea v-model="evaluacionForms[equipo.id].observaciones_docente" rows="2"
+                                placeholder="Observaciones generales del proyecto (opcional)"
+                                class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white resize-none
+                                       focus:outline-none focus:border-emerald-400"/>
+
+                      <p v-if="errorEval" class="text-xs text-red-500 font-semibold">{{ errorEval }}</p>
+
+                      <button @click="enviarEvaluacion(equipo)"
+                              :disabled="!puedeEnviarEvaluacion(equipo.id) || guardandoEval"
+                              :class="['w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all',
+                                       puedeEnviarEvaluacion(equipo.id) ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-gray-100 text-gray-300 cursor-not-allowed']">
+                        {{ equipo.fases[4]?.validado_docente ? 'Actualizar evaluación' : 'Guardar evaluación' }}
+                      </button>
                     </div>
                   </div>
                 </div>

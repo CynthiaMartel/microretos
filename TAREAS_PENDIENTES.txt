@@ -1,0 +1,207 @@
+TAREAS PENDIENTES — microretos
+================================
+Orden sugerido por dependencias (una fase apoya a la siguiente).
+Estimaciones para 1 desarrolladora, en horas de trabajo efectivo.
+Última actualización: 2026-07-21
+
+FASE 0 — Datos base (bloquea informes curriculares y retos limpios)
+--------------------------------------------------------------------
+[ ] 0.1 Importar desde Excel los RA/CE de ciclos y módulos que faltan en BD
+        (mapeo ciclo/módulo -> RA -> CE, script de importación con validación)  ......... 6-8h
+[ ] 0.2 Limpiar retos existentes y crear varios desde cero para info limpia
+        (borrado controlado + alta rápida en lote)  ................................... 4-6h
+                                                                    Subtotal fase 0: 10-14h (~1,5-2 días)
+
+FASE 1 — Seguridad y aislamiento (antes de exponer datos de equipos/alumnado)
+--------------------------------------------------------------------
+[ ] 1.1 Aislamiento de progreso por equipo: un equipo no puede ver el de otro
+        (Policies/scopes por equipo, revisar todos los endpoints de progreso)  ......... 5-7h
+[ ] 1.2 Proteger nombre del alumnado (código/cifrado o pseudonimización)
+        (investigar enfoque: hash reversible vs. alias + tabla de mapeo)  .............. 4-6h
+[ ] 1.3 Revisar ítems de SECURITY_FIXES.md pendientes (niveles C/A/M/B)  ............... 6-10h (variable, según nº de ítems abiertos)
+[ ] 1.4 Revisar redirecciones correctas de la app al hacer login (por rol:
+        superadmin/admin/docente/alumnado/empresa — cada rol debe aterrizar en
+        su vista correcta, sin fugas entre roles)  ............................. 3-4h
+                                                                    Subtotal fase 1: 18-27h (~2,5-3,5 días)
+
+FASE 2 — Núcleo del perfil alumnado
+--------------------------------------------------------------------
+[ ] 2.1 Login/pantalla de alumnado simplificada: solo código de unirse
+        + proyecto asociado (ocultar todo lo demás del menú/rol)  ...................... 6-8h
+[ ] 2.2 Workspace de trabajo del proyecto para el alumnado
+        (revisar/adaptar el ya existente de equipos)  .................................. 4-6h
+                                                                    Subtotal fase 2: 10-14h (~1,5-2 días)
+
+FASE 3 — IA en tareas, informe final y biblioteca
+--------------------------------------------------------------------
+[ ] 3.1 Integrar IA en las tareas del workspace que hoy parten vacías  ................. 8-12h
+[ ] 3.2 Informe al completar proyecto: validaciones curriculares (RA/CE),
+        resumen, nota media y demás (depende de fase 0.1)  ............................. 8-10h
+[ ] 3.3 Biblioteca de proyectos completados (docente + alumnado del equipo,
+        alumnado viene de encuentros)  ............................................... 6-8h
+                                                                    Subtotal fase 3: 22-30h (~3-4 días)
+
+FASE 4 — Encuentros y validación de proyectos
+--------------------------------------------------------------------
+[ ] 4.1 En encuentros, solo permitir asociar proyectos validados
+        (al menos) por el docente (estado "validado" + filtro en selector)  ............ 3-4h
+                                                                    Subtotal fase 4: 3-4h
+
+FASE 5 — Multimedia de proyectos y centro
+--------------------------------------------------------------------
+[ ] 5.1 Generación de imagen o banco de imágenes asociado a un proyecto
+        + card miniatura en panel docente  ............................................ 6-10h
+[ ] 5.2 Placeholder de imagen de centro en el alta de colegio (frontend + guardado BD)  . 3-4h
+                                                                    Subtotal fase 5: 9-14h (~1,5-2 días)
+
+FASE 6 — Noticias (CKEditor + rol editor)
+--------------------------------------------------------------------
+[ ] 6.1 Modelo, migración y CRUD de noticias contra BD  ................................ 4-6h
+[ ] 6.2 CKEditor + sanitización backend (mews/purifier) y DOMPurify en frontend  ........ 4-6h
+[ ] 6.3 Nuevo rol "editor" (editor + superadmin pueden publicar en noticias)  ........... 3-4h
+                                                                    Subtotal fase 6: 11-16h (~1,5-2 días)
+
+FASE 7 — Evaluación 360
+--------------------------------------------------------------------
+[ ] 7.1 Investigación: cómo integrarla con roles repartidos dentro del equipo  .......... 4-6h
+[ ] 7.2 Diseño del modelo de datos y flujo de evaluación cruzada  ....................... 4h
+[ ] 7.3 Implementación (formularios por rol, agregación de resultados)  ................ 10-16h
+                                                                    Subtotal fase 7: 18-26h (~2,5-3,5 días) — mayor incertidumbre
+
+FASE 8 — Seguimiento docente
+--------------------------------------------------------------------
+[ ] 8.1 Vistas de seguimiento de alumnado individual y por grupo  ....................... 6-8h
+[ ] 8.2 Revisión y optimización de código del panel docente  ........................... 4-6h
+                                                                    Subtotal fase 8: 10-14h (~1,5-2 días)
+
+FASE 9 — Calidad de la IA pedagógica
+--------------------------------------------------------------------
+[ ] 9.1 Revisar información generada por IA para mejorar los retos propuestos
+        (ajuste de prompts, validación de salidas)  .................................... 6-8h
+[ ] 9.2 Mejorar propuestas pedagógicas del generador de retos  ......................... 6-8h
+                                                                    Subtotal fase 9: 12-16h (~1,5-2 días)
+
+FASE 10 — UX y documentación
+--------------------------------------------------------------------
+[ ] 10.1 Icono de ayuda global (bombilla) en el layout: al pulsar despliega un
+        esquema/dibujo del flujo de la app; disponible en todas las vistas y
+        roles (componente global + diagrama + integración en layout raíz)  .... 4-6h
+[ ] 10.2 Mejorar las guías tour actuales para adaptarlas a todo lo nuevo  ............... 4-6h
+[ ] 10.3 Documentación técnica + manual de usuario  ..................................... 6-8h
+                                                                    Subtotal fase 10: 14-20h (~2-2,5 días)
+
+FASE 11 — QA y despliegue
+--------------------------------------------------------------------
+[ ] 11.1 Probar versión beta (pase completo de todas las fases anteriores)  ............. 6-10h
+[ ] 11.2 Subir a producción y comprobar (deploy-check + smoke test en Hostinger)  ....... 2-3h
+[ ] 11.3 Buffer para posibles mejoras no contempladas  .................................. 8-12h (colchón, sin alcance cerrado)
+                                                                    Subtotal fase 11: 16-25h (~2-3 días)
+
+--------------------------------------------------------------------
+TOTAL ESTIMADO: 153-220h de trabajo efectivo (punto medio: ~186,5h)
+
+Notas:
+- Las estimaciones asumen trabajo en solitario y sin bloqueos externos (p.ej.
+  disponibilidad de un Excel bien formateado para la fase 0.1).
+- La fase 7 (Evaluación 360) es la más incierta porque depende de una
+  investigación previa que puede cambiar el alcance real.
+- El orden respeta dependencias: los datos curriculares (fase 0) deben existir
+  antes del informe final (3.2); el aislamiento de equipos (1.1) debe ir antes
+  de exponer biblioteca/seguimiento; la validación de proyectos (4.1) debe
+  existir antes de que encuentros los referencie con garantías.
+- Este orden es una propuesta de partida: las fases se pueden reordenar o
+  paralelizar según prioridad de negocio.
+
+
+======================================================================
+PLANIFICACIÓN SEGÚN JORNADA REAL (22h/semana)
+======================================================================
+
+Horario de trabajo:
+  Lunes    8:30-13:30  -> 5h
+  Martes   8:30-13:30  -> 5h
+  Miércoles 8:30-12:30 -> 4h
+  Jueves   8:30-12:30  -> 4h
+  Viernes  8:30-12:30  -> 4h
+  TOTAL SEMANA: 22h (5 jornadas)
+
+Duración total según escenario (a partir de hoy):
+
+  OPTIMISTA (153h) .... 34,8 jornadas / 7,0 semanas / ~1,6 meses -> fin ~ lunes 07/09/2026
+  MEDIO     (186,5h) .. 42,4 jornadas / 8,5 semanas / ~1,9 meses -> fin ~ jueves 17/09/2026
+  PESIMISTA (220h) .... 50,0 jornadas / 10,0 semanas / ~2,3 meses -> fin ~ lunes 28/09/2026
+
+A continuación, el calendario día a día para el ESCENARIO MEDIO (186,5h, usando el
+punto medio de cada horquilla). Sirve como hoja de ruta; los escenarios optimista
+y pesimista simplemente adelantan o retrasan la fecha de fin final. Calculado con
+script para evitar errores de arrastre manual entre tareas.
+
+SEMANA 1 (21-24 jul 2026)
+  Mar 21/07 (5h) — 0.1 Importar RA/CE desde Excel (inicio, 5h)
+  Mié 22/07 (4h) — 0.1 (fin, 2h) + 0.2 Limpiar retos existentes (inicio, 2h)
+  Jue 23/07 (4h) — 0.2 (fin, 3h) + 1.1 Aislamiento progreso por equipo (inicio, 1h)
+  Vie 24/07 (4h) — 1.1 (continúa, 4h)
+
+SEMANA 2 (27-31 jul 2026)
+  Lun 27/07 (5h) — 1.1 (fin, 1h) + 1.2 Cifrado/protección nombre alumnado (inicio, 4h)
+  Mar 28/07 (5h) — 1.2 (fin, 1h) + 1.3 Revisar SECURITY_FIXES.md (inicio, 4h)
+  Mié 29/07 (4h) — 1.3 (fin, 4h)
+  Jue 30/07 (4h) — 1.4 Revisar redirecciones login por rol (completa, 3,5h) + 2.1 Login/pantalla alumnado (inicio, 0,5h)
+  Vie 31/07 (4h) — 2.1 (continúa, 4h)
+
+SEMANA 3 (3-7 ago 2026)
+  Lun 03/08 (5h) — 2.1 (fin, 2,5h) + 2.2 Workspace alumnado (inicio, 2,5h)
+  Mar 04/08 (5h) — 2.2 (fin, 2,5h) + 3.1 IA en tareas del workspace (inicio, 2,5h)
+  Mié 05/08 (4h) — 3.1 (continúa, 4h)
+  Jue 06/08 (4h) — 3.1 (fin, 3,5h) + 3.2 Informe final RA/CE (inicio, 0,5h)
+  Vie 07/08 (4h) — 3.2 (continúa, 4h)
+
+SEMANA 4 (10-14 ago 2026)
+  Lun 10/08 (5h) — 3.2 (fin, 4,5h) + 3.3 Biblioteca proyectos completados (inicio, 0,5h)
+  Mar 11/08 (5h) — 3.3 (continúa, 5h)
+  Mié 12/08 (4h) — 3.3 (fin, 1,5h) + 4.1 Validación proyectos en encuentros (inicio, 2,5h)
+  Jue 13/08 (4h) — 4.1 (fin, 1h) + 5.1 Generación imagen/banco proyecto (inicio, 3h)
+  Vie 14/08 (4h) — 5.1 (continúa, 4h)
+
+SEMANA 5 (17-21 ago 2026)
+  Lun 17/08 (5h) — 5.1 (fin, 1h) + 5.2 Imagen de centro (completa, 3,5h) + 6.1 Modelo/CRUD noticias (inicio, 0,5h)
+  Mar 18/08 (5h) — 6.1 (fin, 4,5h) + 6.2 CKEditor + sanitización (inicio, 0,5h)
+  Mié 19/08 (4h) — 6.2 (continúa, 4h)
+  Jue 20/08 (4h) — 6.2 (fin, 0,5h) + 6.3 Rol editor (completa, 3,5h)
+  Vie 21/08 (4h) — 7.1 Investigación evaluación 360 (inicio, 4h)
+
+SEMANA 6 (24-28 ago 2026)
+  Lun 24/08 (5h) — 7.1 (fin, 1h) + 7.2 Diseño evaluación 360 (completa, 4h)
+  Mar 25/08 (5h) — 7.3 Implementación evaluación 360 (inicio, 5h)
+  Mié 26/08 (4h) — 7.3 (continúa, 4h)
+  Jue 27/08 (4h) — 7.3 (fin, 4h)
+  Vie 28/08 (4h) — 8.1 Seguimiento alumnado individual/grupo (inicio, 4h)
+
+SEMANA 7 (31 ago - 4 sept 2026)
+  Lun 31/08 (5h) — 8.1 (fin, 3h) + 8.2 Optimización panel docente (inicio, 2h)
+  Mar 01/09 (5h) — 8.2 (fin, 3h) + 9.1 Revisar retos generados por IA (inicio, 2h)
+  Mié 02/09 (4h) — 9.1 (continúa, 4h)
+  Jue 03/09 (4h) — 9.1 (fin, 1h) + 9.2 Mejorar propuestas pedagógicas IA (inicio, 3h)
+  Vie 04/09 (4h) — 9.2 (fin, 4h)
+
+SEMANA 8 (7-11 sept 2026)
+  Lun 07/09 (5h) — 10.1 Icono bombilla: esquema flujo app (completa, 5h)
+  Mar 08/09 (5h) — 10.2 Mejorar guías tour (completa, 5h)
+  Mié 09/09 (4h) — 10.3 Documentación técnica + manual (inicio, 4h)
+  Jue 10/09 (4h) — 10.3 (fin, 3h) + 11.1 Pruebas versión beta (inicio, 1h)
+  Vie 11/09 (4h) — 11.1 (continúa, 4h)
+
+SEMANA 9 (14-17 sept 2026)
+  Lun 14/09 (5h) — 11.1 (fin, 3h) + 11.2 Deploy a producción y comprobación (inicio, 2h)
+  Mar 15/09 (5h) — 11.2 (fin, 0,5h) + 11.3 Buffer mejoras no contempladas (inicio, 4,5h)
+  Mié 16/09 (4h) — 11.3 (continúa, 4h)
+  Jue 17/09 (4h) — 11.3 (fin, 1,5h) -> PROYECTO COMPLETADO
+
+Notas sobre la planificación:
+- El escenario OPTIMISTA (153h) adelantaría el cierre a ~lunes 07/09/2026.
+- El escenario PESIMISTA (220h) movería el cierre a ~lunes 28/09/2026.
+- Cualquier imprevisto (bloqueos externos, cambios de alcance en evaluación 360,
+  Excel de RA/CE mal formateado, etc.) desplaza estas fechas hacia el escenario
+  pesimista o más allá.
+- Este calendario asume dedicación exclusiva a estas tareas durante las 22h/semana;
+  cualquier otra tarea del día a día que consuma parte de ese tiempo alarga el plazo.

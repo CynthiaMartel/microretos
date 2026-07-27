@@ -1255,6 +1255,17 @@ function formatFecha(isoDate) {
                 </svg>
                 Ver todos los encuentros
               </button>
+              <button @click="router.push({ name: 'mis-grupos' })"
+                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                             bg-violet-50 border border-violet-200 text-violet-700
+                             text-[10px] font-black uppercase tracking-widest
+                             hover:bg-violet-100 transition-all mb-2">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2v1h12v-1z"/>
+                </svg>
+                Mis grupos — seguimiento
+              </button>
               <button @click="router.push({ name: 'startup-day-crear' })"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
                              bg-[#99CC33]/10 border border-[#99CC33]/20 text-[#5a7a00]

@@ -1,13 +1,14 @@
 // Fases estándar del microproyecto — reflejan las mismas 5 fases fijas que
-// el alumnado recorre en EquipoWorkspace.vue (fasesConfig). Nombre/descripción
-// no se editan; la duración ya no vive aquí por fase, sino que se deriva del
-// calendario de clases (ver CLASES_PROYECTO_DEFECTO/duracionPorFase más abajo),
-// porque una misma clase puede cubrir varias fases a la vez.
+// el alumnado recorre en EquipoWorkspace.vue (fasesConfig); si se renombra una fase
+// aquí, hacer lo mismo en fasesConfig para que alumnado y docentes vean el mismo nombre.
+// La duración no vive aquí por fase, sino que se deriva del calendario de clases (ver
+// CLASES_PROYECTO_DEFECTO/duracionPorFase más abajo), porque una misma clase puede
+// cubrir varias fases a la vez.
 export const FASES_PROYECTO = [
   { num: 0, label: 'Inicio del equipo',  icono: '👥', color: 'slate',  desc: 'Constitución del equipo', descLarga: 'Conóceos, estableced roles y acordad cómo vais a trabajar juntos durante el reto.' },
   { num: 1, label: 'Análisis del reto',  icono: '🔍', color: 'blue',   desc: 'Comprensión del reto',     descLarga: 'Analizad en profundidad el reto planteado por la empresa y definid vuestra propuesta de solución con datos concretos.' },
-  { num: 2, label: 'Diseño de solución', icono: '💡', color: 'amber',  desc: 'Prototipo y propuesta',    descLarga: 'Dividid el trabajo en tareas y avanzad en la construcción de vuestra solución.' },
-  { num: 3, label: 'Desarrollo',         icono: '🔨', color: 'orange', desc: 'Construcción del producto', descLarga: 'Construid y entregad el trabajo final al docente y a la empresa validadora.' },
+  { num: 2, label: 'Diseño de solución y desarrollo', icono: '💡', color: 'amber',  desc: 'Prototipo, tareas y desarrollo', descLarga: 'Diseñad y construid vuestra solución: definid el prototipo, dividid el trabajo en tareas y avanzad en la construcción.' },
+  { num: 3, label: 'Entrega de la solución',          icono: '🔨', color: 'orange', desc: 'Entrega de la solución',         descLarga: 'Entregad la solución final que proponéis para cubrir la necesidad de la empresa, al docente y a la empresa validadora.' },
   { num: 4, label: 'Presentación',       icono: '🎓', color: 'green',  desc: 'Entrega y reflexión',      descLarga: 'Reflexionad individualmente y en grupo sobre lo aprendido. Es el cierre del proyecto.' },
 ]
 
@@ -15,7 +16,7 @@ export const FASES_PROYECTO = [
 // (por su `num`) que se trabajan en ella. Una clase puede cubrir varias fases.
 export const CLASES_PROYECTO_DEFECTO = [
   { fases: [0, 1] }, // Inicio del equipo + Análisis del reto
-  { fases: [2, 3] }, // Diseño de solución + Desarrollo
+  { fases: [2, 3] }, // Diseño de solución y desarrollo + Entrega de la solución
   { fases: [2, 3] },
   { fases: [4] },    // Presentación
 ]

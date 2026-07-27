@@ -105,7 +105,7 @@ const cerrarSesionIdle = () => {
 
   <TopBar v-if="!isPublicRetoRoute" />
   <SidePanel v-if="!isPublicRetoRoute" />
-  <div :class="!isPublicRetoRoute ? 'lg:pl-64' : ''" class="relative" style="z-index: 1;">
+  <div :class="!isPublicRetoRoute ? 'lg:pl-72' : ''" class="relative" style="z-index: 1;">
     <RouterView />
   </div>
   <AppCredit />

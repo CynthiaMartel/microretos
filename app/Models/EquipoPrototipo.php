@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class EquipoPrototipo extends Model
 {
     protected $fillable = [
-        'equipo_id', 'filename', 'url', 'public_id',
+        'equipo_id', 'contexto', 'filename', 'url', 'public_id',
         'resource_type', 'mime', 'size', 'label',
     ];
 

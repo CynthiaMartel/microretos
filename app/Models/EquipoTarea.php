@@ -8,10 +8,11 @@ class EquipoTarea extends Model
 {
     protected $table = 'equipo_tareas';
 
-    protected $fillable = ['equipo_id', 'descripcion', 'responsable', 'estado', 'orden'];
+    protected $fillable = ['equipo_id', 'descripcion', 'tipo', 'obligatoria', 'responsable', 'estado', 'orden'];
 
     protected $casts = [
-        'orden' => 'integer',
+        'orden'       => 'integer',
+        'obligatoria' => 'boolean',
     ];
 
     public function equipo()

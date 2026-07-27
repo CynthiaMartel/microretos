@@ -43,11 +43,13 @@ Route::middleware('throttle:20,1')->group(function () {
 
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/equipo/{token}',                          [EquipoPublicoController::class, 'show']);
+    Route::get('/equipo/{token}/reto',                     [EquipoPublicoController::class, 'verReto']);
     Route::put('/equipo/{token}/fase/{fase}',              [EquipoPublicoController::class, 'guardarFase'])
         ->whereNumber('fase');
     Route::post('/equipo/{token}/fase/{fase}/completar',   [EquipoPublicoController::class, 'completarFase'])
         ->whereNumber('fase');
     Route::post('/equipo/{token}/tareas',                  [EquipoPublicoController::class, 'storeTarea']);
+    Route::post('/equipo/{token}/fase/2/restablecer-tareas-genericas', [EquipoPublicoController::class, 'restablecerTareasGenericas']);
     Route::put('/equipo/{token}/tareas/{tarea}',           [EquipoPublicoController::class, 'updateTarea'])
         ->whereNumber('tarea');
     Route::delete('/equipo/{token}/tareas/{tarea}',        [EquipoPublicoController::class, 'destroyTarea'])
@@ -59,6 +61,13 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::post('/equipo/{token}/prototipos',       [EquipoPublicoController::class, 'storePrototipo']);
     Route::delete('/equipo/{token}/prototipos/{id}', [EquipoPublicoController::class, 'destroyPrototipo'])
         ->whereNumber('id');
+});
+
+// Sugerencias IA del workspace de alumnado — throttle propio, más restrictivo
+// (llamadas a OpenAI, no comparten cupo con el resto de endpoints públicos)
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/equipo/{token}/fase/1/sugerir-hallazgo', [EquipoPublicoController::class, 'sugerirHallazgo']);
+    Route::post('/equipo/{token}/fase/2/sugerir-tareas',   [EquipoPublicoController::class, 'sugerirTareas']);
 });
 
 // Validación pública del microproyecto por parte de la empresa (acceso por token)
@@ -169,6 +178,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/encuentros',                          [EncuentroController::class, 'index']);
         Route::post('/encuentros',                         [EncuentroController::class, 'store']);
         Route::post('/encuentros/lote',                    [EncuentroController::class, 'storeLote']);
+        // Ruta específica antes de la paramétrica {id} — si no, "mis-grupos" se capturaría como {id}
+        Route::get('/encuentros/mis-grupos',               [EncuentroController::class, 'misGrupos']);
         Route::post('/encuentros/{id}/crear-codigo',       [EncuentroController::class, 'crearCodigo'])->whereNumber('id');
         Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
         Route::get('/encuentros/{id}',                     [EncuentroController::class, 'show']);
@@ -206,10 +217,8 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // ── Gestión de equipos (docente) ──────────────────────────────────────
-        Route::get('/startup/proyectos/{uuid}/equipos',        [EquipoGestionController::class, 'index']);
-        Route::post('/startup/proyectos/{uuid}/equipos',       [EquipoGestionController::class, 'store']);
-        // Crea equipos desde datos del wizard + genera codigo_clase
-        Route::post('/startup/proyectos/{uuid}/crear-equipos', [EquipoGestionController::class, 'crearEquipos']);
+        // Nota: la creación de equipos y el listado con progreso viven en
+        // EncuentroController (crearCodigo/workspace) — no duplicar aquí.
         Route::get('/startup/proyectos/{uuid}/pantalla-acceso',[EquipoGestionController::class, 'pantallaAcceso']);
         Route::delete('/startup/equipos/{id}',                 [EquipoGestionController::class, 'destroy'])
             ->whereNumber('id');

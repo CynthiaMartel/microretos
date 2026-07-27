@@ -6,9 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\Microreto;
 use App\Models\Modulo;
-use App\Models\CicloFormativo;
 use App\Models\Empresa;
 use App\Http\Requests\StoreMicroretoRequest;
+use App\Services\MicroretoFichaService;
 
 class MicroretoIAController extends Controller
 {
@@ -18,12 +18,6 @@ class MicroretoIAController extends Controller
         // El frontend filtra en cliente, así que cargamos todo pero con techo.
         // Cuando el volumen crezca habrá que añadir filtros server-side.
         $limit = min((int) $request->query('limit', 500), 500);
-
-        // Pre-cargar módulos y ciclos para derivar curso sin N+1
-        $modulosPorCiclo = \App\Models\Modulo::select('idcicloformativo', 'nombre', 'curso')
-            ->get()
-            ->groupBy('idcicloformativo');
-        $ciclosPorNombre = CicloFormativo::pluck('id', 'nombre');
 
         $user  = $request->user();
         $query = Microreto::with([
@@ -45,42 +39,7 @@ class MicroretoIAController extends Controller
             });
         }
 
-        $microretos = $query->get()
-        ->map(function ($reto) use ($modulosPorCiclo, $ciclosPorNombre) {
-
-            $reto->es_simulado = (bool) $reto->es_simulado;
-
-            if ($reto->empresa) {
-                $reto->centro_educativo  = $reto->empresa->centroEducativo?->nombre
-                    ?? $reto->empresa->centro_educativo
-                    ?? 'Centro Desconocido';
-
-                $reto->familia           = $reto->empresa->familias->first()?->nombre
-                    ?? 'Familia Desconocida';
-
-                $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
-            } else {
-                $reto->centro_educativo    = 'Centro Desconocido';
-                $reto->familia             = 'Familia Desconocida';
-                $reto->empresa_es_simulada = false;
-            }
-
-            // Derivar curso en memoria si no está guardado (evita N+1)
-            if (is_null($reto->curso) && $reto->modulo && $reto->modulo !== 'Transversal') {
-                $cicloId = $reto->ciclo_id ?? $ciclosPorNombre->get($reto->ciclo);
-                if ($cicloId) {
-                    $primerModulo    = trim(explode(' y ', $reto->modulo)[0]);
-                    $modulosDelCiclo = $modulosPorCiclo->get($cicloId, collect());
-                    $modulo = $modulosDelCiclo->first(fn($m) =>
-                        $m->nombre === $primerModulo ||
-                        str_starts_with($m->nombre, rtrim($primerModulo, '.'))
-                    );
-                    $reto->curso = $modulo?->curso;
-                }
-            }
-
-            return $reto;
-        });
+        $microretos = MicroretoFichaService::enriquecerLote($query->get());
 
         return response()->json($microretos);
     }
@@ -111,96 +70,7 @@ class MicroretoIAController extends Controller
             ? $query->findOrFail((int) $id)
             : $query->where('uuid', $id)->firstOrFail();
 
-        $reto->es_simulado = (bool) $reto->es_simulado;
-
-        if ($reto->empresa) {
-            $reto->centro_educativo = $reto->empresa->centroEducativo?->nombre
-                ?? $reto->empresa->centro_educativo
-                ?? 'Centro Desconocido';
-
-            $reto->familia = $reto->empresa->familias->first()?->nombre
-                ?? 'Familia Desconocida';
-
-            $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
-        } else {
-            $reto->centro_educativo    = 'Centro Desconocido';
-            $reto->familia             = 'Familia Desconocida';
-            $reto->empresa_es_simulada = false;
-        }
-
-        // Derivar curso si no está guardado aún
-        if (is_null($reto->curso)) {
-            $reto->curso = $this->derivarCurso($reto->ciclo_id, $reto->ciclo, $reto->modulo);
-        }
-
-        // Fallback: intentar derivarlo de evaluacion_oficial cuando modulo es 'Transversal'
-        if (is_null($reto->curso) && $reto->evaluacion_oficial && $reto->ciclo_id) {
-            $reto->curso = $this->derivarCursoDeEvaluacion($reto->ciclo_id, $reto->evaluacion_oficial);
-        }
-
-        return response()->json($reto);
-    }
-
-    /**
-     * Deduce el número de curso (1 o 2) a partir del módulo guardado en el microreto.
-     * Primero intenta por ciclo_id (FK), luego por nombre de ciclo (legacy).
-     * Tolerante al punto final en nombres de módulo (datos BOE vs. texto libre).
-     */
-    private function derivarCurso(?int $cicloId, ?string $cicloNombre, ?string $moduloTexto): ?int
-    {
-        if (!$moduloTexto || $moduloTexto === 'Transversal') {
-            return null;
-        }
-
-        // El campo 'modulo' puede ser "Módulo A y Módulo B" — tomamos el primero
-        $primerModulo = trim(explode(' y ', $moduloTexto)[0]);
-
-        $cicloIdResuelto = $cicloId;
-
-        if (!$cicloIdResuelto && $cicloNombre) {
-            $cicloIdResuelto = CicloFormativo::where('nombre', $cicloNombre)->value('id');
-        }
-
-        if (!$cicloIdResuelto) {
-            return null;
-        }
-
-        // Intento exacto primero; si falla, toleramos punto final (nombres BOE acaban en '.')
-        $curso = Modulo::where('idcicloformativo', $cicloIdResuelto)
-            ->where('nombre', $primerModulo)
-            ->value('curso');
-
-        if (is_null($curso)) {
-            $curso = Modulo::where('idcicloformativo', $cicloIdResuelto)
-                ->where('nombre', 'LIKE', rtrim($primerModulo, '.') . '%')
-                ->orderByRaw('LENGTH(nombre) ASC') // preferir el más corto (más específico)
-                ->value('curso');
-        }
-
-        return $curso;
-    }
-
-    /**
-     * Fallback: cuando modulo = 'Transversal', intentamos derivar el curso
-     * mirando los módulos referenciados en el JSON de evaluacion_oficial.
-     */
-    private function derivarCursoDeEvaluacion(int $cicloId, array $evaluacionOficial): ?int
-    {
-        foreach ($evaluacionOficial as $item) {
-            $nombreModulo = $item['modulo'] ?? null;
-            if (!$nombreModulo) continue;
-
-            $curso = Modulo::where('idcicloformativo', $cicloId)
-                ->where('nombre', 'LIKE', rtrim($nombreModulo, '.') . '%')
-                ->orderByRaw('LENGTH(nombre) ASC')
-                ->value('curso');
-
-            if (!is_null($curso)) {
-                return $curso;
-            }
-        }
-
-        return null;
+        return response()->json(MicroretoFichaService::enriquecer($reto));
     }
 
     public function simularInfoEmpresa(Request $request)
