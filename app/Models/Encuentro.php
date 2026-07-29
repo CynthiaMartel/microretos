@@ -44,4 +44,9 @@ class Encuentro extends Model
     {
         return $this->belongsTo(Microproyecto::class);
     }
+
+    public function equipos()
+    {
+        return $this->hasMany(\App\Models\Equipo::class);
+    }
 }

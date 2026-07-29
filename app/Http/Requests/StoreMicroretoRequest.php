@@ -14,7 +14,7 @@ class StoreMicroretoRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $textFields = [
-            'empresa_nombre', 'titulo', 'quien_es', 'dia_a_dia',
+            'empresa_nombre', 'titulo', 'subtitulo', 'quien_es', 'dia_a_dia',
             'pregunta_reto', 'ciclo', 'modulo', 'duracion', 'nivel_grupo',
         ];
 
@@ -26,7 +26,7 @@ class StoreMicroretoRequest extends FormRequest
         }
 
         foreach (['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
-                  'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado'] as $field) {
+                  'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes'] as $field) {
             if ($this->has($field) && is_array($this->input($field))) {
                 $sanitized[$field] = $this->sanitizeRecursively($this->input($field));
             }
@@ -61,6 +61,7 @@ class StoreMicroretoRequest extends FormRequest
             'empresa_id'           => 'nullable|integer|exists:empresas,id',
             'empresa_nombre'       => 'nullable|string|max:255',
             'titulo'               => 'nullable|string|max:500',
+            'subtitulo'            => 'nullable|string|max:500',
             'quien_es'             => 'nullable|string|max:5000',
             'dia_a_dia'            => 'nullable|string|max:5000',
             'pregunta_reto'        => 'nullable|string|max:5000',
@@ -87,6 +88,8 @@ class StoreMicroretoRequest extends FormRequest
             'evaluacion_oficial.*.aplicacion' => 'nullable|string|max:1000',
             'tips_profesorado'     => 'nullable|array',
             'tips_profesorado.*'   => 'nullable|string|max:2000',
+            'variantes'            => 'nullable|array',
+            'variantes.*'          => 'nullable|string|max:2000',
             'nivel_grupo'          => 'nullable|string|max:100',
             'curso'                => 'nullable|integer',
             'ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',

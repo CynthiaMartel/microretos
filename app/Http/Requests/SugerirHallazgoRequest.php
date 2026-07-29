@@ -14,8 +14,10 @@ class SugerirHallazgoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'existentes'   => 'sometimes|array|max:20',
-            'existentes.*' => 'string|max:500',
+            'existentes'    => 'sometimes|array|max:20',
+            'existentes.*'  => 'string|max:500',
+            'sugeridas_ia'  => 'sometimes|array|max:20',
+            'sugeridas_ia.*' => 'string|max:500',
         ];
     }
 }

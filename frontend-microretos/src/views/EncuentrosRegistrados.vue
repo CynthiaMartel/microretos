@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
 import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
+import ReestructurarEquipoModal from '../components/ReestructurarEquipoModal.vue'
 import api from '../api.js'
 import { duracionPorFase } from '../config/fasesProyecto.js'
 
@@ -161,6 +162,23 @@ const encuentroAbierto = ref(null)
 
 function verEncuentro(s)     { encuentroAbierto.value = s }
 function cerrarEncuentro()   { encuentroAbierto.value = null; editandoFechaFin.value = false }
+
+// ─── Reestructurar equipo ──────────────────────────────────────────────────────
+const reestructurando = ref(null)
+
+function abrirReestructurar(s) { reestructurando.value = s }
+function cerrarReestructurar() { reestructurando.value = null }
+
+function onEquipoReestructurado({ id, num_equipos, alumnados }) {
+  encuentros.value = encuentros.value.map(s =>
+    s.id === id ? { ...s, num_equipos, alumnados } : s
+  )
+  if (encuentroAbierto.value?.id === id) {
+    encuentroAbierto.value = { ...encuentroAbierto.value, num_equipos, alumnados }
+  }
+  reestructurando.value = null
+  mostrarSnack('Reparto de equipos actualizado.')
+}
 
 // ─── Editar fecha_fin del encuentro ───────────────────────────────────────────
 const editandoFechaFin  = ref(false)
@@ -591,6 +609,15 @@ function formatFecha(isoDate) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12l10 5 10-5"/>
                           </svg>
                         </button>
+                        <button v-if="s.num_equipos"
+                                @click.stop="abrirReestructurar(s)"
+                                class="p-1.5 rounded-lg bg-violet-50 text-violet-500 hover:bg-violet-100 transition-all"
+                                title="Reestructurar equipo">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                          </svg>
+                        </button>
                         <button v-if="s.microreto_id"
                                 @click.stop="abrirMicroretoModal(s.microreto_id)"
                                 class="p-1.5 rounded-lg bg-[#00A859]/10 text-[#00A859] hover:bg-[#00A859]/20 transition-all"
@@ -787,13 +814,26 @@ function formatFecha(isoDate) {
                 Copiar
               </button>
               <button @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
+                      title="Vuelve a generar equipos desde cero — bloqueado si ya hay progreso real"
                       class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              hover:bg-gray-200 transition-all disabled:opacity-50">
                 Regen.
               </button>
             </div>
-            <div v-else>
+            <div v-if="encuentroAbierto.num_equipos" class="mt-2">
+              <button @click="abrirReestructurar(encuentroAbierto)"
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                             bg-violet-50 border border-violet-200 text-violet-600
+                             text-[10px] font-black uppercase tracking-widest hover:bg-violet-100 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Reestructurar equipo
+              </button>
+            </div>
+            <div v-if="!encuentroAbierto.codigo_clase">
               <button @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
                       class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
                              border border-dashed border-[#00A859]/30 text-[#00A859] text-xs font-black
@@ -1067,6 +1107,14 @@ function formatFecha(isoDate) {
     :encuentro="encuentroAEliminar"
     @encuentro-eliminado="onEncuentroEliminado"
     @cerrar="cerrarModalEliminar"
+  />
+
+  <!-- Modal reestructurar equipo -->
+  <ReestructurarEquipoModal
+    :visible="!!reestructurando"
+    :encuentro="reestructurando"
+    @actualizado="onEquipoReestructurado"
+    @cerrar="cerrarReestructurar"
   />
 
   <!-- Snackbar -->

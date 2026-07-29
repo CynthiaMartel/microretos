@@ -134,16 +134,25 @@ class EncuentroController extends Controller
             ], 422);
         }
 
+        // Un microproyecto puede tener varios encuentros (distintas clases/grupos trabajando el
+        // mismo reto) — solo se tocan los equipos de ESTE encuentro, nunca los de otro.
+        if ($this->encuentroTieneProgreso($encuentro)) {
+            return response()->json([
+                'error' => 'Alguno de los equipos de este encuentro ya tiene progreso (fases completadas, tareas, reflexiones o prototipos). Generar un código nuevo borraría ese trabajo. Usa "Reestructurar equipo" si quieres cambiar el reparto sin perderlo.',
+            ], 422);
+        }
+
         $numEquipos = max(1, min(30, (int) ($encuentro->num_equipos ?? 3)));
         $alumnados  = $encuentro->alumnados ?? [];
 
-        $proyecto->equipos()->delete();
+        $encuentro->equipos()->delete();
 
         for ($n = 1; $n <= $numEquipos; $n++) {
             $equipo = Equipo::create([
                 'microproyecto_id' => $proyecto->id,
                 'encuentro_id'     => $encuentro->id,
                 'nombre'           => "Equipo {$n}",
+                'numero_equipo'    => $n,
             ]);
 
             foreach ($alumnados as $a) {
@@ -159,7 +168,7 @@ class EncuentroController extends Controller
         $codigo = $this->generarCodigoClase();
         $encuentro->update(['codigo_clase' => $codigo]);
 
-        $equipos = $proyecto->equipos()->with('miembros')->get()->map(fn($e) => [
+        $equipos = $encuentro->equipos()->with('miembros')->get()->map(fn($e) => [
             'id'       => $e->id,
             'nombre'   => $e->nombre,
             'token'    => $e->token,
@@ -170,6 +179,109 @@ class EncuentroController extends Controller
         ]);
 
         return response()->json(['codigo_clase' => $codigo, 'equipos' => $equipos], 201);
+    }
+
+    private function equipoTieneProgreso(Equipo $equipo): bool
+    {
+        return $equipo->fases()->where('completada', true)->exists()
+            || $equipo->tareas()->exists()
+            || $equipo->reflexiones()->exists()
+            || $equipo->prototipos()->exists();
+    }
+
+    private function encuentroTieneProgreso(Encuentro $encuentro): bool
+    {
+        return $encuentro->equipos->contains(fn($e) => $this->equipoTieneProgreso($e));
+    }
+
+    /**
+     * PATCH /api/encuentros/{id}/reestructurar-equipos
+     * Actualiza el reparto de alumnado/equipos de un encuentro ya creado, SIN borrar y
+     * recrear: hace upsert por nombre dentro de cada equipo, para no perder el progreso ya
+     * hecho (tareas, reflexiones, fortalezas/puntos de mejora ya escritos, etc.). Si reducir
+     * el número de equipos obligaría a eliminar uno con progreso real, bloquea la operación.
+     */
+    public function reestructurarEquipos(\App\Http\Requests\ReestructurarEquiposRequest $request, $id)
+    {
+        $encuentro = Encuentro::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $proyecto = $encuentro->microproyecto;
+        if (!$proyecto) {
+            return response()->json(['error' => 'Este encuentro no tiene ningún proyecto asociado.'], 422);
+        }
+
+        $numEquipos = (int) $request->validated('num_equipos');
+        $alumnados  = $request->validated('alumnados');
+
+        $equiposActuales = $encuentro->equipos()->get()->keyBy('numero_equipo');
+
+        $aEliminar  = $equiposActuales->filter(fn($e) => (int) $e->numero_equipo > $numEquipos);
+        $bloqueados = $aEliminar->filter(fn($e) => $this->equipoTieneProgreso($e));
+
+        if ($bloqueados->isNotEmpty()) {
+            return response()->json([
+                'error' => 'No se puede reducir el número de equipos: '
+                    . $bloqueados->pluck('nombre')->implode(', ')
+                    . ' ya tiene progreso real (fases completadas, tareas, reflexiones o prototipos).',
+            ], 422);
+        }
+
+        foreach ($aEliminar as $equipo) {
+            $equipo->delete();
+        }
+
+        for ($n = 1; $n <= $numEquipos; $n++) {
+            $equipo = $equiposActuales->get($n);
+            if (!$equipo) {
+                $equipo = Equipo::create([
+                    'microproyecto_id' => $proyecto->id,
+                    'encuentro_id'     => $encuentro->id,
+                    'nombre'           => "Equipo {$n}",
+                    'numero_equipo'    => $n,
+                ]);
+            }
+
+            $alumnadosDelEquipo = collect($alumnados)->filter(fn($a) => (int) $a['equipo_num'] === $n);
+            $this->sincronizarMiembrosPorNombre($equipo, $alumnadosDelEquipo);
+        }
+
+        $encuentro->update(['num_equipos' => $numEquipos, 'alumnados' => $alumnados]);
+
+        $equipos = $encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get()->map(fn($e) => [
+            'id'       => $e->id,
+            'nombre'   => $e->nombre,
+            'token'    => $e->token,
+            'miembros' => $e->miembros->map(fn($m) => ['nombre' => $m->nombre, 'rol' => $m->rol]),
+        ]);
+
+        return response()->json(['equipos' => $equipos]);
+    }
+
+    // Upsert por nombre (el docente no ve ids de equipo_miembros, solo nombres): actualiza el
+    // rol de los que ya existan, crea los nuevos, borra los que ya no aparezcan en el reparto.
+    private function sincronizarMiembrosPorNombre(Equipo $equipo, \Illuminate\Support\Collection $alumnados): void
+    {
+        $existentes  = $equipo->miembros()->get()->keyBy(fn($m) => mb_strtolower(trim($m->nombre)));
+        $conservados = [];
+
+        foreach ($alumnados as $a) {
+            $clave     = mb_strtolower(trim($a['nombre']));
+            $existente = $existentes->get($clave);
+
+            if ($existente) {
+                $existente->update(['rol' => $a['rol'] ?? $existente->rol]);
+                $conservados[] = $existente->id;
+            } else {
+                $conservados[] = $equipo->miembros()->create([
+                    'nombre' => $a['nombre'],
+                    'rol'    => $a['rol'] ?? null,
+                ])->id;
+            }
+        }
+
+        $equipo->miembros()->whereNotIn('id', $conservados)->delete();
     }
 
     /**

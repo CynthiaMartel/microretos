@@ -47,6 +47,15 @@ const imagenFondo = computed(() => {
   return `${base}/familias/${slug}.webp`
 })
 
+// Datos crudos de la empresa (lo que se recogió antes de que la IA los resumiera) —
+// deliberadamente sin datos de contacto: eso lo filtra MicroretoFichaResource en el backend.
+const tieneDatosRecogidos = computed(() => {
+  const e = reto.value?.empresa
+  if (!e) return false
+  return !!(e.dia_a_normal || e.friccion_area || e.friccion_problema
+    || e.consecuencias || e.restricciones || e.lo_que_no_quieren)
+})
+
 function cerrar() {
   emit('close')
 }
@@ -184,6 +193,16 @@ function cerrar() {
                                  text-gray-500 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                       Nivel {{ reto.nivel_grupo }}
                     </span>
+                    <span v-if="reto.empresa?.sector"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
+                                 text-gray-500 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      {{ reto.empresa.sector }}
+                    </span>
+                    <span v-if="reto.empresa?.tamano"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
+                                 text-gray-500 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      {{ reto.empresa.tamano }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -191,98 +210,159 @@ function cerrar() {
               <!-- Cuerpo de la ficha -->
               <div class="px-6 py-8 md:px-12 md:py-10 space-y-10">
 
-                <!-- Quién es / Día a día -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-                  <div v-if="reto.quien_es">
-                    <h3 class="section-title text-[#00A859]">
-                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Datos recogidos de la empresa: diagnóstico crudo, tal cual lo aportó el
+                     docente/empresa — es la materia prima que la IA resume debajo. -->
+                <div v-if="tieneDatosRecogidos"
+                     class="bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200
+                            rounded-2xl p-5 md:p-7 shadow-sm">
+                  <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shrink-0 shadow-sm">
+                      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0
-                                 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0
-                                 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001
-                                 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                                 a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
-                      ¿Quién es {{ reto.empresa_nombre }}?
-                    </h3>
-                    <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
+                    </div>
+                    <div>
+                      <h3 class="text-orange-700 font-black uppercase text-xs md:text-sm tracking-[0.15em]">
+                        Datos recogidos de la empresa
+                      </h3>
+                      <p class="text-[11px] text-orange-400 font-medium">Diagnóstico original, sin resumir por IA</p>
+                    </div>
                   </div>
-                  <div v-if="reto.dia_a_dia">
-                    <h3 class="section-title text-[#00A859]">
-                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      Su día a día
-                    </h3>
-                    <p class="text-gray-600 text-sm leading-relaxed">{{ reto.dia_a_dia }}</p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div v-if="reto.empresa.dia_a_normal" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Su día a día</p>
+                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.dia_a_normal }}</p>
+                    </div>
+                    <div v-if="reto.empresa.friccion_area || reto.empresa.friccion_problema" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Fricciones de la empresa</p>
+                      <p v-if="reto.empresa.friccion_area" class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.friccion_area }}</p>
+                      <p v-if="reto.empresa.friccion_problema" class="text-sm text-gray-700 leading-relaxed mt-1">{{ reto.empresa.friccion_problema }}</p>
+                    </div>
+                    <div v-if="reto.empresa.consecuencias" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Consecuencias</p>
+                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.consecuencias }}</p>
+                    </div>
+                    <div v-if="reto.empresa.restricciones" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Restricciones</p>
+                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.restricciones }}</p>
+                    </div>
+                    <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
+                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Dificultades -->
-                <div v-if="reto.dificultades?.length">
-                  <h3 class="section-title text-yellow-600">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Resumen de diagnóstico: la lectura de la IA a partir de los datos de arriba —
+                     agrupa quién es/día a día, dificultades, pregunta del reto, qué necesitan y
+                     limitaciones bajo un único título para que se lea como el "resumen" del
+                     diagnóstico crudo, no como información nueva y distinta. -->
+                <div class="space-y-8">
+                  <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+                             tracking-widest border-b-2 border-gray-200 pb-2">
+                    <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3
-                               L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                               a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    Dificultades
+                    Resumen de diagnóstico
                   </h3>
-                  <ul class="space-y-2 pl-1">
-                    <li v-for="(item, i) in reto.dificultades" :key="i"
-                        class="flex items-start gap-3 text-sm text-gray-700">
-                      <span class="text-yellow-500 font-black mt-0.5 shrink-0">•</span>
-                      <span>{{ item }}</span>
-                    </li>
-                  </ul>
-                </div>
 
-                <!-- Pregunta del reto -->
-                <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
-                            p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-                  <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
-                    Pregunta del Reto
-                  </h3>
-                  <p class="text-lg md:text-xl font-bold text-[#1F2937] leading-snug">
-                    {{ reto.pregunta_reto }}
-                  </p>
-                </div>
+                  <!-- Quién es / Día a día -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+                    <div v-if="reto.quien_es">
+                      <h3 class="section-title text-[#00A859]">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0
+                                   00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0
+                                   100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001
+                                   3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                        </svg>
+                        ¿Quién es {{ reto.empresa_nombre }}?
+                      </h3>
+                      <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
+                    </div>
+                    <div v-if="reto.dia_a_dia">
+                      <h3 class="section-title text-[#00A859]">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Su día a día
+                      </h3>
+                      <p class="text-gray-600 text-sm leading-relaxed">{{ reto.dia_a_dia }}</p>
+                    </div>
+                  </div>
 
-                <!-- Qué necesitan / Limitaciones -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-                  <div v-if="reto.que_necesitan?.length">
-                    <h3 class="section-title text-[#00A859]">
+                  <!-- Dificultades -->
+                  <div v-if="reto.dificultades?.length">
+                    <h3 class="section-title text-yellow-600">
                       <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
-                                 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3
+                                 L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                       </svg>
-                      Qué necesitan
+                      Dificultades
                     </h3>
                     <ul class="space-y-2 pl-1">
-                      <li v-for="(item, i) in reto.que_necesitan" :key="i"
+                      <li v-for="(item, i) in reto.dificultades" :key="i"
                           class="flex items-start gap-3 text-sm text-gray-700">
-                        <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                        <span class="text-yellow-500 font-black mt-0.5 shrink-0">•</span>
                         <span>{{ item }}</span>
                       </li>
                     </ul>
                   </div>
-                  <div v-if="reto.limitaciones?.length">
-                    <h3 class="section-title text-red-500">
-                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
-                                 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                      </svg>
-                      Limitaciones
+
+                  <!-- Pregunta del reto -->
+                  <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
+                              p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
+                    <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
+                      Pregunta del Reto
                     </h3>
-                    <ul class="space-y-2 pl-1">
-                      <li v-for="(item, i) in reto.limitaciones" :key="i"
-                          class="flex items-start gap-3 text-sm text-gray-700">
-                        <span class="text-red-500 font-black mt-0.5 shrink-0">•</span>
-                        <span>{{ item }}</span>
-                      </li>
-                    </ul>
+                    <p class="text-lg md:text-xl font-bold text-[#1F2937] leading-snug">
+                      {{ reto.pregunta_reto }}
+                    </p>
+                  </div>
+
+                  <!-- Qué necesitan / Limitaciones -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+                    <div v-if="reto.que_necesitan?.length">
+                      <h3 class="section-title text-[#00A859]">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
+                                   00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Qué necesitan
+                      </h3>
+                      <ul class="space-y-2 pl-1">
+                        <li v-for="(item, i) in reto.que_necesitan" :key="i"
+                            class="flex items-start gap-3 text-sm text-gray-700">
+                          <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                          <span>{{ item }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div v-if="reto.limitaciones?.length">
+                      <h3 class="section-title text-red-500">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
+                                   015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        </svg>
+                        Limitaciones
+                      </h3>
+                      <ul class="space-y-2 pl-1">
+                        <li v-for="(item, i) in reto.limitaciones" :key="i"
+                            class="flex items-start gap-3 text-sm text-gray-700">
+                          <span class="text-red-500 font-black mt-0.5 shrink-0">•</span>
+                          <span>{{ item }}</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
 
@@ -317,6 +397,27 @@ function cerrar() {
                       <li v-for="ods in reto.ods_sugeridos" :key="ods"
                           class="text-sm font-semibold text-[#1F2937]">{{ ods }}</li>
                     </ul>
+                  </div>
+                </div>
+
+                <!-- Soft skills -->
+                <div v-if="reto.soft_skills?.length">
+                  <h3 class="flex items-center gap-2 text-purple-600 font-black text-[11px]
+                             uppercase tracking-[0.15em] mb-3">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283
+                               -.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283
+                               .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Soft skills
+                  </h3>
+                  <div class="flex flex-wrap gap-2">
+                    <span v-for="(skill, i) in reto.soft_skills" :key="i"
+                          class="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700
+                                 rounded-full text-xs font-semibold">
+                      {{ skill }}
+                    </span>
                   </div>
                 </div>
 

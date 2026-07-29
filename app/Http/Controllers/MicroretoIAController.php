@@ -8,6 +8,7 @@ use App\Models\Microreto;
 use App\Models\Modulo;
 use App\Models\Empresa;
 use App\Http\Requests\StoreMicroretoRequest;
+use App\Http\Resources\MicroretoFichaResource;
 use App\Services\MicroretoFichaService;
 
 class MicroretoIAController extends Controller
@@ -70,7 +71,7 @@ class MicroretoIAController extends Controller
             ? $query->findOrFail((int) $id)
             : $query->where('uuid', $id)->firstOrFail();
 
-        return response()->json(MicroretoFichaService::enriquecer($reto));
+        return response()->json(new MicroretoFichaResource(MicroretoFichaService::enriquecer($reto)));
     }
 
     public function simularInfoEmpresa(Request $request)
@@ -353,6 +354,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'microretos.*.empresa_id'           => 'nullable|integer|exists:empresas,id',
             'microretos.*.empresa_nombre'       => 'nullable|string|max:255',
             'microretos.*.titulo'               => 'nullable|string|max:500',
+            'microretos.*.subtitulo'            => 'nullable|string|max:500',
             'microretos.*.quien_es'             => 'nullable|string|max:5000',
             'microretos.*.dia_a_dia'            => 'nullable|string|max:5000',
             'microretos.*.pregunta_reto'        => 'nullable|string|max:5000',
@@ -379,6 +381,8 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'microretos.*.evaluacion_oficial.*.aplicacion' => 'nullable|string|max:1000',
             'microretos.*.tips_profesorado'     => 'nullable|array',
             'microretos.*.tips_profesorado.*'   => 'nullable|string|max:2000',
+            'microretos.*.variantes'            => 'nullable|array',
+            'microretos.*.variantes.*'          => 'nullable|string|max:2000',
             'microretos.*.nivel_grupo'          => 'nullable|string|max:100',
             'microretos.*.curso'                => 'nullable|integer',
             'microretos.*.ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',
@@ -388,10 +392,10 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'microretos.*.es_simulado'          => 'nullable|boolean',
         ]);
 
-        $textFields = ['empresa_nombre', 'titulo', 'quien_es', 'dia_a_dia', 'pregunta_reto',
+        $textFields = ['empresa_nombre', 'titulo', 'subtitulo', 'quien_es', 'dia_a_dia', 'pregunta_reto',
                        'ciclo', 'modulo', 'duracion', 'nivel_grupo'];
         $arrayFields = ['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
-                        'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado'];
+                        'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes'];
 
         // Docentes solo pueden guardar microretos de empresas de su centro
         $user = $request->user();

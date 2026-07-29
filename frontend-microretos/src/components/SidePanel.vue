@@ -281,7 +281,7 @@ function rolHome(role) {
                       <rect x="9" y="3" width="6" height="4" rx="1"/>
                       <path d="M9 12l2 2 4-4"/>
                     </svg>
-                    <span>Docente: crear/ver encuentros</span>
+                    <span>Crear/ver encuentros</span>
                   </button>
                 </div>
 
@@ -301,7 +301,7 @@ function rolHome(role) {
                       <path d="M7 11V7a5 5 0 0110 0v4"/>
                       <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
                     </svg>
-                    <span>Docente: dar acceso al encuentro</span>
+                    <span>Dar acceso al encuentro</span>
                   </button>
                 </div>
 
@@ -364,7 +364,7 @@ function rolHome(role) {
                       <path d="M3 3v18h18"/>
                       <path d="M7 15l4-6 4 4 5-8"/>
                     </svg>
-                    <span>Docente: seguimiento de equipos</span>
+                    <span>Seguimiento de equipos</span>
                   </button>
                 </div>
 
@@ -587,14 +587,14 @@ function rolHome(role) {
       class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       @click.self="mostrarInfo = false"
     >
-      <div class="relative bg-[#1a2332] border border-white/10 rounded-[2rem]
-                  shadow-2xl max-w-lg w-full p-8 text-white overflow-y-auto max-h-[90vh]">
+      <div class="relative bg-[#F8FAFC] border border-gray-100 rounded-[2rem]
+                  shadow-2xl max-w-lg w-full p-8 text-[#121212] overflow-y-auto max-h-[90vh]">
 
         <!-- X -->
         <button
           @click="mostrarInfo = false"
-          class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10
-                 flex items-center justify-center text-white/40 hover:text-white transition-all"
+          class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
+                 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -603,7 +603,7 @@ function rolHome(role) {
 
         <!-- Logo -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="w-12 h-12 rounded-2xl bg-[#00A859]/15 border border-[#00A859]/30
+          <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/25
                       flex items-center justify-center">
             <svg class="w-6 h-6 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -611,14 +611,14 @@ function rolHome(role) {
             </svg>
           </div>
           <div>
-            <h2 class="text-2xl font-black tracking-tight">
+            <h2 class="text-2xl font-black tracking-tight text-[#121212]">
               Dua<span class="text-[#00A859]">Lab</span>
             </h2>
-            <p class="text-white/40 text-xs font-medium">Plataforma de retos para FP Dual</p>
+            <p class="text-gray-400 text-xs font-medium">Plataforma de retos para FP Dual</p>
           </div>
         </div>
 
-        <p class="text-white/60 text-sm leading-relaxed mb-6">
+        <p class="text-gray-500 text-sm leading-relaxed mb-6">
           DuaLab es la plataforma que conecta centros educativos de FP con empresas para
           generar retos de aprendizaje real, alineados con los módulos y resultados de aprendizaje del ciclo.
         </p>
@@ -626,30 +626,30 @@ function rolHome(role) {
         <!-- Secciones explicadas -->
         <div class="space-y-4">
 
-          <div class="rounded-2xl bg-white/5 border border-white/8 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-[#99CC33] mb-2">Retos</p>
-            <div class="space-y-2 text-xs text-white/60">
-              <p><span class="text-white font-bold">Generador</span> — Crea retos con IA a partir de los datos de una empresa y los criterios de evaluación del ciclo. Requiere sesión.</p>
-              <p><span class="text-white font-bold">Biblioteca</span> — Accede a todos los retos generados. Comparte cada reto con el alumnado mediante un código QR temporal.</p>
+          <div class="rounded-2xl bg-white border border-gray-100 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-lime-700 mb-2">Retos</p>
+            <div class="space-y-2 text-xs text-gray-500">
+              <p><span class="text-[#121212] font-bold">Generador</span> — Crea retos con IA a partir de los datos de una empresa y los criterios de evaluación del ciclo. Requiere sesión.</p>
+              <p><span class="text-[#121212] font-bold">Biblioteca</span> — Accede a todos los retos generados. Comparte cada reto con el alumnado mediante un código QR temporal.</p>
             </div>
           </div>
 
-          <div class="rounded-2xl bg-white/5 border border-white/8 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Taller de Ideas</p>
-            <div class="space-y-2 text-xs text-white/60">
-              <p><span class="text-white font-bold">Generar Proyecto</span> — Crea una nueva propuesta para el Taller de Ideas.</p>
-              <p><span class="text-white font-bold">Biblioteca Proyectos</span> — Gestiona las propuestas y proyectos generados por los equipos, módulos, objetivos y validación por empresa.</p>
+          <div class="rounded-2xl bg-white border border-gray-100 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2">Taller de Ideas</p>
+            <div class="space-y-2 text-xs text-gray-500">
+              <p><span class="text-[#121212] font-bold">Generar Proyecto</span> — Crea una nueva propuesta para el Taller de Ideas.</p>
+              <p><span class="text-[#121212] font-bold">Biblioteca Proyectos</span> — Gestiona las propuestas y proyectos generados por los equipos, módulos, objetivos y validación por empresa.</p>
             </div>
           </div>
 
-          <div class="rounded-2xl bg-white/5 border border-white/8 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Encuentro con alumnado</p>
-            <div class="space-y-2 text-xs text-white/60">
-              <p><span class="text-white font-bold">Docente: crear/ver encuentros</span> — Registra los encuentros de trabajo con retos.</p>
-              <p><span class="text-white font-bold">Docente: dar acceso al encuentro</span> — Elige un encuentro y proyecta su QR y código para el alumnado.</p>
-              <p><span class="text-white font-bold">Alumnado: unirse a equipo</span> — Primera vez: el alumnado elige su clase y su equipo.</p>
-              <p><span class="text-white font-bold">Alumnado: retomar workspace</span> — Reentrada directa con el código de equipo al flujo de trabajo.</p>
-              <p><span class="text-white font-bold">Docente: seguimiento de equipos</span> — Sigue el avance de todos los equipos y encuentros.</p>
+          <div class="rounded-2xl bg-white border border-gray-100 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2">Encuentro con alumnado</p>
+            <div class="space-y-2 text-xs text-gray-500">
+              <p><span class="text-[#121212] font-bold">Crear/ver encuentros</span> — Registra los encuentros de trabajo con retos.</p>
+              <p><span class="text-[#121212] font-bold">Dar acceso al encuentro</span> — Elige un encuentro y proyecta su QR y código para el alumnado.</p>
+              <p><span class="text-[#121212] font-bold">Alumnado: unirse a equipo</span> — Primera vez: el alumnado elige su clase y su equipo.</p>
+              <p><span class="text-[#121212] font-bold">Alumnado: retomar workspace</span> — Reentrada directa con el código de equipo al flujo de trabajo.</p>
+              <p><span class="text-[#121212] font-bold">Seguimiento de equipos</span> — Sigue el avance de todos los equipos y encuentros.</p>
             </div>
           </div>
 

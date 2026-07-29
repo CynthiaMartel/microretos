@@ -9,11 +9,12 @@ use App\Models\Encuentro;
 class Equipo extends Model
 {
     protected $fillable = [
-        'microproyecto_id', 'encuentro_id', 'nombre', 'token', 'codigo_acceso', 'fase_actual',
+        'microproyecto_id', 'encuentro_id', 'nombre', 'numero_equipo', 'token', 'codigo_acceso', 'fase_actual',
     ];
 
     protected $casts = [
-        'fase_actual' => 'integer',
+        'fase_actual'   => 'integer',
+        'numero_equipo' => 'integer',
     ];
 
     protected static function booted(): void

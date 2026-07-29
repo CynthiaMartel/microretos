@@ -38,6 +38,8 @@ const proyecto    = computed(() => workspace.value?.proyecto)
 const diagnostico = computed(() => workspace.value?.diagnostico)
 const preguntasF0 = computed(() => workspace.value?.preguntas_f0 ?? [])
 const tareas      = computed(() => workspace.value?.tareas ?? [])
+// Miembros reales del equipo (dados de alta en F0) para asignar responsable de tarea por desplegable
+const miembrosEquipo = computed(() => equipo.value?.miembros ?? [])
 const reflexiones = computed(() => workspace.value?.reflexiones ?? [])
 
 function getFase(n) {
@@ -136,8 +138,12 @@ async function completarFase(n) {
   guardando.value = true
   try {
     const res = await api.post(`/equipo/${token}/fase/${n}/completar`)
-    workspace.value.fases[n] = { ...getFase(n), completada: true }
-    workspace.value.equipo.fase_actual = res.data.fase_actual
+    // Recargamos el workspace completo en vez de parchear campos sueltos: así
+    // cualquier efecto colateral del backend (p.ej. la precarga de tareas
+    // genéricas al completar la Fase 1) se refleja siempre, sin mantener
+    // sincronía manual pieza a pieza.
+    const ws = await api.get(`/equipo/${token}`)
+    workspace.value = ws.data
     faseVista.value = res.data.fase_actual
     mostrarOk('¡Fase completada! Ahora podéis continuar con la siguiente.')
   } finally {
@@ -212,11 +218,15 @@ const rolesInfo = {
     ],
   },
 }
+// Los miembros se precargan desde equipo.miembros (ya dados de alta por el docente al crear
+// el encuentro, ver EncuentroController::crearCodigo()), no desde equipo_fases.datos — así el
+// alumnado parte del reparto real y solo confirma/corrige, en vez de reescribirlo de cero.
 function inicializarF0() {
   const datos = getFase(0).datos ?? {}
   f0.value = {
     contrato_firmado: datos.contrato_firmado ?? false,
-    miembros: (datos.miembros ?? []).map(m => ({
+    miembros: (equipo.value?.miembros ?? []).map(m => ({
+      id:               m.id,
       nombre:           m.nombre ?? '',
       rol:              m.rol ?? '',
       fortalezas:       Array.isArray(m.fortalezas) ? m.fortalezas : [],
@@ -267,9 +277,21 @@ function serializarF0() {
     })),
   }
 }
-async function guardarF0() { await guardarFase(0, serializarF0()) }
+// Tras guardar, se refresca equipo.miembros y se reinicializa F0: los miembros nuevos (sin id
+// todavía) reciben el id real que les asignó sincronizarMiembros(). Si no se refresca, guardar
+// dos veces seguidas sin salir de F0 duplicaría a cualquier miembro añadido en esta sesión.
+async function refrescarMiembros() {
+  const res = await api.get(`/equipo/${token}`)
+  workspace.value.equipo.miembros = res.data.equipo.miembros
+  inicializarF0()
+}
+async function guardarF0() {
+  await guardarFase(0, serializarF0())
+  await refrescarMiembros()
+}
 async function completarF0() {
   await guardarFase(0, serializarF0())
+  await refrescarMiembros()
   await completarFase(0)
 }
 
@@ -286,12 +308,15 @@ function onCompletarF0() {
 }
 
 // ── F1: Análisis del reto ───────────────────────────────────────────────────
-const f1 = ref({ sintesis: [], reto_frase: '', hallazgos: [], propuesta: '', explicacion_propuesta: '' })
+const f1 = ref({ sintesis: [], reto_frase: '', hallazgos: [] })
 const nuevoHallazgo = ref('')
 const sugiriendoHallazgo = ref(false)
 const errorSugerencia = ref('')
 const HALLAZGO_MAXLEN = 280
 const hallazgoAbierto = ref(null) // índice del hallazgo desplegado para lectura/edición completa
+// Todos los hallazgos que la IA ha generado en esta sesión, aunque el equipo borre alguno de
+// f1.hallazgos después — así no se le vuelve a sugerir algo que ya propuso y fue descartado.
+const hallazgosSugeridosIA = ref([])
 
 function inicializarF1() {
   const datos = getFase(1).datos ?? {}
@@ -301,9 +326,8 @@ function inicializarF1() {
       : preguntasF0.value.map(p => ({ pregunta: p, respuesta: '' })),
     reto_frase: datos.reto_frase ?? '',
     hallazgos:  datos.hallazgos  ?? [],
-    propuesta:  datos.propuesta  ?? '',
-    explicacion_propuesta: datos.explicacion_propuesta ?? '',
   }
+  hallazgosSugeridosIA.value = []
 }
 
 function addHallazgo() {
@@ -325,8 +349,13 @@ async function sugerirHallazgo() {
   errorSugerencia.value = ''
   try {
     const existentes = f1.value.hallazgos.filter(h => h.trim())
-    const res = await api.post(`/equipo/${token}/fase/1/sugerir-hallazgo`, { existentes })
-    f1.value.hallazgos.push(res.data.hallazgo.slice(0, HALLAZGO_MAXLEN))
+    const res = await api.post(`/equipo/${token}/fase/1/sugerir-hallazgo`, {
+      existentes,
+      sugeridas_ia: hallazgosSugeridosIA.value,
+    })
+    const hallazgo = res.data.hallazgo.slice(0, HALLAZGO_MAXLEN)
+    f1.value.hallazgos.push(hallazgo)
+    hallazgosSugeridosIA.value.push(hallazgo)
     hallazgoAbierto.value = f1.value.hallazgos.length - 1
   } catch (e) {
     errorSugerencia.value = e.response?.data?.error ?? 'No se pudo generar la sugerencia.'
@@ -340,9 +369,7 @@ const hallazgosValidos = computed(() => f1.value.hallazgos.filter(h => h.trim())
 const f1Valido = computed(() =>
   f1.value.sintesis.every(s => s.respuesta.trim().length > 0) &&
   f1.value.reto_frase.trim() &&
-  hallazgosValidos.value &&
-  f1.value.propuesta.trim() &&
-  f1.value.explicacion_propuesta.trim()
+  hallazgosValidos.value
 )
 
 async function guardarF1() { await guardarFase(1, { ...f1.value }) }
@@ -355,14 +382,10 @@ const intentoF1 = ref(false)
 const f1SintesisRef     = ref(null)
 const f1HallazgosRef    = ref(null)
 const f1RetoFraseRef    = ref(null)
-const f1PropuestaRef    = ref(null)
-const f1ExplicacionRef  = ref(null)
 const f1Faltantes = computed(() => [
   { ok: f1.value.sintesis.every(s => s.respuesta.trim().length > 0), label: 'Responder todas las preguntas de síntesis del equipo', ref: f1SintesisRef },
   { ok: hallazgosValidos.value,                                      label: 'Añadir al menos 4 hallazgos clave', ref: f1HallazgosRef },
   { ok: !!f1.value.reto_frase.trim(),                                label: 'Escribir el reto en una frase', ref: f1RetoFraseRef },
-  { ok: !!f1.value.propuesta.trim(),                                 label: 'Describir la propuesta inicial de solución', ref: f1PropuestaRef },
-  { ok: !!f1.value.explicacion_propuesta.trim(),                     label: 'Explicar la propuesta', ref: f1ExplicacionRef },
 ])
 function onCompletarF1() {
   if (f1Valido.value) { intentoF1.value = false; completarF1(); return }
@@ -454,13 +477,21 @@ async function eliminarArchivoEntregable(prototipo) {
   }
 }
 
-// ── F2: Diseño de solución y desarrollo (prototipo + tareas) ────────────────
-const f2 = ref({ tipo_prototipo: '', prototipo_url: '', iteracion: 1 })
+// ── F2: Diseño de solución y desarrollo (propuesta + prototipo + tareas) ────
+const f2 = ref({
+  propuesta: '', explicacion_propuesta: '',
+  solucion_final: '', justificacion_solucion_final: '',
+  tipo_prototipo: '', prototipo_url: '', iteracion: 1,
+})
 const tiposPrototipo = ['Croquis / boceto papel', 'Storyboard / mapa visual', 'Maqueta física', 'Prototipo digital (Figma/Canva/Genially)', 'Diagrama de procesos']
 
 function inicializarF2() {
   const datos = getFase(2).datos ?? {}
   f2.value = {
+    propuesta:      datos.propuesta      ?? '',
+    explicacion_propuesta: datos.explicacion_propuesta ?? '',
+    solucion_final: datos.solucion_final ?? '',
+    justificacion_solucion_final: datos.justificacion_solucion_final ?? '',
     tipo_prototipo: datos.tipo_prototipo ?? '',
     prototipo_url:  datos.prototipo_url  ?? '',
     iteracion:      datos.iteracion      ?? 1,
@@ -469,9 +500,32 @@ function inicializarF2() {
 
 async function guardarF2() { await guardarFase(2, { ...f2.value }) }
 
-// Tareas genéricas (proceso de trabajo: buscar info, organizar, lluvia de ideas…) — precargadas,
+// Tareas (proceso de trabajo: buscar info, organizar, lluvia de ideas…) — precargadas,
 // sin IA, con su propio formulario de añadir.
-const tareasGenericas = computed(() => tareas.value.filter(t => t.tipo !== 'detalle_solucion'))
+// "Elegid en equipo las soluciones" (obligatoria) va al principio — hay que decidir antes de
+// construir. QA (obligatoria) va al final — es la última revisión antes de dar algo por
+// terminado. El resto mantiene su orden original en medio.
+function prioridadTarea(t) {
+  if (t.obligatoria && t.descripcion.includes('QA')) return 2
+  if (t.obligatoria) return 0
+  return 1
+}
+const tareasGenericas = computed(() =>
+  tareas.value
+    .filter(t => t.tipo !== 'detalle_solucion')
+    .sort((a, b) => prioridadTarea(a) - prioridadTarea(b))
+)
+
+function esTareaQA(tarea) {
+  return tarea.descripcion.includes('QA')
+}
+
+function tooltipObligatoria(tarea) {
+  if (esTareaQA(tarea)) {
+    return 'No se puede eliminar. QA = control de calidad: repasad entre todo el equipo que el trabajo esté bien hecho antes de darlo por terminado.'
+  }
+  return 'No se puede eliminar. Sin elegir en equipo la solución no podéis avanzar a construirla.'
+}
 const nuevaTareaGenerica = ref({ descripcion: '', responsable: '', estado: 'pendiente' })
 const cargandoTareaGenerica = ref(false)
 
@@ -491,17 +545,18 @@ async function restablecerTareasGenericas() {
   try {
     const res = await api.post(`/equipo/${token}/fase/2/restablecer-tareas-genericas`)
     workspace.value.tareas.push(...res.data)
-    if (!res.data.length) mostrarOk('Ya teníais todas las tareas genéricas precargadas.')
-    else mostrarOk('Tareas genéricas restablecidas.')
+    if (!res.data.length) mostrarOk('Ya teníais todas las tareas precargadas.')
+    else mostrarOk('Tareas restablecidas.')
   } finally {
     restableciendoGenericas.value = false
   }
 }
 
-// Tareas más complejas (detallan la propuesta concreta de F1) — sugeridas con IA y también
-// añadibles a mano, con su propio formulario.
+// Sugerencias de soluciones (ideas a partir de la propuesta inicial de esta fase) — sugeridas
+// con IA y también añadibles a mano. Son solo de lectura: no tienen estado ni responsable, y no
+// cuentan en el progreso que gatea completar F2 (eso lo hacen solo las tareas genéricas).
 const tareasComplejas = computed(() => tareas.value.filter(t => t.tipo === 'detalle_solucion'))
-const nuevaTareaCompleja = ref({ descripcion: '', responsable: '', estado: 'pendiente' })
+const nuevaTareaCompleja = ref({ descripcion: '' })
 const cargandoTareaCompleja = ref(false)
 const sugiriendoTareas = ref(false)
 const errorSugerenciaTareas = ref('')
@@ -510,6 +565,10 @@ async function sugerirTareas() {
   sugiriendoTareas.value = true
   errorSugerenciaTareas.value = ''
   try {
+    // La propuesta (y el resto de f2) puede llevar cambios sin guardar todavía — el único botón
+    // "Guardar" está en la tarjeta de Prototipo, más abajo. Guardamos aquí primero para que el
+    // backend siempre vea la propuesta actual, y no rechace la petición por datos desactualizados.
+    await guardarFase(2, { ...f2.value })
     const res = await api.post(`/equipo/${token}/fase/2/sugerir-tareas`)
     workspace.value.tareas.push(...res.data)
   } catch (e) {
@@ -525,7 +584,7 @@ async function addTareaCompleja() {
   try {
     const res = await api.post(`/equipo/${token}/tareas`, { ...nuevaTareaCompleja.value, tipo: 'detalle_solucion' })
     workspace.value.tareas.push(res.data)
-    nuevaTareaCompleja.value = { descripcion: '', responsable: '', estado: 'pendiente' }
+    nuevaTareaCompleja.value = { descripcion: '' }
   } finally { cargandoTareaCompleja.value = false }
 }
 
@@ -546,14 +605,28 @@ async function eliminarTarea(tarea) {
   if (i !== -1) workspace.value.tareas.splice(i, 1)
 }
 
+// El progreso solo cuenta las tareas genéricas — las sugerencias de soluciones son de solo
+// lectura (sin estado) y no deben impedir llegar al 100%.
 const progreso = computed(() => {
-  if (!tareas.value.length) return 0
-  return Math.round(tareas.value.filter(t => t.estado === 'realizado').length / tareas.value.length * 100)
+  if (!tareasGenericas.value.length) return 0
+  return Math.round(tareasGenericas.value.filter(t => t.estado === 'realizado').length / tareasGenericas.value.length * 100)
 })
 
+// Gate de la propuesta inicial de solución: hasta que no esté rellena no se muestra
+// la sección de "Sugerencias de soluciones" (que se generan/detallan a partir de ella).
+const f2PropuestaValida = computed(() =>
+  !!f2.value.propuesta.trim() && !!f2.value.explicacion_propuesta.trim()
+)
+
+const f2SolucionFinalValida = computed(() =>
+  !!f2.value.solucion_final.trim() && !!f2.value.justificacion_solucion_final.trim()
+)
+
 const f2Valido = computed(() =>
+  f2PropuestaValida.value &&
+  f2SolucionFinalValida.value &&
   !!f2.value.tipo_prototipo &&
-  tareas.value.length > 0 &&
+  tareasGenericas.value.length > 0 &&
   progreso.value === 100
 )
 
@@ -563,12 +636,20 @@ async function completarF2() {
 }
 
 const intentoF2 = ref(false)
-const f2TipoPrototipoRef = ref(null)
-const f2TareasRef        = ref(null)
+const f2PropuestaRef      = ref(null)
+const f2ExplicacionRef    = ref(null)
+const f2SolucionFinalRef  = ref(null)
+const f2JustificacionSolucionFinalRef = ref(null)
+const f2TipoPrototipoRef  = ref(null)
+const f2TareasRef         = ref(null)
 const f2Faltantes = computed(() => [
+  { ok: !!f2.value.propuesta.trim(),                            label: 'Describir la propuesta inicial de solución', ref: f2PropuestaRef },
+  { ok: !!f2.value.explicacion_propuesta.trim(),                 label: 'Explicar la propuesta', ref: f2ExplicacionRef },
+  { ok: !!f2.value.solucion_final.trim(),                       label: 'Describir la solución final propuesta', ref: f2SolucionFinalRef },
+  { ok: !!f2.value.justificacion_solucion_final.trim(),         label: 'Justificar la solución final', ref: f2JustificacionSolucionFinalRef },
   { ok: !!f2.value.tipo_prototipo,                             label: 'Elegir el tipo de prototipo', ref: f2TipoPrototipoRef },
-  { ok: tareas.value.length > 0,                                label: 'Añadir al menos una tarea', ref: f2TareasRef },
-  { ok: tareas.value.length === 0 || progreso.value === 100,    label: 'Marcar todas las tareas como realizadas', ref: f2TareasRef },
+  { ok: tareasGenericas.value.length > 0,                       label: 'Añadir al menos una tarea', ref: f2TareasRef },
+  { ok: tareasGenericas.value.length === 0 || progreso.value === 100, label: 'Marcar todas las tareas como realizadas', ref: f2TareasRef },
 ])
 const mostrarModalPasoF3 = ref(false)
 function onCompletarF2() {
@@ -716,8 +797,10 @@ function onCompletarF4() {
 const informeCierre = computed(() => ({
   retoFrase:        getFase(1).datos?.reto_frase ?? '',
   hallazgos:         getFase(1).datos?.hallazgos ?? [],
-  propuesta:         getFase(1).datos?.propuesta ?? '',
-  explicacionPropuesta: getFase(1).datos?.explicacion_propuesta ?? '',
+  propuesta:         getFase(2).datos?.propuesta ?? '',
+  explicacionPropuesta: getFase(2).datos?.explicacion_propuesta ?? '',
+  solucionFinal:     getFase(2).datos?.solucion_final ?? '',
+  justificacionSolucionFinal: getFase(2).datos?.justificacion_solucion_final ?? '',
   tipoPrototipo:     getFase(2).datos?.tipo_prototipo ?? '',
   prototipoUrl:      getFase(2).datos?.prototipo_url ?? '',
   tareasTotal:       tareas.value.length,
@@ -885,7 +968,12 @@ watch(workspace, (val) => {
           <!-- ─────────────────────────────────────────────── -->
           <!--  CONTENIDO PRINCIPAL (fases)                    -->
           <!-- ─────────────────────────────────────────────── -->
-          <div class="flex-1 min-w-0 space-y-4 sm:space-y-5">
+          <!-- w-full es necesario: el contenedor padre usa items-start (para que el sidebar
+               no estire su altura en el layout de escritorio lg:flex-row), lo que en móvil
+               (flex-col) hace que esta columna se dimensione por el contenido en vez de estirarse
+               al 100% — y un texto largo sin espacios para partir (p.ej. un hallazgo generado por
+               IA) puede ensancharla mucho más allá del viewport. -->
+          <div class="flex-1 min-w-0 w-full space-y-4 sm:space-y-5">
 
             <!-- Tarjeta intro de la fase activa -->
             <div class="bg-[#F0FDF4] border border-[#00A859]/20 rounded-2xl px-5 py-4 flex gap-3 items-start">
@@ -1229,27 +1317,6 @@ watch(workspace, (val) => {
                          class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5
                                 focus:outline-none focus:border-blue-400 bg-gray-50 font-semibold"/>
                 </div>
-
-                <div ref="f1PropuestaRef" class="rounded-xl transition-all"
-                     :class="intentoF1 && (!f1.propuesta.trim() || !f1.explicacion_propuesta.trim()) ? 'ring-2 ring-red-200 border border-red-300 p-3 -m-1' : ''">
-                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
-                    Propuesta inicial de solución <span class="text-red-400">*</span>
-                  </label>
-                  <textarea v-model="f1.propuesta" rows="3"
-                            placeholder="Describid vuestra solución y en qué se diferencia de lo que existe..."
-                            class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
-                                   focus:outline-none focus:border-blue-400 bg-gray-50 resize-none"/>
-                  <div ref="f1ExplicacionRef" class="mt-3">
-                    <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
-                      Explicación <span class="text-red-400">*</span>
-                    </label>
-                    <p class="text-[11px] text-gray-400 mb-2">Explicad por qué creéis que esta propuesta responde al reto.</p>
-                    <textarea v-model="f1.explicacion_propuesta" rows="3"
-                              placeholder="Explicad el razonamiento detrás de vuestra propuesta..."
-                              class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
-                                     focus:outline-none focus:border-blue-400 bg-gray-50 resize-none"/>
-                  </div>
-                </div>
               </div>
 
               <div class="flex gap-3">
@@ -1276,6 +1343,226 @@ watch(workspace, (val) => {
             <!-- FASE 2 — Diseño de solución y desarrollo (tareas) -->
             <!-- ════════════════════════════════════════════ -->
             <div v-else-if="faseVista === 2" class="space-y-5">
+
+              <!-- Propuesta inicial de solución: pregunta del reto (recap de F1) + propuesta -->
+              <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+                <div v-if="diagnostico?.pregunta_reto" class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                  <p class="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Pregunta del reto</p>
+                  <p class="text-sm font-bold text-amber-900 leading-snug">"{{ diagnostico.pregunta_reto }}"</p>
+                </div>
+
+                <div ref="f2PropuestaRef" class="rounded-xl transition-all"
+                     :class="intentoF2 && (!f2.propuesta.trim() || !f2.explicacion_propuesta.trim()) ? 'ring-2 ring-red-200 border border-red-300 p-3 -m-1' : ''">
+                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
+                    Propuesta inicial de solución <span class="text-red-400">*</span>
+                  </label>
+                  <p class="text-[11px] text-gray-400 mb-2">Describid vuestra solución y en qué se diferencia de lo que existe.</p>
+                  <textarea v-model="f2.propuesta" rows="3"
+                            placeholder="Describid vuestra solución..."
+                            class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+                                   focus:outline-none focus:border-amber-400 bg-gray-50 resize-none"/>
+                  <div ref="f2ExplicacionRef" class="mt-3">
+                    <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
+                      Explicación <span class="text-red-400">*</span>
+                    </label>
+                    <p class="text-[11px] text-gray-400 mb-2">Explicad por qué creéis que esta propuesta responde al reto.</p>
+                    <textarea v-model="f2.explicacion_propuesta" rows="3"
+                              placeholder="Explicad el razonamiento detrás de vuestra propuesta..."
+                              class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+                                     focus:outline-none focus:border-amber-400 bg-gray-50 resize-none"/>
+                  </div>
+                </div>
+              </div>
+
+              <div ref="f2TareasRef" class="space-y-4 sm:space-y-5 rounded-2xl transition-all"
+                   :class="intentoF2 && (tareasGenericas.length === 0 || progreso !== 100) ? 'ring-2 ring-red-200 rounded-2xl p-1 -m-1' : ''">
+
+                <!-- Tareas -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+                  <div class="flex items-center justify-between gap-2 mb-1">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-amber-500">Tareas</p>
+                    <button @click="restablecerTareasGenericas" :disabled="restableciendoGenericas"
+                            title="Vuelve a añadir las tareas precargadas que hayáis borrado"
+                            class="shrink-0 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-500
+                                   text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all disabled:opacity-50">
+                      {{ restableciendoGenericas ? 'Restableciendo…' : '↺ Restablecer precargadas' }}
+                    </button>
+                  </div>
+                  <p class="text-[11px] text-gray-400 mb-4">
+                    Proceso de trabajo precargado a partir de la ficha del reto (buscar información, organizar, lluvia de ideas… incluye QA antes de entregar) — editadlas y añadid las vuestras.
+                  </p>
+
+                  <div class="space-y-2 mb-4">
+                    <template v-for="t in tareasGenericas" :key="t.id">
+                      <div class="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                           :class="{
+                             'border-green-200 bg-green-50': t.estado === 'realizado',
+                             'border-amber-200 bg-amber-50': t.estado === 'en_progreso',
+                             'border-gray-100 bg-gray-50':   t.estado === 'pendiente',
+                           }">
+                        <select :value="t.estado" @change="cambiarEstadoTarea(t, $event.target.value)"
+                                class="text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
+                                       focus:outline-none cursor-pointer"
+                                :class="{
+                                  'text-green-600': t.estado === 'realizado',
+                                  'text-amber-600': t.estado === 'en_progreso',
+                                  'text-gray-400':  t.estado === 'pendiente',
+                                }">
+                          <option value="pendiente">⬜ Pendiente</option>
+                          <option value="en_progreso">🔄 En progreso</option>
+                          <option value="realizado">✅ Realizado</option>
+                        </select>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap"
+                             :class="{ 'line-through text-gray-400': t.estado === 'realizado' }">
+                            {{ t.descripcion }}
+                            <span v-if="t.obligatoria"
+                                  :title="tooltipObligatoria(t)"
+                                  class="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help">
+                              🔒 Obligatoria
+                            </span>
+                          </p>
+                          <select :value="t.responsable ?? ''" @change="actualizarResponsableTarea(t, $event.target.value)"
+                                 class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
+                                        border-gray-200 focus:outline-none focus:border-amber-400 px-0 py-0.5 cursor-pointer">
+                            <option value="">+ responsable</option>
+                            <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                          </select>
+                        </div>
+                        <button v-if="!t.obligatoria" @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
+                      </div>
+
+                      <!-- Explicación de QA: por qué importa, para que el alumnado lo entienda de verdad -->
+                      <div v-if="esTareaQA(t)" class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">¿Qué es el QA y por qué importa?</p>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                          QA son las siglas de "control de calidad". Antes de dar cualquier trabajo por terminado, todo el
+                          equipo revisa junto lo que se ha hecho: ¿funciona de verdad?, ¿tiene errores?, ¿se entiende bien?,
+                          ¿responde a lo que pedía el reto? En cualquier proyecto real, descubrir un fallo después de
+                          entregarlo cuesta mucho más (en tiempo y credibilidad) que revisarlo a tiempo entre todos. Por eso
+                          esta tarea no se puede eliminar ni dejar para el final sin más: es el último paso antes de
+                          entregar, y es de todo el equipo, no de una sola persona.
+                        </p>
+                      </div>
+                    </template>
+                    <p v-if="!tareasGenericas.length" class="text-sm text-gray-400 text-center py-6">
+                      Añadid tareas de trabajo
+                    </p>
+                  </div>
+
+                  <div class="border-t border-gray-100 pt-4 space-y-2">
+                    <div class="flex gap-2">
+                      <input v-model="nuevaTareaGenerica.descripcion" type="text"
+                             placeholder="Añadir tarea (ej. Buscar más referencias)…"
+                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                                    focus:outline-none focus:border-amber-400 bg-gray-50"
+                             @keydown.enter="addTareaGenerica"/>
+                    </div>
+                    <div class="flex gap-2">
+                      <select v-model="nuevaTareaGenerica.responsable"
+                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                                    focus:outline-none focus:border-amber-400 bg-gray-50 cursor-pointer">
+                        <option value="">Responsable…</option>
+                        <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                      </select>
+                      <button @click="addTareaGenerica" :disabled="!nuevaTareaGenerica.descripcion.trim() || cargandoTareaGenerica"
+                              class="px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-black
+                                     uppercase tracking-wider disabled:opacity-50 hover:bg-amber-600 transition-all">
+                        + Tarea
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sugerencias de soluciones: bloqueadas hasta rellenar la propuesta inicial de solución.
+                   Son de solo lectura (sin estado ni responsable) — ideas a valorar, no tareas a marcar. -->
+              <div v-if="!f2PropuestaValida" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+                <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Sugerencias de soluciones</p>
+                <p class="text-sm text-gray-400">🔒 Completad primero la propuesta inicial de solución de arriba para desbloquear esta sección.</p>
+              </div>
+              <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+                <div class="flex items-center justify-between mb-1">
+                  <p class="text-[9px] font-black uppercase tracking-widest text-violet-500">Sugerencias de soluciones</p>
+                  <button @click="sugerirTareas" :disabled="sugiriendoTareas"
+                          class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
+                                 text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
+                    {{ sugiriendoTareas ? 'Generando…' : '✨ Sugerir con IA' }}
+                  </button>
+                </div>
+                <div class="bg-violet-50 border border-violet-200 rounded-xl px-3.5 py-2.5 mb-3">
+                  <p class="text-sm font-black text-violet-800 leading-snug">
+                    Ideas de posibles soluciones a partir de vuestra propuesta inicial, las necesidades y limitaciones del reto, y el prototipo elegido.
+                  </p>
+                </div>
+                <p v-if="errorSugerenciaTareas" class="text-xs text-red-500 font-semibold mb-3">{{ errorSugerenciaTareas }}</p>
+                <p class="text-[11px] text-gray-400 mb-2">
+                  No son tareas a marcar como hechas — son ideas a valorar en equipo. Generadlas con IA o añadid las vuestras.
+                </p>
+                <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-4 flex items-start gap-1.5">
+                  <span class="shrink-0">⚠️</span>
+                  <span><strong>Revisa las sugerencias de la IA. Ten criterio propio.</strong></span>
+                </p>
+
+                <div class="space-y-2 mb-4">
+                  <div v-for="t in tareasComplejas" :key="t.id"
+                       class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
+                    <span class="text-lg shrink-0">💡</span>
+                    <p class="flex-1 text-sm font-semibold text-[#1F2937] leading-snug">{{ t.descripcion }}</p>
+                    <button @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
+                  </div>
+                  <p v-if="!tareasComplejas.length" class="text-sm text-gray-400 text-center py-6">
+                    Generad sugerencias con IA o añadid las vuestras
+                  </p>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4">
+                  <div class="flex gap-2">
+                    <input v-model="nuevaTareaCompleja.descripcion" type="text"
+                           placeholder="Añadir vuestra propia sugerencia de solución…"
+                           class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                                  focus:outline-none focus:border-violet-400 bg-gray-50"
+                           @keydown.enter="addTareaCompleja"/>
+                    <button @click="addTareaCompleja" :disabled="!nuevaTareaCompleja.descripcion.trim() || cargandoTareaCompleja"
+                            class="px-4 py-2 rounded-xl bg-violet-500 text-white text-xs font-black
+                                   uppercase tracking-wider disabled:opacity-50 hover:bg-violet-600 transition-all">
+                      + Añadir
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Solución final propuesta: puede ser la inicial mejorada o una distinta si ha cambiado -->
+              <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-emerald-500">Solución final propuesta</p>
+                <p class="text-[11px] text-gray-400">
+                  Puede ser la misma solución inicial de arriba, pero mejorada con lo que habéis
+                  trabajado en tareas y sugerencias — o puede ser otra completamente distinta, si
+                  durante el proceso habéis cambiado de idea. Lo importante es que sea la que
+                  finalmente vais a construir.
+                </p>
+                <div ref="f2SolucionFinalRef" class="rounded-xl transition-all"
+                     :class="intentoF2 && !f2.solucion_final.trim() ? 'ring-2 ring-red-200 border border-red-300 p-3 -m-1' : ''">
+                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
+                    Solución final propuesta <span class="text-red-400">*</span>
+                  </label>
+                  <textarea v-model="f2.solucion_final" rows="3"
+                            placeholder="Describid la solución que finalmente vais a construir..."
+                            class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+                                   focus:outline-none focus:border-emerald-400 bg-gray-50 resize-none"/>
+                </div>
+                <div ref="f2JustificacionSolucionFinalRef" class="rounded-xl transition-all"
+                     :class="intentoF2 && !f2.justificacion_solucion_final.trim() ? 'ring-2 ring-red-200 border border-red-300 p-3 -m-1' : ''">
+                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">
+                    Justificación <span class="text-red-400">*</span>
+                  </label>
+                  <p class="text-[11px] text-gray-400 mb-2">Explicad por qué esta es la solución final — qué ha cambiado (o no) respecto a la inicial y por qué.</p>
+                  <textarea v-model="f2.justificacion_solucion_final" rows="3"
+                            placeholder="Explicad el razonamiento detrás de esta solución final..."
+                            class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+                                   focus:outline-none focus:border-emerald-400 bg-gray-50 resize-none"/>
+                </div>
+              </div>
 
               <!-- Prototipo: qué es y cómo se representa -->
               <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-5">
@@ -1375,6 +1662,7 @@ watch(workspace, (val) => {
                 </button>
               </div>
 
+              <!-- Progreso: última sección antes de poder pasar a la siguiente fase -->
               <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 sm:px-5 py-4">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-xs font-black text-[#1F2937] uppercase tracking-wider">Progreso</span>
@@ -1385,177 +1673,8 @@ watch(workspace, (val) => {
                        :style="{ width: progreso + '%' }"/>
                 </div>
                 <p class="text-[10px] text-gray-400 mt-2">
-                  {{ tareas.filter(t => t.estado === 'realizado').length }} de {{ tareas.length }} tareas realizadas
+                  {{ tareasGenericas.filter(t => t.estado === 'realizado').length }} de {{ tareasGenericas.length }} tareas realizadas
                 </p>
-              </div>
-
-              <div ref="f2TareasRef" class="space-y-4 sm:space-y-5 rounded-2xl transition-all"
-                   :class="intentoF2 && (tareas.length === 0 || progreso !== 100) ? 'ring-2 ring-red-200 rounded-2xl p-1 -m-1' : ''">
-
-                <!-- Tareas genéricas -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-                  <div class="flex items-center justify-between gap-2 mb-1">
-                    <p class="text-[9px] font-black uppercase tracking-widest text-amber-500">Tareas genéricas</p>
-                    <button @click="restablecerTareasGenericas" :disabled="restableciendoGenericas"
-                            title="Vuelve a añadir las tareas genéricas precargadas que hayáis borrado"
-                            class="shrink-0 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-500
-                                   text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all disabled:opacity-50">
-                      {{ restableciendoGenericas ? 'Restableciendo…' : '↺ Restablecer precargadas' }}
-                    </button>
-                  </div>
-                  <p class="text-[11px] text-gray-400 mb-4">
-                    Proceso de trabajo precargado a partir de la ficha del reto (buscar información, organizar, lluvia de ideas… incluye QA interno antes de entregar) — editadlas y añadid las vuestras.
-                  </p>
-
-                  <div class="space-y-2 mb-4">
-                    <div v-for="t in tareasGenericas" :key="t.id"
-                         class="flex items-center gap-3 p-3 rounded-xl border transition-all"
-                         :class="{
-                           'border-green-200 bg-green-50': t.estado === 'realizado',
-                           'border-amber-200 bg-amber-50': t.estado === 'en_progreso',
-                           'border-gray-100 bg-gray-50':   t.estado === 'pendiente',
-                         }">
-                      <select :value="t.estado" @change="cambiarEstadoTarea(t, $event.target.value)"
-                              class="text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
-                                     focus:outline-none cursor-pointer"
-                              :class="{
-                                'text-green-600': t.estado === 'realizado',
-                                'text-amber-600': t.estado === 'en_progreso',
-                                'text-gray-400':  t.estado === 'pendiente',
-                              }">
-                        <option value="pendiente">⬜ Pendiente</option>
-                        <option value="en_progreso">🔄 En progreso</option>
-                        <option value="realizado">✅ Realizado</option>
-                      </select>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap"
-                           :class="{ 'line-through text-gray-400': t.estado === 'realizado' }">
-                          {{ t.descripcion }}
-                          <span v-if="t.obligatoria"
-                                title="No se puede eliminar. Es control de calidad (QA): repasad el trabajo en equipo antes de darlo por terminado."
-                                class="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help">
-                            🔒 Obligatoria
-                          </span>
-                        </p>
-                        <input :value="t.responsable" @change="actualizarResponsableTarea(t, $event.target.value.trim())"
-                               type="text" placeholder="+ responsable" maxlength="100"
-                               class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
-                                      border-gray-200 focus:outline-none focus:border-amber-400 px-0 py-0.5 w-32"/>
-                      </div>
-                      <button v-if="!t.obligatoria" @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
-                    </div>
-                    <p v-if="!tareasGenericas.length" class="text-sm text-gray-400 text-center py-6">
-                      Añadid tareas genéricas de trabajo
-                    </p>
-                  </div>
-
-                  <div class="border-t border-gray-100 pt-4 space-y-2">
-                    <div class="flex gap-2">
-                      <input v-model="nuevaTareaGenerica.descripcion" type="text"
-                             placeholder="Añadir tarea genérica (ej. Buscar más referencias)…"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
-                                    focus:outline-none focus:border-amber-400 bg-gray-50"
-                             @keydown.enter="addTareaGenerica"/>
-                    </div>
-                    <div class="flex gap-2">
-                      <input v-model="nuevaTareaGenerica.responsable" type="text" placeholder="Responsable (nombre)"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
-                                    focus:outline-none focus:border-amber-400 bg-gray-50"/>
-                      <button @click="addTareaGenerica" :disabled="!nuevaTareaGenerica.descripcion.trim() || cargandoTareaGenerica"
-                              class="px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-black
-                                     uppercase tracking-wider disabled:opacity-50 hover:bg-amber-600 transition-all">
-                        + Tarea
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Tareas más complejas -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-                  <div class="flex items-center justify-between mb-1">
-                    <p class="text-[9px] font-black uppercase tracking-widest text-violet-500">Tareas más complejas</p>
-                    <button @click="sugerirTareas" :disabled="sugiriendoTareas"
-                            class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
-                                   text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
-                      {{ sugiriendoTareas ? 'Generando…' : '✨ Sugerir con IA' }}
-                    </button>
-                  </div>
-                  <div class="bg-violet-50 border border-violet-200 rounded-xl px-3.5 py-2.5 mb-3">
-                    <p class="text-sm font-black text-violet-800 leading-snug">
-                      Tareas complejas: sugerencias de soluciones a partir de vuestra propuesta inicial (Fase 1 · Análisis del reto).
-                    </p>
-                  </div>
-                  <p v-if="errorSugerenciaTareas" class="text-xs text-red-500 font-semibold mb-3">{{ errorSugerenciaTareas }}</p>
-                  <p class="text-[11px] text-gray-400 mb-2">
-                    Un poco más específicas que las genéricas. Generadlas con IA o añadid las vuestras.
-                  </p>
-                  <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-4 flex items-start gap-1.5">
-                    <span class="shrink-0">⚠️</span>
-                    <span><strong>Revisa las sugerencias de la IA. Ten criterio propio.</strong></span>
-                  </p>
-
-                  <div class="space-y-2 mb-4">
-                    <div v-for="t in tareasComplejas" :key="t.id"
-                         class="flex items-center gap-3 p-3 rounded-xl border transition-all"
-                         :class="{
-                           'border-green-200 bg-green-50': t.estado === 'realizado',
-                           'border-amber-200 bg-amber-50': t.estado === 'en_progreso',
-                           'border-gray-100 bg-gray-50':   t.estado === 'pendiente',
-                         }">
-                      <select :value="t.estado" @change="cambiarEstadoTarea(t, $event.target.value)"
-                              class="text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
-                                     focus:outline-none cursor-pointer"
-                              :class="{
-                                'text-green-600': t.estado === 'realizado',
-                                'text-amber-600': t.estado === 'en_progreso',
-                                'text-gray-400':  t.estado === 'pendiente',
-                              }">
-                        <option value="pendiente">⬜ Pendiente</option>
-                        <option value="en_progreso">🔄 En progreso</option>
-                        <option value="realizado">✅ Realizado</option>
-                      </select>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap"
-                           :class="{ 'line-through text-gray-400': t.estado === 'realizado' }">
-                          {{ t.descripcion }}
-                          <span v-if="t.obligatoria"
-                                title="No se puede eliminar. Es control de calidad (QA): repasad el trabajo en equipo antes de darlo por terminado."
-                                class="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help">
-                            🔒 Obligatoria
-                          </span>
-                        </p>
-                        <input :value="t.responsable" @change="actualizarResponsableTarea(t, $event.target.value.trim())"
-                               type="text" placeholder="+ responsable" maxlength="100"
-                               class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
-                                      border-gray-200 focus:outline-none focus:border-violet-400 px-0 py-0.5 w-32"/>
-                      </div>
-                      <button v-if="!t.obligatoria" @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
-                    </div>
-                    <p v-if="!tareasComplejas.length" class="text-sm text-gray-400 text-center py-6">
-                      Generad tareas con IA o añadid las vuestras
-                    </p>
-                  </div>
-
-                  <div class="border-t border-gray-100 pt-4 space-y-2">
-                    <div class="flex gap-2">
-                      <input v-model="nuevaTareaCompleja.descripcion" type="text"
-                             placeholder="Añadir tarea más compleja (ej. Diseñar la pantalla de inicio)…"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
-                                    focus:outline-none focus:border-violet-400 bg-gray-50"
-                             @keydown.enter="addTareaCompleja"/>
-                    </div>
-                    <div class="flex gap-2">
-                      <input v-model="nuevaTareaCompleja.responsable" type="text" placeholder="Responsable (nombre)"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
-                                    focus:outline-none focus:border-violet-400 bg-gray-50"/>
-                      <button @click="addTareaCompleja" :disabled="!nuevaTareaCompleja.descripcion.trim() || cargandoTareaCompleja"
-                              class="px-4 py-2 rounded-xl bg-violet-500 text-white text-xs font-black
-                                     uppercase tracking-wider disabled:opacity-50 hover:bg-violet-600 transition-all">
-                        + Tarea
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <button @click="onCompletarF2" :disabled="guardando"
@@ -1900,6 +2019,12 @@ watch(workspace, (val) => {
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Propuesta inicial de solución</p>
                       <p class="text-sm text-[#1F2937]">{{ informeCierre.propuesta }}</p>
                       <p v-if="informeCierre.explicacionPropuesta" class="text-sm text-gray-500 mt-1">{{ informeCierre.explicacionPropuesta }}</p>
+                    </div>
+
+                    <div v-if="informeCierre.solucionFinal">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Solución final propuesta</p>
+                      <p class="text-sm text-[#1F2937]">{{ informeCierre.solucionFinal }}</p>
+                      <p v-if="informeCierre.justificacionSolucionFinal" class="text-sm text-gray-500 mt-1">{{ informeCierre.justificacionSolucionFinal }}</p>
                     </div>
 
                     <div v-if="informeCierre.tipoPrototipo">

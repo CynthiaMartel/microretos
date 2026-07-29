@@ -7,6 +7,8 @@ const LGRAY  = [75, 85, 99];
 const YELLOW = [161, 128, 0];
 const RED    = [220, 38, 38];
 const BLUE   = [37, 99, 235];
+const PURPLE = [126, 34, 206];
+const ORANGE = [194, 65, 12];
 
 const PAGE_W    = 210;
 const PAGE_H    = 297;
@@ -115,6 +117,49 @@ function makeRenderer(doc) {
     return bw + 2.5;
   };
 
+  // Tarjeta con fondo y borde de color, replicando visualmente una tarjeta destacada de la
+  // ficha en pantalla (no solo un título de sección con texto plano debajo). Pre-calcula la
+  // altura total antes de dibujar el rectángulo de fondo, porque en jsPDF hay que dibujar el
+  // fondo antes que el texto que va encima.
+  const addHighlightedCard = (title, titleColor, bgColor, borderColor, fields) => {
+    const present = fields.filter(f => f.text);
+    if (!present.length) return;
+
+    const measured = present.map(f => {
+      setFont(8.5, 'normal', LGRAY);
+      const lines = doc.splitTextToSize(String(f.text), CONTENT_W - 12);
+      return { ...f, lines };
+    });
+    let contentH = 12; // padding superior + título
+    measured.forEach(f => { contentH += 5 + f.lines.length * 4.5 + 3; });
+    contentH += 3; // padding inferior
+
+    checkBreak(contentH + 6);
+    const boxY = s.y;
+    doc.setFillColor(...bgColor);
+    doc.setDrawColor(...borderColor);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(MARGIN, boxY, CONTENT_W, contentH, 3, 3, 'FD');
+
+    setFont(7, 'bold', titleColor);
+    doc.text(title.toUpperCase(), MARGIN + 5, boxY + 7);
+
+    let y = boxY + 14;
+    measured.forEach(f => {
+      setFont(7.5, 'bold', DARK);
+      doc.text(f.label, MARGIN + 5, y);
+      y += 4.5;
+      setFont(8.5, 'normal', LGRAY);
+      f.lines.forEach(line => {
+        doc.text(line, MARGIN + 5, y);
+        y += 4.5;
+      });
+      y += 3;
+    });
+
+    s.y = boxY + contentH + 7;
+  };
+
   // ── renderReto ───────────────────────────────────────────────────────────────
 
   const renderReto = (reto) => {
@@ -150,6 +195,8 @@ function makeRenderer(doc) {
     if (reto.familia)        bx += drawBadge(reto.familia,        [229,231,235], DARK,   bx, s.y);
     if (reto.ciclo)          bx += drawBadge(reto.ciclo,          [209,250,229], GREEN,  bx, s.y);
     if (reto.nivel_grupo)    bx += drawBadge(`Nivel ${reto.nivel_grupo}`, [243,244,246], GRAY, bx, s.y);
+    if (reto.empresa?.sector) bx += drawBadge(reto.empresa.sector, [243,244,246], GRAY, bx, s.y);
+    if (reto.empresa?.tamano) bx += drawBadge(reto.empresa.tamano, [243,244,246], GRAY, bx, s.y);
     if (reto.centro_educativo || reto.centro)
       drawBadge(reto.centro_educativo || reto.centro, [243,244,246], GRAY, bx, s.y);
 
@@ -160,6 +207,29 @@ function makeRenderer(doc) {
     doc.setLineWidth(0.3);
     doc.line(MARGIN, s.y, MARGIN + CONTENT_W, s.y);
     s.y += 6;
+
+    // ── DATOS RECOGIDOS DE LA EMPRESA ────────────────────────────────────────
+    // Tarjeta destacada (fondo + borde naranja), igual que la tarjeta en pantalla — no un
+    // simple título de sección. Diagnóstico crudo, antes del resumen que redacta la IA debajo.
+    const emp = reto.empresa;
+    if (emp) {
+      addHighlightedCard('Datos recogidos de la empresa', ORANGE, [255, 247, 237], [253, 186, 116], [
+        { label: 'Su día a día', text: emp.dia_a_normal },
+        { label: 'Fricciones de la empresa', text: [emp.friccion_area, emp.friccion_problema].filter(Boolean).join('\n') },
+        { label: 'Consecuencias', text: emp.consecuencias },
+        { label: 'Restricciones', text: emp.restricciones },
+        { label: 'Lo que no quieren', text: emp.lo_que_no_quieren },
+      ]);
+    }
+
+    // ── RESUMEN DE DIAGNÓSTICO (lectura de la IA a partir de los datos de arriba) ──
+    checkBreak(10);
+    setFont(7.5, 'bold', DARK);
+    doc.text('RESUMEN DE DIAGNÓSTICO', MARGIN, s.y);
+    doc.setDrawColor(...DARK);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, s.y + 1.5, MARGIN + CONTENT_W, s.y + 1.5);
+    s.y += 7;
 
     // ── QUIÉN ES / DÍA A DÍA ────────────────────────────────────────────────
     if (reto.quien_es) {
@@ -219,6 +289,20 @@ function makeRenderer(doc) {
         checkBreak(6);
         setFont(8.5, 'bold', DARK);
         doc.text(String(ods), MARGIN + 2, s.y);
+        s.y += 5;
+      });
+      s.y += 3;
+    }
+
+    // ── SOFT SKILLS ──────────────────────────────────────────────────────────
+    if (reto.soft_skills?.length) {
+      addSectionTitle('Soft Skills', PURPLE);
+      reto.soft_skills.forEach(skill => {
+        checkBreak(5);
+        setFont(8.5, 'bold', PURPLE);
+        doc.text('•', MARGIN + 2, s.y);
+        setFont(8.5, 'normal', DARK);
+        doc.text(String(skill), MARGIN + 7, s.y);
         s.y += 5;
       });
       s.y += 3;

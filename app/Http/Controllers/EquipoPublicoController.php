@@ -12,6 +12,7 @@ use App\Http\Requests\UpdateEquipoTareaRequest;
 use App\Http\Requests\StoreEquipoReflexionRequest;
 use App\Http\Requests\StoreEquipoPrototipoRequest;
 use App\Http\Requests\SugerirHallazgoRequest;
+use App\Http\Resources\MicroretoFichaResource;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
 use App\Models\EquipoMiembro;
@@ -150,7 +151,10 @@ class EquipoPublicoController extends Controller
             return response()->json(['error' => 'Este proyecto no tiene un reto asociado.'], 404);
         }
 
-        return response()->json(MicroretoFichaService::enriquecer($reto));
+        // MicroretoFichaResource: whitelist explícita de campos — este endpoint es público
+        // (solo requiere el token del equipo), nunca debe devolver el modelo Empresa crudo
+        // (CIF, teléfono, email, persona de contacto, dirección quedan fuera a propósito).
+        return response()->json(new MicroretoFichaResource(MicroretoFichaService::enriquecer($reto)));
     }
 
     // ── Guardar datos de fase ────────────────────────────────────────────────
@@ -213,17 +217,20 @@ class EquipoPublicoController extends Controller
         return response()->json(['ok' => true, 'fase_actual' => $equipo->fresh()->fase_actual]);
     }
 
-    // Secuencia genérica de tareas — proceso de trabajo (buscar, organizar, idear,
-    // construir, revisar, entregar), no pasos de una solución concreta — que se
-    // precarga como plantilla editable al entrar en F2. El QA interno es obligatoria:
-    // el equipo no puede borrarla (ver destroyTarea()).
+    // Secuencia genérica de tareas — proceso de trabajo (buscar, organizar, idear, elegir,
+    // construir, revisar, entregar), no pasos de una solución concreta — que se precarga como
+    // plantilla editable al entrar en F2. Hay dos obligatorias que el equipo no puede borrar
+    // (ver destroyTarea()): elegir la solución entre las sugerencias y el QA final. El frontend
+    // las ordena siempre igual: la de elegir solución al principio, QA al final (ver
+    // tareasGenericas/prioridadTarea en EquipoWorkspace.vue), independientemente de este orden.
     const TAREAS_GENERICAS = [
         ['descripcion' => 'Buscar información sobre vuestra propuesta (referencias, ejemplos similares, datos que la apoyen)', 'obligatoria' => false],
         ['descripcion' => 'Organizar la información recopilada y decidir qué vais a usar', 'obligatoria' => false],
         ['descripcion' => 'Lluvia de ideas en equipo: cómo llevar a la práctica vuestra solución', 'obligatoria' => false],
+        ['descripcion' => 'Elegid en equipo las soluciones que vais a llevar a cabo', 'obligatoria' => true],
         ['descripcion' => 'Convertir el prototipo inicial en una versión más detallada', 'obligatoria' => false],
         ['descripcion' => 'Revisar el diseño final: que sea claro, usable y esté bien presentado', 'obligatoria' => false],
-        ['descripcion' => 'QA interno: revisar entre todo el equipo antes de dar nada por terminado', 'obligatoria' => true],
+        ['descripcion' => 'QA (control de calidad): revisad entre todo el equipo el trabajo antes de dar nada por terminado', 'obligatoria' => true],
         ['descripcion' => 'Preparar la entrega final (versión editable + versión para compartir)', 'obligatoria' => false],
     ];
 
@@ -296,29 +303,38 @@ class EquipoPublicoController extends Controller
 
         $existentes = collect($request->validated('existentes', []))
             ->map(fn($h) => trim($h))
-            ->filter()
-            ->values();
+            ->filter();
+
+        $sugeridasIa = collect($request->validated('sugeridas_ia', []))
+            ->map(fn($h) => trim($h))
+            ->filter();
+
+        // Unimos lo que el equipo ya tiene escrito con lo que la IA ya generó en esta sesión
+        // (aunque el equipo lo haya borrado de su lista): en ambos casos no queremos repetirlo.
+        $noRepetir = $existentes->merge($sugeridasIa)->unique()->values();
 
         $prompt = $contexto;
-        if ($existentes->isNotEmpty()) {
-            $prompt .= "\n\nHallazgos ya propuestos en esta sesión (genera uno DISTINTO, no los repitas ni parafrasees):\n- "
-                . $existentes->implode("\n- ");
+        if ($noRepetir->isNotEmpty()) {
+            $prompt .= "\n\nHallazgos ya propuestos en esta sesión, tuyos o del equipo (genera uno DISTINTO, no los repitas ni parafrasees):\n- "
+                . $noRepetir->implode("\n- ");
         }
 
         // La lista de hallazgos ya propuestos forma parte de la clave de caché: cada clic sucesivo
         // cambia el prompt (evita repetir), así que también cambia la clave y dispara una llamada nueva.
-        $cacheKey  = 'hallazgo_ejemplo_' . md5($prompt);
+        // El sufijo de versión cambia cuando se retoca el prompt — evita servir de caché una
+        // respuesta generada con una redacción antigua para el mismo contexto.
+        $cacheKey  = 'hallazgo_ejemplo_v2_' . md5($prompt);
         $resultado = Cache::remember($cacheKey, now()->addHours(6), function () use ($prompt) {
             $response = Http::withToken(config('services.openai.key'))
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model'    => 'gpt-4o',
                     'messages' => [
-                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a analizar el reto de una empresa. A partir del contexto, redacta UN hallazgo de ejemplo: un dato o conclusión concreta (no genérica) que justificaría una propuesta de solución. Es solo un ejemplo para guiar al equipo — ellos añadirán más hallazgos propios. Escríbelo en UNA sola frase corta (máximo 25 palabras), con lenguaje sencillo y directo, fácil de entender para alumnado de FP — nada de tecnicismos ni frases largas.'],
+                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a analizar el reto de una empresa. Redacta UN hallazgo de ejemplo: una OBSERVACIÓN sobre la situación o el problema actual de la empresa, apoyada en el contexto (quiénes son, su día a día, qué necesitan, sus dificultades) — algo que ya está pasando o que falta hoy, no algo que la empresa podría hacer en el futuro. Un hallazgo NUNCA debe mencionar una solución, tecnología, sistema o proceso a construir, ni predecir resultados de algo que todavía no existe — eso es una propuesta de solución, no un hallazgo, y se trabaja en otra fase distinta. Ejemplo de hallazgo VÁLIDO: "La empresa no lleva ningún registro histórico de cuándo florecen sus plantas cada año." Ejemplo NO VÁLIDO porque ya describe una solución: "Registrando la temperatura se podría predecir la cosecha con un 85% de precisión." No inventes cifras, porcentajes ni estadísticas que no estén explícitas en el contexto — si no hay datos numéricos, razona en términos cualitativos. Es solo un ejemplo para guiar al equipo — ellos añadirán más hallazgos propios. Escríbelo en UNA sola frase corta (máximo 25 palabras), con lenguaje sencillo y directo, fácil de entender para alumnado de FP — nada de tecnicismos ni frases largas.'],
                         ['role' => 'user',   'content' => "Contexto del reto:\n{$prompt}\nDevuelve SOLO este JSON:\n{\"hallazgo\":\"texto del hallazgo de ejemplo\"}"],
                     ],
                     'response_format' => ['type' => 'json_object'],
-                    'temperature'     => 0.9,
+                    'temperature'     => 0.6,
                 ]);
 
             if (!$response->successful()) return null;
@@ -334,41 +350,54 @@ class EquipoPublicoController extends Controller
 
     /**
      * POST /api/equipo/{token}/fase/2/sugerir-tareas
-     * Genera 3-4 tareas para la sección "tareas más complejas" (tipo=detalle_solucion):
-     * un poco más concretas que las genéricas precargadas, detallando la propuesta de F1
-     * sin llegar a diseñar la solución técnica al completo. Recibe las tareas de este tipo
-     * que el equipo ya tiene para no repetirlas.
+     * Genera 3-4 sugerencias de posibles soluciones (tipo=detalle_solucion) a partir de la
+     * propuesta inicial del equipo, las necesidades/limitaciones/pregunta del reto y el
+     * prototipo elegido. Son ideas a valorar por el equipo, no tareas de trabajo — no llevan
+     * estado ni responsable. Recibe las sugerencias que el equipo ya tiene para no repetirlas.
      */
     public function sugerirTareas($token): JsonResponse
     {
         $equipo = Equipo::with('microproyecto.microreto', 'fases', 'tareas')->where('token', $token)->firstOrFail();
-        $mr        = $equipo->microproyecto->microreto;
-        $fase1     = $equipo->fases->firstWhere('numero_fase', 1);
-        $propuesta = $fase1->datos['propuesta'] ?? null;
+        $mr           = $equipo->microproyecto->microreto;
+        $fase2        = $equipo->fases->firstWhere('numero_fase', 2);
+        $propuesta    = $fase2->datos['propuesta'] ?? null;
+        $explicacion  = $fase2->datos['explicacion_propuesta'] ?? null;
 
         if (!$propuesta) {
-            return response()->json(['error' => 'Completad primero la propuesta de solución en la fase de Análisis del reto.'], 422);
+            return response()->json(['error' => 'Completad primero la propuesta inicial de solución de esta fase.'], 422);
         }
 
-        $tareasExistentes = $equipo->tareas->where('tipo', 'detalle_solucion')->pluck('descripcion')->filter()->values();
+        $sugerenciasExistentes = $equipo->tareas->where('tipo', 'detalle_solucion')->pluck('descripcion')->filter()->values();
 
-        $contexto = "Propuesta de solución del equipo: {$propuesta}\n" . $this->contextoMicroreto($mr);
-        if ($tareasExistentes->isNotEmpty()) {
-            $contexto .= "\n\nTareas de este tipo que el equipo ya tiene (no las repitas ni las parafrasees, proponed otras distintas):\n- "
-                . $tareasExistentes->implode("\n- ");
+        $contexto = "Propuesta inicial de solución del equipo: {$propuesta}\n";
+        if ($explicacion) {
+            $contexto .= "Por qué creen que responde al reto: {$explicacion}\n";
+        }
+        $contexto .= $this->contextoMicroreto($mr);
+
+        $tipoPrototipo = $fase2->datos['tipo_prototipo'] ?? null;
+        if ($tipoPrototipo) {
+            $contexto .= "Prototipo elegido por el equipo: {$tipoPrototipo}\n";
         }
 
-        // La lista de tareas ya existentes forma parte de la clave de caché: cada tarea añadida
-        // cambia el prompt (evita repetir), así que también cambia la clave y dispara una llamada nueva.
-        $cacheKey  = 'tareas_sugeridas_' . md5($contexto);
+        if ($sugerenciasExistentes->isNotEmpty()) {
+            $contexto .= "\n\nSugerencias de este tipo que el equipo ya tiene (no las repitas ni las parafrasees, proponed otras distintas):\n- "
+                . $sugerenciasExistentes->implode("\n- ");
+        }
+
+        // La lista de sugerencias ya existentes forma parte de la clave de caché: cada sugerencia
+        // añadida cambia el prompt (evita repetir), así que también cambia la clave y dispara una llamada nueva.
+        // El sufijo de versión cambia cuando se retoca el prompt — evita servir de caché una
+        // respuesta generada con una redacción antigua para el mismo contexto.
+        $cacheKey  = 'soluciones_sugeridas_v2_' . md5($contexto);
         $resultado = Cache::remember($cacheKey, now()->addHour(), function () use ($contexto) {
             $response = Http::withToken(config('services.openai.key'))
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model'    => 'gpt-4o',
                     'messages' => [
-                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a detallar y construir SU propuesta de solución. A partir de la propuesta y el contexto del reto, genera entre 3 y 4 tareas algo más concretas y complejas que las tareas genéricas de trabajo (buscar información, organizar, lluvia de ideas) que el equipo ya tiene — pueden mencionar aspectos concretos de la propuesta (qué construir, qué contenidos o elementos incluir), pero SIN diseñar la solución técnica al detalle ni proponer una arquitectura o especificación completa: siguen siendo tareas de trabajo para el equipo, no una solución hecha por ti. No incluyas tareas de QA ni de entrega final, esas ya están cubiertas aparte.'],
-                        ['role' => 'user',   'content' => "Contexto:\n{$contexto}\nDevuelve SOLO este JSON:\n{\"tareas\":[\"tarea concreta sobre la propuesta\"]}"],
+                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a explorar posibles soluciones para SU propuesta. A partir de la propuesta inicial, las necesidades y limitaciones de la empresa, la pregunta del reto y el prototipo elegido, genera entre 3 y 4 sugerencias de solución: cada una debe describir una ACCIÓN O ARTEFACTO CONCRETO que el equipo podría construir o hacer (una funcionalidad, un formato, un enfoque técnico o de proceso) — nunca una observación sobre cómo es la empresa o cuál es su problema, eso ya se analizó en la fase anterior y no debe repetirse aquí. Ejemplo VÁLIDO: "Crear una plantilla compartida donde el equipo de campo anote la floración semana a semana." Ejemplo NO VÁLIDO porque es un hallazgo, no una solución: "La empresa no tiene ningún sistema para registrar la floración." No son tareas de trabajo ni pasos a ejecutar y marcar como hechos, son ideas concretas que el equipo debe valorar con criterio propio, sin llegar a diseñar la solución técnica al detalle ni proponer una arquitectura o especificación completa. No incluyas nada relativo a QA ni a la entrega final, eso ya está cubierto aparte.'],
+                        ['role' => 'user',   'content' => "Contexto:\n{$contexto}\nDevuelve SOLO este JSON:\n{\"sugerencias\":[\"sugerencia concreta de posible solución\"]}"],
                     ],
                     'response_format' => ['type' => 'json_object'],
                     'temperature'     => 0.6,
@@ -378,12 +407,12 @@ class EquipoPublicoController extends Controller
             return json_decode($response->json()['choices'][0]['message']['content'], true);
         });
 
-        if (!$resultado || empty($resultado['tareas'])) {
+        if (!$resultado || empty($resultado['sugerencias'])) {
             return response()->json(['error' => 'No se pudo generar la sugerencia. Inténtalo de nuevo.'], 502);
         }
 
         $orden   = (int) (EquipoTarea::where('equipo_id', $equipo->id)->max('orden') ?? -1);
-        $creadas = collect($resultado['tareas'])->map(function ($descripcion) use ($equipo, &$orden) {
+        $creadas = collect($resultado['sugerencias'])->map(function ($descripcion) use ($equipo, &$orden) {
             $orden++;
             return EquipoTarea::create([
                 'equipo_id'   => $equipo->id,
@@ -406,6 +435,7 @@ class EquipoPublicoController extends Controller
         if ($mr->pregunta_reto) $contexto .= "Pregunta del reto: {$mr->pregunta_reto}\n";
         if ($mr->que_necesitan) $contexto .= "Qué necesitan: " . implode('; ', $mr->que_necesitan) . "\n";
         if ($mr->dificultades)  $contexto .= "Dificultades: " . implode('; ', $mr->dificultades) . "\n";
+        if ($mr->limitaciones)  $contexto .= "Limitaciones: " . implode('; ', $mr->limitaciones) . "\n";
 
         return $contexto;
     }
@@ -631,6 +661,8 @@ class EquipoPublicoController extends Controller
             'tareas' => $equipo->tareas->map(fn($t) => [
                 'id'          => $t->id,
                 'descripcion' => $t->descripcion,
+                'tipo'        => $t->tipo,
+                'obligatoria' => $t->obligatoria,
                 'responsable' => $t->responsable,
                 'estado'      => $t->estado,
             ]),
@@ -684,18 +716,35 @@ class EquipoPublicoController extends Controller
         ];
     }
 
+    // Upsert, no destructivo: F0 ya se precarga con los miembros que el docente dio de alta
+    // al crear el encuentro (ver EncuentroController::crearCodigo()). Un delete()+create()
+    // completo aquí borraría ese reparto en cuanto el equipo guardara F0 la primera vez.
     private function sincronizarMiembros(Equipo $equipo, array $miembros): void
     {
-        $equipo->miembros()->delete();
+        $existentes  = $equipo->miembros()->pluck('id')->all();
+        $conservados = [];
+
         foreach ($miembros as $m) {
-            if (!empty($m['nombre'])) {
-                $equipo->miembros()->create([
-                    'nombre'        => $m['nombre'],
-                    'rol'           => $m['rol'] ?? null,
-                    'fortalezas'    => $m['fortalezas'] ?? [],
-                    'puntos_mejora' => $m['puntos_mejora'] ?? [],
-                ]);
+            if (empty($m['nombre'])) {
+                continue;
+            }
+
+            $datos = [
+                'nombre'        => $m['nombre'],
+                'rol'           => $m['rol'] ?? null,
+                'fortalezas'    => $m['fortalezas'] ?? [],
+                'puntos_mejora' => $m['puntos_mejora'] ?? [],
+            ];
+
+            if (!empty($m['id']) && in_array($m['id'], $existentes, true)) {
+                $equipo->miembros()->whereKey($m['id'])->update($datos);
+                $conservados[] = $m['id'];
+            } else {
+                $conservados[] = $equipo->miembros()->create($datos)->id;
             }
         }
+
+        // Solo se borran los miembros que el equipo quitó explícitamente de su lista.
+        $equipo->miembros()->whereNotIn('id', $conservados)->delete();
     }
 }

@@ -181,6 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Ruta específica antes de la paramétrica {id} — si no, "mis-grupos" se capturaría como {id}
         Route::get('/encuentros/mis-grupos',               [EncuentroController::class, 'misGrupos']);
         Route::post('/encuentros/{id}/crear-codigo',       [EncuentroController::class, 'crearCodigo'])->whereNumber('id');
+        Route::patch('/encuentros/{id}/reestructurar-equipos', [EncuentroController::class, 'reestructurarEquipos'])->whereNumber('id');
         Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
         Route::get('/encuentros/{id}',                     [EncuentroController::class, 'show']);
         Route::put('/encuentros/{id}',                     [EncuentroController::class, 'update'])->whereNumber('id');
