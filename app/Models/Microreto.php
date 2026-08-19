@@ -22,7 +22,7 @@ class Microreto extends Model
         'curso',
         'ciclo_id',         // FK (nueva)
         'ciclo',            // legacy — se mantiene hasta completar backfill
-        'modulo', 'duracion', 'es_simulado',
+        'modulo', 'multimodulo', 'duracion', 'es_simulado',
     ];
 
     // Genera un UUID automáticamente al crear cada microreto nuevo
@@ -46,6 +46,7 @@ class Microreto extends Model
         'tips_profesorado'   => 'array',
         'variantes'          => 'array',
         'es_simulado'        => 'boolean',
+        'multimodulo'        => 'boolean',
     ];
 
     public function demo()

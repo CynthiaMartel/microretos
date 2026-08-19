@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use App\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Sanctum SPA stateful: cookies HttpOnly de sesión en vez de Bearer token en
+        // localStorage. Añade EnsureFrontendRequestsAreStateful al grupo 'api' y activa
+        // el sub-pipeline de sesión/CSRF ya declarado en config/sanctum.php.
+        $middleware->statefulApi();
+
         // Cabeceras de seguridad HTTP en todas las respuestas
         $middleware->append(SecurityHeaders::class);
 

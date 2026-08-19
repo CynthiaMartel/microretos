@@ -1,3 +1,4 @@
+<!-- Ruta: /retos (name: biblioteca). Antes vivía en /biblioteca — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
@@ -54,16 +55,15 @@ const ciclosDisponibles = computed(() => {
 const cursosDisponibles = computed(() => {
   let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
-  // 'transversal' se muestra aparte (botón fijo), no mezclado en el orden numérico 1º/2º.
-  return [...new Set(d.map(m => m.curso).filter(v => v != null && v !== 'transversal'))].sort((a, b) => a - b);
+  // 'ambos_cursos' se muestra aparte (botón fijo), no mezclado en el orden numérico 1º/2º.
+  return [...new Set(d.map(m => m.curso).filter(v => v != null && v !== 'ambos_cursos'))].sort((a, b) => a - b);
 });
 
-// Un reto transversal vale para 1º y 2º a la vez (módulo presente en ambos
-// cursos, o reto generado para encajar con varios módulos del ciclo).
-const hayRetosTransversales = computed(() => {
+// Un reto "ambos cursos" vale para 1º y 2º a la vez (cruza módulos de los dos años).
+const hayRetosAmbosCursos = computed(() => {
   let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
-  return d.some(m => m.curso === 'transversal');
+  return d.some(m => m.curso === 'ambos_cursos');
 });
 
 // Conteo por nivel dentro de familia+centro (sin aplicar otros filtros activos)
@@ -121,7 +121,11 @@ const microretosFiltrados = computed(() => {
       (filtroCentro.value === '' || centro === filtroCentro.value) &&
       (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
       (filtroNivel.value  === '' || reto.nivel_grupo === filtroNivel.value) &&
-      (filtroCurso.value  === '' || String(reto.curso) === filtroCurso.value || (filtroCurso.value !== 'transversal' && reto.curso === 'transversal')) &&
+      (filtroCurso.value  === ''
+        || String(reto.curso) === filtroCurso.value
+        // 2º puede con todo: su propio curso, el de 1º (ya cursado) y los transversales.
+        || (filtroCurso.value === '2' && (reto.curso === 'ambos_cursos' || String(reto.curso) === '1'))
+      ) &&
       infoOk && empresaOk &&
       (!q || [reto.titulo, reto.pregunta_reto, reto.empresa_nombre, reto.ciclo]
         .some(f => f && f.toLowerCase().includes(q)))
@@ -327,10 +331,13 @@ const cancelarEliminar = () => { modalVisible.value = false; retoAEliminar.value
 const onRetoEliminado = ({ id, titulo }) => {
   microretos.value = microretos.value.filter(m => m.id !== id);
   cancelarEliminar();
-  mostrarSnack(`"${titulo}" movido a la papelera.`, 'ok', {
-    label: 'Ir a la papelera',
-    fn: () => router.push({ name: 'papelera' }),
-  });
+  // La papelera de "Base de datos" es solo superadmin — para el resto de roles,
+  // el mensaje se queda sin acción de "ir a" (ya no tienen esa ruta disponible).
+  mostrarSnack(
+    `"${titulo}" movido a la papelera.`,
+    'ok',
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null,
+  );
 };
 
 // ── SNACKBAR ─────────────────────────────────────────────
@@ -441,9 +448,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   {{ generandoPDFGrupo ? 'Generando...' : `PDF centro (${countCentroActual})` }}
                 </button>
 
-                <!-- Acceso directo a la papelera -->
+                <!-- Acceso directo a la papelera — la papelera de "Base de datos" es solo superadmin;
+                     admin gestiona su propia papelera de cuentas desde /usuarios, no desde aquí. -->
                 <button
-                  v-if="!authStore.isEmpresa"
+                  v-if="authStore.isSuperAdmin"
                   @click="router.push({ name: 'papelera' })"
                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-widest border border-gray-200 text-gray-500 bg-gray-50 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
                   title="Ver elementos eliminados en la papelera">
@@ -954,14 +962,14 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                       {{ curso }}º
                     </button>
                     <button
-                      v-if="hayRetosTransversales"
-                      @click="filtroCurso = filtroCurso === 'transversal' ? '' : 'transversal'"
-                      title="Transversal: posibilidad 1º y/o 2º"
+                      v-if="hayRetosAmbosCursos"
+                      @click="filtroCurso = filtroCurso === 'ambos_cursos' ? '' : 'ambos_cursos'"
+                      title="Ambos Cursos: posibilidad 1º y 2º"
                       class="flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all border"
-                      :class="filtroCurso === 'transversal'
+                      :class="filtroCurso === 'ambos_cursos'
                         ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-sm'
                         : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-400 hover:text-[#1F2937]'">
-                      Transversal
+                      Ambos Cursos
                     </button>
                   </div>
                 </div>
@@ -1116,8 +1124,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                       {{ reto.ciclo }}
                     </span>
                     <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0"
-                          :title="reto.curso === 'transversal' ? 'Transversal: posibilidad 1º y/o 2º' : ''">
-                      {{ reto.curso === 'transversal' ? 'Transversal' : reto.curso + 'º curso' }}
+                          :title="reto.curso === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''">
+                      {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos' : reto.curso + 'º curso' }}
                     </span>
                   </div>
                 </div>

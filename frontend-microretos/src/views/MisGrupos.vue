@@ -1,8 +1,13 @@
+<!-- Ruta: /mis-equipos (name: mis-equipos). Antes /mis-grupos, y antes /dashboard/mis-grupos — ver
+     router/index.js. El componente sigue llamándose MisGrupos.vue (no renombrado a propósito, para
+     no ampliar el diff): la ruta pasó a "equipos" porque "grupo" ya significa la clase/curso del
+     encuentro (Encuentro.grupo, ej. "2ºB"), y esta vista sigue el progreso de los EQUIPOS de
+     alumnado — el endpoint de backend GET /encuentros/mis-grupos tampoco se ha tocado. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
-import { FASES_PROYECTO } from '../config/fasesProyecto.js'
+import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 
 const router = useRouter()
 
@@ -12,7 +17,16 @@ const grupos   = ref([])
 
 const encuentroAbierto = ref(null)
 const equipoAbierto    = ref(null)
-const faseAbierta      = ref(null)
+
+// ── Copiar código (acceso workspace / desbloqueo IA) ────────────────────────
+const codigoCopiado = ref(null)
+async function copiarCodigo(codigo) {
+  try {
+    await navigator.clipboard.writeText(codigo)
+    codigoCopiado.value = codigo
+    setTimeout(() => { if (codigoCopiado.value === codigo) codigoCopiado.value = null }, 1200)
+  } catch { /* clipboard no disponible */ }
+}
 
 const ROLES = {
   portavoz:      { label: 'Portavoz',       color: 'bg-blue-100 text-blue-700' },
@@ -37,39 +51,23 @@ async function cargar() {
 function toggleEncuentro(id) {
   encuentroAbierto.value = encuentroAbierto.value === id ? null : id
   equipoAbierto.value = null
-  faseAbierta.value = null
 }
 
 function toggleEquipo(id) {
   equipoAbierto.value = equipoAbierto.value === id ? null : id
-  faseAbierta.value = null
-}
-
-function toggleFase(equipoId, faseNum) {
-  const key = `${equipoId}-${faseNum}`
-  faseAbierta.value = faseAbierta.value === key ? null : key
-}
-
-function faseEstaAbierta(equipoId, faseNum) {
-  return faseAbierta.value === `${equipoId}-${faseNum}`
 }
 
 function progresoPct(equipo) {
-  return Math.round((equipo.fases_completas / 5) * 100)
+  return progresoPonderado(equipo.fases)
 }
 
-function formatDatos(datos) {
-  if (!datos) return []
-  const entries = []
-  for (const [k, v] of Object.entries(datos)) {
-    if (k === 'evaluacion_docente') continue
-    if (v && typeof v === 'string' && v.trim()) {
-      entries.push({ clave: k.replace(/_/g, ' '), valor: v })
-    } else if (Array.isArray(v) && v.length) {
-      entries.push({ clave: k.replace(/_/g, ' '), valor: v.join(' · ') })
-    }
-  }
-  return entries
+// Estado del chip de fase (color + texto) — misma jerarquía que MisGruposDetalle, pero
+// aquí solo es un resumen: el detalle real vive en "Detalle equipos" (MisGruposDetalle.vue).
+function estadoFase(equipo, faseNum) {
+  if (equipo.fases[faseNum]?.validado_docente) return { label: 'Validado', cls: 'bg-emerald-500 text-white' }
+  if (equipo.fases[faseNum]?.completada)       return { label: 'Completa', cls: 'bg-[#00A859]/20 text-[#00A859]' }
+  if (equipo.fase_actual === faseNum)          return { label: 'En curso', cls: 'bg-blue-100 text-blue-600 ring-1 ring-blue-300' }
+  return { label: 'Pendiente', cls: 'bg-gray-100 text-gray-400' }
 }
 
 function estadoBadge(equipo) {
@@ -83,12 +81,72 @@ const gruposConAlerta = computed(() =>
   grupos.value.filter(g => g.equipos.some(e => e.fase_actual === 0 && e.fases_completas === 0))
 )
 
+// Un grupo (encuentro) se considera "completado" solo si TODOS sus equipos han
+// terminado las 5 fases — con un solo equipo a medias, el grupo sigue "en progreso".
+function grupoCompletado(g) {
+  return g.equipos.length > 0 && g.equipos.every(e => e.fases_completas === 5)
+}
+
+// ── Búsqueda y filtros ──────────────────────────────────────────────────────
+const busqueda      = ref('')
+const filtroCurso   = ref('')
+const filtroFamilia = ref('')
+const filtroEstado  = ref('') // '' | 'progreso' | 'completado'
+
+const cursosDisponibles = computed(() =>
+  [...new Set(grupos.value.map(g => g.encuentro.curso).filter(Boolean))].sort()
+)
+const familiasDisponibles = computed(() =>
+  [...new Set(grupos.value.map(g => g.proyecto?.familia).filter(Boolean))].sort()
+)
+
+const hayFiltrosActivos = computed(() => !!(busqueda.value || filtroCurso.value || filtroFamilia.value || filtroEstado.value))
+function limpiarFiltros() {
+  busqueda.value = ''
+  filtroCurso.value = ''
+  filtroFamilia.value = ''
+  filtroEstado.value = ''
+}
+
+const gruposFiltrados = computed(() => {
+  const q = busqueda.value.toLowerCase().trim()
+  return grupos.value.filter(g => {
+    if (filtroCurso.value   && g.encuentro.curso !== filtroCurso.value) return false
+    if (filtroFamilia.value && g.proyecto?.familia !== filtroFamilia.value) return false
+    if (filtroEstado.value === 'completado' && !grupoCompletado(g)) return false
+    if (filtroEstado.value === 'progreso'   &&  grupoCompletado(g)) return false
+    if (!q) return true
+    const enTexto = [g.encuentro.grupo, g.encuentro.ciclo_formativo, g.proyecto?.titulo, g.proyecto?.familia]
+      .filter(Boolean)
+      .some(t => t.toLowerCase().includes(q))
+    const enEquipos = g.equipos.some(e => e.nombre?.toLowerCase().includes(q))
+    return enTexto || enEquipos
+  })
+})
+
+// Separación explícita en dos secciones — no solo un contador, la lista también
+// se agrupa visualmente por estado. gruposOrdenados concatena ambas para recorrerlas
+// en un único v-for y pintar la cabecera de sección solo al cambiar de grupo.
+const gruposEnProgreso  = computed(() => gruposFiltrados.value.filter(g => !grupoCompletado(g)))
+const gruposCompletados = computed(() => gruposFiltrados.value.filter(g => grupoCompletado(g)))
+const gruposOrdenados   = computed(() => [...gruposEnProgreso.value, ...gruposCompletados.value])
+
+// Contadores — sobre lo que hay visible tras aplicar búsqueda/filtros, para que
+// sirvan también como resumen de "cuántos equipos hay en este recorte".
+const equiposVisibles    = computed(() => gruposFiltrados.value.flatMap(g => g.equipos))
+const totalEquipos       = computed(() => equiposVisibles.value.length)
+const equiposCompletados = computed(() => equiposVisibles.value.filter(e => e.fases_completas === 5).length)
+const equiposSinIniciar  = computed(() => equiposVisibles.value.filter(e => e.fase_actual === 0 && e.fases_completas === 0).length)
+const equiposEnProgreso  = computed(() => totalEquipos.value - equiposCompletados.value - equiposSinIniciar.value)
+
 onMounted(cargar)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+  <div class="min-h-screen bg-[#F8FAFC] pt-12">
+    <!-- top-12 (no top-0): la TopBar global es fixed h-12 con z-50 — con top-0 esta
+         cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
+    <div class="sticky top-12 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <button @click="router.back()"
               class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,23 +174,135 @@ onMounted(cargar)
           <p class="text-gray-400 text-sm">Todavía no tienes encuentros con equipos creados.</p>
         </div>
 
+        <template v-else>
+          <!-- Contadores -->
+          <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="text-center">
+                <p class="text-2xl font-black text-[#121212]">{{ gruposFiltrados.length }}</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Grupos</p>
+              </div>
+              <div class="text-center">
+                <p class="text-2xl font-black text-[#00A859]">{{ totalEquipos }}</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Equipos</p>
+              </div>
+              <div class="text-center">
+                <p class="text-2xl font-black text-blue-600">{{ equiposEnProgreso }}</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">En progreso</p>
+              </div>
+              <div class="text-center">
+                <p class="text-2xl font-black text-emerald-600">{{ equiposCompletados }}</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Completados</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Búsqueda y filtros -->
+          <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-3">
+            <div class="relative">
+              <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input v-model="busqueda" type="text"
+                     placeholder="Buscar por grupo, proyecto, ciclo o equipo..."
+                     class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium
+                            text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-[#00A859]
+                            focus:ring-2 focus:ring-[#00A859]/10 outline-none transition-all"/>
+              <button v-if="busqueda" @click="busqueda = ''"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center
+                             rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
+                <button @click="filtroEstado = ''"
+                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors',
+                                 filtroEstado === '' ? 'bg-[#1F2937] text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
+                  Todos
+                </button>
+                <button @click="filtroEstado = 'progreso'"
+                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors border-l border-gray-200',
+                                 filtroEstado === 'progreso' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
+                  En progreso
+                </button>
+                <button @click="filtroEstado = 'completado'"
+                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors border-l border-gray-200',
+                                 filtroEstado === 'completado' ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
+                  Completados
+                </button>
+              </div>
+              <select v-model="filtroCurso" :disabled="!cursosDisponibles.length"
+                      class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
+                             focus:bg-white focus:border-[#00A859] outline-none transition-all disabled:opacity-50">
+                <option value="">Todos los cursos</option>
+                <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ c }}º curso</option>
+              </select>
+              <select v-model="filtroFamilia" :disabled="!familiasDisponibles.length"
+                      class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
+                             focus:bg-white focus:border-[#00A859] outline-none transition-all disabled:opacity-50">
+                <option value="">Todas las familias</option>
+                <option v-for="f in familiasDisponibles" :key="f" :value="f">{{ f }}</option>
+              </select>
+              <button v-if="hayFiltrosActivos" @click="limpiarFiltros"
+                      class="px-3 py-2 text-xs font-black text-gray-500 hover:text-gray-700 uppercase tracking-wider transition-colors">
+                Limpiar filtros
+              </button>
+            </div>
+          </div>
+        </template>
+
         <p v-if="gruposConAlerta.length" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2">
           {{ gruposConAlerta.length }} grupo(s) con equipos que todavía no han empezado (Fase 0 sin completar).
         </p>
 
-        <div v-for="g in grupos" :key="g.encuentro.id"
-             class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div v-if="grupos.length && !gruposFiltrados.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
+          <p class="text-gray-400 text-sm">Ningún grupo coincide con los filtros aplicados.</p>
+        </div>
+
+        <!-- Encabezado de la lista: cada tarjeta abre el detalle del trabajo real que el
+             equipo ha hecho en su workspace (F0-F4), no es solo un listado de nombres. -->
+        <p v-if="gruposFiltrados.length" class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
+          Trabajo en el workspace de los equipos
+        </p>
+
+        <template v-for="(g, idx) in gruposOrdenados" :key="g.encuentro.id">
+          <!-- Cabecera de sección — separación explícita entre "en progreso" y "completados",
+               no solo un contador arriba. Se pinta una sola vez, al cambiar de grupo. -->
+          <p v-if="idx === 0 || grupoCompletado(gruposOrdenados[idx - 1]) !== grupoCompletado(g)"
+             class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-2">
+            {{ grupoCompletado(g) ? `Completados (${gruposCompletados.length})` : `En progreso (${gruposEnProgreso.length})` }}
+          </p>
+
+          <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
 
           <button @click="toggleEncuentro(g.encuentro.id)"
                   class="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left">
             <div class="flex-1 min-w-0">
               <p class="font-black text-[#121212]">{{ g.encuentro.grupo || g.proyecto?.titulo || 'Sin nombre' }}</p>
               <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ g.equipos.length }} equipo(s)</p>
+              <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span v-if="g.encuentro.codigo_clase" @click.stop="copiarCodigo(g.encuentro.codigo_clase)"
+                      :title="codigoCopiado === g.encuentro.codigo_clase ? '¡Copiado!' : 'Copiar código workspace alumnado'"
+                      class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 cursor-pointer">
+                  <span class="w-1 h-1 rounded-full bg-[#00A859] shrink-0"></span>
+                  <span class="text-[10px] font-black tracking-wider text-[#00A859]">{{ g.encuentro.codigo_clase }}</span>
+                </span>
+                <span v-if="g.encuentro.codigo_ia" @click.stop="copiarCodigo(g.encuentro.codigo_ia)"
+                      :title="codigoCopiado === g.encuentro.codigo_ia ? '¡Copiado!' : 'Copiar código sugerencia IA alumnado'"
+                      class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 border border-orange-200 cursor-pointer">
+                  <span class="text-[9px] shrink-0">✨</span>
+                  <span class="text-[10px] font-black tracking-wider text-orange-600">{{ g.encuentro.codigo_ia }}</span>
+                </span>
+              </div>
             </div>
-            <button @click.stop="router.push({ name: 'workspace-docente', params: { id: g.encuentro.id } })"
+            <button @click.stop="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
                     class="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors
                            text-[10px] font-black text-gray-600 uppercase tracking-wider">
-              Workspace completo →
+              Detalle equipos →
             </button>
             <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', encuentroAbierto === g.encuentro.id ? 'rotate-180' : '']"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,43 +349,41 @@ onMounted(cargar)
                 </svg>
               </button>
 
-              <div v-if="equipoAbierto === equipo.id" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-2">
-                <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-xl border border-gray-100 overflow-hidden">
-                  <button @click="toggleFase(equipo.id, f.num)"
-                          class="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-50 transition-colors text-left">
-                    <span class="text-sm">{{ f.icono }}</span>
-                    <span class="flex-1 text-xs font-bold text-[#1F2937]">{{ f.label }}</span>
-                    <span v-if="equipo.fases[f.num]?.validado_docente" class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black">Validado</span>
-                    <span v-else-if="equipo.fases[f.num]?.completada" class="px-2 py-0.5 rounded-full bg-[#00A859]/10 text-[#00A859] text-[9px] font-black">Completa</span>
-                    <span v-else-if="equipo.fase_actual === f.num" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-black">En progreso</span>
-                    <span v-else class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 text-[9px] font-semibold">Pendiente</span>
-                  </button>
-                  <div v-if="faseEstaAbierta(equipo.id, f.num)" class="px-3 pb-3 pt-1 space-y-2">
-                    <template v-if="equipo.fases[f.num]?.datos">
-                      <div v-for="entry in formatDatos(equipo.fases[f.num].datos)" :key="entry.clave">
-                        <p class="text-[9px] font-black uppercase tracking-wider text-gray-400">{{ entry.clave }}</p>
-                        <p class="text-xs text-[#1F2937] leading-relaxed whitespace-pre-line">{{ entry.valor }}</p>
-                      </div>
-                    </template>
-                    <p v-else class="text-xs text-gray-400 italic">Sin contenido registrado todavía.</p>
+              <div v-if="equipoAbierto === equipo.id" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+                <!-- Resumen de fases — solo estado, sin contenido: el detalle vive en "Detalle equipos" -->
+                <div class="flex flex-wrap gap-1.5">
+                  <div v-for="f in FASES_PROYECTO" :key="f.num" :title="f.label"
+                       :class="['flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black', estadoFase(equipo, f.num).cls]">
+                    <span class="text-xs leading-none">{{ f.icono }}</span>
+                    <span class="uppercase tracking-wider">F{{ f.num }}</span>
+                    <span class="normal-case font-bold">· {{ estadoFase(equipo, f.num).label }}</span>
                   </div>
                 </div>
 
-                <div v-if="equipo.reflexiones.length" class="pt-1">
-                  <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
-                    Reflexiones ({{ equipo.reflexiones.length }})
-                  </p>
-                  <div v-for="r in equipo.reflexiones" :key="r.id" class="p-2.5 bg-violet-50 border border-violet-100 rounded-xl mb-1.5 last:mb-0">
-                    <div class="flex items-center justify-between mb-1">
-                      <span class="text-[9px] font-black uppercase tracking-wider text-violet-600">{{ r.tipo }}</span>
-                      <span v-if="r.autor_nombre" class="text-[9px] text-gray-400">{{ r.autor_nombre }}</span>
-                    </div>
-                  </div>
+                <div v-if="equipo.codigo_acceso" class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Código de acceso del equipo</span>
+                  <span @click.stop="copiarCodigo(equipo.codigo_acceso)"
+                        :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del equipo'"
+                        class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 cursor-pointer">
+                    <span class="w-1 h-1 rounded-full bg-[#00A859] shrink-0"></span>
+                    <span class="text-[10px] font-black tracking-wider text-[#00A859]">{{ equipo.codigo_acceso }}</span>
+                  </span>
                 </div>
+
+                <p v-if="equipo.reflexiones.length" class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                  {{ equipo.reflexiones.length }} reflexión(es) registrada(s)
+                </p>
+
+                <button @click="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
+                        class="w-full py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100
+                               transition-colors text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                  Ver detalle de equipos →
+                </button>
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        </template>
       </template>
     </div>
   </div>

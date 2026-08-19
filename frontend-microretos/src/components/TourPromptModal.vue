@@ -10,6 +10,7 @@ const emit = defineEmits(['activar', 'omitir'])
 <template>
   <Transition name="tp-fade">
     <div v-if="show"
+         @click.self="emit('omitir')"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div class="relative bg-white border border-gray-200 rounded-[2rem] shadow-2xl max-w-sm w-full p-8">
 

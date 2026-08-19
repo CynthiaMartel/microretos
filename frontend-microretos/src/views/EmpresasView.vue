@@ -38,7 +38,8 @@ const empresaExpandida = ref(null)
 const panelActivo      = ref('')
 
 // ─── Modal bienvenida ─────────────────────────────────────────────────────────
-const mostrarBienvenida = ref(true)
+// Auto-disparo desactivado — reactivar poniendo mostrarBienvenida.value = true si se necesita de nuevo.
+const mostrarBienvenida = ref(false)
 const mostrarEjemplo    = ref(false)
 const modoEjemplo       = ref('')   // 'contactar' | 'validar'
 
@@ -92,8 +93,6 @@ onActivated(() => {
   if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
-  } else {
-    mostrarBienvenida.value = true
   }
 })
 
@@ -102,8 +101,6 @@ watch(() => route.fullPath, () => {
   if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
-  } else {
-    mostrarBienvenida.value = true
   }
 })
 

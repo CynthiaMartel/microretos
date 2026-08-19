@@ -1,3 +1,4 @@
+<!-- Ruta: /panel-docente (name: inicio-docente). Antes vivía en /inicio-docente — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -316,7 +317,7 @@ const alertas = computed(() => {
       lista.push({
         nivel: 'info',
         texto: 'No has registrado ningún encuentro este mes',
-        ruta: '/dashboard',
+        ruta: '/encuentros/crear',
       })
   }
 
@@ -452,7 +453,7 @@ function removeNota(id) {
         </button>
 
         <!-- Alumnado total de encuentros -->
-        <button @click="irA('/dashboard/encuentros')"
+        <button @click="irA('/encuentros')"
                 class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
                        hover:border-purple-300/50 hover:shadow-sm transition-all duration-200">
           <div v-if="!cargandoEncuentros" class="text-2xl font-black text-purple-500 tabular-nums leading-none mb-1">
@@ -504,7 +505,7 @@ function removeNota(id) {
               </svg>
             </div>
             <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay encuentros registrados.</p>
-            <button @click="irA('/dashboard')"
+            <button @click="irA('/encuentros/crear')"
                     class="text-[10px] font-black uppercase tracking-widest text-[#00A859]
                            hover:text-[#00A859]/70 transition-colors">
               Registrar primer encuentro →
@@ -518,7 +519,7 @@ function removeNota(id) {
                   :class="isSessionHovered(s) ? 'bg-blue-50 ring-inset ring-1 ring-blue-100' : 'hover:bg-gray-50/60'"
                   @mouseenter="setHoveredFromSession(s)"
                   @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/dashboard/encuentros', query: { id: s.id } })">
+                  @click="router.push({ path: '/encuentros', query: { id: s.id } })">
                 <div class="flex items-start gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black leading-snug truncate transition-colors"
@@ -556,7 +557,7 @@ function removeNota(id) {
               </li>
             </ul>
             <div class="px-4 py-3 border-t border-gray-50 bg-blue-50/50">
-              <button @click="irA('/dashboard/encuentros')"
+              <button @click="irA('/encuentros')"
                       class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
                              uppercase tracking-widest text-blue-500 hover:text-blue-600
                              transition-colors py-0.5">
@@ -798,7 +799,7 @@ function removeNota(id) {
                     ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'"
                   @mouseenter="setHoveredFromSession(s)"
                   @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/dashboard/encuentros', query: { id: s.id } })">
+                  @click="router.push({ path: '/encuentros', query: { id: s.id } })">
                 <div class="w-2 h-2 rounded shrink-0 mt-1 transition-colors duration-150"
                      :class="hoveredDay === _pf(s.fecha).getDate()
                        ? 'bg-blue-600' : 'bg-blue-500'"></div>
@@ -1127,7 +1128,7 @@ function removeNota(id) {
                 <h3 class="text-white font-black text-sm">Acciones rápidas</h3>
               </div>
               <div class="p-3 grid grid-cols-2 gap-2">
-                <button @click="irA('/microretos')"
+                <button @click="irA('/retos/crear')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
                          bg-[#00A859]/5 border border-[#00A859]/15
                          hover:bg-[#00A859]/12 hover:border-[#00A859]/35 hover:shadow-sm transition-all duration-200">
@@ -1151,7 +1152,7 @@ function removeNota(id) {
                   </div>
                   <span class="text-xs font-black text-[#1F2937] group-hover:text-orange-600 transition-colors leading-tight">Nuevo proyecto</span>
                 </button>
-                <button @click="irA('/biblioteca')"
+                <button @click="irA('/retos')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
                          bg-[#99CC33]/5 border border-[#99CC33]/20
                          hover:bg-[#99CC33]/12 hover:border-[#99CC33]/40 hover:shadow-sm transition-all duration-200">
@@ -1218,7 +1219,7 @@ function removeNota(id) {
                   </svg>
                 </button>
 
-                <button @click="irA('/biblioteca')"
+                <button @click="irA('/retos')"
                   class="group flex items-center gap-3 p-3 rounded-xl text-left
                          bg-[#99CC33]/5 border border-[#99CC33]/20
                          hover:bg-[#99CC33]/12 hover:border-[#99CC33]/40 hover:shadow-sm transition-all duration-200">
@@ -1297,7 +1298,7 @@ function removeNota(id) {
               <h3 class="text-white font-black text-sm">Retos</h3>
             </div>
             <div class="p-3 space-y-2">
-              <button @click="irA('/microretos')"
+              <button @click="irA('/retos/crear')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
                        bg-[#00A859]/5 border border-[#00A859]/15
                        hover:bg-[#00A859]/12 hover:border-[#00A859]/35 hover:shadow-sm
@@ -1321,7 +1322,7 @@ function removeNota(id) {
                 </svg>
               </button>
 
-              <button @click="irA('/biblioteca')"
+              <button @click="irA('/retos')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
                        bg-[#99CC33]/5 border border-[#99CC33]/15
                        hover:bg-[#99CC33]/12 hover:border-[#99CC33]/35 hover:shadow-sm
@@ -1360,7 +1361,7 @@ function removeNota(id) {
               <h3 class="text-white font-black text-sm">Taller de Ideas</h3>
             </div>
             <div class="p-3 space-y-2">
-              <button @click="irA('/dashboard')"
+              <button @click="irA('/encuentros/crear')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
                        bg-amber-400/5 border border-amber-400/15
                        hover:bg-amber-400/10 hover:border-amber-400/35 hover:shadow-sm

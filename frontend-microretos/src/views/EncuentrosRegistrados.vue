@@ -1,15 +1,21 @@
+<!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
+import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
 import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
 import ReestructurarEquipoModal from '../components/ReestructurarEquipoModal.vue'
+import CompartirEncuentroModal from '../components/CompartirEncuentroModal.vue'
+import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
 import api from '../api.js'
-import { duracionPorFase } from '../config/fasesProyecto.js'
+import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
+import { useAuthStore } from '../stores/auth.js'
 
 const router  = useRouter()
 const route   = useRoute()
+const authStore = useAuthStore()
 const cargando = ref(false)
 
 // ─── Modal "¿Qué necesitas?" ──────────────────────────────────────────────────
@@ -18,7 +24,7 @@ const guiaBienvenida = ref(false)
 function seleccionarOpcionBienvenida(opcion) {
   if (opcion === 'crear') {
     guiaBienvenida.value = false
-    router.push('/dashboard')
+    router.push('/encuentros/crear')
   } else {
     guiaBienvenida.value = false
   }
@@ -46,9 +52,8 @@ onMounted(async () => {
   if (idParam) {
     const s = encuentros.value.find(s => String(s.id) === String(idParam))
     if (s) verEncuentro(s)
-  } else {
-    guiaBienvenida.value = true
   }
+  // Auto-disparo desactivado — reactivar poniendo guiaBienvenida.value = true si se necesita de nuevo.
 })
 
 // ── Modal eliminar encuentro ─────────────────────────────────────────────────────
@@ -69,10 +74,11 @@ function onEncuentroEliminado({ id, titulo }) {
   encuentros.value = encuentros.value.filter(s => s.id !== id)
   if (encuentroAbierto.value?.id === id) encuentroAbierto.value = null
   cerrarModalEliminar()
-  mostrarSnack(`Encuentro "${titulo || 'sin título'}" movido a la papelera.`, {
-    label: 'Ir a la papelera',
-    fn: () => router.push({ name: 'papelera' }),
-  })
+  // La papelera de "Base de datos" es solo superadmin — el resto de roles ya no tiene esa ruta.
+  mostrarSnack(
+    `Encuentro "${titulo || 'sin título'}" movido a la papelera.`,
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null,
+  )
 }
 
 // ── Snackbar ──────────────────────────────────────────────────────────────────
@@ -100,7 +106,7 @@ const encuentrosUnicos = computed(() => {
 })
 
 const encuentrosFiltrados = computed(() => {
-  let lista = [...encuentros.value].reverse()
+  let lista = [...encuentros.value].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
 
   if (filtros.value.titulo.trim()) {
     const q = filtros.value.titulo.trim().toLowerCase()
@@ -160,13 +166,36 @@ function toggleCentro(centro) {
 // ─── Modal encuentro ─────────────────────────────────────────────────────────────
 const encuentroAbierto = ref(null)
 
-function verEncuentro(s)     { encuentroAbierto.value = s }
+const { cargandoRaCe, modulosExpandidos, raCeBlocksEncuentro, toggleModulo, cargarRaCe } = useRaCeEncuentro()
+
+async function verEncuentro(s) {
+  encuentroAbierto.value = s
+  await cargarRaCe(s.microproyecto_uuid)
+}
+
 function cerrarEncuentro()   { encuentroAbierto.value = null; editandoFechaFin.value = false }
+
+const seccionAccesoAlumnado = ref(null)
+
+function irAAccesoAlumnado() {
+  seccionAccesoAlumnado.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function alumnadosDelEquipoAbierto(n) {
+  return (encuentroAbierto.value?.alumnados || [])
+    .filter(a => a.equipo_num === n)
+    .map(a => a.nombre)
+}
 
 // ─── Reestructurar equipo ──────────────────────────────────────────────────────
 const reestructurando = ref(null)
 
 function abrirReestructurar(s) { reestructurando.value = s }
+
+// ── Modal compartir encuentro ────────────────────────────────────────────────────
+const compartiendo = ref(null)
+function abrirCompartir(s) { compartiendo.value = s }
+function cerrarCompartir()  { compartiendo.value = null }
 function cerrarReestructurar() { reestructurando.value = null }
 
 function onEquipoReestructurado({ id, num_equipos, alumnados }) {
@@ -213,57 +242,11 @@ const microretoModalId = ref(null)
 function abrirMicroretoModal(id) { microretoModalId.value = id }
 function cerrarMicroretoModal()  { microretoModalId.value = null }
 
-// ─── Modal ver proyecto ───────────────────────────────────────────────────────
-const modalVerProyecto = ref(false)
-const proyectoModal    = ref(null)
-const cargandoModal    = ref(false)
+// ─── Modal ficha de proyecto (card de encuentro) ──────────────────────────────
+const proyectoFichaUuid = ref(null)
 
-async function abrirModalProyecto(uuid) {
-  modalVerProyecto.value = true
-  cargandoModal.value    = true
-  proyectoModal.value    = null
-  try {
-    const res = await api.get(`/startup/proyectos/${uuid}`)
-    proyectoModal.value = res.data
-  } catch {
-    /* no crítico */
-  } finally {
-    cargandoModal.value = false
-  }
-}
-
-function cerrarModalProyecto() {
-  modalVerProyecto.value = false
-  proyectoModal.value    = null
-}
-
-function getBadgeModal(p) {
-  if (!p) return { label: '—', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-300' }
-  const e = p.estado
-  if (e === 'borrador' || e === 'en_edicion')
-    return { label: 'En edición',  cls: 'bg-amber-50 border-amber-200 text-amber-700',    dot: 'bg-amber-400' }
-  if (e === 'archivado')
-    return { label: 'Archivado',   cls: 'bg-gray-100 border-gray-200 text-gray-400',       dot: 'bg-gray-400' }
-  if (e === 'validado') {
-    if (p.empresa_validado && p.docente_validado)
-      return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-    if (p.empresa_validado)
-      return { label: 'Validado · Empresa', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-    if (p.docente_validado)
-      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' }
-    return { label: 'Validado', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-  }
-  if (p.empresa_no_valida_aun)
-    return { label: 'No validar aún', cls: 'bg-red-50 border-red-300 text-red-700',         dot: 'bg-red-400' }
-  if (p.enviado_a_empresa_mail)
-    return { label: 'Enviado · Esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' }
-  return { label: 'Pendiente validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' }
-}
-
-// ─── Crear microproyecto desde encuentro ────────────────────────────────────────
-function crearMicroproyecto(encuentroId) {
-  router.push({ name: 'startup-day-crear', query: { encuentro_id: encuentroId } })
-}
+function abrirProyectoFicha(uuid) { proyectoFichaUuid.value = uuid }
+function cerrarProyectoFicha()    { proyectoFichaUuid.value = null }
 
 // ─── Código de acceso para alumnado ──────────────────────────────────────────
 const creandoCodigo = ref({})
@@ -286,6 +269,30 @@ async function crearCodigo(encuentro) {
     errorCodigo.value = { ...errorCodigo.value, [encuentro.id]: e.response?.data?.error || 'Error al crear el código.' }
   } finally {
     creandoCodigo.value = { ...creandoCodigo.value, [encuentro.id]: false }
+  }
+}
+
+// ─── Código de desbloqueo IA del workspace ──────────────────────────────────
+const creandoCodigoIa = ref({})
+const errorCodigoIa   = ref({})
+
+async function crearCodigoIa(encuentro) {
+  creandoCodigoIa.value = { ...creandoCodigoIa.value, [encuentro.id]: true }
+  errorCodigoIa.value   = { ...errorCodigoIa.value,   [encuentro.id]: '' }
+  try {
+    const res = await api.post(`/encuentros/${encuentro.id}/codigo-ia`)
+    const nuevoCodigo = res.data.codigo_ia
+    encuentros.value = encuentros.value.map(s =>
+      s.id === encuentro.id ? { ...s, codigo_ia: nuevoCodigo } : s
+    )
+    if (encuentroAbierto.value?.id === encuentro.id) {
+      encuentroAbierto.value = { ...encuentroAbierto.value, codigo_ia: nuevoCodigo }
+    }
+    mostrarSnack(`Código IA ${nuevoCodigo} generado.`)
+  } catch (e) {
+    errorCodigoIa.value = { ...errorCodigoIa.value, [encuentro.id]: e.response?.data?.error || 'Error al generar el código.' }
+  } finally {
+    creandoCodigoIa.value = { ...creandoCodigoIa.value, [encuentro.id]: false }
   }
 }
 
@@ -332,14 +339,14 @@ function formatFecha(isoDate) {
       <!-- ─── Cabecera ─────────────────────────────────────────────────────── -->
       <header class="mb-8">
         <!-- Volver -->
-        <button @click="router.push('/dashboard')"
+        <button @click="router.push('/encuentros/crear')"
                 class="inline-flex items-center gap-2 mb-5 text-[10px] font-black uppercase tracking-widest
                        text-gray-400 hover:text-[#00A859] transition-colors group">
           <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform"
                fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
-          Volver al dashboard
+          Volver a crear encuentro
         </button>
 
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -376,7 +383,7 @@ function formatFecha(isoDate) {
             </div>
             <!-- Botón Crear nuevo encuentro -->
             <button
-              @click="router.push('/dashboard')"
+              @click="router.push('/encuentros/crear')"
               class="flex items-center gap-2 px-4 py-2 bg-[#00A859] rounded-2xl border border-[#00A859]
                      shadow-sm text-white text-xs font-black uppercase tracking-wider
                      hover:bg-[#009950] hover:border-[#009950] transition-all"
@@ -387,8 +394,9 @@ function formatFecha(isoDate) {
               </svg>
               Nuevo encuentro
             </button>
-            <!-- Botón Papelera -->
+            <!-- Botón Papelera — la papelera de "Base de datos" es solo superadmin -->
             <button
+              v-if="authStore.isSuperAdmin"
               @click="router.push({ name: 'papelera' })"
               class="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-200
                      shadow-sm text-amber-600 text-xs font-black uppercase tracking-wider
@@ -526,7 +534,7 @@ function formatFecha(isoDate) {
           </svg>
         </div>
         <p class="text-sm text-gray-400 font-medium mb-4">Aún no hay encuentros registrados.</p>
-        <button @click="router.push('/dashboard')"
+        <button @click="router.push('/encuentros/crear')"
                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00A859] text-white
                        text-xs font-black uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
           Registrar primer encuentro
@@ -586,59 +594,24 @@ function formatFecha(isoDate) {
 
                 <!-- Card header -->
                 <div class="px-5 pt-5 pb-4 border-b border-gray-100">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-black text-[#1F2937] leading-snug line-clamp-2
-                                group-hover:text-[#00A859] transition-colors">
-                        {{ s.proyecto_titulo || '(sin título)' }}
-                      </p>
-                      <p class="text-[10px] font-bold text-[#00A859] mt-1">
-                        {{ formatFecha(s.fecha) }}
-                      </p>
-                    </div>
-                    <!-- Acciones en hover -->
-                    <div class="flex gap-1 flex-shrink-0">
-                      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button @click.stop="crearMicroproyecto(s.id)"
-                                class="p-1.5 rounded-lg bg-amber-50 text-amber-500 hover:bg-amber-100 transition-all"
-                                title="Trabajar reto (crear propuesta)">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 17l10 5 10-5"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12l10 5 10-5"/>
-                          </svg>
-                        </button>
-                        <button v-if="s.num_equipos"
-                                @click.stop="abrirReestructurar(s)"
-                                class="p-1.5 rounded-lg bg-violet-50 text-violet-500 hover:bg-violet-100 transition-all"
-                                title="Reestructurar equipo">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                          </svg>
-                        </button>
-                        <button v-if="s.microreto_id"
-                                @click.stop="abrirMicroretoModal(s.microreto_id)"
-                                class="p-1.5 rounded-lg bg-[#00A859]/10 text-[#00A859] hover:bg-[#00A859]/20 transition-all"
-                                title="Ver ficha del reto">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
-                                     a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                          </svg>
-                        </button>
-                      </div>
-                      <button @click.stop="abrirModalEliminar(s)"
-                              class="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
-                              title="Eliminar encuentro">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                  <p class="min-h-[2.5rem] text-sm font-black text-[#1F2937] leading-snug line-clamp-2
+                            group-hover:text-[#00A859] transition-colors">
+                    {{ s.proyecto_titulo || '(sin título)' }}
+                  </p>
+                  <p class="text-[10px] font-bold text-[#00A859] mt-1">
+                    {{ formatFecha(s.fecha) }}
+                  </p>
+                </div>
+
+                <!-- Aviso: la card es clicable para más detalle -->
+                <div class="px-5 py-1.5 bg-[#00A859]/5 border-b border-gray-100 flex items-center gap-1.5">
+                  <svg class="w-3 h-3 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <p class="text-[9px] font-bold text-[#00A859] uppercase tracking-wide">
+                    Pica aquí para más detalle y dar acceso al alumnado
+                  </p>
                 </div>
 
                 <!-- Card body -->
@@ -662,24 +635,40 @@ function formatFecha(isoDate) {
                     </p>
                   </div>
 
-                  <!-- Código de acceso del alumnado -->
-                  <div v-if="s.codigo_clase" @click.stop
-                       class="flex items-center gap-2 pt-1">
-                    <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                                 bg-[#00A859]/10 border border-[#00A859]/20">
-                      <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
-                      <span class="text-[11px] font-black tracking-widest text-[#00A859]">{{ s.codigo_clase }}</span>
+                  <!-- Códigos: acceso del alumnado al workspace + desbloqueo IA -->
+                  <div v-if="s.codigo_clase || s.codigo_ia" @click.stop
+                       class="flex flex-wrap items-end gap-2 pt-1">
+                    <div v-if="s.codigo_clase" class="space-y-1">
+                      <p class="text-[9px] font-black uppercase tracking-wide text-gray-400">Código acceso al alumnado</p>
+                      <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full w-fit
+                                   bg-[#00A859]/10 border border-[#00A859]/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
+                        <span class="text-[11px] font-black tracking-widest text-[#00A859]">{{ s.codigo_clase }}</span>
+                        <button @click.stop="copiarCodigo(s.codigo_clase)"
+                                class="p-0.5 rounded hover:bg-[#00A859]/10 text-[#00A859]/50 hover:text-[#00A859] transition-all"
+                                title="Copiar código">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                          </svg>
+                        </button>
+                      </span>
+                    </div>
+                    <span v-if="s.codigo_ia" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                 bg-orange-50 border border-orange-200">
+                      <span class="text-[10px] shrink-0">✨</span>
+                      <span class="text-[11px] font-black tracking-widest text-orange-600">{{ s.codigo_ia }}</span>
+                      <button @click.stop="copiarCodigo(s.codigo_ia)"
+                              class="p-0.5 rounded hover:bg-orange-100 text-orange-300 hover:text-orange-600 transition-all"
+                              title="Copiar código">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                      </button>
                     </span>
-                    <button @click.stop="copiarCodigo(s.codigo_clase)"
-                            class="p-1 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-all"
-                            title="Copiar código">
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                      </svg>
-                    </button>
                   </div>
-                  <div v-else-if="s.num_equipos" @click.stop class="pt-1">
+                  <div v-if="!s.codigo_clase && s.num_equipos && s.puede_editar" @click.stop class="pt-1">
                     <button @click.stop="crearCodigo(s)"
                             :disabled="creandoCodigo[s.id]"
                             class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest
@@ -690,10 +679,69 @@ function formatFecha(isoDate) {
                           d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                         <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                       </svg>
-                      {{ creandoCodigo[s.id] ? 'Creando...' : 'Generar código alumnado' }}
+                      {{ creandoCodigo[s.id] ? 'Creando...' : 'Generar código workspace alumnado' }}
                     </button>
                     <p v-if="errorCodigo[s.id]" class="text-[10px] text-red-400 mt-1">{{ errorCodigo[s.id] }}</p>
                   </div>
+                </div>
+
+                <!-- Acciones -->
+                <div @click.stop class="px-5 py-3 border-t border-gray-100 flex flex-wrap gap-1.5">
+                  <button v-if="s.num_equipos && s.puede_editar"
+                          @click.stop="abrirReestructurar(s)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                                 bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
+                                 text-[10px] font-black uppercase tracking-wide">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reestructurar equipo
+                  </button>
+                  <button v-if="s.es_propietario"
+                          @click.stop="abrirCompartir(s)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                                 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all
+                                 text-[10px] font-black uppercase tracking-wide">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                    </svg>
+                    Compartir
+                  </button>
+                  <button v-if="s.microreto_id"
+                          @click.stop="abrirMicroretoModal(s.microreto_id)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                                 bg-[#00A859]/10 text-[#00A859] hover:bg-[#00A859]/20 transition-all
+                                 text-[10px] font-black uppercase tracking-wide">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                               a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Ficha del reto
+                  </button>
+                  <button v-if="s.microproyecto_uuid"
+                          @click.stop="abrirProyectoFicha(s.microproyecto_uuid)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                                 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all
+                                 text-[10px] font-black uppercase tracking-wide">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Ficha del proyecto
+                  </button>
+                  <button v-if="s.puede_editar" @click.stop="abrirModalEliminar(s)"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ml-auto
+                                 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all
+                                 text-[10px] font-black uppercase tracking-wide">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Eliminar
+                  </button>
                 </div>
 
               </div>
@@ -716,16 +764,16 @@ function formatFecha(isoDate) {
         <div @click="cerrarEncuentro"
              class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-lg w-full overflow-hidden
-                    border border-gray-100">
+        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-2xl w-full max-h-[92vh]
+                    overflow-hidden border border-gray-100 flex flex-col">
           <!-- Cabecera -->
-          <div class="px-7 pt-7 pb-5 border-b border-gray-100">
+          <div class="px-5 sm:px-7 pt-6 sm:pt-7 pb-5 border-b border-gray-100 flex-shrink-0">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-2">
                   <span class="w-2 h-2 rounded-full bg-[#00A859] flex-shrink-0" />
                   <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[#00A859]">
-                    Encuentro · {{ formatFecha(encuentroAbierto.fecha) }}
+                    Encuentro
                   </p>
                 </div>
                 <h2 class="text-lg font-black text-[#1F2937] leading-snug">
@@ -742,14 +790,28 @@ function formatFecha(isoDate) {
             </div>
             <div class="flex flex-wrap gap-1.5 mt-3">
               <span v-if="encuentroAbierto.curso"       class="tag tag-green">{{ encuentroAbierto.curso }}</span>
+              <span v-if="encuentroAbierto.fecha"       class="tag tag-gray">{{ formatFecha(encuentroAbierto.fecha) }}</span>
               <span v-if="encuentroAbierto.grupo"       class="tag tag-lime">Grupo {{ encuentroAbierto.grupo }}</span>
               <span v-if="encuentroAbierto.num_alumnos" class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
+            <button @click="irAAccesoAlumnado"
+                    class="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                           bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859]
+                           text-[10px] font-black uppercase tracking-widest hover:bg-[#00A859]/20 transition-all">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              Dar acceso al alumnado
+            </button>
           </div>
 
+          <!-- Contenido con scroll -->
+          <div class="flex-1 overflow-y-auto min-h-0">
+
           <!-- Cuerpo -->
-          <div class="px-7 py-5 space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+          <div class="px-5 sm:px-7 py-5 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div v-if="encuentroAbierto.centro_educativo"
                    class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Centro</p>
@@ -795,11 +857,21 @@ function formatFecha(isoDate) {
               <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Notas adicionales</p>
               <p class="text-sm text-[#1F2937] leading-relaxed">{{ encuentroAbierto.notas }}</p>
             </div>
+
+            <EncuentroEquiposYRaCe
+              :num-equipos="encuentroAbierto.num_equipos"
+              :alumnados-del-equipo="alumnadosDelEquipoAbierto"
+              :cargando-ra-ce="cargandoRaCe"
+              :ra-ce-blocks="raCeBlocksEncuentro"
+              :modulos-expandidos="modulosExpandidos"
+              @toggle-modulo="toggleModulo"
+            />
           </div>
 
-          <!-- Código de acceso del alumnado en el modal -->
-          <div class="px-7 py-4 border-t border-gray-100">
-            <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-3">Acceso del alumnado</p>
+          <!-- Acceso del alumnado (destacada — incluye el desbloqueo de IA) -->
+          <div ref="seccionAccesoAlumnado"
+               class="mx-5 sm:mx-7 my-4 p-4 sm:p-5 rounded-2xl bg-[#00A859]/5 border-2 border-[#00A859]/20">
+          <p class="text-[9px] font-black uppercase tracking-wider text-[#00A859] mb-3">Acceso del alumnado</p>
             <div v-if="encuentroAbierto.codigo_clase"
                  class="flex items-center gap-3 p-3 rounded-2xl bg-[#00A859]/5 border border-[#00A859]/15">
               <span class="w-2 h-2 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
@@ -813,7 +885,8 @@ function formatFecha(isoDate) {
                 </svg>
                 Copiar
               </button>
-              <button @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
+              <button v-if="encuentroAbierto.puede_editar"
+                      @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
                       title="Vuelve a generar equipos desde cero — bloqueado si ya hay progreso real"
                       class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
@@ -821,7 +894,7 @@ function formatFecha(isoDate) {
                 Regen.
               </button>
             </div>
-            <div v-if="encuentroAbierto.num_equipos" class="mt-2">
+            <div v-if="encuentroAbierto.num_equipos && encuentroAbierto.puede_editar" class="mt-2">
               <button @click="abrirReestructurar(encuentroAbierto)"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
                              bg-violet-50 border border-violet-200 text-violet-600
@@ -833,7 +906,7 @@ function formatFecha(isoDate) {
                 Reestructurar equipo
               </button>
             </div>
-            <div v-if="!encuentroAbierto.codigo_clase">
+            <div v-if="!encuentroAbierto.codigo_clase && encuentroAbierto.puede_editar">
               <button @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
                       class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
                              border border-dashed border-[#00A859]/30 text-[#00A859] text-xs font-black
@@ -844,24 +917,133 @@ function formatFecha(isoDate) {
                     d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                   <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                 </svg>
-                {{ creandoCodigo[encuentroAbierto.id] ? 'Creando...' : 'Generar código para el alumnado' }}
+                {{ creandoCodigo[encuentroAbierto.id] ? 'Creando...' : 'Generar código workspace alumnado' }}
               </button>
               <p v-if="errorCodigo[encuentroAbierto.id]" class="text-xs text-red-400 mt-1.5 text-center">
                 {{ errorCodigo[encuentroAbierto.id] }}
               </p>
             </div>
+
+            <!-- Código de desbloqueo de "Sugerir con IA" en el workspace -->
+            <div class="mt-4 pt-4 border-t border-[#00A859]/15">
+            <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-3">
+              ✨ Desbloqueo IA del workspace
+            </p>
+            <p class="text-[11px] text-gray-400 mb-3 leading-relaxed">
+              Los botones "Sugerir con IA" del workspace de equipo permanecen bloqueados hasta que
+              introducen este código. Compártelo cuando quieras habilitarlos.
+            </p>
+            <div v-if="encuentroAbierto.codigo_ia"
+                 class="flex items-center gap-3 p-3 rounded-2xl bg-orange-50 border border-orange-200">
+              <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0"></span>
+              <span class="text-lg font-black tracking-[0.2em] text-orange-700 flex-1">{{ encuentroAbierto.codigo_ia }}</span>
+              <button @click="copiarCodigo(encuentroAbierto.codigo_ia)"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 text-white
+                             text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                Copiar
+              </button>
+              <button v-if="encuentroAbierto.puede_editar"
+                      @click="crearCodigoIa(encuentroAbierto)" :disabled="creandoCodigoIa[encuentroAbierto.id]"
+                      title="Genera un código nuevo — los equipos que ya lo desbloquearon siguen desbloqueados"
+                      class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
+                             text-[10px] font-black uppercase tracking-widest text-gray-500
+                             hover:bg-gray-200 transition-all disabled:opacity-50">
+                Regen.
+              </button>
+            </div>
+            <button v-else-if="encuentroAbierto.puede_editar" @click="crearCodigoIa(encuentroAbierto)" :disabled="creandoCodigoIa[encuentroAbierto.id]"
+                    class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
+                           border border-dashed border-orange-300 text-orange-600 text-xs font-black
+                           uppercase tracking-widest hover:bg-orange-50 transition-all disabled:opacity-50">
+              <svg class="w-4 h-4" :class="creandoCodigoIa[encuentroAbierto.id] ? 'animate-spin' : ''"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path v-if="!creandoCodigoIa[encuentroAbierto.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+              </svg>
+              {{ creandoCodigoIa[encuentroAbierto.id] ? 'Generando...' : 'Generar código sugerencia IA alumnado' }}
+            </button>
+            <p v-if="errorCodigoIa[encuentroAbierto.id]" class="text-xs text-red-400 mt-1.5 text-center">
+              {{ errorCodigoIa[encuentroAbierto.id] }}
+            </p>
           </div>
 
+          </div>
+          </div>
+          <!-- /Contenido con scroll -->
+
           <!-- Pie -->
-          <div class="px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
-            <button @click="abrirModalEliminar(encuentroAbierto)"
-                    class="text-xs text-gray-400 hover:text-red-400 font-black uppercase
-                           tracking-widest transition-colors">
-              Eliminar encuentro
-            </button>
-            <div class="flex items-center gap-2">
+          <div class="px-5 sm:px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 flex-shrink-0 space-y-3">
+
+            <!-- Acciones (mismo estilo que la card de encuentro) -->
+            <div class="grid grid-cols-2 gap-1.5">
+              <button v-if="encuentroAbierto.num_equipos && encuentroAbierto.puede_editar"
+                      @click="abrirReestructurar(encuentroAbierto)"
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                             bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
+                             text-[10px] font-black uppercase tracking-wide">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Reestructurar equipo
+              </button>
+              <button v-if="encuentroAbierto.es_propietario"
+                      @click="abrirCompartir(encuentroAbierto)"
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                             bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all
+                             text-[10px] font-black uppercase tracking-wide">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                </svg>
+                Compartir
+              </button>
+              <button v-if="encuentroAbierto.microreto_id"
+                      @click="abrirMicroretoModal(encuentroAbierto.microreto_id)"
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                             bg-[#00A859]/10 text-[#00A859] hover:bg-[#00A859]/20 transition-all
+                             text-[10px] font-black uppercase tracking-wide">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                           a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Ficha del reto
+              </button>
               <button v-if="encuentroAbierto.microproyecto_uuid"
-                      @click="router.push({ name: 'workspace-docente', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
+                      @click="abrirProyectoFicha(encuentroAbierto.microproyecto_uuid)"
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                             bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all
+                             text-[10px] font-black uppercase tracking-wide">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+                </svg>
+                Ficha del proyecto
+              </button>
+            </div>
+            <div v-if="encuentroAbierto.puede_editar" class="flex justify-end">
+              <button @click="abrirModalEliminar(encuentroAbierto)"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                             hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all
+                             text-[10px] font-black uppercase tracking-wide">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Eliminar
+              </button>
+            </div>
+
+            <!-- Acciones principales -->
+            <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+              <button v-if="encuentroAbierto.microproyecto_uuid"
+                      @click="router.push({ name: 'mis-equipos-detalle', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-200
                              bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-widest
                              hover:bg-blue-100 transition-all">
@@ -882,29 +1064,6 @@ function formatFecha(isoDate) {
                 </svg>
                 Pantalla de acceso
               </button>
-              <button v-if="encuentroAbierto.microproyecto_uuid"
-                      @click="abrirModalProyecto(encuentroAbierto.microproyecto_uuid); cerrarEncuentro()"
-                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200
-                             bg-white text-gray-600 text-xs font-black uppercase tracking-widest
-                             hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-                </svg>
-                Ver propuesta/proyecto
-              </button>
-              <button @click="crearMicroproyecto(encuentroAbierto.id); cerrarEncuentro()"
-                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A859] text-white
-                             text-xs font-black uppercase tracking-widest hover:bg-[#00A859]/90
-                             transition-all shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 17l10 5 10-5"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12l10 5 10-5"/>
-                </svg>
-                Trabajar reto
-              </button>
             </div>
           </div>
         </div>
@@ -915,191 +1074,8 @@ function formatFecha(isoDate) {
   <!-- Modal ficha de microreto -->
   <MicroretoModal :microreto-id="microretoModalId" @close="cerrarMicroretoModal" />
 
-  <!-- Modal ver proyecto -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="modalVerProyecto"
-           class="fixed inset-0 z-[80] flex items-center justify-center p-4"
-           @click.self="cerrarModalProyecto">
-
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrarModalProyecto" />
-
-        <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-2xl
-                    max-h-[90vh] flex flex-col overflow-hidden">
-
-          <!-- Cabecera -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-7 h-7 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/20
-                          flex items-center justify-center shrink-0">
-                <svg class="w-3.5 h-3.5 text-[#5a7a00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-                </svg>
-              </div>
-              <p v-if="proyectoModal" class="font-black text-[#1F2937] text-sm truncate">
-                {{ proyectoModal.titulo }}
-              </p>
-              <p v-else class="text-sm text-gray-400 font-medium">Cargando proyecto…</p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button v-if="proyectoModal"
-                      @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
-                      class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
-                             text-[10px] font-black uppercase tracking-widest text-gray-500
-                             hover:border-[#99CC33] hover:text-[#5a7a00] transition-all flex items-center gap-1.5">
-                Startup Day
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-              </button>
-              <button @click="cerrarModalProyecto"
-                      class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-                             text-gray-400 hover:bg-gray-200 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Contenido -->
-          <div class="flex-1 overflow-y-auto">
-
-            <!-- Spinner -->
-            <div v-if="cargandoModal" class="flex justify-center items-center py-20">
-              <svg class="animate-spin w-8 h-8 text-[#99CC33]" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-            </div>
-
-            <template v-else-if="proyectoModal">
-
-              <!-- Badge estado + meta -->
-              <div class="px-6 pt-5 pb-4 border-b border-gray-50 space-y-3">
-                <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border', getBadgeModal(proyectoModal).cls]">
-                  <span :class="['w-1.5 h-1.5 rounded-full', getBadgeModal(proyectoModal).dot]" />
-                  {{ getBadgeModal(proyectoModal).label }}
-                </span>
-
-                <div class="flex flex-wrap gap-1.5">
-                  <span v-if="proyectoModal.empresa_nombre" class="tag tag-gray">
-                    <svg class="w-3 h-3 shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                    </svg>
-                    {{ proyectoModal.empresa_nombre }}
-                  </span>
-                  <span v-if="proyectoModal.centro_nombre" class="tag tag-gray">{{ proyectoModal.centro_nombre }}</span>
-                  <span v-if="proyectoModal.ciclo_nombre"  class="tag tag-gray">{{ proyectoModal.ciclo_nombre }}</span>
-                  <span v-if="proyectoModal.curso"         class="tag tag-lime">{{ proyectoModal.curso }}</span>
-                </div>
-              </div>
-
-              <!-- Secciones del proyecto -->
-              <div class="px-6 py-5 space-y-4">
-
-                <div v-if="proyectoModal.diseno_reto?.descripcion || proyectoModal.diseno_reto?.pregunta_reto"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">El reto</p>
-                  <p v-if="proyectoModal.diseno_reto.pregunta_reto"
-                     class="text-sm font-bold text-[#5a7a00] italic mb-2">
-                    "{{ proyectoModal.diseno_reto.pregunta_reto }}"
-                  </p>
-                  <p v-if="proyectoModal.diseno_reto.descripcion"
-                     class="text-sm text-gray-600 leading-relaxed line-clamp-4">
-                    {{ proyectoModal.diseno_reto.descripcion }}
-                  </p>
-                </div>
-
-                <div v-if="proyectoModal.equipo?.alumnos?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Equipo ({{ proyectoModal.equipo.alumnos.length }})
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-for="a in proyectoModal.equipo.alumnos" :key="a.nombre"
-                          class="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
-                      {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
-                    </span>
-                  </div>
-                </div>
-
-                <div v-if="proyectoModal.modulos_seleccionados?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Módulos ({{ proyectoModal.modulos_seleccionados.length }})
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-for="m in proyectoModal.modulos_seleccionados" :key="m.id"
-                          class="text-xs bg-[#00A859]/8 border border-[#00A859]/15 text-[#00A859]
-                                 px-2.5 py-1 rounded-full">
-                      {{ m.nombre }}
-                    </span>
-                  </div>
-                </div>
-
-                <div v-if="proyectoModal.objetivos?.lista?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Objetivos</p>
-                  <ul class="space-y-1">
-                    <li v-for="obj in proyectoModal.objetivos.lista.slice(0, 5)" :key="obj"
-                        class="flex items-start gap-2 text-sm text-gray-600">
-                      <span class="text-[#99CC33] shrink-0 mt-0.5 font-bold">›</span> {{ obj }}
-                    </li>
-                    <li v-if="proyectoModal.objetivos.lista.length > 5"
-                        class="text-xs text-gray-400 pl-4">
-                      + {{ proyectoModal.objetivos.lista.length - 5 }} más…
-                    </li>
-                  </ul>
-                </div>
-
-                <div v-if="proyectoModal.diseno_microproyecto?.fases?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Fases ({{ proyectoModal.diseno_microproyecto.fases.length }})
-                  </p>
-                  <ol class="space-y-1.5">
-                    <li v-for="(f, i) in proyectoModal.diseno_microproyecto.fases.slice(0, 4)" :key="i"
-                        class="flex items-center gap-2.5 text-sm">
-                      <span class="w-5 h-5 rounded-full bg-[#99CC33]/15 text-[#5a7a00] font-black text-[10px]
-                                   flex items-center justify-center shrink-0">{{ i + 1 }}</span>
-                      <span class="font-bold text-[#1F2937]">{{ f.nombre }}</span>
-                      <span v-if="duracionPorFase(proyectoModal.diseno_microproyecto.clases, i)" class="text-gray-400 text-xs">
-                        · {{ duracionPorFase(proyectoModal.diseno_microproyecto.clases, i) }} clase(s)
-                      </span>
-                    </li>
-                    <li v-if="proyectoModal.diseno_microproyecto.fases.length > 4"
-                        class="text-xs text-gray-400 pl-7">
-                      + {{ proyectoModal.diseno_microproyecto.fases.length - 4 }} más…
-                    </li>
-                  </ol>
-                </div>
-
-                <div v-if="!proyectoModal.diseno_reto?.descripcion && !proyectoModal.equipo?.alumnos?.length
-                            && !proyectoModal.modulos_seleccionados?.length && !proyectoModal.objetivos?.lista?.length"
-                     class="text-center py-6 text-gray-400">
-                  <p class="text-xs">Este proyecto aún no tiene secciones rellenas.</p>
-                  <button @click="router.push({ name: 'startup-day-editar', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
-                          class="mt-3 text-xs font-black text-[#5a7a00] underline hover:no-underline">
-                    Ir a editar →
-                  </button>
-                </div>
-
-              </div>
-            </template>
-
-            <!-- Error carga -->
-            <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">
-              <p class="text-sm">No se pudo cargar el proyecto.</p>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+  <!-- Modal ficha de proyecto (botón "Ficha del proyecto" de la card) -->
+  <ProyectoFichaModal :proyecto-uuid="proyectoFichaUuid" @close="cerrarProyectoFicha" />
 
   <!-- Modal eliminar encuentro -->
   <EliminarEncuentroModal
@@ -1115,6 +1091,13 @@ function formatFecha(isoDate) {
     :encuentro="reestructurando"
     @actualizado="onEquipoReestructurado"
     @cerrar="cerrarReestructurar"
+  />
+
+  <!-- Modal compartir encuentro -->
+  <CompartirEncuentroModal
+    :visible="!!compartiendo"
+    :encuentro="compartiendo"
+    @cerrar="cerrarCompartir"
   />
 
   <!-- Snackbar -->

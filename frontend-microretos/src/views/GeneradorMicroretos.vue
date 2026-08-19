@@ -1,3 +1,4 @@
+<!-- Ruta: /retos/crear (name: microretos). Antes vivía en /microretos — ver router/index.js. -->
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
@@ -14,6 +15,9 @@ const showLogin = ref(false);
 
 // Para docentes: identifica si el usuario es docente (oculta funciones de admin)
 const esDocente = computed(() => authStore.isDocente);
+// Centro fijado por rol: docente y admin llevan su centro ya asociado y no pueden cambiarlo
+// en el generador; solo superadmin puede elegir libremente cualquier centro.
+const centroFijadoPorRol = computed(() => (authStore.isDocente || authStore.isAdmin) && authStore.userCentroNombre);
 
 const familias = ref([]); 
 const ciclos = ref([]);
@@ -23,16 +27,32 @@ const modulos = ref([]);
 const isLoaded = ref(false);
 
 // --- CONTROL DE NAVEGACIÓN ---
-const pasoActual = ref(1); 
+const pasoActual = ref(1);
 const totalPasos = 3;
+
+// --- BLOQUEO DE PASOS COMPLETADOS ---
+// Un paso queda "sellado" (no editable) en cuanto se avanza más allá de él, para que la IA
+// no trabaje con datos incoherentes (p.ej. cambiar la empresa del paso 1 tras haber elegido
+// ya familia/ciclo en el paso 3). Se puede retroceder a leerlo, pero no editarlo; "Vaciar" es
+// la única vía para desbloquear y empezar de cero.
+const pasoMaxBloqueado = ref(0);
+const estaPasoBloqueado = (step) => step <= pasoMaxBloqueado.value;
+const sellarPaso = (step) => { pasoMaxBloqueado.value = Math.max(pasoMaxBloqueado.value, step); };
 
 // --- VARIABLES B2B ---
 const empresas = ref([]);
 const familiasFiltradas = ref([]); 
 const buscadorEmpresa = ref('');
 const filtroTipoEmpresa = ref('');   // '' = todas, 'simulada', 'real'
+const filtroSectorEmpresa = ref(''); // '' = todos los sectores
 const mostrarDropdownEmpresas = ref(false);
 const empresaDetalle = ref(null);
+
+// --- PAGINACIÓN RESULTADOS EMPRESA ---
+// "Elige empresa" ocupa ahora el ancho completo del grid (grid-cols-1 sm:2 lg:3).
+// 12 es múltiplo de 1, 2 y 3 → siempre filas completas en los tres casos.
+const EMPRESAS_POR_PAGINA = 12;
+const paginaEmpresas = ref(1);
 
 // --- MODAL INSERT/MODIFY EMPRESA ---
 const mostrarNuevaEmpresa = ref(false);
@@ -77,6 +97,15 @@ const sectoresDisponibles = computed(() => {
   return [...new Set(sectores)].sort();
 });
 
+// Sectores presentes entre las empresas del centro seleccionado (para el filtro del buscador)
+const sectoresParaFiltroEmpresa = computed(() => {
+  let base = empresas.value;
+  if (centroFiltro.value) {
+    base = base.filter(e => e.centro_educativo === centroFiltro.value);
+  }
+  return [...new Set(base.map(e => e.sector).filter(Boolean))].sort();
+});
+
 const todasLasFamilias = ref([]);
 
 const seleccion = ref({
@@ -107,11 +136,48 @@ const seleccion = ref({
   cantidadMicroretos: 3, 
 });
 
-const modulosSeleccionados = ref([]); 
+const modulosSeleccionados = ref([]);
+// Selección manual de módulos en modo "Ambos Cursos" (Escenario B) — uno por cada curso.
+const modulosSeleccionadosCurso1 = ref([]);
+const modulosSeleccionadosCurso2 = ref([]);
 
 const modulosDelCurso = computed(() => {
   return modulos.value.filter(m => m.curso == seleccion.value.cursoSeleccionado);
 });
+const modulosCurso1DelCiclo = computed(() => modulos.value.filter(m => m.curso == 1));
+const modulosCurso2DelCiclo = computed(() => modulos.value.filter(m => m.curso == 2));
+
+// El reto recién generado (aún no guardado) no trae `curso` en evaluacion_oficial —
+// ese enriquecido solo lo hace el backend al mostrar la ficha de un microreto ya persistido.
+// Lo derivamos aquí igual, a partir de los módulos ya cargados del ciclo seleccionado.
+const cursoDeModulo = (nombreModulo) => modulos.value.find(m => m.nombre === nombreModulo)?.curso ?? null;
+
+// Multi-módulo = no se fuerza exactamente 1 módulo: o se deja que la IA decida sobre
+// todo el curso (0 seleccionados) o se eligen a propósito 2+ módulos distintos.
+// Solo aplica dentro de un único curso — en modo "Ambos Cursos" no se fuerza módulo.
+const esMultimodulo = computed(() => modulosSeleccionados.value.length !== 1);
+
+// Escenario B: el reto cruza módulos de 1º y 2º a la vez (siempre multi-módulo por definición).
+const esAmbosCursos = computed(() => seleccion.value.cursoSeleccionado === 'ambos_cursos');
+
+// Válido si no se fuerza nada (la IA decide con todo el currículo de ambos cursos) o si
+// hay al menos 1 módulo forzado de cada curso — nunca forzar solo de un lado en este modo.
+const ambosCursosModulosValidos = computed(() => {
+  const n1 = modulosSeleccionadosCurso1.value.length, n2 = modulosSeleccionadosCurso2.value.length;
+  return (n1 === 0 && n2 === 0) || (n1 > 0 && n2 > 0);
+});
+
+const limpiarModulosAmbos = () => {
+  if (esModoDemo.value) return;
+  modulosSeleccionadosCurso1.value = [];
+  modulosSeleccionadosCurso2.value = [];
+};
+
+// Alterna un id dentro de un ref-array (selección de módulos por pills)
+const toggleEnArray = (arr, id) => {
+  const i = arr.value.indexOf(id);
+  i === -1 ? arr.value.push(id) : arr.value.splice(i, 1);
+};
 
 const microretosGenerados = ref([]);
 const cargando = ref(false);
@@ -213,12 +279,28 @@ const empresasFiltradasBusqueda = computed(() => {
   } else if (filtroTipoEmpresa.value === 'real') {
     filtradas = filtradas.filter(e => !e.es_simulada);
   }
+  if (filtroSectorEmpresa.value) {
+    filtradas = filtradas.filter(e => e.sector === filtroSectorEmpresa.value);
+  }
   if (buscadorEmpresa.value) {
     filtradas = filtradas.filter(e =>
       e.nombre_comercial?.toLowerCase().includes(buscadorEmpresa.value.toLowerCase())
     );
   }
   return filtradas;
+});
+
+const totalPaginasEmpresas = computed(() =>
+  Math.max(1, Math.ceil(empresasFiltradasBusqueda.value.length / EMPRESAS_POR_PAGINA))
+);
+
+const empresasPaginadas = computed(() => {
+  const inicio = (paginaEmpresas.value - 1) * EMPRESAS_POR_PAGINA;
+  return empresasFiltradasBusqueda.value.slice(inicio, inicio + EMPRESAS_POR_PAGINA);
+});
+
+watch([buscadorEmpresa, filtroTipoEmpresa, filtroSectorEmpresa, centroFiltro], () => {
+  paginaEmpresas.value = 1;
 });
 
 const seleccionarEmpresa = (emp) => {
@@ -229,6 +311,7 @@ const seleccionarEmpresa = (emp) => {
 };
 
 const abrirModalEmpresa = () => {
+  if (estaPasoBloqueado(1)) return;
   if (seleccion.value.empresaId) {
     mostrarEditarEmpresa.value = true;
   } else {
@@ -292,8 +375,10 @@ watch(centroFiltro, (newVal, oldVal) => {
 const limpiarFormulario = () => {
   if(confirm("¿Estás seguro de que quieres vaciar el formulario y empezar de cero?")) {
     pasoActual.value = 1;
+    pasoMaxBloqueado.value = 0;
     buscadorEmpresa.value = '';
-    centroFiltro.value = ''; // Limpiamos el filtro del colegio también
+    // Docente/admin: el centro está fijado a su cuenta y no se vacía; superadmin sí lo pierde
+    centroFiltro.value = centroFijadoPorRol.value ? authStore.userCentroNombre : '';
     empresaDetalle.value = null;
     microretosGenerados.value = [];
     crmActualizado.value = false;
@@ -306,7 +391,10 @@ const limpiarFormulario = () => {
     modulosSeleccionados.value = [];
     sectorEsLibre.value = false;
     mostrarDropdownSector.value = false;
-    
+    filtroTipoEmpresa.value = '';
+    filtroSectorEmpresa.value = '';
+    paginaEmpresas.value = 1;
+
     seleccion.value = {
       empresaId: '', empresaNombre: '', empresaCentro: '', empresaSector: '',
       empresaUbicacion: '', empresaTamano: '', empresaWeb: '',
@@ -320,6 +408,7 @@ const limpiarFormulario = () => {
 
 // --- FUNCIÓN PARA CARGAR DATOS DEMO DESDE API ---
 const cargarDemo = async (familiaProfesional) => {
+  if (estaPasoBloqueado(1)) return;
   mostrarSelectorDemo.value = false;
   try {
     const res = await api.get(`/demos/${encodeURIComponent(familiaProfesional)}`);
@@ -402,7 +491,17 @@ const paso1Valido = computed(() => seleccion.value.empresaNombre && seleccion.va
 const paso2Valido = computed(() => seleccion.value.diaANormal && seleccion.value.friccionProblema && seleccion.value.expectativasAlumno);
 const paso3Valido = computed(() => {
   if (esModoDemo.value) return !!seleccion.value.familia;
-  return !!(seleccion.value.familia && seleccion.value.cicloId && seleccion.value.cursoSeleccionado);
+  const base = !!(seleccion.value.familia && seleccion.value.cicloId && seleccion.value.cursoSeleccionado);
+  if (seleccion.value.cursoSeleccionado === 'ambos_cursos') return base && ambosCursosModulosValidos.value;
+  return base;
+});
+
+// Validez del paso actual — única fuente de verdad para habilitar tanto "Siguiente Paso"
+// como el salto hacia delante desde el indicador de progreso.
+const pasoActualValido = computed(() => {
+  if (pasoActual.value === 1) return paso1Valido.value;
+  if (pasoActual.value === 2) return paso2Valido.value;
+  return true;
 });
 
 // Cierra el dropdown al hacer clic fuera
@@ -460,7 +559,7 @@ onMounted(async () => {
   // Guarda de seguridad en componente: el router ya redirige antes de montar,
   // pero este check actúa como barrera extra ante manipulaciones del token en memoria.
   if (!authStore.isAuthenticated) {
-    router.replace({ path: '/', query: { redirect: '/microretos' } })
+    router.replace({ path: '/', query: { redirect: '/retos/crear' } })
     return
   }
 
@@ -479,13 +578,14 @@ onMounted(async () => {
     showLogin.value = true;
   } else {
     await cargarEmpresas();
-    // Docentes: fijar automáticamente el centro educativo (no editable)
-    if (authStore.isDocente && authStore.userCentroNombre) {
+    // Docente/admin: fijar automáticamente el centro educativo (no editable)
+    if (centroFijadoPorRol.value) {
       centroFiltro.value = authStore.userCentroNombre;
     }
     await nextTick();
     pasoGuia.value = 1;
-    showTourPrompt.value = true;
+    // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
+    // showTourPrompt.value = true;
   }
 });
 
@@ -562,6 +662,8 @@ watch(() => seleccion.value.cicloId, async (val) => {
   const res = await api.get(`/ciclos/${val}/modulos`);
   modulos.value = res.data;
   modulosSeleccionados.value = [];
+  modulosSeleccionadosCurso1.value = [];
+  modulosSeleccionadosCurso2.value = [];
 
   if (esModoDemo.value && demoModuloNombre.value) {
     const nombreBuscado = demoModuloNombre.value;
@@ -575,16 +677,41 @@ watch(() => seleccion.value.cicloId, async (val) => {
 
 watch(() => seleccion.value.cursoSeleccionado, () => {
   modulosSeleccionados.value = [];
+  modulosSeleccionadosCurso1.value = [];
+  modulosSeleccionadosCurso2.value = [];
 });
 
 const avanzarPaso = async () => {
-  if (pasoActual.value < totalPasos) pasoActual.value++;
+  if (pasoActual.value >= totalPasos || !pasoActualValido.value) return;
+  const step = pasoActual.value;
+  if (!estaPasoBloqueado(step)) {
+    const confirmado = confirm(
+      'Al continuar, los datos de este paso quedarán bloqueados y no podrás modificarlos. ' +
+      'Si necesitas cambiarlos más adelante, tendrás que pulsar "Vaciar" y empezar de nuevo.\n\n¿Continuar?'
+    );
+    if (!confirmado) return;
+  }
+  sellarPaso(step);
+  pasoActual.value++;
   window.scrollTo({ top: 0, behavior: 'instant' });
   await nextTick();
   pasoGuia.value = 1;
   modoGuia.value = true;
 };
-const retrocederPaso = () => { if (pasoActual.value > 1) pasoActual.value--; window.scrollTo({top: 0, behavior: 'smooth'}); };
+// Única vía para navegar entre pasos: desde el botón "Volver"/"Siguiente Paso" o desde
+// el indicador de progreso. Hacia atrás siempre se permite (solo lectura, ya sellado);
+// hacia delante solo un paso a la vez y reutilizando avanzarPaso — así el sellado, el
+// aviso de confirmación y la validación del paso actual se aplican igual sea cual sea
+// el control que se use para avanzar.
+const irAPaso = (step) => {
+  if (step === pasoActual.value + 1) {
+    avanzarPaso();
+    return;
+  }
+  if (step >= pasoActual.value) return;
+  pasoActual.value = step;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 const guardarInfoEmpresa = async () => {
   actualizandoCRM.value = true;
@@ -612,7 +739,7 @@ const guardarInfoEmpresa = async () => {
 };
 
 const toggleInfoSimulada = async () => {
-  if (esModoDemo.value || cargandoSimulacion.value) return;
+  if (esModoDemo.value || cargandoSimulacion.value || estaPasoBloqueado(2)) return;
 
   // Si ya está activo, simplemente desactivar
   if (esInfoSimulada.value) {
@@ -647,8 +774,12 @@ const toggleInfoSimulada = async () => {
 
     esInfoSimulada.value = true;
 
-    // Navegar al paso 2 para que el usuario vea los campos rellenos
-    if (pasoActual.value === 1) pasoActual.value = 2;
+    // Navegar al paso 2 para que el usuario vea los campos rellenos; al abandonar el paso 1
+    // por esta vía también queda sellado, igual que si se hubiera pulsado "Siguiente Paso".
+    if (pasoActual.value === 1) {
+      sellarPaso(1);
+      pasoActual.value = 2;
+    }
   } catch (e) {
     console.error(e);
     alert('Error al generar información simulada. Inténtalo de nuevo.');
@@ -661,17 +792,22 @@ const generarReto = async () => {
   cargando.value = true;
   todosGuardados.value = false; 
   try {
-    const nombresModulosSeleccionados = modulosSeleccionados.value.map(id => modulos.value.find(m => m.id === id)?.nombre).filter(Boolean); 
-    const moduloNombreTxt = nombresModulosSeleccionados.length > 0 ? nombresModulosSeleccionados.join(' y ') : `A determinar por IA (${seleccion.value.cursoSeleccionado}º Curso)`;
+    const moduloIdCombinado = esAmbosCursos.value
+      ? [...modulosSeleccionadosCurso1.value, ...modulosSeleccionadosCurso2.value]
+      : modulosSeleccionados.value;
+    const nombresModulosSeleccionados = moduloIdCombinado.map(id => modulos.value.find(m => m.id === id)?.nombre).filter(Boolean);
+    const moduloNombreTxt = esAmbosCursos.value
+      ? (nombresModulosSeleccionados.length > 0 ? nombresModulosSeleccionados.join(' y ') + ' (Transversal 1º y 2º)' : 'Transversal (1º y 2º)')
+      : (nombresModulosSeleccionados.length > 0 ? nombresModulosSeleccionados.join(' y ') : `A determinar por IA (${seleccion.value.cursoSeleccionado}º Curso)`);
     const datosP2 = getDatosPaso2Preparados();
-    
+
     const res = await api.post('/generar-microreto', {
       ...seleccion.value, restricciones: datosP2.restriccionesStr, consecuencias: datosP2.consecuenciasArray,
       ciclo_nombre: ciclos.value.find(c => c.id === seleccion.value.cicloId)?.nombre, modulo_nombre: moduloNombreTxt,
-      ciclo_id: seleccion.value.cicloId, modulo_id: modulosSeleccionados.value.length > 0 ? modulosSeleccionados.value : null,
-      nivelGrupo: seleccion.value.nivelGrupo, expectativasAlumno: seleccion.value.expectativasAlumno, 
+      ciclo_id: seleccion.value.cicloId, modulo_id: moduloIdCombinado.length > 0 ? moduloIdCombinado : null,
+      nivelGrupo: seleccion.value.nivelGrupo, expectativasAlumno: seleccion.value.expectativasAlumno,
       cursoSeleccionado: seleccion.value.cursoSeleccionado,
-      cantidad: seleccion.value.cantidadMicroretos 
+      cantidad: seleccion.value.cantidadMicroretos
     });
 
     if (res.data && res.data.microretos) {
@@ -685,7 +821,8 @@ const generarReto = async () => {
                 ciclo_id:     seleccion.value.cicloId   || null,
                 ciclo:        cicloNombreSnapshot,
                 modulo:       moduloNombreTxt,
-                curso:        seleccion.value.cursoSeleccionado,
+                multimodulo:  !esAmbosCursos.value && esMultimodulo.value,
+                curso:        esAmbosCursos.value ? 'ambos_cursos' : seleccion.value.cursoSeleccionado,
                 duracion:     seleccion.value.duracion,
                 nivel_grupo:  seleccion.value.nivelGrupo,
                 es_simulado:  esInfoSimulada.value || !!(empresaDetalle.value?.es_simulada),
@@ -697,7 +834,10 @@ const generarReto = async () => {
     }
 
     setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300);
-  } catch (e) { console.error(e); alert("Error al contactar con la IA"); } finally { cargando.value = false; }
+  } catch (e) {
+    console.error(e);
+    alert(e.response?.data?.error || "Error al contactar con la IA");
+  } finally { cargando.value = false; }
 };
 
 const guardarTodos = async () => {
@@ -1070,67 +1210,54 @@ async function guardarEstadoGen(nuevoEstado) {
 
   <div class="max-w-6xl mx-auto">
 
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+      <header class="mb-6 md:mb-8 text-center flex flex-col items-center">
+        <div class="inline-flex items-center mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
              :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo.png" alt="Logo DuaLab" class="h-20 sm:h-32 md:h-40 w-auto object-contain -mr-3 sm:-mr-4 md:-mr-8 relative z-10" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-[#00A859]">Lab</span><span class="text-[#99CC33] not-italic text-sm sm:text-lg md:text-xl ml-1">Studio Tool</span>
+          <img src="../assets/logo.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain -mr-2 sm:-mr-3 md:-mr-4 relative z-10" />
+          <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+            Dua<span class="text-[#00A859]">Lab</span><span class="text-[#99CC33] not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
           </span>
         </div>
-        
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+
+        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Factoría de <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Retos</span>
         </h1>
-        
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+
+        <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial.
         </p>
 
-        <!-- Botón Guía -->
-        <div class="flex justify-center mt-5 transition-all duration-1000 ease-out transform"
-             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'"
-             style="transition-delay:450ms">
-          <button
-            ref="refBtnGuia"
-            @click="modoGuia = true; pasoGuia = 1"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100
-                   shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
-                   hover:bg-blue-100 hover:border-blue-200 transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Activar Guía
-          </button>
-        </div>
-
       </header>
 
-      <div class="max-w-3xl mx-auto mb-16 relative transition-all duration-1000 delay-500 ease-out transform"
+      <div class="max-w-3xl mx-auto mb-8 md:mb-10 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
         <div class="flex justify-between items-center relative z-10">
-          <div v-for="step in totalPasos" :key="step" class="flex flex-col items-center">
-            <div class="w-12 h-12 rounded-full flex items-center justify-center font-black transition-all duration-500 shadow-sm"
+          <button type="button" v-for="step in totalPasos" :key="step"
+            @click="irAPaso(step)"
+            :disabled="step > pasoActual && (step !== pasoActual + 1 || !pasoActualValido)"
+            :title="step < pasoActual ? 'Volver a este paso' : step === pasoActual + 1 ? 'Ir al siguiente paso' : ''"
+            class="flex flex-col items-center bg-transparent border-0"
+            :class="step < pasoActual || (step === pasoActual + 1 && pasoActualValido) ? 'cursor-pointer' : 'cursor-default'">
+            <div class="w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center font-black transition-all duration-500 shadow-sm"
               :class="pasoActual >= step ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white scale-110 shadow-lg' : 'bg-white border-2 border-gray-200 text-gray-400'">
-              <span v-if="pasoActual > step"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
+              <span v-if="pasoActual > step"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
               <span v-else>{{ step }}</span>
             </div>
-            <span class="text-[10px] font-black uppercase mt-3 tracking-widest text-center" :class="pasoActual >= step ? 'text-[#00A859]' : 'text-gray-400'">
-              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. El Problema' : '3. Match Académico' }}
+            <span class="text-[9px] md:text-[10px] font-black uppercase mt-1.5 md:mt-2 tracking-widest text-center" :class="pasoActual >= step ? 'text-[#00A859]' : 'text-gray-400'">
+              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. Diagnóstico de Empresa' : '3. Match Académico' }}
             </span>
-          </div>
+          </button>
         </div>
-        <div class="absolute top-6 left-0 w-full h-1 bg-gray-200 -z-0 rounded-full"></div>
-        <div class="absolute top-6 left-0 h-1 bg-gradient-to-r from-[#00A859] to-[#99CC33] transition-all duration-700 -z-0 rounded-full" :style="{ width: ((pasoActual - 1) / (totalPasos - 1)) * 100 + '%' }"></div>
+        <div class="absolute top-[18px] md:top-[22px] left-0 w-full h-1 bg-gray-200 -z-0 rounded-full"></div>
+        <div class="absolute top-[18px] md:top-[22px] left-0 h-1 bg-gradient-to-r from-[#00A859] to-[#99CC33] transition-all duration-700 -z-0 rounded-full" :style="{ width: ((pasoActual - 1) / (totalPasos - 1)) * 100 + '%' }"></div>
       </div>
 
       <main class="min-h-[400px]">
         <transition name="fade" mode="out-in">
           <div v-if="pasoActual === 1" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <section class="bg-white rounded-[2.5rem] p-8 md:p-10 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.05)] relative z-10">
+            <section class="bg-white rounded-[2.5rem] p-6 md:p-8 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.05)] relative z-10">
               <transition name="fade">
                 <div v-if="seleccion.empresaNombre" class="absolute -top-4 left-8">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#1F2937] text-xs font-bold tracking-wide border border-gray-100 border-b-0 shadow-[0_-4px_8px_rgb(0,0,0,0.04)]">
@@ -1142,14 +1269,73 @@ async function guardarEstadoGen(nuevoEstado) {
                 </div>
               </transition>
 
-              <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 flex items-center justify-center text-[#00A859]">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                  </div>
-                  <h2 class="text-2xl font-black uppercase tracking-tight text-[#1F2937]">Buscar en DuaLab</h2>
+              <div class="flex flex-wrap items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 flex items-center justify-center text-[#00A859]">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
-                
+                <h2 class="text-2xl font-black uppercase tracking-tight text-[#1F2937]">Buscar en la base de datos de DuaLab</h2>
+
+                <button
+                  ref="refBtnGuia"
+                  @click="modoGuia = true; pasoGuia = 1"
+                  class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100
+                         shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
+                         hover:bg-blue-100 hover:border-blue-200 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  Activar Guía
+                </button>
+              </div>
+
+              <div v-if="esModoDemo"
+                class="mb-6 flex items-center gap-3 bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs font-bold text-[#00A859] uppercase tracking-widest">
+                  Modo Demo activo — los campos están bloqueados. Pulsa "Vaciar" para editarlos.
+                </p>
+              </div>
+
+              <div v-else-if="estaPasoBloqueado(1)"
+                class="mb-6 flex items-center gap-3 bg-gray-100 border border-gray-200 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v4h8z"/>
+                </svg>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Este paso ya está bloqueado — puedes leerlo, pero para modificarlo pulsa "Vaciar" y empieza de nuevo.
+                </p>
+              </div>
+
+              <!-- FILA 1: Centro educativo, con las acciones generales debajo en horizontal -->
+              <div class="mb-8 flex flex-col gap-4">
+                <!-- PASO 1: Centro educativo obligatorio -->
+                <div ref="refCentroEducativo"
+                     class="w-full lg:max-w-sm rounded-2xl transition-all duration-300"
+                     :class="[
+                       !centroFiltro && !esModoDemo ? 'step-glow-active' : '',
+                       tourTargetActivo === 'refCentroEducativo' ? 'tour-active' : '',
+                       modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda' ? 'tour-seccion-blur' : ''
+                     ]">
+                  <label class="label-style" :class="!centroFiltro && !esModoDemo ? '!text-[#00A859]' : ''">
+                    {{ !centroFiltro && !esModoDemo ? '① Centro Educativo *' : 'Centro Educativo *' }}
+                  </label>
+                  <input v-if="esModoDemo" type="text" value="IES DEMO" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
+                  <input v-else-if="centroFijadoPorRol"
+                    type="text"
+                    :value="authStore.userCentroNombre"
+                    disabled
+                    class="input-style opacity-80 cursor-not-allowed bg-gray-50"
+                    title="Tu centro educativo está fijado según tu cuenta"
+                  />
+                  <select v-else v-model="centroFiltro" :disabled="estaPasoBloqueado(1)" class="input-style">
+                    <option value="">Selecciona tu centro...</option>
+                    <option v-for="centro in centrosDisponibles" :key="centro" :value="centro">{{ centro }}</option>
+                  </select>
+                </div>
+
                 <div class="flex flex-wrap items-center gap-2"
                      :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'acciones' }">
                   <!-- Cargar Demo -->
@@ -1157,7 +1343,8 @@ async function guardarEstadoGen(nuevoEstado) {
                        :class="{ 'tour-active': tourTargetActivo === 'refBotonesDemo' }">
                     <button
                       @click="mostrarSelectorDemo = !mostrarSelectorDemo"
-                      :class="esModoDemo ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/30 hover:bg-[#00A859]/15' : 'bg-white text-[#00A859] hover:bg-gray-50 border-gray-200 hover:border-[#00A859] shadow-sm'"
+                      :disabled="estaPasoBloqueado(1)"
+                      :class="estaPasoBloqueado(1) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esModoDemo ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/30 hover:bg-[#00A859]/15' : 'bg-white text-[#00A859] hover:bg-gray-50 border-gray-200 hover:border-[#00A859] shadow-sm'"
                       class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                       <template v-if="esModoDemo">
                         <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -1193,9 +1380,9 @@ async function guardarEstadoGen(nuevoEstado) {
                   <!-- Información Simulada -->
                   <button ref="refInfoSimulada"
                     @click="toggleInfoSimulada()"
-                    :disabled="esModoDemo || cargandoSimulacion"
+                    :disabled="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2)"
                     :class="[
-                      esModoDemo || cargandoSimulacion ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm',
+                      esModoDemo || cargandoSimulacion || estaPasoBloqueado(2) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm',
                       tourTargetActivo === 'refInfoSimulada' ? 'tour-active' : ''
                     ]"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
@@ -1206,42 +1393,6 @@ async function guardarEstadoGen(nuevoEstado) {
                     <span v-else>Información Simulada</span>
                   </button>
 
-                  <!-- Separador vertical -->
-                  <span class="hidden sm:block w-px h-6 bg-gray-200 mx-1 rounded-full" />
-
-                  <!-- Ver base de datos — solo admin -->
-                  <RouterLink
-                    v-if="!esDocente"
-                    ref="refBaseDatos"
-                    to="/base-datos"
-                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border bg-white text-gray-600 hover:bg-gray-50 border-gray-200 hover:border-gray-400 shadow-sm"
-                    :class="{ 'tour-active': tourTargetActivo === 'refBaseDatos' }"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <ellipse cx="12" cy="5" rx="9" ry="3"/>
-                      <path d="M21 12c0 1.657-4.03 3-9 3S3 13.657 3 12"/>
-                      <path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/>
-                    </svg>
-                    Base de datos
-                  </RouterLink>
-
-                  <!-- Insertar / Modificar empresa — solo admin -->
-                  <button v-if="!esDocente" ref="refInsertarEmpresa" @click="abrirModalEmpresa"
-                    :class="[
-                      seleccion.empresaId
-                        ? 'bg-[#00A859] text-white border-[#00A859] hover:bg-[#007a42] shadow-md'
-                        : 'bg-white text-[#1F2937] hover:bg-gray-50 border-gray-200 shadow-sm',
-                      tourTargetActivo === 'refInsertarEmpresa' ? 'tour-active' : ''
-                    ]"
-                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path v-if="seleccion.empresaId" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7z"/>
-                    </svg>
-                    {{ seleccion.empresaId ? 'Modificar datos empresa' : 'Insertar nueva empresa' }}
-                  </button>
-
                   <!-- Vaciar -->
                   <button @click="limpiarFormulario" class="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -1250,66 +1401,83 @@ async function guardarEstadoGen(nuevoEstado) {
                 </div>
               </div>
 
-              <div v-if="esModoDemo"
-                class="mb-6 flex items-center gap-3 bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl px-5 py-3">
-                <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <p class="text-xs font-bold text-[#00A859] uppercase tracking-widest">
-                  Modo Demo activo — los campos están bloqueados. Pulsa "Vaciar" para editarlos.
-                </p>
-              </div>
+              <!-- FILA 2: Elige empresa — a lo ancho del grid, coherente con las cards de resultados -->
+              <div class="mb-10 relative z-20 rounded-2xl transition-all duration-300" ref="buscadorRef"
+                   :class="[
+                     centroFiltro && !seleccion.empresaId && !esModoDemo ? 'step-glow-empresa' : '',
+                     tourTargetActivo === 'refBuscadorEmpresa' ? 'tour-active' : '',
+                     modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda' ? 'tour-seccion-blur' : ''
+                   ]">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <label class="label-style !mb-0"
+                      :class="centroFiltro && !seleccion.empresaId && !esModoDemo ? '!text-[#00A859]' : (!centroFiltro && !esModoDemo ? 'opacity-40' : '')">
+                      <template v-if="centroFiltro && !seleccion.empresaId && !esModoDemo">② Elige empresa</template>
+                      <template v-else-if="!centroFiltro && !esModoDemo">Empresa (elige primero un centro)</template>
+                      <template v-else>Buscar empresa</template>
+                    </label>
 
-              <div class="mb-10 relative z-20 grid grid-cols-1 md:grid-cols-2 gap-6"
-                   :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda' }">
-                <!-- PASO 1: Centro educativo obligatorio -->
-                <div ref="refCentroEducativo"
-                     class="rounded-2xl transition-all duration-300"
-                     :class="[
-                       !centroFiltro && !esModoDemo ? 'step-glow-active' : '',
-                       tourTargetActivo === 'refCentroEducativo' ? 'tour-active' : ''
-                     ]">
-                  <label class="label-style" :class="!centroFiltro && !esModoDemo ? '!text-[#00A859]' : ''">
-                    {{ !centroFiltro && !esModoDemo ? '① Centro Educativo *' : 'Centro Educativo *' }}
-                  </label>
-                  <input v-if="esModoDemo" type="text" value="IES DEMO" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
-                  <input v-else-if="esDocente && authStore.userCentroNombre"
-                    type="text"
-                    :value="authStore.userCentroNombre"
-                    disabled
-                    class="input-style opacity-80 cursor-not-allowed bg-gray-50"
-                    title="Tu centro educativo está fijado según tu cuenta"
-                  />
-                  <select v-else v-model="centroFiltro" class="input-style">
-                    <option value="">Selecciona tu centro...</option>
-                    <option v-for="centro in centrosDisponibles" :key="centro" :value="centro">{{ centro }}</option>
-                  </select>
-                </div>
+                    <div v-if="!esDocente" class="flex flex-wrap items-center gap-2 mb-2">
+                      <!-- Ver base de datos — solo superadmin (catálogo global, no ligado a un centro) -->
+                      <RouterLink
+                        v-if="authStore.isSuperAdmin"
+                        ref="refBaseDatos"
+                        to="/base-datos"
+                        class="px-4 py-2 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border bg-white text-gray-600 hover:bg-gray-50 border-gray-200 hover:border-gray-400 shadow-sm"
+                        :class="{ 'tour-active': tourTargetActivo === 'refBaseDatos' }"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                          <path d="M21 12c0 1.657-4.03 3-9 3S3 13.657 3 12"/>
+                          <path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/>
+                        </svg>
+                        Base de datos
+                      </RouterLink>
 
-                <!-- PASO 2: Buscar empresa (bloqueado hasta elegir centro) -->
-                <div class="relative rounded-2xl transition-all duration-300" ref="buscadorRef"
-                     :class="[
-                       centroFiltro && !seleccion.empresaId && !esModoDemo ? 'step-glow-empresa' : '',
-                       tourTargetActivo === 'refBuscadorEmpresa' ? 'tour-active' : ''
-                     ]">
-                  <label class="label-style"
-                    :class="centroFiltro && !seleccion.empresaId && !esModoDemo ? '!text-[#00A859]' : (!centroFiltro && !esModoDemo ? 'opacity-40' : '')">
-                    <template v-if="centroFiltro && !seleccion.empresaId && !esModoDemo">② Elige empresa</template>
-                    <template v-else-if="!centroFiltro && !esModoDemo">Empresa (elige primero un centro)</template>
-                    <template v-else>Buscar empresa</template>
-                  </label>
+                      <!-- Insertar / Modificar empresa — admin y superadmin, acotado a su propio centro en el backend -->
+                      <button ref="refInsertarEmpresa" @click="abrirModalEmpresa"
+                        :disabled="estaPasoBloqueado(1)"
+                        :class="[
+                          estaPasoBloqueado(1)
+                            ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200'
+                            : seleccion.empresaId
+                              ? 'bg-[#00A859] text-white border-[#00A859] hover:bg-[#007a42] shadow-md'
+                              : 'bg-white text-[#1F2937] hover:bg-gray-50 border-gray-200 shadow-sm',
+                          tourTargetActivo === 'refInsertarEmpresa' ? 'tour-active' : ''
+                        ]"
+                        class="px-4 py-2 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path v-if="seleccion.empresaId" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7z"/>
+                        </svg>
+                        {{ seleccion.empresaId ? 'Modificar datos empresa' : 'Insertar nueva empresa' }}
+                      </button>
+                    </div>
+                  </div>
 
                   <!-- Filtro simulada/real — visible solo cuando hay centro seleccionado -->
-                  <div v-if="centroFiltro && !esModoDemo" class="flex items-center gap-1.5 mb-2">
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="flex flex-wrap items-center gap-1.5 mb-2">
                     <button
                       v-for="(label, val) in { '': 'Todas', 'simulada': 'Simuladas', 'real': 'Verídicas' }"
                       :key="val"
-                      @click="filtroTipoEmpresa = val; if (!buscadorEmpresa) mostrarDropdownEmpresas = true"
+                      @click="filtroTipoEmpresa = val; mostrarDropdownEmpresas = true"
                       :class="filtroTipoEmpresa === val
                         ? (val === 'simulada' ? 'bg-[#1F2937] text-white border-[#1F2937]' : val === 'real' ? 'bg-[#00A859] text-white border-[#00A859]' : 'bg-gray-200 text-gray-700 border-gray-300')
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'"
                       class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all"
                     >{{ label }}</button>
+                  </div>
+
+                  <!-- Filtro por sector — solo sectores presentes entre las empresas del centro -->
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && sectoresParaFiltroEmpresa.length > 0" class="mb-3">
+                    <select
+                      v-model="filtroSectorEmpresa"
+                      @change="mostrarDropdownEmpresas = true"
+                      class="input-style !py-2 text-sm"
+                    >
+                      <option value="">Todos los sectores</option>
+                      <option v-for="sector in sectoresParaFiltroEmpresa" :key="sector" :value="sector">{{ sector }}</option>
+                    </select>
                   </div>
 
                   <div class="relative">
@@ -1323,7 +1491,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       v-model="buscadorEmpresa"
                       @input="onBuscadorInput"
                       @focus="mostrarDropdownEmpresas = true"
-                      :disabled="!centroFiltro && !esModoDemo"
+                      :disabled="(!centroFiltro && !esModoDemo) || estaPasoBloqueado(1)"
                       autocomplete="new-password"
                       name="buscar-empresa-dualab"
                       type="search"
@@ -1333,39 +1501,56 @@ async function guardarEstadoGen(nuevoEstado) {
                   </div>
 
                   <Transition name="dropdown">
-                    <div
-                      v-if="mostrarDropdownEmpresas && empresasFiltradasBusqueda.length > 0"
-                      class="absolute w-full mt-2 bg-[#1F2937] border border-[#374151] rounded-2xl shadow-2xl max-h-64 overflow-y-auto z-50"
-                    >
-                      <div v-if="buscadorEmpresa" class="px-6 pt-3 pb-1">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                          {{ empresasFiltradasBusqueda.length }} resultado(s) para "{{ buscadorEmpresa }}"
+                    <div v-if="mostrarDropdownEmpresas && centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="mt-3">
+                      <div v-if="empresasFiltradasBusqueda.length > 0">
+                        <span class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                          {{ empresasFiltradasBusqueda.length }} resultado(s)
                         </span>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <button
+                            v-for="emp in empresasPaginadas"
+                            :key="emp.id"
+                            @click="seleccionarEmpresa(emp)"
+                            class="text-left px-5 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-[#00A859] hover:shadow-md transition-all"
+                          >
+                            <span class="font-bold text-[#1F2937] block truncate">{{ emp.nombre_comercial }}</span>
+                            <span class="text-xs text-gray-400 uppercase tracking-widest block truncate mt-0.5">
+                              {{ emp.sector || 'Sin sector especificado' }}
+                            </span>
+                            <span v-if="emp.es_simulada" class="inline-block mt-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-500">
+                              Simulada
+                            </span>
+                          </button>
+                        </div>
+
+                        <!-- Paginación: EMPRESAS_POR_PAGINA es múltiplo de 1/2/3 columnas → siempre filas completas -->
+                        <div v-if="totalPaginasEmpresas > 1" class="flex items-center justify-between mt-3">
+                          <button
+                            type="button"
+                            @click="paginaEmpresas -= 1"
+                            :disabled="paginaEmpresas === 1"
+                            class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                          >← Anterior</button>
+                          <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                            Página {{ paginaEmpresas }} de {{ totalPaginasEmpresas }}
+                          </span>
+                          <button
+                            type="button"
+                            @click="paginaEmpresas += 1"
+                            :disabled="paginaEmpresas === totalPaginasEmpresas"
+                            class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                          >Siguiente →</button>
+                        </div>
                       </div>
 
-                      <button
-                        v-for="emp in empresasFiltradasBusqueda"
-                        :key="emp.id"
-                        @mousedown.prevent="seleccionarEmpresa(emp)"
-                        class="w-full text-left px-6 py-4 border-b border-[#374151] hover:bg-[#374151] transition-colors last:border-0"
-                      >
-                        <span class="font-bold text-white block">{{ emp.nombre_comercial }}</span>
-                        <span class="text-xs text-gray-400 uppercase tracking-widest">
-                          {{ emp.sector || 'Sin sector especificado' }}
-                        </span>
-                      </button>
+                      <!-- Mensaje cuando no hay resultados -->
+                      <div v-else class="px-6 py-5 bg-white border border-gray-200 rounded-2xl shadow-sm">
+                        <p class="text-gray-400 text-sm">No se encontró ninguna empresa con esos filtros.</p>
+                      </div>
                     </div>
                   </Transition>
-
-                  <!-- Mensaje cuando no hay resultados (oculto en modo demo) -->
-                  <div
-                    v-if="!esModoDemo && mostrarDropdownEmpresas && buscadorEmpresa && empresasFiltradasBusqueda.length === 0"
-                    class="absolute w-full mt-2 bg-[#1F2937] border border-[#374151] rounded-2xl shadow-2xl z-50 px-6 py-5"
-                  >
-                    <p class="text-gray-400 text-sm">No se encontró ninguna empresa con ese nombre.</p>
-                  </div>
                 </div>
-              </div>
 
             <div v-if="empresaDetalle" class="bg-white rounded-3xl p-8 border border-gray-100 mb-8 animate-in fade-in duration-500">
 
@@ -1520,8 +1705,8 @@ async function guardarEstadoGen(nuevoEstado) {
                 <div>
                   <label class="label-style" :class="!seleccion.empresaSector && (seleccion.empresaId || seleccion.empresaNombre) ? 'text-red-500' : ''">Sector de Actividad *</label>
 
-                  <!-- Modo demo: input bloqueado -->
-                  <input v-if="esModoDemo" :value="seleccion.empresaSector" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
+                  <!-- Modo demo o paso bloqueado: input de solo lectura -->
+                  <input v-if="esModoDemo || estaPasoBloqueado(1)" :value="seleccion.empresaSector" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
 
                   <!-- Modo libre: campo de texto con vuelta al listado -->
                   <div v-else-if="sectorEsLibre" class="flex gap-2">
@@ -1587,7 +1772,7 @@ async function guardarEstadoGen(nuevoEstado) {
 
                 <div>
                   <label class="label-style" :class="!seleccion.empresaTamano && (seleccion.empresaId || seleccion.empresaNombre) ? 'text-red-500' : ''">Tamaño de la Empresa *</label>
-                  <select v-model="seleccion.empresaTamano" :disabled="esModoDemo" class="input-style" :class="!seleccion.empresaTamano && (seleccion.empresaId || seleccion.empresaNombre) ? 'border-red-500 bg-red-900/30 text-red-400 focus:border-red-500 focus:bg-red-900/40' : ''">
+                  <select v-model="seleccion.empresaTamano" :disabled="esModoDemo || estaPasoBloqueado(1)" class="input-style" :class="!seleccion.empresaTamano && (seleccion.empresaId || seleccion.empresaNombre) ? 'border-red-500 bg-red-900/30 text-red-400 focus:border-red-500 focus:bg-red-900/40' : ''">
                     <option value="" disabled selected>¡FALTA INFO! Selecciona...</option>
                     <option value="Micropyme (1-10)">Micropyme (1 a 10 empleados)</option>
                     <option value="Pequeña (10-50)">Pequeña (10 a 50 empleados)</option>
@@ -1602,7 +1787,7 @@ async function guardarEstadoGen(nuevoEstado) {
                   </label>
                   <input
                     v-model="seleccion.empresaWeb"
-                    :disabled="esModoDemo"
+                    :disabled="esModoDemo || estaPasoBloqueado(1)"
                     class="input-style"
                     :class="seleccion.empresaWeb && !empresaWebEsValida ? 'border-red-500 focus:border-red-500' : ''"
                     placeholder="https://..."
@@ -1644,8 +1829,8 @@ async function guardarEstadoGen(nuevoEstado) {
 
                 <div class="flex flex-wrap items-center gap-2">
                   <button @click="toggleInfoSimulada()"
-                    :disabled="esModoDemo || cargandoSimulacion"
-                    :class="esModoDemo || cargandoSimulacion ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
+                    :disabled="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2)"
+                    :class="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <svg v-if="cargandoSimulacion" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
@@ -1684,6 +1869,16 @@ async function guardarEstadoGen(nuevoEstado) {
                 </p>
               </div>
 
+              <div v-else-if="estaPasoBloqueado(2)"
+                class="mb-6 flex items-center gap-3 bg-gray-100 border border-gray-200 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v4h8z"/>
+                </svg>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Este paso ya está bloqueado — puedes leerlo, pero para modificarlo pulsa "Vaciar" y empieza de nuevo.
+                </p>
+              </div>
+
               <div v-if="diagnosticoRecuperado" class="mb-10 p-5 md:p-6 bg-[#00A859]/5 border border-[#00A859]/20 rounded-3xl flex gap-4 md:gap-5 items-start">
                 <div class="bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white p-2.5 rounded-2xl shrink-0 mt-1 shadow-md">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1706,7 +1901,7 @@ async function guardarEstadoGen(nuevoEstado) {
                     <button @click="abrirPopup('info', 1)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button @click="abrirPopup('ejemplo', 1)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
-                  <textarea v-model="seleccion.diaANormal" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.diaANormal.max" class="input-style h-24" placeholder="Ej: Somos una empresa de servicios informáticos..."></textarea>
+                  <textarea v-model="seleccion.diaANormal" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.diaANormal.max" class="input-style h-24" placeholder="Ej: Somos una empresa de servicios informáticos..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
                     <span v-if="charInfo('diaANormal').isWarning && !charInfo('diaANormal').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                     <span class="text-[10px] transition-colors" :class="charInfo('diaANormal').isOver ? 'text-red-400 font-bold' : charInfo('diaANormal').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('diaANormal').len }}/{{ CHAR_LIMITS.diaANormal.max }}</span>
@@ -1724,7 +1919,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       <button @click="abrirPopup('info', 2)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                       <button @click="abrirPopup('ejemplo', 2)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                     </div>
-                    <textarea v-model="seleccion.friccionArea" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.friccionArea.max" class="input-style h-16" placeholder="Ej: Registro manual de albaranes..."></textarea>
+                    <textarea v-model="seleccion.friccionArea" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.friccionArea.max" class="input-style h-16" placeholder="Ej: Registro manual de albaranes..."></textarea>
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
                       <span v-if="charInfo('friccionArea').isWarning && !charInfo('friccionArea').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                       <span class="text-[10px] transition-colors" :class="charInfo('friccionArea').isOver ? 'text-red-400 font-bold' : charInfo('friccionArea').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('friccionArea').len }}/{{ CHAR_LIMITS.friccionArea.max }}</span>
@@ -1735,7 +1930,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">2b</span>
                       ¿Por qué? Cuéntanos qué ocurre hoy
                     </label>
-                    <textarea v-model="seleccion.friccionProblema" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.friccionProblema.max" class="input-style h-24" placeholder="Se pierde mucho tiempo porque... hay errores cuando..."></textarea>
+                    <textarea v-model="seleccion.friccionProblema" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.friccionProblema.max" class="input-style h-24" placeholder="Se pierde mucho tiempo porque... hay errores cuando..."></textarea>
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
                       <span v-if="charInfo('friccionProblema').isWarning && !charInfo('friccionProblema').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                       <span class="text-[10px] transition-colors" :class="charInfo('friccionProblema').isOver ? 'text-red-400 font-bold' : charInfo('friccionProblema').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('friccionProblema').len }}/{{ CHAR_LIMITS.friccionProblema.max }}</span>
@@ -1754,15 +1949,15 @@ async function guardarEstadoGen(nuevoEstado) {
                   </div>
                   
                   <div class="flex flex-wrap gap-2 mb-4">
-                    <button v-for="opt in limitacionesOpciones" :key="opt" 
-                      @click="!esModoDemo && (seleccion.restricciones.includes(opt) ? seleccion.restricciones = seleccion.restricciones.filter(c => c !== opt) : seleccion.restricciones.push(opt))"
-                      :disabled="esModoDemo"
+                    <button v-for="opt in limitacionesOpciones" :key="opt"
+                      @click="!esModoDemo && !estaPasoBloqueado(2) && (seleccion.restricciones.includes(opt) ? seleccion.restricciones = seleccion.restricciones.filter(c => c !== opt) : seleccion.restricciones.push(opt))"
+                      :disabled="esModoDemo || estaPasoBloqueado(2)"
                       :class="seleccion.restricciones.includes(opt) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
                       class="px-5 py-2.5 rounded-2xl border-2 text-[10px] font-black uppercase transition-all shadow-sm">
                       {{ opt }}
                     </button>
                   </div>
-                  <textarea v-model="seleccion.otraLimitacion" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.otraLimitacion.max" class="input-style h-20" placeholder="Describe aquí otros intentos de solución o detalles de las limitaciones..."></textarea>
+                  <textarea v-model="seleccion.otraLimitacion" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.otraLimitacion.max" class="input-style h-20" placeholder="Describe aquí otros intentos de solución o detalles de las limitaciones..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
                     <span v-if="charInfo('otraLimitacion').isWarning && !charInfo('otraLimitacion').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                     <span class="text-[10px] transition-colors" :class="charInfo('otraLimitacion').isOver ? 'text-red-400 font-bold' : charInfo('otraLimitacion').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('otraLimitacion').len }}/{{ CHAR_LIMITS.otraLimitacion.max }}</span>
@@ -1774,7 +1969,7 @@ async function guardarEstadoGen(nuevoEstado) {
                     <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">3b</span>
                     ¿Qué NO quieren bajo ningún concepto?
                   </label>
-                  <textarea v-model="seleccion.loQueNoQuieren" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.loQueNoQuieren.max" class="input-style h-16" placeholder="Ej: Nada que requiera suscripción mensual..."></textarea>
+                  <textarea v-model="seleccion.loQueNoQuieren" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.loQueNoQuieren.max" class="input-style h-16" placeholder="Ej: Nada que requiera suscripción mensual..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
                     <span v-if="charInfo('loQueNoQuieren').isWarning && !charInfo('loQueNoQuieren').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                     <span class="text-[10px] transition-colors" :class="charInfo('loQueNoQuieren').isOver ? 'text-red-400 font-bold' : charInfo('loQueNoQuieren').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('loQueNoQuieren').len }}/{{ CHAR_LIMITS.loQueNoQuieren.max }}</span>
@@ -1792,15 +1987,15 @@ async function guardarEstadoGen(nuevoEstado) {
                   </div>
                   
                   <div class="flex flex-wrap gap-2 mb-4">
-                    <button v-for="opt in consecuenciasOpciones" :key="opt" 
-                      @click="!esModoDemo && (seleccion.consecuencias.includes(opt) ? seleccion.consecuencias = seleccion.consecuencias.filter(c => c !== opt) : seleccion.consecuencias.push(opt))"
-                      :disabled="esModoDemo"
+                    <button v-for="opt in consecuenciasOpciones" :key="opt"
+                      @click="!esModoDemo && !estaPasoBloqueado(2) && (seleccion.consecuencias.includes(opt) ? seleccion.consecuencias = seleccion.consecuencias.filter(c => c !== opt) : seleccion.consecuencias.push(opt))"
+                      :disabled="esModoDemo || estaPasoBloqueado(2)"
                       :class="seleccion.consecuencias.includes(opt) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#99CC33]/50'"
                       class="px-5 py-2.5 rounded-2xl border-2 text-[10px] font-black uppercase transition-all shadow-sm">
                       {{ opt }}
                     </button>
                   </div>
-                  <input v-model="seleccion.otraConsecuencia" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.otraConsecuencia.max" class="input-style" placeholder="Otra mejora específica (Opcional)..." />
+                  <input v-model="seleccion.otraConsecuencia" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.otraConsecuencia.max" class="input-style" placeholder="Otra mejora específica (Opcional)..." />
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
                     <span v-if="charInfo('otraConsecuencia').isWarning && !charInfo('otraConsecuencia').isOver" class="text-amber-400 text-[10px]">Cerca del límite</span>
                     <span class="text-[10px] transition-colors" :class="charInfo('otraConsecuencia').isOver ? 'text-red-400 font-bold' : charInfo('otraConsecuencia').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('otraConsecuencia').len }}/{{ CHAR_LIMITS.otraConsecuencia.max }}</span>
@@ -1817,7 +2012,7 @@ async function guardarEstadoGen(nuevoEstado) {
                     <button @click="abrirPopup('info', 5)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button @click="abrirPopup('ejemplo', 5)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
-                  <textarea v-model="seleccion.expectativasAlumno" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.expectativasAlumno.max" class="input-style h-24" placeholder="Ej: Que investigue herramientas gratuitas y proponga un prototipo sencillo..."></textarea>
+                  <textarea v-model="seleccion.expectativasAlumno" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.expectativasAlumno.max" class="input-style h-24" placeholder="Ej: Que investigue herramientas gratuitas y proponga un prototipo sencillo..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
                     <span v-if="charInfo('expectativasAlumno').isWarning && !charInfo('expectativasAlumno').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                     <span class="text-[10px] transition-colors" :class="charInfo('expectativasAlumno').isOver ? 'text-red-400 font-bold' : charInfo('expectativasAlumno').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('expectativasAlumno').len }}/{{ CHAR_LIMITS.expectativasAlumno.max }}</span>
@@ -1852,8 +2047,8 @@ async function guardarEstadoGen(nuevoEstado) {
 
                 <div class="flex flex-wrap items-center gap-2">
                   <button @click="toggleInfoSimulada()"
-                    :disabled="esModoDemo || cargandoSimulacion"
-                    :class="esModoDemo || cargandoSimulacion ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
+                    :disabled="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2)"
+                    :class="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <svg v-if="cargandoSimulacion" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
@@ -1961,23 +2156,77 @@ async function guardarEstadoGen(nuevoEstado) {
                       class="flex-1 py-3 rounded-xl text-sm transition-all">
                       1º Curso
                     </button>
-                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 2)" 
+                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 2)"
                       :disabled="esModoDemo"
-                      :class="seleccion.cursoSeleccionado === 2 ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'" 
+                      :class="seleccion.cursoSeleccionado === 2 ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'"
                       class="flex-1 py-3 rounded-xl text-sm transition-all">
                       2º Curso
+                    </button>
+                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 'ambos_cursos')"
+                      :disabled="esModoDemo"
+                      :class="seleccion.cursoSeleccionado === 'ambos_cursos' ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'"
+                      class="flex-1 py-3 rounded-xl text-sm transition-all">
+                      Ambos Cursos
                     </button>
                   </div>
                 </div>
 
                 <div ref="refModulosSection" class="col-span-2 mt-2 pt-6 border-t border-gray-100"
                      :class="{ 'tour-active': tourTargetActivo === 'refModulosSection' }">
-                  <div class="w-full bg-gray-50 p-6 rounded-3xl border border-gray-200 relative">
+                  <div v-if="esAmbosCursos" class="w-full bg-gray-50 p-6 rounded-3xl border border-gray-200 relative">
+                    <div class="flex items-center justify-between mb-3">
+                      <label class="label-style !mb-0 !ml-0">Forzar Módulos de 1º y 2º (Opcional)</label>
+                      <button type="button" @click="!esModoDemo && limpiarModulosAmbos()"
+                        :disabled="esModoDemo"
+                        class="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Vaciar
+                      </button>
+                    </div>
+                    <span class="text-xs text-gray-400 italic block mb-3">Sin módulos seleccionados, la IA cruzará RA/CE de todos los módulos de 1º y 2º, cubriendo un mínimo de 3 módulos distintos con al menos uno de cada curso. Si eliges módulos, elige al menos uno de cada curso — la IA se ceñirá a los que fuerces.</span>
+
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-2">Módulos de 1º</label>
+                        <div class="flex flex-wrap gap-2">
+                          <button v-for="m in modulosCurso1DelCiclo" :key="m.id" type="button"
+                            @click="!esModoDemo && toggleEnArray(modulosSeleccionadosCurso1, m.id)"
+                            :disabled="esModoDemo"
+                            :class="modulosSeleccionadosCurso1.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                            class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
+                            {{ m.nombre }}
+                          </button>
+                          <p v-if="modulosCurso1DelCiclo.length === 0" class="text-xs text-red-500 italic">No hay módulos de 1º cargados para este ciclo.</p>
+                        </div>
+                      </div>
+                      <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-2">Módulos de 2º</label>
+                        <div class="flex flex-wrap gap-2">
+                          <button v-for="m in modulosCurso2DelCiclo" :key="m.id" type="button"
+                            @click="!esModoDemo && toggleEnArray(modulosSeleccionadosCurso2, m.id)"
+                            :disabled="esModoDemo"
+                            :class="modulosSeleccionadosCurso2.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                            class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
+                            {{ m.nombre }}
+                          </button>
+                          <p v-if="modulosCurso2DelCiclo.length === 0" class="text-xs text-red-500 italic">No hay módulos de 2º cargados para este ciclo.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p v-if="!ambosCursosModulosValidos" class="text-xs text-red-500 mt-2 italic">Si eliges módulos en modo "Ambos Cursos", debes elegir al menos uno de 1º y uno de 2º.</p>
+                  </div>
+                  <div v-else class="w-full bg-gray-50 p-6 rounded-3xl border border-gray-200 relative">
                     <div class="flex items-center justify-between mb-3">
                       <label class="label-style !mb-0 !ml-0">Forzar Módulo Específico (Opcional)</label>
-                      <span class="text-xs text-gray-400 italic">Si no eliges, la IA cruzará con todos.</span>
+                      <button type="button" @click="!esModoDemo && (modulosSeleccionados = [])"
+                        :disabled="esModoDemo"
+                        class="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Vaciar
+                      </button>
                     </div>
-                    
+                    <span class="text-xs text-gray-400 italic block mb-3">Sin módulo seleccionado, la IA cruzará RA/CE de todos los módulos del curso, cubriendo un mínimo de 3 módulos distintos si el ciclo tiene suficientes. Si fuerzas un módulo, la IA se ceñirá a ese módulo.</span>
+
                     <!-- Módulo virtual cuando la demo no tiene ciclo en BD -->
                     <div v-if="esModoDemo && modulosDelCurso.length === 0 && demoModuloNombre"
                       class="input-style min-h-[60px] flex items-center gap-2 bg-[#00A859]/5 border-[#00A859]/20 text-[#1F2937] cursor-default">
@@ -1985,9 +2234,15 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="text-sm font-semibold">{{ demoModuloNombre }}</span>
                       <span class="ml-auto text-[10px] text-gray-400 uppercase tracking-wide">Módulo de demo</span>
                     </div>
-                    <select v-else v-model="modulosSeleccionados" multiple :disabled="esModoDemo || modulosDelCurso.length === 0" class="input-style min-h-[120px]">
-                      <option v-for="m in modulosDelCurso" :key="m.id" :value="m.id">{{ m.nombre }}</option>
-                    </select>
+                    <div v-else class="flex flex-wrap gap-2">
+                      <button v-for="m in modulosDelCurso" :key="m.id" type="button"
+                        @click="!esModoDemo && toggleEnArray(modulosSeleccionados, m.id)"
+                        :disabled="esModoDemo"
+                        :class="modulosSeleccionados.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                        class="px-5 py-2.5 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
+                        {{ m.nombre }}
+                      </button>
+                    </div>
                     <p v-if="!esModoDemo && modulosDelCurso.length === 0 && seleccion.cicloId" class="text-xs text-red-500 mt-2 italic">No hay módulos cargados para este curso.</p>
                   </div>
                 </div>
@@ -2026,12 +2281,12 @@ async function guardarEstadoGen(nuevoEstado) {
         </div>
 
         <div class="flex flex-wrap md:flex-nowrap gap-4 w-full max-w-4xl">
-          <button v-if="pasoActual > 1" @click="retrocederPaso" class="flex-1 min-w-[150px] px-10 py-6 bg-white text-[#1F2937] border-2 border-gray-200 rounded-full font-black text-xs tracking-widest transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-95">
+          <button v-if="pasoActual > 1" @click="irAPaso(pasoActual - 1)" class="flex-1 min-w-[150px] px-10 py-6 bg-white text-[#1F2937] border-2 border-gray-200 rounded-full font-black text-xs tracking-widest transition-all hover:bg-gray-50 hover:border-gray-300 active:scale-95">
             VOLVER
           </button>
           
-          <button v-if="pasoActual < totalPasos" @click="avanzarPaso" 
-            :disabled="(pasoActual === 1 && !paso1Valido) || (pasoActual === 2 && !paso2Valido)"
+          <button v-if="pasoActual < totalPasos" @click="avanzarPaso"
+            :disabled="!pasoActualValido"
             class="flex-[2] min-w-[200px] px-10 py-6 bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white rounded-full font-black text-xs tracking-widest shadow-md hover:shadow-lg disabled:opacity-30 transition-all hover:scale-105 active:scale-95">
             SIGUIENTE PASO
           </button>
@@ -2139,7 +2394,7 @@ async function guardarEstadoGen(nuevoEstado) {
                 </span>
                 <span class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-500 rounded-lg text-xs font-bold uppercase tracking-wider">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                  Nivel: {{ reto.nivel_grupo || seleccion.nivelGrupo }} ({{ reto.curso || seleccion.cursoSeleccionado }}º)
+                  Nivel: {{ reto.nivel_grupo || seleccion.nivelGrupo }} ({{ (reto.curso || seleccion.cursoSeleccionado) === 'ambos_cursos' ? 'Ambos Cursos (1º y 2º)' : (reto.curso || seleccion.cursoSeleccionado) + 'º' }})
                 </span>
               </div>
             </div>
@@ -2230,7 +2485,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <div class="pt-6">
                 <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
                   <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
-                  RA/CE Seleccionados
+                  Módulos + RA/CE seleccionados
                 </h3>
 
                 <!-- Aviso: no se pudo asignar ningún RA/CE -->
@@ -2256,13 +2511,34 @@ async function guardarEstadoGen(nuevoEstado) {
                     </svg>
                     <p class="text-sm text-blue-700 leading-relaxed">
                       Esta selección de RA/CE la ha hecho la IA a partir del currículo oficial — revísala antes de publicar el reto.
+                      Cubre un mínimo de 3 módulos distintos (salvo que se hayan forzado módulos concretos)<template v-if="reto.curso === 'ambos_cursos'">, incluyendo al menos uno de 1º y uno de 2º</template>.
+                    </p>
+                  </div>
+
+                  <!-- Aviso: la IA no cumplió la cobertura mínima exigida (mínimo de módulos y/o mezcla 1º+2º) -->
+                  <div v-if="reto.aviso_cobertura_incompleta" class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4">
+                    <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <p class="text-sm text-amber-700 leading-relaxed">
+                      <strong class="font-bold">Atención:</strong> esta vez la IA no cubrió correctamente la cobertura mínima exigida
+                      (mínimo de módulos distintos<template v-if="reto.curso === 'ambos_cursos'"> y/o mezcla de 1º y 2º</template>).
+                      Revisa manualmente los módulos/RA/CE de abajo, o pulsa "Generar más variantes" para intentarlo de nuevo.
                     </p>
                   </div>
 
                   <div class="space-y-6">
                     <div v-for="evalObj in reto.evaluacion_oficial" :key="evalObj.modulo" class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
-                      <p class="text-xs uppercase font-bold text-gray-400 mb-1">Módulo</p>
-                      <p class="font-black text-[#1F2937] text-lg mb-4">{{ evalObj.modulo }}</p>
+                      <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                        <div>
+                          <p class="text-xs uppercase font-bold text-gray-400 mb-1">Módulo</p>
+                          <p class="font-black text-[#1F2937] text-lg">{{ evalObj.modulo }}</p>
+                        </div>
+                        <span v-if="evalObj.curso ?? cursoDeModulo(evalObj.modulo)" class="shrink-0 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                          {{ evalObj.curso ?? cursoDeModulo(evalObj.modulo) }}º Curso
+                        </span>
+                      </div>
                       <div class="mb-4">
                         <p class="text-xs uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg> Resultado de Aprendizaje

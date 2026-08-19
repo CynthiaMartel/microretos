@@ -4,6 +4,12 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+// Valida POST /encuentros/lote, usado solo por la migración silenciosa de
+// DashboardDocente.vue que sube encuentros heredados de localStorage (clave
+// legacy "dualab_sesiones", de cuando los encuentros se llamaban "sesiones").
+// No lo llama el formulario de creación — no es código muerto ni una feature
+// especulativa: mientras exista algún docente con esa clave sin migrar, sigue
+// siendo necesario.
 class StoreEncuentroLoteRequest extends FormRequest
 {
     public function authorize(): bool

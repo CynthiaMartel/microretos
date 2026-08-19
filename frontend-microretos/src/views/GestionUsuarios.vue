@@ -1,3 +1,4 @@
+<!-- Ruta: /usuarios (name: gestion-usuarios). Antes vivía en /admin/usuarios — ver router/index.js. Nota: el endpoint del backend sigue siendo /admin/usuarios, no confundir. -->
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import api from '../api.js'
@@ -15,7 +16,7 @@ const filtroRol   = ref(0)
 // ── Modal: crear cuenta ─────────────────────────────────────────────
 const modalCrear  = ref(false)
 const creando     = ref(false)
-const form        = ref({ name: '', email: '', password: '', role: '2', centro_educativo_id: null, empresa_id: null })
+const form        = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
 const formErrors  = ref({})
 const msgCrear    = ref('')
 
@@ -33,7 +34,21 @@ let   highlightTimer   = null
 const modalEditar        = ref(false)
 const editando           = ref(false)
 const usuarioEditando    = ref(null)
-const formEditar         = ref({ name: '', email: '', password: '', role: '2', centro_educativo_id: null, empresa_id: null })
+const formEditar         = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
+const confirmarCambioPassword = ref(false)   // switch que el admin debe marcar para autorizar el reseteo de contraseña
+
+// ── Requisitos de contraseña (mismos que valida el backend: min 8, mayúscula, minúscula, número, símbolo) ──
+function evaluarPassword(pwd) {
+  return [
+    { label: 'Mínimo 8 caracteres',  ok: pwd.length >= 8 },
+    { label: 'Una letra mayúscula',  ok: /[A-Z]/.test(pwd) },
+    { label: 'Una letra minúscula',  ok: /[a-z]/.test(pwd) },
+    { label: 'Un número',            ok: /[0-9]/.test(pwd) },
+    { label: 'Un carácter especial (!@#$…)', ok: /[^A-Za-z0-9]/.test(pwd) },
+  ]
+}
+const passwordRequisitos       = computed(() => evaluarPassword(form.value.password || ''))
+const passwordRequisitosEditar = computed(() => evaluarPassword(formEditar.value.password || ''))
 const formEmailLocal       = ref('')   // parte antes del @ en el form crear
 const formEditarEmailLocal = ref('')   // parte antes del @ en el form editar
 const formEditarErrors   = ref({})
@@ -46,10 +61,12 @@ async function abrirModalEditar(usuario) {
     name:                 usuario.name,
     email:                usuario.email,
     password:             '',
+    password_confirmation: '',
     role:                 String(usuario.role),
     centro_educativo_id:  usuario.centro_educativo_id ?? null,
     empresa_id:           usuario.empresa_id ?? null,
   }
+  confirmarCambioPassword.value = false
   formEditarErrors.value = {}
   msgEditar.value        = ''
   modalEditar.value      = true
@@ -75,6 +92,17 @@ async function guardarEdicion() {
     return
   }
 
+  if (formEditar.value.password) {
+    if (formEditar.value.password !== formEditar.value.password_confirmation) {
+      formEditarErrors.value.password_confirmation = 'Las contraseñas no coinciden.'
+      return
+    }
+    if (!confirmarCambioPassword.value) {
+      formEditarErrors.value.password = 'Debes confirmar que quieres cambiar la contraseña de esta cuenta.'
+      return
+    }
+  }
+
   editando.value         = true
   try {
     const payload = {
@@ -82,7 +110,11 @@ async function guardarEdicion() {
       email: formEditar.value.email,
       role:  formEditar.value.role,
     }
-    if (formEditar.value.password) payload.password = formEditar.value.password
+    if (formEditar.value.password) {
+      payload.password              = formEditar.value.password
+      payload.password_confirmation = formEditar.value.password_confirmation
+      payload.confirm_password_change = true
+    }
     if (authStore.isSuperAdmin && ['2', '4'].includes(formEditar.value.role)) {
       payload.centro_educativo_id = formEditar.value.centro_educativo_id
     }
@@ -92,13 +124,34 @@ async function guardarEdicion() {
     const { data } = await api.patch(`/admin/usuarios/${usuarioEditando.value.id}`, payload)
     reemplazar(usuarios.value, data.data)
     modalEditar.value = false
-    mostrarToast('Cuenta actualizada correctamente.')
+    mostrarToast(
+      payload.password
+        ? 'Cuenta actualizada. Contraseña cambiada correctamente.'
+        : 'Cuenta actualizada correctamente.'
+    )
   } catch (e) {
-    if (e.response?.status === 422) {
+    const status = e.response?.status
+
+    if (status === 422) {
       const errs = e.response.data.errors ?? {}
       formEditarErrors.value = Object.fromEntries(
         Object.entries(errs).map(([k, v]) => [k, v[0]])
       )
+      // Si el fallo de validación viene del bloque de contraseña, dejarlo explícito
+      // además del error en el campo concreto (el switch queda lejos del mensaje genérico)
+      if (payload.password && (
+        formEditarErrors.value.password ||
+        formEditarErrors.value.password_confirmation ||
+        formEditarErrors.value.confirm_password_change
+      )) {
+        msgEditar.value = 'No se ha podido cambiar la contraseña. Revisa los campos marcados en rojo.'
+      }
+    } else if (status === 403) {
+      msgEditar.value = e.response?.data?.message || 'No tienes permiso para realizar este cambio.'
+    } else if (status === 429) {
+      msgEditar.value = e.response?.data?.message || 'Demasiados intentos. Inténtalo más tarde.'
+    } else if (!e.response) {
+      msgEditar.value = 'Error de conexión. Inténtalo más tarde.'
     } else {
       msgEditar.value = e.response?.data?.message ?? 'Error al actualizar la cuenta.'
     }
@@ -237,6 +290,8 @@ async function cargar() {
       const { data } = await api.get('/admin/usuarios')
       usuarios.value = data.data
     }
+  } catch (e) {
+    mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
   } finally {
     cargando.value = false
   }
@@ -254,6 +309,10 @@ async function crearUsuario() {
     formErrors.value.empresa_id = 'Debes asignar una empresa antes de crear la cuenta.'
     return
   }
+  if (form.value.password !== form.value.password_confirmation) {
+    formErrors.value.password_confirmation = 'Las contraseñas no coinciden.'
+    return
+  }
 
   creando.value    = true
   try {
@@ -261,7 +320,7 @@ async function crearUsuario() {
     usuarios.value.push(data.data)
     modalCrear.value      = false
     cuentaRecienCreada.value = data.data
-    form.value       = { name: '', email: '', password: '', role: '2', centro_educativo_id: null, empresa_id: null }
+    form.value       = { name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null }
     formEmailLocal.value = ''
     // Pequeño delay para que el DOM renderice la nueva fila antes del modal
     await nextTick()
@@ -281,7 +340,7 @@ async function crearUsuario() {
 }
 
 async function abrirModalCrear() {
-  form.value = { name: '', email: '', password: '', role: '2', centro_educativo_id: null, empresa_id: null }
+  form.value = { name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null }
   formEmailLocal.value = ''
   formErrors.value = {}
   msgCrear.value = ''
@@ -508,6 +567,8 @@ onMounted(async () => {
     ])
     usuarios.value = resActivos.data.data
     papelera.value = resPapelera.data.data
+  } catch (e) {
+    mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
   } finally {
     cargando.value = false
   }
@@ -803,8 +864,8 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Fila secundaria: asociar centro (solo docentes activos) -->
-          <div v-if="vista === 'activos' && [2,4].includes(u.role)" class="border-t border-gray-100 pt-2.5">
+          <!-- Fila secundaria: asociar centro (solo docentes activos; el backend restringe esta acción a superadmin) -->
+          <div v-if="authStore.isSuperAdmin && vista === 'activos' && [2,4].includes(u.role)" class="border-t border-gray-100 pt-2.5">
             <button @click="abrirModalCentro(u)"
               class="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider
                      text-gray-400 hover:text-blue-600 transition-colors">
@@ -895,13 +956,36 @@ onMounted(async () => {
               <!-- Contraseña -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Contraseña temporal</label>
-                <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas y números"
+                <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas, minúsculas, número y símbolo"
                   maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formErrors.password ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formErrors.password" class="text-[10px] text-red-500 mt-1">{{ formErrors.password }}</p>
-                <p v-else class="text-[10px] text-gray-400 mt-1">Mín. 8 · máx. 128 · mayúscula + número</p>
+                <p v-if="formErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formErrors.password }}</p>
+                <ul class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  <li v-for="req in passwordRequisitos" :key="req.label"
+                    class="flex items-center gap-1 text-[10px] transition-colors"
+                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="8" stroke-width="2"/>
+                    </svg>
+                    {{ req.label }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Repite contraseña -->
+              <div>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la contraseña</label>
+                <input v-model="form.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
+                  maxlength="128"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
+                <p v-if="formErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formErrors.password_confirmation }}</p>
               </div>
 
               <!-- Tipo de cuenta (solo visible para superadmin; admin de centro siempre crea docentes) -->
@@ -1018,6 +1102,12 @@ onMounted(async () => {
               La cuenta de
               <span class="text-[#1F2937] font-bold">{{ cuentaRecienCreada?.name }}</span>
               se ha creado correctamente.
+            </p>
+            <p class="text-xs text-[#00A859] font-bold flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+              Contraseña creada correctamente
             </p>
 
             <!-- Aviso destacado -->
@@ -1246,8 +1336,49 @@ onMounted(async () => {
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formEditarErrors.password ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formEditarErrors.password" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.password }}</p>
-                <p v-else-if="formEditar.password" class="text-[10px] text-gray-400 mt-1">Mín. 8 · máx. 128 · mayúscula + número</p>
+                <p v-if="formEditarErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formEditarErrors.password }}</p>
+                <ul v-if="formEditar.password" class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  <li v-for="req in passwordRequisitosEditar" :key="req.label"
+                    class="flex items-center gap-1 text-[10px] transition-colors"
+                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="8" stroke-width="2"/>
+                    </svg>
+                    {{ req.label }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Repite nueva contraseña (solo si se ha escrito una) -->
+              <div v-if="formEditar.password">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la nueva contraseña</label>
+                <input v-model="formEditar.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
+                  maxlength="128"
+                  class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formEditarErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
+                <p v-if="formEditarErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.password_confirmation }}</p>
+              </div>
+
+              <!-- Switch de confirmación: obliga a un clic deliberado antes de resetear la contraseña de otra cuenta -->
+              <div v-if="formEditar.password" class="rounded-xl bg-red-50 border border-red-200 px-4 py-3.5">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <button type="button" role="switch" :aria-checked="confirmarCambioPassword"
+                    @click="confirmarCambioPassword = !confirmarCambioPassword"
+                    :class="confirmarCambioPassword ? 'bg-red-500' : 'bg-gray-300'"
+                    class="relative w-12 h-6 rounded-full transition-all duration-200 shrink-0">
+                    <span :class="confirmarCambioPassword ? 'translate-x-6' : 'translate-x-1'"
+                      class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 block"></span>
+                  </button>
+                  <div>
+                    <span class="text-xs font-black text-red-600">Confirmo que quiero cambiar la contraseña de esta cuenta</span>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Se cerrará la sesión en todos los dispositivos donde estuviera conectada.</p>
+                  </div>
+                </label>
+                <p v-if="formEditarErrors.confirm_password_change" class="text-[10px] text-red-600 font-bold mt-2">{{ formEditarErrors.confirm_password_change }}</p>
               </div>
 
               <!-- Tipo de cuenta (solo visible para superadmin) -->
@@ -1390,24 +1521,26 @@ onMounted(async () => {
       </div>
     </Transition>
 
-    <!-- ══ TOAST ══════════════════════════════════════════════════ -->
-    <Transition name="toast">
-      <div v-if="toast.show"
-           class="fixed bottom-6 right-6 z-[9300] flex items-center gap-3 px-4 py-3
-                  rounded-xl border shadow-xl text-xs font-bold"
-           :class="toast.ok
-             ? 'bg-[#00A859]/20 border-[#00A859]/40 text-[#00A859]'
-             : 'bg-red-500/20 border-red-500/40 text-red-300'">
-        <svg v-if="toast.ok" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-        </svg>
-        <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        {{ toast.msg }}
-      </div>
-    </Transition>
+    <!-- ══ TOAST (centrado en pantalla) ══════════════════════════════ -->
+    <div class="fixed inset-0 z-[9300] flex items-center justify-center pointer-events-none px-4">
+      <Transition name="toast">
+        <div v-if="toast.show"
+             class="pointer-events-auto flex items-center gap-3 px-5 py-3.5
+                    rounded-xl border shadow-2xl text-xs font-bold text-white"
+             :class="toast.ok
+               ? 'bg-[#00A859] border-[#00A859]'
+               : 'bg-red-600 border-red-600'">
+          <svg v-if="toast.ok" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ toast.msg }}
+        </div>
+      </Transition>
+    </div>
 
   </div>
 </template>

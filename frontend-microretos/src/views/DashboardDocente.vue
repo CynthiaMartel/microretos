@@ -1,10 +1,15 @@
+<!-- Ruta: /encuentros/crear (name: dashboard-docente). El nombre del archivo quedó del naming antiguo (/dashboard) tras el rename de URLs — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
+import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
+import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
+import TourPromptModal from '../components/TourPromptModal.vue'
 import { useUIState } from '../composables/useUIState.js'
+import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
 import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase } from '../config/fasesProyecto.js'
 
@@ -131,53 +136,6 @@ function estadoProyectoBadge(proyectoOEstado) {
   return { label: estado || '—',   cls: 'bg-gray-100 text-gray-500' }
 }
 
-// ─── Modal Ver Proyecto ───────────────────────────────────────────────────────
-const modalVerProyecto = ref(false)
-const proyectoModal    = ref(null)
-const cargandoModal    = ref(false)
-
-async function abrirModalProyecto(uuid) {
-  modalVerProyecto.value = true
-  cargandoModal.value    = true
-  proyectoModal.value    = null
-  try {
-    const res = await api.get(`/startup/proyectos/${uuid}`)
-    proyectoModal.value = res.data
-  } catch {
-    /* no crítico */
-  } finally {
-    cargandoModal.value = false
-  }
-}
-
-function cerrarModalProyecto() {
-  modalVerProyecto.value = false
-  proyectoModal.value    = null
-}
-
-function getBadgeModal(p) {
-  if (!p) return { label: '—', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-300' }
-  const e = p.estado
-  if (e === 'borrador' || e === 'en_edicion')
-    return { label: 'En edición',  cls: 'bg-amber-50 border-amber-200 text-amber-700',    dot: 'bg-amber-400' }
-  if (e === 'archivado')
-    return { label: 'Archivado',   cls: 'bg-gray-100 border-gray-200 text-gray-400',       dot: 'bg-gray-400' }
-  if (e === 'validado') {
-    if (p.empresa_validado && p.docente_validado)
-      return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-    if (p.empresa_validado)
-      return { label: 'Validado · Empresa', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-    if (p.docente_validado)
-      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' }
-    return { label: 'Validado', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' }
-  }
-  if (p.empresa_no_valida_aun)
-    return { label: 'No validar aún', cls: 'bg-red-50 border-red-300 text-red-700',         dot: 'bg-red-400' }
-  if (p.enviado_a_empresa_mail)
-    return { label: 'Enviado · Esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' }
-  return { label: 'Pendiente validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' }
-}
-
 // ─── Alumnado por equipos ─────────────────────────────────────────────────────
 const nuevoAlumnadoNombre = ref('')
 const nuevoAlumnadoEquipo = ref(1)
@@ -290,6 +248,10 @@ onMounted(async () => {
   } catch (e) {
     console.error('Error migrando encuentros desde localStorage:', e)
   }
+
+  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
+  // await nextTick()
+  // showTourPrompt.value = true
 })
 
 onUnmounted(() => {
@@ -345,9 +307,10 @@ function onEncuentroEliminado({ id, titulo }) {
   encuentros.value = encuentros.value.filter(s => s.id !== id)
   cerrarEncuentroModal()
   cerrarModalEliminar()
+  // La papelera de "Base de datos" es solo superadmin — el resto de roles ya no tiene esa ruta.
   mostrarSnack(
     `"${titulo}" movido a la papelera.`,
-    { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) }
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null
   )
 }
 
@@ -366,7 +329,7 @@ const encuentrosFiltrados = computed(() => {
   }
   if (filtroSes.value.curso) lista = lista.filter(s => s.curso === filtroSes.value.curso)
   if (filtroSes.value.grupo) lista = lista.filter(s => s.grupo === filtroSes.value.grupo)
-  return lista
+  return lista.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
 })
 
 const encuentrosVisibles = computed(() => {
@@ -383,6 +346,10 @@ watch(filtroSes, () => { paginaEncuentros.value = 1 }, { deep: true })
 // ─── Tour guía paso a paso ────────────────────────────────────────────────────
 const modoGuia       = ref(false)
 const pasoGuia       = ref(1)
+const showTourPrompt = ref(false)
+
+function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true; pasoGuia.value = 1 }
+function omitirTourDesdeModal()  { showTourPrompt.value = false }
 
 const guiaPasosData = [
   { ref: 'refCampoFecha',    seccion: 'datos', texto: 'Indica la fecha en la que se realizó el encuentro.' },
@@ -512,15 +479,38 @@ function cerrarMicroretoModal() {
   microretoModalId.value = null
 }
 
+// ─── Modal ficha de proyecto ──────────────────────────────────────────────────
+const proyectoModalUuid = ref(null)
+
+function abrirProyectoModal(uuid) {
+  proyectoModalUuid.value = uuid
+}
+
+function cerrarProyectoModal() {
+  proyectoModalUuid.value = null
+}
+
 // ─── Modal de detalle de encuentro ────────────────────────────────────────────
 const encuentroAbierto = ref(null)
+const { cargandoRaCe, modulosExpandidos, raCeBlocksEncuentro, toggleModulo, cargarRaCe } = useRaCeEncuentro()
 
-function verEncuentro(s) {
+async function verEncuentro(s) {
   encuentroAbierto.value = s
+  await cargarRaCe(s.microproyecto_uuid)
 }
 
 function cerrarEncuentroModal() {
   encuentroAbierto.value = null
+}
+
+function alumnadosDeEquipoEn(encuentro, n) {
+  return (encuentro?.alumnados || [])
+    .filter(a => a.equipo_num === n)
+    .map(a => a.nombre)
+}
+
+function alumnadosDelEquipoAbierto(n) {
+  return alumnadosDeEquipoEn(encuentroAbierto.value, n)
 }
 
 // El flujo es secuencial: 1) proyecto asociado → 2) fecha de trabajo →
@@ -529,6 +519,8 @@ const proyectoAsociado  = computed(() => !!form.value.microproyecto_id)
 const fechaEstablecida  = computed(() => proyectoAsociado.value && form.value.fecha !== '')
 const equiposRepartidos = computed(() =>
   fechaEstablecida.value &&
+  !!form.value.curso &&
+  !!form.value.grupo &&
   (form.value.num_equipos || 0) >= 1 &&
   form.value.alumnados.length > 0 &&
   alumnadosSinEquipo.value.length === 0
@@ -543,6 +535,8 @@ const requisitosFaltantes = computed(() => {
     return faltantes
   }
   if (!form.value.fecha) faltantes.push('Establece la fecha de trabajo.')
+  if (!form.value.curso) faltantes.push('Indica el curso del encuentro.')
+  if (!form.value.grupo) faltantes.push('Indica el grupo del encuentro.')
   if ((form.value.num_equipos || 0) < 1) faltantes.push('Indica el número de equipos.')
   if (form.value.alumnados.length === 0) faltantes.push('Reparte el alumnado en los equipos.')
   else if (alumnadosSinEquipo.value.length > 0) faltantes.push('Hay alumnado sin equipo asignado.')
@@ -758,7 +752,7 @@ function formatFecha(isoDate) {
                   </div>
                 </div>
                 <div class="flex flex-col gap-1.5 flex-shrink-0">
-                  <button @click="abrirModalProyecto(proyectoSeleccionado.uuid)"
+                  <button @click="abrirProyectoModal(proyectoSeleccionado.uuid)"
                           class="px-3 py-1.5 rounded-xl bg-[#99CC33]/10 border border-[#99CC33]/20
                                  text-[10px] font-black uppercase tracking-widest text-[#5a7a00]
                                  hover:bg-[#99CC33]/20 transition-all">
@@ -878,7 +872,7 @@ function formatFecha(isoDate) {
                       </div>
                     </button>
                     <!-- Botón Ver (abre modal) -->
-                    <button @click.stop="abrirModalProyecto(p.uuid)"
+                    <button @click.stop="abrirProyectoModal(p.uuid)"
                             title="Ver detalle"
                             class="shrink-0 flex items-center justify-center px-3 border-l border-gray-100
                                    text-gray-300 hover:text-[#5a7a00] hover:bg-[#99CC33]/10
@@ -916,7 +910,7 @@ function formatFecha(isoDate) {
                     vinculado desde el registro. Los proyectos se crean en
                     <button @click="router.push({ name: 'startup-day-crear' })"
                             class="underline font-black hover:text-[#5a7a00] transition-colors">
-                      Startup Day
+                      Generar Proyecto
                     </button>.
                   </p>
                 </div>
@@ -988,7 +982,7 @@ function formatFecha(isoDate) {
                    :class="{ 'tour-active': tourTargetActivo === 'refCampoAlumnado' }">
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="field-label">Curso</label>
+                    <label class="field-label">Curso <span class="text-red-400">*</span></label>
                     <div class="flex gap-2 mt-1">
                       <button v-for="c in ['1º', '2º']" :key="c"
                               @click="form.curso = c"
@@ -1002,7 +996,7 @@ function formatFecha(isoDate) {
                     </div>
                   </div>
                   <div>
-                    <label class="field-label">Grupo</label>
+                    <label class="field-label">Grupo <span class="text-red-400">*</span></label>
                     <div class="flex gap-1.5 mt-1 flex-wrap">
                       <button v-for="g in ['A', 'B', 'C', 'D']" :key="g"
                               @click="form.grupo = g"
@@ -1082,13 +1076,25 @@ function formatFecha(isoDate) {
                   <!-- Grid de equipos -->
                   <div class="grid grid-cols-2 gap-2">
                     <div v-for="n in (form.num_equipos || 3)" :key="n"
-                         class="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                         class="rounded-xl border p-3 transition-all"
+                         :class="Number(nuevoAlumnadoEquipo) === n
+                           ? 'border-[#00A859] bg-[#00A859]/5 ring-2 ring-[#00A859]/30'
+                           : 'border-gray-100 bg-gray-50/50'">
                       <div class="flex items-center gap-1.5 mb-2">
-                        <span class="w-5 h-5 rounded-full bg-[#00A859]/10 flex items-center justify-center
-                                     text-[9px] font-black text-[#00A859] flex-shrink-0">{{ n }}</span>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 flex-1 truncate">
+                        <span class="w-5 h-5 rounded-full flex items-center justify-center
+                                     text-[9px] font-black flex-shrink-0 transition-colors"
+                              :class="Number(nuevoAlumnadoEquipo) === n
+                                ? 'bg-[#00A859] text-white'
+                                : 'bg-[#00A859]/10 text-[#00A859]'">{{ n }}</span>
+                        <p class="text-[10px] font-black uppercase tracking-widest flex-1 truncate"
+                           :class="Number(nuevoAlumnadoEquipo) === n ? 'text-[#00A859]' : 'text-gray-500'">
                           Equipo {{ n }}
                         </p>
+                        <span v-if="Number(nuevoAlumnadoEquipo) === n"
+                              class="text-[8px] font-black uppercase tracking-widest text-[#00A859]
+                                     bg-[#00A859]/10 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                          Aquí
+                        </span>
                         <span class="text-[9px] text-gray-400 flex-shrink-0">
                           {{ alumnadosDeEquipo(n).length }}
                         </span>
@@ -1244,7 +1250,7 @@ function formatFecha(isoDate) {
             <!-- Acciones rápidas -->
             <div class="px-5 py-3 border-b border-gray-100">
               <!-- Botón Ver encuentros — prominente -->
-              <button @click="router.push('/dashboard/encuentros')"
+              <button @click="router.push('/encuentros')"
                       class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
                              bg-[#00A859] text-white
                              text-[10px] font-black uppercase tracking-widest
@@ -1255,7 +1261,8 @@ function formatFecha(isoDate) {
                 </svg>
                 Ver todos los encuentros
               </button>
-              <button @click="router.push({ name: 'mis-grupos' })"
+              <!-- name 'mis-equipos' (antes 'mis-grupos') — ver router/index.js -->
+              <button @click="router.push({ name: 'mis-equipos' })"
                       class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
                              bg-violet-50 border border-violet-200 text-violet-700
                              text-[10px] font-black uppercase tracking-widest
@@ -1264,7 +1271,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2v1h12v-1z"/>
                 </svg>
-                Mis grupos — seguimiento
+                Mis grupos — seguimiento equipos
               </button>
               <button @click="router.push({ name: 'startup-day-crear' })"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
@@ -1379,6 +1386,14 @@ function formatFecha(isoDate) {
                       <span v-if="s.curso"       class="tag tag-green">{{ s.curso }}</span>
                       <span v-if="s.grupo"       class="tag tag-lime">Gr. {{ s.grupo }}</span>
                       <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} al.</span>
+                      <span v-if="s.num_equipos" class="tag tag-gray">{{ s.num_equipos }} eq.</span>
+                    </div>
+                    <div v-if="s.num_equipos" class="space-y-0.5 mt-1">
+                      <p v-for="n in s.num_equipos" :key="n"
+                         class="text-[9px] text-gray-400 truncate">
+                        <span class="font-black text-[#00A859]">Eq.{{ n }}</span>
+                        {{ alumnadosDeEquipoEn(s, n).join(', ') || 'Sin alumnos' }}
+                      </p>
                     </div>
                   </div>
                   <div class="flex flex-col items-end gap-1 flex-shrink-0">
@@ -1441,11 +1456,11 @@ function formatFecha(isoDate) {
              class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
         <!-- Panel -->
-        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-lg w-full overflow-hidden
-                    border border-gray-100">
+        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-2xl w-full max-h-[92vh]
+                    overflow-hidden border border-gray-100 flex flex-col">
 
           <!-- Cabecera -->
-          <div class="px-7 pt-7 pb-5 border-b border-gray-100">
+          <div class="px-5 sm:px-7 pt-6 sm:pt-7 pb-5 border-b border-gray-100 flex-shrink-0">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-2">
@@ -1457,6 +1472,10 @@ function formatFecha(isoDate) {
                 <h2 class="text-lg font-black text-[#1F2937] leading-snug">
                   {{ encuentroAbierto.proyecto_titulo || '(sin título)' }}
                 </h2>
+                <p v-if="encuentroAbierto.centro_educativo"
+                   class="text-xs font-semibold text-gray-400 mt-0.5 truncate">
+                  {{ encuentroAbierto.centro_educativo }}
+                </p>
               </div>
               <button @click="cerrarEncuentroModal()"
                       class="flex-shrink-0 p-2 rounded-xl hover:bg-gray-100 text-gray-400
@@ -1469,36 +1488,24 @@ function formatFecha(isoDate) {
 
             <!-- Tags rápidos -->
             <div class="flex flex-wrap gap-1.5 mt-3">
+              <span v-if="encuentroAbierto.fecha"           class="tag tag-gray">{{ formatFecha(encuentroAbierto.fecha) }}</span>
               <span v-if="encuentroAbierto.curso"           class="tag tag-green">{{ encuentroAbierto.curso }}</span>
               <span v-if="encuentroAbierto.grupo"           class="tag tag-lime">Grupo {{ encuentroAbierto.grupo }}</span>
               <span v-if="encuentroAbierto.num_alumnos"     class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
           </div>
 
+          <!-- Contenido con scroll -->
+          <div class="flex-1 overflow-y-auto min-h-0">
+
           <!-- Cuerpo -->
-          <div class="px-7 py-5 space-y-4">
+          <div class="px-5 sm:px-7 py-5 space-y-4">
 
             <!-- Grid de datos -->
-            <div class="grid grid-cols-2 gap-3">
-              <div v-if="encuentroAbierto.centro_educativo"
-                   class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
-                <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Centro</p>
-                <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ encuentroAbierto.centro_educativo }}</p>
-              </div>
-              <div v-if="encuentroAbierto.ciclo_formativo"
-                   class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
+            <div v-if="encuentroAbierto.ciclo_formativo" class="grid grid-cols-1 gap-3">
+              <div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
                 <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Ciclo</p>
                 <p class="text-sm font-bold text-[#1F2937] leading-snug">{{ encuentroAbierto.ciclo_formativo }}</p>
-              </div>
-              <div v-if="encuentroAbierto.fecha"
-                   class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
-                <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Fecha</p>
-                <p class="text-sm font-bold text-[#1F2937]">{{ formatFecha(encuentroAbierto.fecha) }}</p>
-              </div>
-              <div v-if="encuentroAbierto.num_alumnos"
-                   class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-100">
-                <p class="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Alumnos</p>
-                <p class="text-sm font-bold text-[#1F2937]">{{ encuentroAbierto.num_alumnos }}</p>
               </div>
             </div>
 
@@ -1509,17 +1516,25 @@ function formatFecha(isoDate) {
               <p class="text-sm text-[#1F2937] leading-relaxed">{{ encuentroAbierto.notas }}</p>
             </div>
 
+            <EncuentroEquiposYRaCe
+              :num-equipos="encuentroAbierto.num_equipos"
+              :alumnados-del-equipo="alumnadosDelEquipoAbierto"
+              :cargando-ra-ce="cargandoRaCe"
+              :ra-ce-blocks="raCeBlocksEncuentro"
+              :modulos-expandidos="modulosExpandidos"
+              @toggle-modulo="toggleModulo"
+            />
+
           </div>
 
+          </div>
+          <!-- /Contenido con scroll -->
+
           <!-- Pie -->
-          <div class="px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 flex items-center justify-between gap-4">
-            <button @click="abrirModalEliminar(encuentroAbierto)"
-                    class="text-xs text-gray-400 hover:text-red-400 font-black uppercase
-                           tracking-widest transition-colors">
-              Eliminar encuentro
-            </button>
-            <div v-if="encuentroAbierto.microreto_id" class="flex items-center gap-2">
-              <button @click="abrirMicroretoModal(encuentroAbierto.microreto_id); cerrarEncuentroModal()"
+          <div class="px-5 sm:px-7 py-4 bg-[#F8FAFC] border-t border-gray-100 space-y-3 flex-shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <button v-if="encuentroAbierto.microreto_id"
+                      @click="abrirMicroretoModal(encuentroAbierto.microreto_id)"
                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
@@ -1528,18 +1543,47 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
                 </svg>
-                Ver ficha
+                Ver ficha reto
               </button>
-              <button @click="router.push({ name: 'startup-day-crear', query: { microreto_id: encuentroAbierto.microreto_id, encuentro_id: encuentroAbierto.id } }); cerrarEncuentroModal()"
-                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#99CC33] text-white
-                             text-xs font-black uppercase tracking-widest hover:bg-[#99CC33]/90
+              <button v-if="encuentroAbierto.microproyecto_uuid"
+                      @click="abrirProyectoModal(encuentroAbierto.microproyecto_uuid)"
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                             bg-white border border-gray-200 text-gray-500
+                             text-xs font-black uppercase tracking-widest
+                             hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/>
+                </svg>
+                Ver ficha proyecto
+              </button>
+              <button @click="router.push({ path: '/encuentros', query: { id: encuentroAbierto.id } }); cerrarEncuentroModal()"
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                             bg-white border border-gray-200 text-gray-500
+                             text-xs font-black uppercase tracking-widest
+                             hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                Ver más detalle de este encuentro
+              </button>
+              <button @click="router.push('/encuentros'); cerrarEncuentroModal()"
+                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00A859] text-white
+                             text-xs font-black uppercase tracking-widest hover:bg-[#00A859]/90
                              transition-all shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                 </svg>
-                Crear propuesta
+                Ver todos los encuentros
               </button>
             </div>
+            <button @click="abrirModalEliminar(encuentroAbierto)"
+                    class="text-xs text-gray-400 hover:text-red-400 font-black uppercase
+                           tracking-widest transition-colors">
+              Eliminar encuentro
+            </button>
           </div>
 
         </div>
@@ -1555,12 +1599,29 @@ function formatFecha(isoDate) {
     @close="cerrarMicroretoModal"
   />
 
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODAL FICHA DE PROYECTO                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ProyectoFichaModal
+    :proyecto-uuid="proyectoModalUuid"
+    @close="cerrarProyectoModal"
+  />
+
   <!-- Modal eliminar encuentro -->
   <EliminarEncuentroModal
     :visible="modalEliminarVisible"
     :encuentro="encuentroAEliminar"
     @encuentro-eliminado="onEncuentroEliminado"
     @cerrar="cerrarModalEliminar"
+  />
+
+  <!-- Modal: ¿Activar guía-tour? -->
+  <TourPromptModal
+    :show="showTourPrompt"
+    titulo="¿Quieres activar la guía-tour?"
+    descripcion="Explora el panel docente con una guía paso a paso que te muestra cada función."
+    @activar="activarTourDesdeModal"
+    @omitir="omitirTourDesdeModal"
   />
 
   <!-- Snackbar papelera -->
@@ -1584,249 +1645,6 @@ function formatFecha(isoDate) {
                        text-xs font-black uppercase tracking-wider hover:bg-amber-300 transition-colors">
           {{ snackbar.accion.label }}
         </button>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- ══ MODAL VER PROYECTO ══════════════════════════════════════════════════ -->
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="modalVerProyecto"
-           class="fixed inset-0 z-[80] flex items-center justify-center p-4"
-           @click.self="cerrarModalProyecto">
-
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrarModalProyecto" />
-
-        <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-2xl
-                    max-h-[90vh] flex flex-col overflow-hidden">
-
-          <!-- Cabecera -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-7 h-7 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/20
-                          flex items-center justify-center shrink-0">
-                <svg class="w-3.5 h-3.5 text-[#5a7a00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-                </svg>
-              </div>
-              <p v-if="proyectoModal" class="font-black text-[#1F2937] text-sm truncate">
-                {{ proyectoModal.titulo }}
-              </p>
-              <p v-else class="text-sm text-gray-400 font-medium">Cargando proyecto…</p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <!-- Abrir en Startup Day -->
-              <button v-if="proyectoModal"
-                      @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
-                      class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
-                             text-[10px] font-black uppercase tracking-widest text-gray-500
-                             hover:border-[#99CC33] hover:text-[#5a7a00] transition-all flex items-center gap-1.5">
-                Startup Day
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-              </button>
-              <button @click="cerrarModalProyecto"
-                      class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-                             text-gray-400 hover:bg-gray-200 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Contenido -->
-          <div class="flex-1 overflow-y-auto">
-
-            <!-- Spinner -->
-            <div v-if="cargandoModal" class="flex justify-center items-center py-20">
-              <svg class="animate-spin w-8 h-8 text-[#99CC33]" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-            </div>
-
-            <template v-else-if="proyectoModal">
-
-              <!-- Badge estado + meta -->
-              <div class="px-6 pt-5 pb-4 border-b border-gray-50 space-y-3">
-                <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border', getBadgeModal(proyectoModal).cls]">
-                  <span :class="['w-1.5 h-1.5 rounded-full', getBadgeModal(proyectoModal).dot]" />
-                  {{ getBadgeModal(proyectoModal).label }}
-                </span>
-
-                <!-- Sub-estado propuesta -->
-                <div v-if="(proyectoModal.estado === 'publicado' || proyectoModal.estado === 'propuesta') && !proyectoModal.empresa_validado"
-                     class="space-y-2">
-                  <div v-if="proyectoModal.empresa_validado"
-                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#00A859]/8 border border-[#00A859]/20">
-                    <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <p class="text-xs font-black text-[#00A859]">La empresa validó el proyecto</p>
-                  </div>
-                  <div v-else-if="proyectoModal.empresa_no_valida_aun"
-                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
-                    <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-xs font-black text-red-700">Empresa contestó: No validar aún</p>
-                  </div>
-                  <div v-else-if="proyectoModal.enviado_a_empresa_mail"
-                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
-                    <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                    </svg>
-                    <p class="text-xs font-black text-blue-700">Enlace enviado · Pendiente de respuesta</p>
-                  </div>
-                  <div v-else
-                       class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-violet-50 border border-violet-200">
-                    <svg class="w-4 h-4 text-violet-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-xs font-black text-violet-700">Propuesta pendiente de enviar a empresa</p>
-                  </div>
-                </div>
-
-                <!-- Meta chips -->
-                <div class="flex flex-wrap gap-1.5">
-                  <span v-if="proyectoModal.empresa_nombre" class="tag tag-gray">
-                    <svg class="w-3 h-3 shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                    </svg>
-                    {{ proyectoModal.empresa_nombre }}
-                  </span>
-                  <span v-if="proyectoModal.centro_nombre" class="tag tag-gray">{{ proyectoModal.centro_nombre }}</span>
-                  <span v-if="proyectoModal.ciclo_nombre"  class="tag tag-gray">{{ proyectoModal.ciclo_nombre }}</span>
-                  <span v-if="proyectoModal.curso"         class="tag tag-lime">{{ proyectoModal.curso }}</span>
-                </div>
-              </div>
-
-              <!-- Secciones del proyecto -->
-              <div class="px-6 py-5 space-y-4">
-
-                <!-- El reto -->
-                <div v-if="proyectoModal.diseno_reto?.descripcion || proyectoModal.diseno_reto?.pregunta_reto"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">El reto</p>
-                  <p v-if="proyectoModal.diseno_reto.pregunta_reto"
-                     class="text-sm font-bold text-[#5a7a00] italic mb-2">
-                    "{{ proyectoModal.diseno_reto.pregunta_reto }}"
-                  </p>
-                  <p v-if="proyectoModal.diseno_reto.descripcion"
-                     class="text-sm text-gray-600 leading-relaxed line-clamp-4">
-                    {{ proyectoModal.diseno_reto.descripcion }}
-                  </p>
-                </div>
-
-                <!-- Equipo -->
-                <div v-if="proyectoModal.equipo?.alumnos?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Equipo ({{ proyectoModal.equipo.alumnos.length }})
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-for="a in proyectoModal.equipo.alumnos" :key="a.nombre"
-                          class="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
-                      {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Módulos -->
-                <div v-if="proyectoModal.modulos_seleccionados?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Módulos ({{ proyectoModal.modulos_seleccionados.length }})
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-for="m in proyectoModal.modulos_seleccionados" :key="m.id"
-                          class="text-xs bg-[#00A859]/8 border border-[#00A859]/15 text-[#00A859]
-                                 px-2.5 py-1 rounded-full">
-                      {{ m.nombre }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Objetivos -->
-                <div v-if="proyectoModal.objetivos?.lista?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Objetivos</p>
-                  <ul class="space-y-1">
-                    <li v-for="obj in proyectoModal.objetivos.lista.slice(0, 5)" :key="obj"
-                        class="flex items-start gap-2 text-sm text-gray-600">
-                      <span class="text-[#99CC33] shrink-0 mt-0.5 font-bold">›</span> {{ obj }}
-                    </li>
-                    <li v-if="proyectoModal.objetivos.lista.length > 5"
-                        class="text-xs text-gray-400 pl-4">
-                      + {{ proyectoModal.objetivos.lista.length - 5 }} más…
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Fases -->
-                <div v-if="proyectoModal.diseno_microproyecto?.fases?.length"
-                     class="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                    Fases ({{ proyectoModal.diseno_microproyecto.fases.length }})
-                  </p>
-                  <ol class="space-y-1.5">
-                    <li v-for="(f, i) in proyectoModal.diseno_microproyecto.fases.slice(0, 4)" :key="i"
-                        class="flex items-center gap-2.5 text-sm">
-                      <span class="w-5 h-5 rounded-full bg-[#99CC33]/15 text-[#5a7a00] font-black text-[10px]
-                                   flex items-center justify-center shrink-0">{{ i + 1 }}</span>
-                      <span class="font-bold text-[#1F2937]">{{ f.nombre }}</span>
-                      <span v-if="duracionPorFase(proyectoModal.diseno_microproyecto.clases, i)" class="text-gray-400 text-xs">
-                        · {{ duracionPorFase(proyectoModal.diseno_microproyecto.clases, i) }} clase(s)
-                      </span>
-                    </li>
-                    <li v-if="proyectoModal.diseno_microproyecto.fases.length > 4"
-                        class="text-xs text-gray-400 pl-7">
-                      + {{ proyectoModal.diseno_microproyecto.fases.length - 4 }} más…
-                    </li>
-                  </ol>
-                </div>
-
-                <!-- Sin datos -->
-                <div v-if="!proyectoModal.diseno_reto?.descripcion && !proyectoModal.equipo?.alumnos?.length
-                            && !proyectoModal.modulos_seleccionados?.length && !proyectoModal.objetivos?.lista?.length"
-                     class="text-center py-6 text-gray-400">
-                  <p class="text-xs">Este proyecto aún no tiene secciones rellenas.</p>
-                  <button @click="router.push({ name: 'startup-day-editar', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
-                          class="mt-3 text-xs font-black text-[#5a7a00] underline hover:no-underline">
-                    Ir a editar →
-                  </button>
-                </div>
-
-              </div>
-            </template>
-
-            <!-- Error carga -->
-            <div v-else-if="!cargandoModal" class="flex flex-col items-center justify-center py-20 text-gray-400">
-              <p class="text-sm">No se pudo cargar el proyecto.</p>
-            </div>
-          </div>
-
-          <!-- Pie del modal -->
-          <div v-if="proyectoModal" class="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3">
-            <button @click="cerrarModalProyecto"
-                    class="flex-1 py-2.5 rounded-full bg-gray-100 text-[#1F2937]
-                           text-xs font-black uppercase tracking-widest
-                           hover:bg-gray-200 transition-all">
-              Cerrar
-            </button>
-            <button @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyectoModal.uuid } }); cerrarModalProyecto()"
-                    class="flex-1 py-2.5 rounded-full bg-[#99CC33] text-white
-                           text-xs font-black uppercase tracking-widest shadow-sm
-                           hover:bg-[#88bb22] transition-all">
-              Ver en Startup Day
-            </button>
-          </div>
-
-        </div>
       </div>
     </Transition>
   </Teleport>

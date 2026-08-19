@@ -43,7 +43,7 @@ class EncuentroColaboradorController extends Controller
         $yaColaboradores = $encuentro->colaboradores()->pluck('users.id');
 
         $docentes = User::where('centro_educativo_id', $centroId)
-            ->where('role', User::ROLE_DOCENTE)
+            ->whereIn('role', [User::ROLE_DOCENTE, User::ROLE_ADMIN])
             ->where('id', '!=', $encuentro->user_id)
             ->whereNotIn('id', $yaColaboradores)
             ->orderBy('name')
@@ -117,10 +117,7 @@ class EncuentroColaboradorController extends Controller
                 $q->where('user_id', $user->id);
 
                 if ($user->isAdmin() && $user->centro_educativo_id) {
-                    $nombreCentro = $user->centroEducativo?->nombre;
-                    if ($nombreCentro) {
-                        $q->orWhere('centro_educativo', $nombreCentro);
-                    }
+                    $q->orWhere('centro_educativo_id', $user->centro_educativo_id);
                 }
             });
         }

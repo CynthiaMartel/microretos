@@ -2,6 +2,15 @@
 .claude/
 INSERT_*.sql
 INSERT_*.sql.zip
+
+# Informes generados (se regeneran, no se versionan) — TAREAS_*.md/.txt sí se versionan
+INFORME_*.md
+INFORME_*.pdf
+RESUMEN_*.md
+RESUMEN_*.pdf
+
+# Scripts sueltos de prueba manual en la raíz (Playwright ad-hoc, no son tests del repo)
+/test_*.js
 .DS_Store
 .env
 .env.local

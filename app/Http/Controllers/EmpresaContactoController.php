@@ -33,6 +33,7 @@ class EmpresaContactoController extends Controller
     public function contactar(Request $request, int $id): JsonResponse
     {
         $empresa = Empresa::findOrFail($id);
+        $this->autorizarEmpresa($request, $empresa);
 
         $data = $request->validate([
             'remitente' => 'required|email|max:255',
@@ -64,6 +65,7 @@ class EmpresaContactoController extends Controller
     public function enviarValidacion(Request $request, int $id): JsonResponse
     {
         $empresa = Empresa::findOrFail($id);
+        $this->autorizarEmpresa($request, $empresa);
 
         $data = $request->validate([
             'remitente'     => 'required|email|max:255',
@@ -119,5 +121,22 @@ class EmpresaContactoController extends Controller
         $proyecto->update(['enviado_a_empresa_mail' => true]);
 
         return response()->json(['success' => true]);
+    }
+
+    // Docente y admin solo pueden contactar/validar con empresas de su propio centro;
+    // superadmin no tiene esta restricción.
+    private function autorizarEmpresa(Request $request, Empresa $empresa): void
+    {
+        $user = $request->user();
+
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        if (($user->isDocente() || $user->isAdmin()) && $empresa->perteneceAlCentroDe($user)) {
+            return;
+        }
+
+        abort(403, 'No autorizado: la empresa no pertenece a tu centro educativo.');
     }
 }

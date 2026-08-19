@@ -47,18 +47,17 @@ class StoreEncuentroRequest extends FormRequest
         return [
             'microproyecto_id'       => ['required', 'integer', 'exists:microproyectos,id', function ($attribute, $value, $fail) {
                 $user = $this->user();
-                if ($user->isSuperAdmin()) return;
-
                 $proyecto = Microproyecto::find($value);
-                if ($proyecto && $proyecto->centro_id !== $user->centro_educativo_id) {
-                    $fail('El proyecto seleccionado no pertenece a tu centro educativo.');
+
+                if ($proyecto && !$proyecto->esVisiblePara($user)) {
+                    $fail('No tienes acceso a este proyecto. Pide al docente propietario que lo comparta contigo o crea uno nuevo.');
                 }
             }],
             'fecha'                  => 'required|date',
             'centro_educativo'       => 'nullable|string|max:255',
             'ciclo_formativo'        => 'nullable|string|max:255',
-            'curso'                  => 'nullable|string|max:10',
-            'grupo'                  => 'nullable|string|max:10',
+            'curso'                  => 'required|string|max:10',
+            'grupo'                  => 'required|string|max:10',
             'num_alumnos'            => 'nullable|integer|min:1|max:999',
             'notas'                  => 'nullable|string|max:5000',
             'num_equipos'            => 'required|integer|min:1|max:30',
@@ -77,6 +76,8 @@ class StoreEncuentroRequest extends FormRequest
     {
         return [
             'microproyecto_id.required' => 'Debes asociar un proyecto al encuentro antes de guardarlo.',
+            'curso.required'            => 'Indica el curso del encuentro.',
+            'grupo.required'            => 'Indica el grupo del encuentro.',
             'num_equipos.required'      => 'Indica el número de equipos del encuentro.',
             'alumnados.required'        => 'Reparte el alumnado en equipos antes de guardar el encuentro.',
             'alumnados.min'             => 'Reparte el alumnado en equipos antes de guardar el encuentro.',

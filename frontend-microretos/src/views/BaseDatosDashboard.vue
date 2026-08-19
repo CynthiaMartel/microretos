@@ -20,28 +20,12 @@ const router = useRouter()
 const { tourActivo } = useUIState()
 const dbSecurity = useDbSecurity()
 
-// ─── Aviso de expiración de sesión ───────────────────────
-const minutosRestantes = ref(authStore.minutosRestantes)
-let tokenTimer = null
 onMounted(() => {
-  tokenTimer = setInterval(() => {
-    minutosRestantes.value = authStore.minutosRestantes
-    if (minutosRestantes.value === 0) {
-      clearInterval(tokenTimer)
-      authStore.logout()
-      router.push('/')
-    }
-  }, 60_000)
   document.addEventListener('click', cerrarEstadoDropdown)
 })
 onUnmounted(() => {
-  clearInterval(tokenTimer)
   document.removeEventListener('click', cerrarEstadoDropdown)
 })
-
-const mostrarAvisoToken = computed(() =>
-  minutosRestantes.value >= 0 && minutosRestantes.value <= 60
-)
 
 // ─── Datos ───────────────────────────────────────────────
 const empresas             = ref([])
@@ -214,8 +198,9 @@ onMounted(async () => {
     return
   }
   await cargarDatos()
-  await nextTick()
-  showTourPrompt.value = true
+  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
+  // await nextTick()
+  // showTourPrompt.value = true
 })
 
 async function cargarDatos() {
@@ -744,32 +729,6 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       </div>
     </Transition>
 
-    <!-- ══════════════ AVISO EXPIRACIÓN DE SESIÓN ═══════════ -->
-    <Transition name="modal-fade">
-      <div
-        v-if="mostrarAvisoToken"
-        class="max-w-7xl mx-auto mb-4 flex items-center gap-3
-               px-5 py-3 rounded-2xl border
-               bg-amber-50 border-amber-300 text-amber-800"
-      >
-        <svg class="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <p class="text-sm font-semibold flex-1">
-          Tu sesión expira en
-          <span class="font-black">{{ minutosRestantes }} minuto{{ minutosRestantes !== 1 ? 's' : '' }}</span>.
-          Guarda tu trabajo y vuelve a iniciar sesión para no perder el acceso.
-        </p>
-        <button
-          @click="authStore.logout(); router.push('/')"
-          class="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl
-                 bg-amber-500 text-white hover:bg-amber-600 transition-all shrink-0"
-        >
-          Renovar sesión
-        </button>
-      </div>
-    </Transition>
 
     <!-- ══════════════════════ CABECERA ══════════════════════ -->
     <div class="max-w-7xl mx-auto">

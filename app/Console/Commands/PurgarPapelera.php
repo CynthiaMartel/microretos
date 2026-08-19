@@ -117,7 +117,7 @@ class PurgarPapelera extends Command
 
     private function limpiarUsuario(User $user): void
     {
-        // Elimina los tokens Sanctum para no dejar huérfanos en personal_access_tokens
-        $user->tokens()->delete();
+        // Elimina las sesiones activas para no dejar huérfanas en la tabla sessions
+        DB::table('sessions')->where('user_id', $user->id)->delete();
     }
 }

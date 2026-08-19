@@ -162,7 +162,7 @@ const imagenFondo = computed(() => {
               <span v-if="reto.curso"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200
                            text-indigo-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                {{ reto.curso === 'transversal' ? 'Transversal: 1º y/o 2º' : reto.curso + 'º Curso' }}
+                {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos: 1º y 2º' : reto.curso + 'º Curso' }}
               </span>
               <span v-if="reto.duracion"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200

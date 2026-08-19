@@ -19,7 +19,7 @@ class DatosFPController extends Controller
 
     /**
      * GET /empresas
-     * Devuelve las empresas disponibles. Para docentes, solo las de su centro.
+     * Devuelve las empresas disponibles. Docentes y admin de centro: solo las de su centro.
      */
     public function getEmpresas(Request $request)
     {
@@ -29,14 +29,8 @@ class DatosFPController extends Controller
         $user  = $request->user();
         $query = Empresa::orderBy('nombre_comercial');
 
-        if ($user && $user->isDocente() && $user->centro_educativo_id) {
-            $centroNombre = $user->centroEducativo?->nombre;
-            $query->where(function ($q) use ($user, $centroNombre) {
-                $q->where('centro_id', $user->centro_educativo_id);
-                if ($centroNombre) {
-                    $q->orWhere('centro_educativo', $centroNombre);
-                }
-            });
+        if ($user && ($user->isDocente() || $user->isAdmin())) {
+            $query->delCentroDe($user);
         }
 
         return response()->json($query->get());
@@ -438,6 +432,7 @@ class DatosFPController extends Controller
 
     public function guardarEmpresa(Request $request)
     {
+        $auth = $request->user();
         $estadosPermitidos = ['Pendiente de llamar', 'Llamado - Información obtenida', 'Llamado - Negativa', 'Llamado - Llamar más tarde', 'En colaboración activa', 'Descartada'];
 
         $request->validate([
@@ -469,10 +464,17 @@ class DatosFPController extends Controller
             ? implode(', ', $request->consecuencias)
             : $request->consecuencias;
 
+        // Admin de centro: la empresa que crea es siempre de su propio centro, nunca
+        // el que mande el cliente — solo superadmin puede elegir centro libremente.
+        $centroEducativoNombre = $request->centroEducativo;
+        if ($auth->isAdmin()) {
+            $centroEducativoNombre = $auth->centroEducativo?->nombre;
+        }
+
         // Resolvemos o creamos el centro educativo
         $centroId = null;
-        if ($request->filled('centroEducativo')) {
-            $centro   = CentroEducativo::firstOrCreate(['nombre' => $request->centroEducativo]);
+        if ($centroEducativoNombre) {
+            $centro   = CentroEducativo::firstOrCreate(['nombre' => $centroEducativoNombre]);
             $centroId = $centro->id;
         }
 
@@ -480,7 +482,7 @@ class DatosFPController extends Controller
             'nombre_comercial'  => $request->nombreComercial,
             'razon_social'      => $request->razonSocial,
             'cif'               => $request->cif,
-            'centro_educativo'  => $request->centroEducativo, // legacy
+            'centro_educativo'  => $centroEducativoNombre, // legacy
             'centro_id'         => $centroId,
             'sector'            => $request->sector,
             'tamano'            => $request->tamano,
@@ -519,7 +521,7 @@ class DatosFPController extends Controller
         if ($centroId && $request->filled('ciclosIds') && is_array($request->ciclosIds)) {
             $rows = collect($request->ciclosIds)->map(fn($cicloId) => [
                 'centro_id'         => $centroId,
-                'centro_educativo'  => $request->centroEducativo,  // legacy
+                'centro_educativo'  => $centroEducativoNombre,  // legacy
                 'ciclo_id'          => $cicloId,
             ])->all();
             DB::table('centro_ciclo')->insertOrIgnore($rows);
@@ -574,6 +576,11 @@ class DatosFPController extends Controller
             return response()->json(['error' => 'Empresa no encontrada'], 404);
         }
 
+        $auth = $request->user();
+        if ($auth->isAdmin() && !$empresa->perteneceAlCentroDe($auth)) {
+            return response()->json(['error' => 'No autorizado: esta empresa no pertenece a tu centro educativo.'], 403);
+        }
+
         $estadosPermitidos = ['Pendiente de llamar', 'Llamado - Información obtenida', 'Llamado - Negativa', 'Llamado - Llamar más tarde', 'En colaboración activa', 'Descartada'];
 
         $request->validate([
@@ -605,9 +612,19 @@ class DatosFPController extends Controller
             ? implode(', ', $request->consecuencias)
             : $request->consecuencias;
 
+        // Admin de centro: no puede mover la empresa a otro centro ni desvincularla del
+        // suyo — el campo se ignora y se mantiene el centro actual (que ya se comprobó
+        // arriba que es el propio). Solo superadmin puede reasignar libremente.
+        $centroEducativoNombre = $request->centroEducativo;
+        if ($auth->isAdmin()) {
+            $centroEducativoNombre = $empresa->centro_educativo;
+        }
+
         // Resolvemos o creamos el centro educativo
         $centroId = $empresa->centro_id;
-        if ($request->filled('centroEducativo')) {
+        if ($auth->isAdmin()) {
+            // Se mantiene el centro_id actual (ya validado arriba).
+        } elseif ($request->filled('centroEducativo')) {
             $centro   = CentroEducativo::firstOrCreate(['nombre' => $request->centroEducativo]);
             $centroId = $centro->id;
         } elseif ($request->has('centroEducativo') && !$request->centroEducativo) {
@@ -618,7 +635,7 @@ class DatosFPController extends Controller
             'nombre_comercial'  => $request->nombreComercial,
             'razon_social'      => $request->razonSocial,
             'cif'               => $request->cif,
-            'centro_educativo'  => $request->centroEducativo, // legacy
+            'centro_educativo'  => $centroEducativoNombre, // legacy
             'centro_id'         => $centroId,
             'sector'            => $request->sector,
             'tamano'            => $request->tamano,
@@ -664,7 +681,7 @@ class DatosFPController extends Controller
         if ($centroId && $request->filled('ciclosIds') && is_array($request->ciclosIds)) {
             $rows = collect($request->ciclosIds)->map(fn($cicloId) => [
                 'centro_id'         => $centroId,
-                'centro_educativo'  => $request->centroEducativo,  // legacy
+                'centro_educativo'  => $centroEducativoNombre,  // legacy
                 'ciclo_id'          => $cicloId,
             ])->all();
             DB::table('centro_ciclo')->insertOrIgnore($rows);
@@ -681,6 +698,10 @@ class DatosFPController extends Controller
         $empresa = Empresa::find($id);
         if (!$empresa) {
             return response()->json(['error' => 'Empresa no encontrada'], 404);
+        }
+
+        if ($request->user()->isAdmin() && !$empresa->perteneceAlCentroDe($request->user())) {
+            return response()->json(['error' => 'No autorizado: esta empresa no pertenece a tu centro educativo.'], 403);
         }
 
         $estadosPermitidos = ['Pendiente de llamar', 'Llamado - Información obtenida', 'Llamado - Negativa', 'Llamado - Llamar más tarde', 'En colaboración activa', 'Descartada'];

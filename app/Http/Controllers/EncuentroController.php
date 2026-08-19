@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEncuentroLoteRequest;
 use App\Http\Requests\StoreEncuentroRequest;
 use App\Http\Requests\UpdateEncuentroRequest;
+use App\Http\Resources\EncuentroResource;
 use App\Models\Equipo;
 use App\Models\Microproyecto;
 use App\Models\Encuentro;
+use App\Support\CodigoLegible;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -18,21 +20,15 @@ class EncuentroController extends Controller
         $user  = $request->user();
         $query = Encuentro::with([
             'docente:id,name',
+            'colaboradores:id,name',
             'microproyecto:id,uuid,titulo,microreto_id,estado',
             'microproyecto.microreto:id,titulo,empresa_nombre',
-        ])->orderBy('created_at', 'desc');
+        ])->visiblesPara($user)->orderBy('created_at', 'desc');
 
-        if ($user?->isDocente()) {
-            $query->where('user_id', $user->id);
-        } elseif ($user?->isAdmin() && $user->centro_educativo_id) {
-            $nombreCentro = $user->centroEducativo?->nombre;
-            if ($nombreCentro) {
-                $query->where('centro_educativo', $nombreCentro);
-            }
-        }
-        // Superadmin: sin filtro
-
-        return $query->get()->map(fn($encuentro) => $this->conTituloProyecto($encuentro));
+        // response()->json() evita el envoltorio {"data": [...]} que Laravel aplica
+        // cuando se devuelve una Resource/colección directamente desde el controller —
+        // el frontend espera un array plano (mismo criterio que MicroretoFichaResource).
+        return response()->json(EncuentroResource::collection($query->get()));
     }
 
     public function store(StoreEncuentroRequest $request)
@@ -43,7 +39,8 @@ class EncuentroController extends Controller
         $validated['user_id'] = $user->id;
 
         if ($user->centro_educativo_id && $user->centroEducativo) {
-            $validated['centro_educativo'] = $user->centroEducativo->nombre;
+            $validated['centro_educativo']    = $user->centroEducativo->nombre;
+            $validated['centro_educativo_id'] = $user->centro_educativo_id;
         }
 
         if (!empty($validated['microproyecto_id'])) {
@@ -54,19 +51,19 @@ class EncuentroController extends Controller
         $encuentro = Encuentro::create($validated);
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
 
-        return response()->json($this->conTituloProyecto($encuentro), 201);
+        return response()->json(new EncuentroResource($encuentro), 201);
     }
 
     public function update(UpdateEncuentroRequest $request, $id)
     {
         $encuentro = Encuentro::where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->editablesPara($request->user())
             ->firstOrFail();
 
         $encuentro->update($request->validated());
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
 
-        return response()->json($this->conTituloProyecto($encuentro));
+        return response()->json(new EncuentroResource($encuentro));
     }
 
     // Sugiere fecha_fin a partir de las clases estimadas en las fases del proyecto
@@ -77,22 +74,18 @@ class EncuentroController extends Controller
         return $proyecto?->fechaFinSugerida(Carbon::parse($fecha))?->toDateString();
     }
 
-    private function conTituloProyecto(Encuentro $encuentro): array
-    {
-        $data = $encuentro->toArray();
-        $data['microproyecto_uuid'] = $encuentro->microproyecto?->uuid;
-        $data['proyecto_titulo']    = $encuentro->microproyecto?->titulo;
-        $data['microreto_id']       = $encuentro->microproyecto?->microreto_id;
-        $data['microreto_titulo']   = $encuentro->microproyecto?->microreto?->titulo;
-        unset($data['microproyecto']);
-        return $data;
-    }
-
     public function storeLote(StoreEncuentroLoteRequest $request)
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+
         foreach ($request->validated()['encuentros'] as $s) {
-            $s['user_id'] = $userId;
+            $s['user_id'] = $user->id;
+            // El centro se sella siempre desde el usuario autenticado — nunca se
+            // confía en el string que pueda mandar el cliente (mismo criterio que store()).
+            if ($user->centro_educativo_id && $user->centroEducativo) {
+                $s['centro_educativo']    = $user->centroEducativo->nombre;
+                $s['centro_educativo_id'] = $user->centro_educativo_id;
+            }
             Encuentro::create($s);
         }
 
@@ -101,16 +94,23 @@ class EncuentroController extends Controller
 
     public function show(Request $request, $id)
     {
-        return Encuentro::with(['microproyecto:id,uuid,titulo,estado'])
+        $encuentro = Encuentro::with([
+            'docente:id,name',
+            'colaboradores:id,name',
+            'microproyecto:id,uuid,titulo,microreto_id,estado',
+            'microproyecto.microreto:id,titulo,empresa_nombre',
+        ])
             ->where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->visiblesPara($request->user())
             ->firstOrFail();
+
+        return response()->json(new EncuentroResource($encuentro));
     }
 
     public function destroy(Request $request, $id)
     {
         $encuentro = Encuentro::where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->editablesPara($request->user())
             ->firstOrFail();
         $encuentro->delete();
         return response()->noContent();
@@ -123,7 +123,7 @@ class EncuentroController extends Controller
     public function crearCodigo(Request $request, $id)
     {
         $encuentro = Encuentro::where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->editablesPara($request->user())
             ->firstOrFail();
 
         $proyecto = $encuentro->microproyecto;
@@ -181,6 +181,23 @@ class EncuentroController extends Controller
         return response()->json(['codigo_clase' => $codigo, 'equipos' => $equipos], 201);
     }
 
+    /**
+     * POST /api/encuentros/{id}/codigo-ia
+     * Genera (o regenera) el código que desbloquea "Sugerir con IA" en el workspace.
+     * Regenerarlo no bloquea de nuevo a los equipos que ya lo introdujeron.
+     */
+    public function generarCodigoIa(Request $request, $id)
+    {
+        $encuentro = Encuentro::where('id', $id)
+            ->editablesPara($request->user())
+            ->firstOrFail();
+
+        $codigo = CodigoLegible::generar(fn($c) => Encuentro::where('codigo_ia', $c)->exists());
+        $encuentro->update(['codigo_ia' => $codigo]);
+
+        return response()->json(['codigo_ia' => $codigo]);
+    }
+
     private function equipoTieneProgreso(Equipo $equipo): bool
     {
         return $equipo->fases()->where('completada', true)->exists()
@@ -204,7 +221,7 @@ class EncuentroController extends Controller
     public function reestructurarEquipos(\App\Http\Requests\ReestructurarEquiposRequest $request, $id)
     {
         $encuentro = Encuentro::where('id', $id)
-            ->where('user_id', $request->user()->id)
+            ->editablesPara($request->user())
             ->firstOrFail();
 
         $proyecto = $encuentro->microproyecto;
@@ -286,24 +303,14 @@ class EncuentroController extends Controller
 
     /**
      * GET /api/encuentros/{id}/workspace
-     * Dashboard docente: progreso de todos los equipos del encuentro.
+     * Dashboard docente: progreso de todos los equipos del encuentro. El nombre de este
+     * endpoint es independiente de la ruta del SPA que lo consume — esa ruta se llama
+     * /mis-grupos/:id (antes /workspace/:id); no renombrar este endpoint junto a aquella.
      */
     public function workspace(Request $request, $id)
     {
-        $user  = $request->user();
-        $query = Encuentro::where('id', $id);
-
-        if ($user->isDocente()) {
-            $query->where('user_id', $user->id);
-        } elseif ($user->isAdmin() && $user->centro_educativo_id) {
-            $nombreCentro = $user->centroEducativo?->nombre;
-            if ($nombreCentro) {
-                $query->where('centro_educativo', $nombreCentro);
-            }
-        }
-        // Superadmin: sin filtro
-
-        $encuentro = $query->firstOrFail();
+        $user      = $request->user();
+        $encuentro = Encuentro::where('id', $id)->visiblesPara($user)->firstOrFail();
 
         $proyecto = $encuentro->microproyecto?->load([
             'equipos.miembros',
@@ -320,6 +327,7 @@ class EncuentroController extends Controller
                 'grupo'            => $encuentro->grupo,
                 'fecha'            => $encuentro->fecha,
                 'num_alumnos'      => $encuentro->num_alumnos,
+                'codigo_ia'        => $encuentro->codigo_ia,
             ],
             'proyecto' => $proyecto ? [
                 'uuid'               => $proyecto->uuid,
@@ -334,28 +342,19 @@ class EncuentroController extends Controller
     /**
      * GET /api/encuentros/mis-grupos
      * Vista agregada: todos los encuentros del docente (o del centro, para admin)
-     * que ya tienen equipos, con el mismo detalle de progreso que /workspace
-     * pero para todos a la vez — pensada para "Mis grupos" (seguimiento sin
-     * entrar encuentro por encuentro).
+     * que ya tienen equipos, con el mismo detalle de progreso que el endpoint
+     * /encuentros/{id}/workspace (ver workspace() arriba) pero para todos a la vez —
+     * pensada para "Mis grupos" (seguimiento sin entrar encuentro por encuentro).
      */
     public function misGrupos(Request $request)
     {
         $user  = $request->user();
         $query = Encuentro::with([
+            'microproyecto.familia',
             'microproyecto.equipos.miembros',
             'microproyecto.equipos.fases',
             'microproyecto.equipos.reflexiones',
-        ])->whereHas('microproyecto.equipos')->orderBy('created_at', 'desc');
-
-        if ($user->isDocente()) {
-            $query->where('user_id', $user->id);
-        } elseif ($user->isAdmin() && $user->centro_educativo_id) {
-            $nombreCentro = $user->centroEducativo?->nombre;
-            if ($nombreCentro) {
-                $query->where('centro_educativo', $nombreCentro);
-            }
-        }
-        // Superadmin: sin filtro
+        ])->whereHas('microproyecto.equipos')->visiblesPara($user)->orderBy('created_at', 'desc');
 
         $grupos = $query->get()->map(function ($encuentro) {
             $proyecto = $encuentro->microproyecto;
@@ -365,14 +364,18 @@ class EncuentroController extends Controller
                     'id'               => $encuentro->id,
                     'grupo'            => $encuentro->grupo,
                     'ciclo_formativo'  => $encuentro->ciclo_formativo,
+                    'curso'            => $encuentro->curso,
                     'centro_educativo' => $encuentro->centro_educativo,
                     'fecha'            => $encuentro->fecha,
+                    'codigo_clase'     => $encuentro->codigo_clase,
+                    'codigo_ia'        => $encuentro->codigo_ia,
                 ],
                 'proyecto' => $proyecto ? [
                     'uuid'               => $proyecto->uuid,
                     'titulo'             => $proyecto->titulo,
                     'estado'             => $proyecto->estado,
                     'evaluacion_oficial' => $proyecto->evaluacion_oficial,
+                    'familia'            => $proyecto->familia?->nombre,
                 ] : null,
                 'equipos' => $proyecto ? $this->formatEquiposConProgreso($proyecto->equipos) : collect(),
             ];
@@ -406,6 +409,8 @@ class EncuentroController extends Controller
                 'token'           => $equipo->token,
                 'fase_actual'     => $equipo->fase_actual,
                 'fases_completas' => $fasesCompletas,
+                'diagnostico_final'       => $equipo->diagnostico_final,
+                'diagnostico_generado_en' => $equipo->diagnostico_generado_en,
                 'miembros'        => $equipo->miembros->map(fn($m) => [
                     'id'         => $m->id,
                     'nombre'     => $m->nombre,
@@ -427,14 +432,6 @@ class EncuentroController extends Controller
 
     private function generarCodigoClase(): string
     {
-        $charset = 'ABCDEFGHJKLMNPQRTUVWXY';
-        do {
-            $letras  = $charset[random_int(0, strlen($charset) - 1)]
-                     . $charset[random_int(0, strlen($charset) - 1)]
-                     . $charset[random_int(0, strlen($charset) - 1)];
-            $numeros = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
-            $codigo  = $letras . '-' . $numeros;
-        } while (Encuentro::where('codigo_clase', $codigo)->exists());
-        return $codigo;
+        return CodigoLegible::generar(fn($codigo) => Encuentro::where('codigo_clase', $codigo)->exists());
     }
 }

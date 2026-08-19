@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class UpdateAdminUserRequest extends FormRequest
@@ -31,7 +32,17 @@ class UpdateAdminUserRequest extends FormRequest
         }
 
         if ($this->filled('password')) {
-            $rules['password']              = ['string', 'max:128', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()];
+            $rules['password'] = ['string', 'max:128', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()];
+
+            // El superadmin no puede reponer la contraseña anterior de la cuenta al resetearla
+            if ($this->user()->isSuperAdmin()) {
+                $rules['password'][] = function ($attribute, $value, $fail) use ($targetUser) {
+                    if (Hash::check($value, $targetUser->password)) {
+                        $fail('La nueva contraseña no puede ser igual a la contraseña actual de la cuenta.');
+                    }
+                };
+            }
+
             $rules['password_confirmation'] = 'required|string';
             // El superadmin/admin debe confirmar explícitamente que quiere resetear la contraseña de esta cuenta
             $rules['confirm_password_change'] = ['required', 'accepted'];

@@ -261,6 +261,7 @@ const guardar = async () => {
       ...microretoGenerado.value,
       ciclo: ciclos.value.find(c => c.id === seleccion.value.cicloId)?.nombre,
       modulo: nombresModulosSeleccionados.length > 0 ? nombresModulosSeleccionados.join(' y ') : 'Transversal',
+      curso: nombresModulosSeleccionados.length === 0 ? 'ambos_cursos' : undefined,
       duracion: seleccion.value.duracion,
       nivel_grupo: seleccion.value.nivelGrupo,
       es_simulado: !!(empresaDetalle.value?.es_simulada),
@@ -300,7 +301,7 @@ const guardar = async () => {
               <span v-else>{{ step }}</span>
             </div>
             <span class="text-[10px] font-black uppercase mt-3 tracking-widest text-center" :class="pasoActual >= step ? 'text-emerald-500' : 'text-slate-400'">
-              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. El Problema' : '3. Match Académico' }}
+              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. Diagnóstico de Empresa' : '3. Match Académico' }}
             </span>
           </div>
         </div>

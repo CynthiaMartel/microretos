@@ -209,21 +209,23 @@ const retosFiltrados = computed(() => {
   )
   if (retoFiltroFamilia.value) list = list.filter(m => m.familia === retoFiltroFamilia.value)
   if (retoFiltroCiclo.value)   list = list.filter(m => (m.ciclo || '') === retoFiltroCiclo.value)
-  if (retoFiltroCurso.value === 'transversal') {
-    list = list.filter(m => m.curso === 'transversal')
-  } else if (retoFiltroCurso.value) {
-    const target = retoFiltroCurso.value === '1º' ? '1' : '2'
-    // Un reto transversal vale tanto para 1º como para 2º — aparece siempre.
-    list = list.filter(m => String(m.curso ?? '') === target || m.curso === 'transversal')
+  if (retoFiltroCurso.value === 'ambos_cursos') {
+    list = list.filter(m => m.curso === 'ambos_cursos')
+  } else if (retoFiltroCurso.value === '1º') {
+    // 1º solo puede abordar retos exclusivamente de 1º.
+    list = list.filter(m => String(m.curso ?? '') === '1')
+  } else if (retoFiltroCurso.value === '2º') {
+    // 2º puede con todo: su propio curso, el de 1º (ya cursado) y los de ambos cursos.
+    list = list.filter(m => String(m.curso ?? '') === '2' || String(m.curso ?? '') === '1' || m.curso === 'ambos_cursos')
   }
   return list.slice(0, 60)
 })
 
-// Etiqueta legible del curso de un reto — 'transversal' significa que el
+// Etiqueta legible del curso de un reto — 'ambos_cursos' significa que el
 // módulo del que parte existe en 1º y 2º, o que la IA lo generó para encajar
 // con varios módulos a la vez, así que vale para cualquiera de los dos cursos.
 function cursoLabel(curso) {
-  if (curso === 'transversal') return 'Transversal: 1º y/o 2º'
+  if (curso === 'ambos_cursos') return 'Ambos Cursos: 1º y 2º'
   return curso ? `${curso}º` : ''
 }
 
@@ -879,7 +881,10 @@ async function autocompletarDesdeMicroreto(mr, sesion = null) {
   // ── Paso 1: Básicos ───────────────────────────────────────────────────────
   if (!form.value.titulo && mr.titulo) form.value.titulo = mr.titulo;
 
-  if (mr.curso) {
+  // Solo autocompletar cuando el reto es exclusivamente de 1º o 2º — un reto de
+  // "ambos cursos" no debe forzar un curso concreto en el Encuentro, que siempre
+  // representa un grupo-clase real de un único año.
+  if (String(mr.curso) === '1' || String(mr.curso) === '2') {
     form.value.curso = String(mr.curso) === '1' ? '1º' : '2º';
     cursoAutocompletado.value = true;
     setTimeout(() => { cursoAutocompletado.value = false; }, 6000);
@@ -1016,8 +1021,9 @@ onMounted(async () => {
   await cargarCatalogos();
   if (!uuid.value && authStore.userCentroId) form.value.centro_id = authStore.userCentroId;
   await cargarProyecto();
-  await nextTick();
-  if (!modalBorradorAviso.value) showTourPrompt.value = true;
+  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
+  // await nextTick();
+  // if (!modalBorradorAviso.value) showTourPrompt.value = true;
 });
 
 // ── Guardar ───────────────────────────────────────────────────────────────────
@@ -1390,14 +1396,14 @@ onUnmounted(() => { tourActivo.value = false; });
                     <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
                   </select>
                   <div class="flex rounded-xl border border-gray-200 overflow-hidden text-[11px] font-black uppercase tracking-widest">
-                    <button v-for="op in ['', '1º', '2º', 'transversal']" :key="op"
+                    <button v-for="op in ['', '1º', '2º', 'ambos_cursos']" :key="op"
                             @click="retoFiltroCurso = op"
-                            :title="op === 'transversal' ? 'Transversal: posibilidad 1º y/o 2º' : ''"
+                            :title="op === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''"
                             :class="['px-3 py-1.5 transition-colors',
                                      retoFiltroCurso === op
                                        ? 'bg-[#00A859] text-white'
                                        : 'bg-white text-gray-400 hover:bg-gray-50']">
-                      {{ op === '' ? 'Todos' : op === 'transversal' ? 'Transversal' : op }}
+                      {{ op === '' ? 'Todos' : op === 'ambos_cursos' ? 'Ambos Cursos' : op }}
                     </button>
                   </div>
                   <button v-if="retoBusqueda || retoFiltroFamilia || retoFiltroCiclo || retoFiltroCurso"

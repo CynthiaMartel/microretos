@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\MicroretoTokenController;
 use App\Http\Controllers\MicroproyectoController;
+use App\Http\Controllers\EncuentroColaboradorController;
 use App\Http\Controllers\EncuentroController;
 use App\Http\Controllers\EmpresaContactoController;
 use App\Http\Controllers\UploadController;
@@ -70,6 +71,11 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/equipo/{token}/fase/2/sugerir-tareas',   [EquipoPublicoController::class, 'sugerirTareas']);
 });
 
+// Desbloqueo del módulo IA del workspace — throttle propio y restrictivo
+// (evita fuerza bruta sobre el código corto que reparte el docente)
+Route::middleware('throttle:15,1')
+    ->post('/equipo/{token}/ia/verificar-codigo', [EquipoPublicoController::class, 'verificarCodigoIa']);
+
 // Validación pública del microproyecto por parte de la empresa (acceso por token)
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/startup/landing/{token}',          [MicroproyectoController::class, 'showByToken']);
@@ -101,7 +107,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
     Route::post('/admin/logout',          [AdminAuthController::class, 'logout']);
-    Route::post('/admin/refresh',         [AdminAuthController::class, 'refresh']);
     Route::middleware('throttle:5,1')
         ->post('/admin/verify-password', [AdminAuthController::class, 'verifyPassword']);
 
@@ -115,8 +120,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/microretos/{id}', [MicroretoIAController::class, 'show']);
     });
 
-    // ── Solo admin: centros, familias, ciclos, papelera ──────────────────────
-    Route::middleware('admin')->group(function () {
+    // ── Solo superadmin: catálogo global (centros, familias, ciclos) y papelera ──
+    // Es gestión de la app a nivel de "intranet", no ligada a un centro concreto —
+    // el admin de centro tiene el mismo alcance que el docente aquí, ninguno.
+    Route::middleware('superadmin')->group(function () {
 
         // Centros educativos
         Route::post('/centros',        [DatosFPController::class, 'guardarCentro']);
@@ -144,14 +151,20 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    // Empresas — lectura para todos, escritura solo admin
+    // Empresas — lectura (propio centro para docente/admin) para todos los roles autenticados.
+    // Alta/edición/estado: admin (acotado a su propio centro, ver DatosFPController) o superadmin
+    // — se usa tanto desde "Base de datos" como desde el alta inline en el Generador de Retos.
+    // El dashboard global (todos los centros) y el borrado son solo superadmin: es catálogo
+    // cross-centro, no trabajo del día a día de un centro concreto.
     Route::get('/empresas',                [DatosFPController::class, 'getEmpresas']);
-    Route::get('/empresas/dashboard',      [DatosFPController::class, 'getDashboardEmpresas']);
     Route::get('/empresas/{id}/familias',  [DatosFPController::class, 'getFamiliasPorEmpresa']);
     Route::middleware('admin')->group(function () {
         Route::post('/empresas',               [DatosFPController::class, 'guardarEmpresa']);
         Route::put('/empresas/{id}',           [DatosFPController::class, 'actualizarEmpresa']);
         Route::patch('/empresas/{id}/estado',  [DatosFPController::class, 'actualizarEstadoEmpresa']);
+    });
+    Route::middleware('superadmin')->group(function () {
+        Route::get('/empresas/dashboard',      [DatosFPController::class, 'getDashboardEmpresas']);
         Route::delete('/empresas/{id}',        [DatosFPController::class, 'eliminarEmpresa']);
     });
 
@@ -181,8 +194,15 @@ Route::middleware('auth:sanctum')->group(function () {
         // Ruta específica antes de la paramétrica {id} — si no, "mis-grupos" se capturaría como {id}
         Route::get('/encuentros/mis-grupos',               [EncuentroController::class, 'misGrupos']);
         Route::post('/encuentros/{id}/crear-codigo',       [EncuentroController::class, 'crearCodigo'])->whereNumber('id');
+        Route::post('/encuentros/{id}/codigo-ia',          [EncuentroController::class, 'generarCodigoIa'])->whereNumber('id');
         Route::patch('/encuentros/{id}/reestructurar-equipos', [EncuentroController::class, 'reestructurarEquipos'])->whereNumber('id');
         Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
+        // Ruta específica antes de la paramétrica {id} de abajo
+        Route::get('/encuentros/{id}/colaboradores/candidatos', [EncuentroColaboradorController::class, 'candidatos'])->whereNumber('id');
+        Route::get('/encuentros/{id}/colaboradores',             [EncuentroColaboradorController::class, 'index'])->whereNumber('id');
+        Route::post('/encuentros/{id}/colaboradores',            [EncuentroColaboradorController::class, 'store'])->whereNumber('id');
+        Route::patch('/encuentros/{id}/colaboradores/{userId}',  [EncuentroColaboradorController::class, 'update'])->whereNumber('id')->whereNumber('userId');
+        Route::delete('/encuentros/{id}/colaboradores/{userId}', [EncuentroColaboradorController::class, 'destroy'])->whereNumber('id')->whereNumber('userId');
         Route::get('/encuentros/{id}',                     [EncuentroController::class, 'show']);
         Route::put('/encuentros/{id}',                     [EncuentroController::class, 'update'])->whereNumber('id');
         Route::delete('/encuentros/{id}',                  [EncuentroController::class, 'destroy']);
@@ -229,6 +249,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ->whereNumber('id')->whereNumber('fase');
         Route::patch('/startup/equipos/{id}/evaluar',              [EquipoGestionController::class, 'evaluar'])
             ->whereNumber('id');
+
+        // Diagnóstico final IA — mismo throttle que el resto de llamadas de generación (arriba)
+        Route::middleware('throttle:10,1')
+            ->post('/startup/equipos/{id}/diagnostico-final', [EquipoGestionController::class, 'diagnosticoFinal'])
+            ->whereNumber('id');
     });
 
     // ── Gestión de usuarios (solo admin) ─────────────────────────────
@@ -236,7 +261,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',                       [AdminUserController::class, 'index']);
         Route::post('/',                      [AdminUserController::class, 'store']);
         Route::get('/papelera',               [AdminUserController::class, 'papelera']);
-        Route::patch('/{user}',               [AdminUserController::class, 'update']);
+        // Throttle propio: implica cambio de contraseña de otra cuenta, más restrictivo que el resto del CRUD
+        Route::middleware('throttle:20,1')
+            ->patch('/{user}',                [AdminUserController::class, 'update']);
         Route::patch('/{user}/activar',       [AdminUserController::class, 'activar']);
         Route::patch('/{user}/bloquear',      [AdminUserController::class, 'toggleBloquear']);
         Route::delete('/{user}',              [AdminUserController::class, 'destroy']);

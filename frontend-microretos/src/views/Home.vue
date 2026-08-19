@@ -12,8 +12,8 @@ const isLoaded  = ref(false);
 onMounted(() => { setTimeout(() => { isLoaded.value = true; }, 100); });
 
 const irABiblioteca = () => {
-  if (authStore.isAuthenticated) router.push('/biblioteca');
-  else openLogin('/biblioteca');
+  if (authStore.isAuthenticated) router.push('/retos');
+  else openLogin('/retos');
 };
 </script>
 

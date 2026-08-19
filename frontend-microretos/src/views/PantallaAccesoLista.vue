@@ -1,3 +1,4 @@
+<!-- Ruta: /pantalla-acceso (name: pantalla-acceso-lista). Antes vivía en /dashboard/pantalla-acceso — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -62,7 +63,7 @@ onMounted(cargar)
       <template v-else>
         <div v-if="!encuentrosConEquipos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
           <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene equipos creados todavía.</p>
-          <button @click="router.push('/dashboard/encuentros')"
+          <button @click="router.push('/encuentros')"
                   class="px-4 py-2 rounded-xl bg-[#00A859] text-white text-xs font-black uppercase tracking-wider">
             Ir a Crear/Ver Encuentros
           </button>

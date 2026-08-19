@@ -38,6 +38,7 @@ class MicroretoFichaResource extends JsonResource
             'curso'               => $this->curso,
             'ciclo'               => $this->ciclo,
             'modulo'              => $this->modulo,
+            'multimodulo'         => (bool) $this->multimodulo,
             'duracion'            => $this->duracion,
             // Calculados por MicroretoFichaService::enriquecer()/enriquecerLote()
             'familia'             => $this->familia,

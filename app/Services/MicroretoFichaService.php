@@ -29,7 +29,39 @@ class MicroretoFichaService
             $reto->curso = self::derivarCursoDeEvaluacion($reto->ciclo_id, $reto->evaluacion_oficial);
         }
 
+        self::anotarCursoPorModulo($reto);
+
         return $reto;
+    }
+
+    /**
+     * Añade `curso` (1|2|null) a cada entrada de evaluacion_oficial, buscando el módulo
+     * real por nombre dentro del ciclo del reto — así la ficha puede mostrar a qué curso
+     * pertenece cada módulo sugerido por la IA, sin depender de que se haya guardado en
+     * su momento (funciona igual para retos antiguos y nuevos). Solo para enriquecer() —
+     * enriquecerLote() no lo necesita porque los listados no muestran este detalle.
+     */
+    private static function anotarCursoPorModulo(Microreto $reto): void
+    {
+        if (empty($reto->evaluacion_oficial) || !$reto->ciclo_id) {
+            return;
+        }
+
+        $cache = [];
+        $evaluacion = $reto->evaluacion_oficial;
+        foreach ($evaluacion as &$item) {
+            $nombreModulo = $item['modulo'] ?? null;
+            if (!$nombreModulo) {
+                continue;
+            }
+            if (!array_key_exists($nombreModulo, $cache)) {
+                $cache[$nombreModulo] = self::buscarCursoDeModulo($reto->ciclo_id, $nombreModulo);
+            }
+            $item['curso'] = $cache[$nombreModulo];
+        }
+        unset($item);
+
+        $reto->evaluacion_oficial = $evaluacion;
     }
 
     /**
@@ -87,8 +119,12 @@ class MicroretoFichaService
      * Deduce el número de curso (1 o 2) a partir del módulo guardado en el microreto.
      * Primero intenta por ciclo_id (FK), luego por nombre de ciclo (legacy).
      * Tolerante al punto final en nombres de módulo (datos BOE vs. texto libre).
+     * Usado como fallback en guardarEnBD()/guardarLote() cuando el frontend no manda
+     * `curso` ya calculado. No tiene en cuenta `multimodulo` (multi-módulo del mismo
+     * curso) ni el Escenario B (ambos cursos) — esos casos siempre llegan con `curso`
+     * ya resuelto explícitamente por el generador.
      */
-    private static function derivarCurso(?int $cicloId, ?string $cicloNombre, ?string $moduloTexto): ?int
+    public static function derivarCurso(?int $cicloId, ?string $cicloNombre, ?string $moduloTexto): ?int
     {
         if (!$moduloTexto || $moduloTexto === 'Transversal') {
             return null;
@@ -132,16 +168,25 @@ class MicroretoFichaService
             $nombreModulo = $item['modulo'] ?? null;
             if (!$nombreModulo) continue;
 
-            $curso = Modulo::where('idcicloformativo', $cicloId)
-                ->where('nombre', 'LIKE', rtrim($nombreModulo, '.') . '%')
-                ->orderByRaw('LENGTH(nombre) ASC')
-                ->value('curso');
-
+            $curso = self::buscarCursoDeModulo($cicloId, $nombreModulo);
             if (!is_null($curso)) {
                 return $curso;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Busca el curso (1|2) de un módulo por nombre dentro de un ciclo. Tolerante al
+     * punto final en nombres BOE (p. ej. "Instalaciones eléctricas interiores." vs
+     * el texto libre guardado sin el punto).
+     */
+    private static function buscarCursoDeModulo(int $cicloId, string $nombreModulo): ?int
+    {
+        return Modulo::where('idcicloformativo', $cicloId)
+            ->where('nombre', 'LIKE', rtrim($nombreModulo, '.') . '%')
+            ->orderByRaw('LENGTH(nombre) ASC')
+            ->value('curso');
     }
 }

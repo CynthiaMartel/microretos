@@ -134,7 +134,7 @@ onMounted(async () => {
     cargando.value = false;
   }
   await nextTick();
-  guiaBienvenida.value = true;
+  // Auto-disparo desactivado — reactivar poniendo guiaBienvenida.value = true si se necesita de nuevo.
 });
 
 onUnmounted(() => {
@@ -146,7 +146,6 @@ onBeforeRouteUpdate(async () => {
   modoGuia.value = false;
   pasoGuia.value = 1;
   await nextTick();
-  guiaBienvenida.value = true;
 });
 
 function getEtiqueta(p) {
@@ -218,7 +217,11 @@ function cerrarModalEliminar() {
 function onProyectoEliminado({ uuid, titulo }) {
   proyectos.value = proyectos.value.filter(p => p.uuid !== uuid);
   cerrarModalEliminar();
-  mostrarSnack(`"${titulo}" movido a la papelera.`, { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) });
+  // La papelera de "Base de datos" es solo superadmin — el resto de roles ya no tiene esa ruta.
+  mostrarSnack(
+    `"${titulo}" movido a la papelera.`,
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null,
+  );
 }
 
 // ── Snackbar ────────────────────────────────────────────────────────────────
@@ -321,9 +324,9 @@ function mostrarSnack(mensaje, accion = null) {
               </svg>
               Guía
             </button>
-            <!-- Botón Papelera -->
+            <!-- Botón Papelera — la papelera de "Base de datos" es solo superadmin -->
             <button
-              v-if="!authStore.isEmpresa"
+              v-if="authStore.isSuperAdmin"
               @click="router.push({ name: 'papelera' })"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-full
                      bg-amber-400/10 border border-amber-400/20 text-amber-600
@@ -362,7 +365,7 @@ function mostrarSnack(mensaje, accion = null) {
       </header>
 
       <!-- Filtros -->
-      <div class="flex flex-col sm:flex-row gap-3 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
 
         <!-- Búsqueda -->
         <div ref="refBusqueda"
@@ -370,7 +373,7 @@ function mostrarSnack(mensaje, accion = null) {
                'tour-active': pasoRefActivo === 'refBusqueda',
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda'
              }"
-             class="relative flex-1">
+             class="relative w-full lg:flex-1 lg:min-w-[240px]">
           <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -391,7 +394,7 @@ function mostrarSnack(mensaje, accion = null) {
                'tour-active': pasoRefActivo === 'refFiltros',
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'filtros'
              }"
-             class="flex flex-wrap gap-2">
+             class="flex flex-wrap gap-2 lg:justify-end lg:min-w-0">
           <button v-for="op in filtroOpciones" :key="op"
                   @click="filtroEstado = op"
                   :class="[

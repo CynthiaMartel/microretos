@@ -4,13 +4,29 @@
 // La duración no vive aquí por fase, sino que se deriva del calendario de clases (ver
 // CLASES_PROYECTO_DEFECTO/duracionPorFase más abajo), porque una misma clase puede
 // cubrir varias fases a la vez.
+// `peso`: contribución de cada fase al progreso total de un equipo (deben sumar 100).
+// Hoy están repartidas a partes iguales, pero viven aquí — no repartidas en cada
+// componente — para poder ajustarlas sin tocar el cálculo que las consume.
 export const FASES_PROYECTO = [
-  { num: 0, label: 'Inicio del equipo',  icono: '👥', color: 'slate',  desc: 'Constitución del equipo', descLarga: 'Conóceos, estableced roles y acordad cómo vais a trabajar juntos durante el reto.' },
-  { num: 1, label: 'Análisis del reto',  icono: '🔍', color: 'blue',   desc: 'Comprensión del reto',     descLarga: 'Analizad en profundidad el reto planteado por la empresa y definid vuestra propuesta de solución con datos concretos.' },
-  { num: 2, label: 'Diseño de solución y desarrollo', icono: '💡', color: 'amber',  desc: 'Prototipo, tareas y desarrollo', descLarga: 'Diseñad y construid vuestra solución: definid el prototipo, dividid el trabajo en tareas y avanzad en la construcción.' },
-  { num: 3, label: 'Entrega de la solución',          icono: '🔨', color: 'orange', desc: 'Entrega de la solución',         descLarga: 'Entregad la solución final que proponéis para cubrir la necesidad de la empresa, al docente y a la empresa validadora.' },
-  { num: 4, label: 'Presentación',       icono: '🎓', color: 'green',  desc: 'Entrega y reflexión',      descLarga: 'Reflexionad individualmente y en grupo sobre lo aprendido. Es el cierre del proyecto.' },
+  { num: 0, label: 'Inicio del equipo',  icono: '👥', color: 'slate',  desc: 'Constitución del equipo', descLarga: 'Conóceos, estableced roles y acordad cómo vais a trabajar juntos durante el reto.', peso: 20 },
+  { num: 1, label: 'Análisis del reto',  icono: '🔍', color: 'blue',   desc: 'Comprensión del reto',     descLarga: 'Analizad en profundidad el reto planteado por la empresa y definid vuestra propuesta de solución con datos concretos.', peso: 20 },
+  { num: 2, label: 'Diseño de solución y desarrollo', icono: '💡', color: 'amber',  desc: 'Prototipo, tareas y desarrollo', descLarga: 'Diseñad y construid vuestra solución: definid el prototipo, dividid el trabajo en tareas y avanzad en la construcción.', peso: 20 },
+  { num: 3, label: 'Entrega de la solución',          icono: '🔨', color: 'orange', desc: 'Entrega de la solución',         descLarga: 'Entregad la solución final que proponéis para cubrir la necesidad de la empresa, al docente y a la empresa validadora.', peso: 20 },
+  { num: 4, label: 'Presentación',       icono: '🎓', color: 'green',  desc: 'Entrega y reflexión',      descLarga: 'Reflexionad individualmente y en grupo sobre lo aprendido. Es el cierre del proyecto.', peso: 20 },
 ]
+
+// Progreso real de un equipo (0-100) según los pesos de fase de arriba, no un reparto
+// igual asumido en cada sitio que lo calculaba. `fases` es el objeto indexado por
+// número de fase que devuelve la API (equipo.fases), con `completada` por fase.
+export function progresoPonderado(fases) {
+  const pesoTotal = FASES_PROYECTO.reduce((acc, f) => acc + f.peso, 0)
+  if (!pesoTotal) return 0
+  const pesoCompletado = FASES_PROYECTO.reduce(
+    (acc, f) => acc + (fases?.[f.num]?.completada ? f.peso : 0),
+    0
+  )
+  return Math.round((pesoCompletado / pesoTotal) * 100)
+}
 
 // Calendario de clases por defecto — cada entrada es una clase, con las fases
 // (por su `num`) que se trabajan en ella. Una clase puede cubrir varias fases.

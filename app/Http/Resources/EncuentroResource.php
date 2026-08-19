@@ -9,6 +9,12 @@ class EncuentroResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $user           = $request->user();
+        $esPropietario  = $user && $this->user_id === $user->id;
+        $puedeEditar    = $esPropietario || ($user && $this->colaboradores->contains(
+            fn($c) => $c->id === $user->id && $c->pivot->puede_editar
+        ));
+
         return [
             'id'                 => $this->id,
             'fecha'              => $this->fecha?->format('Y-m-d'),
@@ -27,6 +33,16 @@ class EncuentroResource extends JsonResource
             'proyecto_titulo'    => $this->microproyecto?->titulo,
             'microreto_id'       => $this->microproyecto?->microreto_id,
             'microreto_titulo'   => $this->microproyecto?->microreto?->titulo,
+            'es_propietario'     => $esPropietario,
+            'puede_editar'       => $puedeEditar,
+            'propietario_nombre' => $this->docente?->name,
+            'colaboradores'      => $esPropietario || $user?->isAdmin() || $user?->isSuperAdmin()
+                ? $this->colaboradores->map(fn($c) => [
+                    'id'           => $c->id,
+                    'name'         => $c->name,
+                    'puede_editar' => (bool) $c->pivot->puede_editar,
+                ])
+                : [],
         ];
     }
 }

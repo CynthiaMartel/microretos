@@ -20,7 +20,7 @@ class UpdateEncuentroRequest extends FormRequest
                 if (!$value) return;
 
                 $encuentro = Encuentro::where('id', $this->route('id'))
-                    ->where('user_id', $this->user()->id)
+                    ->editablesPara($this->user())
                     ->first();
                 if (!$encuentro || !$encuentro->fecha || !$encuentro->microproyecto) return;
 

@@ -7,8 +7,9 @@ use App\Models\User;
 
 class MicroproyectoPolicy
 {
-    // El superadmin ve y puede todo sin restricción de centro.
-    // Docentes y admins solo pueden actuar sobre proyectos de su propio centro.
+    // El superadmin ve y puede todo sin restricción de centro. Admin gestiona todo su
+    // centro. Un docente solo accede a los proyectos que creó o cuyos encuentros
+    // comparte (ver Microproyecto::esVisiblePara/esEditablePara).
 
     public function viewAny(User $user): bool
     {
@@ -17,10 +18,7 @@ class MicroproyectoPolicy
 
     public function view(User $user, Microproyecto $proyecto): bool
     {
-        if ($user->isSuperAdmin()) return true;
-
-        return $user->centro_educativo_id !== null
-            && $proyecto->centro_id === $user->centro_educativo_id;
+        return $proyecto->esVisiblePara($user);
     }
 
     public function create(User $user): bool
@@ -30,11 +28,11 @@ class MicroproyectoPolicy
 
     public function update(User $user, Microproyecto $proyecto): bool
     {
-        return $this->view($user, $proyecto);
+        return $proyecto->esEditablePara($user);
     }
 
     public function delete(User $user, Microproyecto $proyecto): bool
     {
-        return $this->view($user, $proyecto);
+        return $proyecto->esEditablePara($user);
     }
 }

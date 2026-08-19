@@ -42,6 +42,7 @@ class Empresa extends Model
         'restricciones',
         'lo_que_no_quieren',
         'es_simulada',
+        'expectativas_alumno',
     ];
 
     protected $casts = [
@@ -61,5 +62,40 @@ class Empresa extends Model
     public function microretos()
     {
         return $this->hasMany(Microreto::class, 'empresa_id');
+    }
+
+    // Empresas del centro del usuario: docente y admin ven solo las de su centro
+    // (por centro_id normalizado, o por el nombre legacy si el backfill no llegó);
+    // superadmin no debería llamar a este scope (ve todas sin filtro).
+    public function scopeDelCentroDe($query, \App\Models\User $user)
+    {
+        if (!$user->centro_educativo_id) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        $centroNombre = $user->centroEducativo?->nombre;
+
+        return $query->where(function ($q) use ($user, $centroNombre) {
+            $q->where('centro_id', $user->centro_educativo_id);
+            if ($centroNombre) {
+                $q->orWhere('centro_educativo', $centroNombre);
+            }
+        });
+    }
+
+    // Comprueba si esta empresa concreta pertenece al centro del usuario
+    // (mismo criterio que scopeDelCentroDe, para checks puntuales por id).
+    public function perteneceAlCentroDe(\App\Models\User $user): bool
+    {
+        if (!$user->centro_educativo_id) {
+            return false;
+        }
+
+        if ($this->centro_id === $user->centro_educativo_id) {
+            return true;
+        }
+
+        $centroNombre = $user->centroEducativo?->nombre;
+        return $centroNombre !== null && $this->centro_educativo === $centroNombre;
     }
 }

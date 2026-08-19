@@ -5,16 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use App\Models\Encuentro;
+use App\Support\CodigoLegible;
 
 class Equipo extends Model
 {
     protected $fillable = [
         'microproyecto_id', 'encuentro_id', 'nombre', 'numero_equipo', 'token', 'codigo_acceso', 'fase_actual',
+        'ia_desbloqueada', 'diagnostico_final', 'diagnostico_generado_en',
     ];
 
     protected $casts = [
-        'fase_actual'   => 'integer',
-        'numero_equipo' => 'integer',
+        'fase_actual'             => 'integer',
+        'numero_equipo'           => 'integer',
+        'ia_desbloqueada'         => 'boolean',
+        'diagnostico_final'       => 'array',
+        'diagnostico_generado_en' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -29,23 +34,9 @@ class Equipo extends Model
         });
     }
 
-    // Genera un código legible tipo "XKM-479" — fácil de proyectar y escribir en móvil
     private static function generarCodigo(): string
     {
-        $charset = 'ABCDEFGHJKLMNPQRTUVWXY'; // sin I, O, S, Z (confundibles)
-        $intentos = 0;
-        do {
-            $letras  = $charset[random_int(0, strlen($charset) - 1)]
-                     . $charset[random_int(0, strlen($charset) - 1)]
-                     . $charset[random_int(0, strlen($charset) - 1)];
-            $numeros = str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
-            $codigo  = $letras . '-' . $numeros;
-            if (++$intentos > 200) {
-                throw new \RuntimeException('Espacio de códigos agotado.');
-            }
-        } while (static::where('codigo_acceso', $codigo)->exists());
-
-        return $codigo;
+        return CodigoLegible::generar(fn($codigo) => static::where('codigo_acceso', $codigo)->exists());
     }
 
     // ── Relaciones ────────────────────────────────────────────────────────────

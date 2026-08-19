@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
+import DesbloquearIaModal from '../components/DesbloquearIaModal.vue'
 import {
   MegaphoneIcon,
   ClockIcon,
@@ -31,6 +32,23 @@ const guardando = ref(false)
 const msgOk     = ref('')
 
 const token = route.params.token
+
+// ── Desbloqueo IA — código repartido por el docente, gatea "Sugerir con IA" ──
+const mostrarModalIa    = ref(false)
+const accionPendienteIa = ref(null)
+
+function pedirDesbloqueoIa(accion) {
+  accionPendienteIa.value = accion
+  mostrarModalIa.value = true
+}
+
+function onIaDesbloqueada() {
+  mostrarModalIa.value = false
+  if (workspace.value?.equipo) workspace.value.equipo.ia_desbloqueada = true
+  if (accionPendienteIa.value === 'hallazgo') ejecutarSugerirHallazgo()
+  else if (accionPendienteIa.value === 'tareas') ejecutarSugerirTareas()
+  accionPendienteIa.value = null
+}
 
 // ── Helpers de acceso a datos ─────────────────────────────────────────────
 const equipo      = computed(() => workspace.value?.equipo)
@@ -344,7 +362,12 @@ function toggleHallazgo(i) {
   hallazgoAbierto.value = hallazgoAbierto.value === i ? null : i
 }
 
-async function sugerirHallazgo() {
+function sugerirHallazgo() {
+  if (!equipo.value?.ia_desbloqueada) return pedirDesbloqueoIa('hallazgo')
+  ejecutarSugerirHallazgo()
+}
+
+async function ejecutarSugerirHallazgo() {
   sugiriendoHallazgo.value = true
   errorSugerencia.value = ''
   try {
@@ -561,7 +584,12 @@ const cargandoTareaCompleja = ref(false)
 const sugiriendoTareas = ref(false)
 const errorSugerenciaTareas = ref('')
 
-async function sugerirTareas() {
+function sugerirTareas() {
+  if (!equipo.value?.ia_desbloqueada) return pedirDesbloqueoIa('tareas')
+  ejecutarSugerirTareas()
+}
+
+async function ejecutarSugerirTareas() {
   sugiriendoTareas.value = true
   errorSugerenciaTareas.value = ''
   try {
@@ -1241,7 +1269,7 @@ watch(workspace, (val) => {
                     <button @click="sugerirHallazgo" :disabled="sugiriendoHallazgo"
                             class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                    text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
-                      {{ sugiriendoHallazgo ? 'Generando…' : '✨ Sugerir con IA' }}
+                      {{ sugiriendoHallazgo ? 'Generando…' : (equipo?.ia_desbloqueada ? '✨ Sugerir con IA' : '🔒 Sugerir con IA') }}
                     </button>
                   </div>
                   <p class="text-[11px] text-gray-500 mb-2">
@@ -1487,7 +1515,7 @@ watch(workspace, (val) => {
                   <button @click="sugerirTareas" :disabled="sugiriendoTareas"
                           class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                  text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
-                    {{ sugiriendoTareas ? 'Generando…' : '✨ Sugerir con IA' }}
+                    {{ sugiriendoTareas ? 'Generando…' : (equipo?.ia_desbloqueada ? '✨ Sugerir con IA' : '🔒 Sugerir con IA') }}
                   </button>
                 </div>
                 <div class="bg-violet-50 border border-violet-200 rounded-xl px-3.5 py-2.5 mb-3">
@@ -2142,6 +2170,13 @@ watch(workspace, (val) => {
     </template>
 
     <MicroretoModal :token="verFichaReto ? token : null" @close="verFichaReto = false" />
+
+    <DesbloquearIaModal
+      v-if="mostrarModalIa"
+      :token="token"
+      @desbloqueado="onIaDesbloqueada"
+      @cerrar="mostrarModalIa = false; accionPendienteIa = null"
+    />
 
     <!-- Modal intermedio: aviso antes de pasar de Diseño de solución y desarrollo a Entrega de la solución -->
     <Teleport to="body">

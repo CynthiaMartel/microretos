@@ -2,17 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAdminUserRequest;
+use App\Http\Requests\UpdateAdminUserRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
 
+// Endpoint API: /admin/usuarios (sin cambios). El frontend renombró su URL a /usuarios — no confundir ambas.
 class AdminUserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $auth = $request->user();
+
+        if ($error = $this->requireCentroSiAdmin($auth)) return $error;
 
         $query = User::with('centroEducativo')
             ->whereNot('id', $auth->id)
@@ -27,18 +33,15 @@ class AdminUserController extends Controller
         return response()->json(['data' => $this->formatUsers($query->get())]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreAdminUserRequest $request): JsonResponse
     {
         $auth = $request->user();
+        if ($error = $this->requireCentroSiAdmin($auth)) return $error;
+
+        $data = $request->validated();
 
         if ($auth->isAdmin()) {
             // Admin de centro: solo puede crear docentes, asignados automáticamente a su centro
-            $data = $request->validate([
-                'name'     => 'required|string|max:255',
-                'email'    => 'required|email|max:254|unique:users,email',
-                'password' => ['required', 'string', 'max:128', Password::min(8)->mixedCase()->numbers()],
-            ]);
-
             $user = User::create([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
@@ -50,15 +53,6 @@ class AdminUserController extends Controller
             ]);
         } else {
             // Superadmin: puede crear docente (2), empresa (3) o admin de centro (4)
-            $data = $request->validate([
-                'name'                => 'required|string|max:255',
-                'email'               => 'required|email|max:254|unique:users,email',
-                'password'            => ['required', 'string', 'max:128', Password::min(8)->mixedCase()->numbers()],
-                'role'                => 'required|in:2,3,4',
-                'centro_educativo_id' => 'nullable|exists:centro_educativo,id',
-                'empresa_id'          => 'nullable|exists:empresas,id',
-            ]);
-
             $user = User::create([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
@@ -94,7 +88,7 @@ class AdminUserController extends Controller
         $user->update(['is_blocked' => !$user->is_blocked]);
 
         if ($user->is_blocked) {
-            $user->tokens()->delete();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
         }
 
         return response()->json(['success' => true, 'data' => $this->formatUser($user->fresh())]);
@@ -116,31 +110,13 @@ class AdminUserController extends Controller
         return response()->json(['success' => true, 'data' => $this->formatUser($user->fresh()->load('centroEducativo'))]);
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UpdateAdminUserRequest $request, User $user): JsonResponse
     {
         $auth = $request->user();
 
         if ($error = $this->checkScope($auth, $user)) return $error;
 
-        // Admin de centro solo puede mantener el rol docente; superadmin puede asignar 2, 3 o 4
-        $rolesPermitidos = $auth->isAdmin() ? '2' : '2,3,4';
-
-        $rules = [
-            'name'  => 'required|string|max:255',
-            'email' => 'required|email|max:254|unique:users,email,' . $user->id,
-            'role'  => 'required|in:' . $rolesPermitidos,
-        ];
-
-        if ($auth->isSuperAdmin()) {
-            $rules['centro_educativo_id'] = 'nullable|exists:centro_educativo,id';
-            $rules['empresa_id']          = 'nullable|exists:empresas,id';
-        }
-
-        if ($request->filled('password')) {
-            $rules['password'] = ['string', 'max:128', Password::min(8)->mixedCase()->numbers()];
-        }
-
-        $data = $request->validate($rules);
+        $data = $request->validated();
 
         $user->name  = $data['name'];
         $user->email = $data['email'];
@@ -156,6 +132,11 @@ class AdminUserController extends Controller
 
         if ($request->filled('password')) {
             $user->password = Hash::make($data['password']);
+            $user->password_changed_at = now();
+            Log::info('Contraseña de usuario cambiada por un administrador', [
+                'target_user_id' => $user->id,
+                'admin_id'       => $auth->id,
+            ]);
         }
 
         $user->save();
@@ -167,7 +148,7 @@ class AdminUserController extends Controller
     {
         if ($error = $this->checkScope($request->user(), $user)) return $error;
 
-        $user->tokens()->delete();
+        DB::table('sessions')->where('user_id', $user->id)->delete();
         $user->delete();
 
         return response()->json(['success' => true, 'message' => 'Cuenta enviada a la papelera.']);
@@ -176,6 +157,7 @@ class AdminUserController extends Controller
     public function papelera(Request $request): JsonResponse
     {
         $auth = $request->user();
+        if ($error = $this->requireCentroSiAdmin($auth)) return $error;
 
         $query = User::onlyTrashed()
             ->with(['centroEducativo', 'empresa'])
@@ -192,6 +174,8 @@ class AdminUserController extends Controller
     public function restaurar(Request $request, int $id): JsonResponse
     {
         $auth = $request->user();
+        if ($error = $this->requireCentroSiAdmin($auth)) return $error;
+
         $user = User::onlyTrashed()->findOrFail($id);
 
         if ($auth->isAdmin()) {
@@ -209,6 +193,8 @@ class AdminUserController extends Controller
     public function destruir(Request $request, int $id): JsonResponse
     {
         $auth = $request->user();
+        if ($error = $this->requireCentroSiAdmin($auth)) return $error;
+
         $user = User::onlyTrashed()->findOrFail($id);
 
         if ($user->isSuperAdmin()) {
@@ -222,7 +208,7 @@ class AdminUserController extends Controller
             }
         }
 
-        $user->tokens()->delete();
+        DB::table('sessions')->where('user_id', $user->id)->delete();
         $user->forceDelete();
 
         return response()->json(['success' => true, 'message' => 'Cuenta eliminada definitivamente.']);
@@ -234,6 +220,20 @@ class AdminUserController extends Controller
      * Comprueba si $auth puede operar sobre $target.
      * Devuelve JsonResponse con 403 si no tiene permiso, null si sí.
      */
+    /**
+     * Un admin de centro sin centro_educativo_id asignado NO debe caer en el "sin
+     * filtro" implícito de where('centro_educativo_id', null) — eso le daría acceso
+     * a todas las cuentas sin centro de la plataforma, incluidas las de empresa.
+     */
+    private function requireCentroSiAdmin(User $auth): ?JsonResponse
+    {
+        if ($auth->isAdmin() && !$auth->centro_educativo_id) {
+            return response()->json(['success' => false, 'message' => 'Tu cuenta no tiene un centro educativo asignado. Contacta con el superadministrador.'], 403);
+        }
+
+        return null;
+    }
+
     private function checkScope(User $auth, User $target): ?JsonResponse
     {
         if ($target->isSuperAdmin()) {
@@ -241,6 +241,9 @@ class AdminUserController extends Controller
         }
 
         if ($auth->isAdmin()) {
+            if (!$auth->centro_educativo_id) {
+                return response()->json(['success' => false, 'message' => 'Tu cuenta no tiene un centro educativo asignado.'], 403);
+            }
             if ($target->isAdmin()) {
                 return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar este usuario.'], 403);
             }
@@ -273,6 +276,7 @@ class AdminUserController extends Controller
             'empresa_id'          => $user->empresa_id,
             'empresa_nombre'      => $user->empresa?->nombre_comercial,
             'created_at'          => $user->created_at?->toDateTimeString(),
+            'password_changed_at' => $user->password_changed_at?->toDateTimeString(),
             'deleted_at'          => $user->deleted_at?->toDateTimeString(),
         ];
     }

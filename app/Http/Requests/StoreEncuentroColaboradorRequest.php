@@ -26,8 +26,8 @@ class StoreEncuentroColaboradorRequest extends FormRequest
                 }
 
                 $candidato = User::find($value);
-                if (!$candidato || !$candidato->isDocente()) {
-                    $fail('Solo se pueden añadir docentes como colaboradores.');
+                if (!$candidato || (!$candidato->isDocente() && !$candidato->isAdmin())) {
+                    $fail('Solo se pueden añadir docentes o administradores de centro como colaboradores.');
                     return;
                 }
 

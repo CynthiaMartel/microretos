@@ -1,3 +1,4 @@
+<!-- Ruta: /retos/:id (name: detalle-microreto). Antes vivía en /biblioteca/:id — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -5,10 +6,12 @@ import QRCode from 'qrcode';
 import api from '../api.js';
 import { usePdfExport } from '../composables/usePdfExport.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useUiHighlightStore } from '../stores/uiHighlight.js';
 import LoginModal from '../components/LoginModal.vue';
 
 const route   = useRoute();
 const router  = useRouter();
+const uiHighlight = useUiHighlightStore();
 const reto    = ref(null);
 const cargando = ref(true);
 const error   = ref(false);
@@ -64,6 +67,15 @@ const imagenFondo = computed(() => {
   const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api$/, '');
   return `${baseUrl}/familias/${slugFamilia}.webp`;
 });
+
+// Datos crudos de la empresa (lo que se recogió antes de que la IA los resumiera) —
+// deliberadamente sin datos de contacto: eso lo filtra MicroretoFichaResource en el backend.
+const tieneDatosRecogidos = computed(() => {
+  const e = reto.value?.empresa
+  if (!e) return false
+  return !!(e.dia_a_normal || e.friccion_area || e.friccion_problema
+    || e.consecuencias || e.restricciones || e.lo_que_no_quieren)
+})
 
 // --- QR TEMPORAL ---
 const showQrModal  = ref(false);
@@ -424,7 +436,31 @@ async function copiarUrl() {
                              14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247
                              18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                   </svg>
-                  {{ reto.curso === 'transversal' ? 'Transversal: 1º y/o 2º' : reto.curso + 'º Curso' }}
+                  {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos: 1º y 2º' : reto.curso + 'º Curso' }}
+                </span>
+
+                <span v-if="reto.multimodulo"
+                      class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                             bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg
+                             text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  Multi-módulo
+                </span>
+
+                <span v-if="reto.empresa?.sector"
+                      class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                             bg-gray-50 border border-gray-200 text-gray-600 rounded-lg
+                             text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                  {{ reto.empresa.sector }}
+                </span>
+                <span v-if="reto.empresa?.tamano"
+                      class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                             bg-gray-50 border border-gray-200 text-gray-600 rounded-lg
+                             text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                  {{ reto.empresa.tamano }}
                 </span>
               </div>
             </div>
@@ -432,6 +468,63 @@ async function copiarUrl() {
 
           <!-- ── Cuerpo ── -->
           <div class="px-6 py-8 md:px-14 md:py-12 space-y-10 md:space-y-14">
+
+            <!-- Datos recogidos de la empresa: diagnóstico crudo, tal cual lo aportó el
+                 docente/empresa — es la materia prima que la IA resume debajo. -->
+            <div v-if="tieneDatosRecogidos"
+                 class="bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200
+                        rounded-2xl p-5 md:p-7 shadow-sm">
+              <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shrink-0 shadow-sm">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                             a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-orange-700 font-black uppercase text-xs md:text-sm tracking-[0.15em]">
+                    Datos recogidos de la empresa
+                  </h3>
+                  <p class="text-[11px] text-orange-400 font-medium">Diagnóstico original, sin resumir por IA</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div v-if="reto.empresa.dia_a_normal" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Su día a día</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.dia_a_normal }}</p>
+                </div>
+                <div v-if="reto.empresa.friccion_area || reto.empresa.friccion_problema" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Fricciones de la empresa</p>
+                  <p v-if="reto.empresa.friccion_area" class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.friccion_area }}</p>
+                  <p v-if="reto.empresa.friccion_problema" class="text-sm text-gray-700 leading-relaxed mt-1">{{ reto.empresa.friccion_problema }}</p>
+                </div>
+                <div v-if="reto.empresa.consecuencias" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Consecuencias</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.consecuencias }}</p>
+                </div>
+                <div v-if="reto.empresa.restricciones" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Restricciones</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.restricciones }}</p>
+                </div>
+                <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen de diagnóstico: la lectura de la IA a partir de los datos de arriba. -->
+            <div class="space-y-10 md:space-y-14">
+              <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+                         tracking-widest border-b-2 border-gray-200 pb-2">
+                <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                           a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Resumen de diagnóstico
+              </h3>
 
             <!-- Quién es / Día a día -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
@@ -527,6 +620,7 @@ async function copiarUrl() {
                 </ul>
               </div>
             </div>
+            </div>
 
             <!-- Prototipos / ODS -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
@@ -562,6 +656,27 @@ async function copiarUrl() {
               </div>
             </div>
 
+            <!-- Soft skills -->
+            <div v-if="reto.soft_skills?.length">
+              <h3 class="flex items-center gap-2 text-purple-600 font-black text-[11px]
+                         uppercase tracking-[0.15em] mb-3">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283
+                           -.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283
+                           .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Soft skills
+              </h3>
+              <div class="flex flex-wrap gap-2">
+                <span v-for="(skill, i) in reto.soft_skills" :key="i"
+                      class="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700
+                             rounded-full text-xs font-semibold">
+                  {{ skill }}
+                </span>
+              </div>
+            </div>
+
             <!-- RA / CE -->
             <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
               <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
@@ -574,13 +689,38 @@ async function copiarUrl() {
                            0112 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0
                            01.665-6.479L12 14z"/>
                 </svg>
-                RA/CE Seleccionados
+                Módulos + RA/CE seleccionados
               </h3>
+              <div class="flex items-start gap-2 text-amber-700 bg-amber-50 border border-amber-200
+                          rounded-2xl px-4 py-3 mb-6">
+                <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs font-semibold leading-relaxed">
+                  Módulos, RA y CE que la IA considera que más encajan con este reto. Podrás cambiarlos al crear
+                  el proyecto en
+                  <span class="underline underline-offset-2 decoration-amber-400 cursor-pointer hover:text-amber-900"
+                        @mouseenter="uiHighlight.setHighlight('generar-proyecto')"
+                        @mouseleave="uiHighlight.clearHighlight('generar-proyecto')"
+                        @click="router.push('/proyectos/crear')">2. Taller de Ideas → Generar Proyecto</span>
+                  (menú izquierdo).
+                  Cubre un mínimo de 3 módulos distintos (salvo que se forzaran módulos concretos)<template v-if="reto.curso === 'ambos_cursos'">, incluyendo al menos uno de 1º y uno de 2º</template>.
+                </p>
+              </div>
               <div class="space-y-4 md:space-y-6">
                 <div v-for="evalObj in reto.evaluacion_oficial" :key="evalObj.modulo"
                      class="bg-white border border-gray-200 p-5 md:p-6 rounded-2xl shadow-sm">
-                  <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Módulo</p>
-                  <p class="font-black text-[#1F2937] text-base md:text-lg mb-4">{{ evalObj.modulo }}</p>
+                  <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div>
+                      <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Módulo</p>
+                      <p class="font-black text-[#1F2937] text-base md:text-lg">{{ evalObj.modulo }}</p>
+                    </div>
+                    <span v-if="evalObj.curso" class="shrink-0 px-3 py-1 bg-blue-50 border border-blue-200
+                                text-blue-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      {{ evalObj.curso }}º Curso
+                    </span>
+                  </div>
                   <div class="mb-4">
                     <p class="text-[10px] uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
                       <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -21,7 +21,7 @@ class UpdatePerfilRequest extends FormRequest
                 'string',
                 'max:128',
                 'confirmed',
-                Password::min(8)->mixedCase()->numbers(),
+                Password::min(8)->mixedCase()->numbers()->symbols(),
             ],
             'password_confirmation' => 'nullable|string',
         ];

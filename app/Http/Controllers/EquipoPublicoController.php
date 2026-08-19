@@ -12,6 +12,7 @@ use App\Http\Requests\UpdateEquipoTareaRequest;
 use App\Http\Requests\StoreEquipoReflexionRequest;
 use App\Http\Requests\StoreEquipoPrototipoRequest;
 use App\Http\Requests\SugerirHallazgoRequest;
+use App\Http\Requests\VerificarCodigoIaRequest;
 use App\Http\Resources\MicroretoFichaResource;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
@@ -49,15 +50,18 @@ class EquipoPublicoController extends Controller
             return response()->json(['error' => 'Código no válido.'], 404);
         }
 
-        // Encuentro belongsTo Microproyecto (singular) — se consulta como query builder
-        // sobre esa única relación, no como colección.
         $proyecto = $encuentro->microproyecto()
             ->whereIn('estado', ['propuesta', 'validado'])
-            ->whereHas('equipos')
-            ->with('equipos.miembros')
             ->first();
 
         if (!$proyecto) {
+            return response()->json(['error' => 'El docente aún no ha creado los equipos. Pídele que regenere el código de acceso desde "Mis encuentros".'], 403);
+        }
+
+        // Equipos de ESTE encuentro concreto, no de todos los que compartan microproyecto.
+        $equipos = $encuentro->equipos()->with('miembros')->get();
+
+        if ($equipos->isEmpty()) {
             return response()->json(['error' => 'El docente aún no ha creado los equipos. Pídele que regenere el código de acceso desde "Mis encuentros".'], 403);
         }
 
@@ -65,7 +69,7 @@ class EquipoPublicoController extends Controller
             'tipo'            => 'clase',
             'proyecto_titulo' => $proyecto->titulo,
             'curso'           => $proyecto->curso,
-            'equipos'         => $proyecto->equipos->map(fn($e) => [
+            'equipos'         => $equipos->map(fn($e) => [
                 'id'       => $e->id,
                 'nombre'   => $e->nombre,
                 'token'    => $e->token,
@@ -286,6 +290,31 @@ class EquipoPublicoController extends Controller
     // ── Sugerencias IA ───────────────────────────────────────────────────────
 
     /**
+     * POST /api/equipo/{token}/ia/verificar-codigo
+     * Comprueba el código repartido por el docente y, si coincide, desbloquea
+     * "Sugerir con IA" para todo el equipo (persiste en equipos.ia_desbloqueada).
+     */
+    public function verificarCodigoIa(VerificarCodigoIaRequest $request, $token): JsonResponse
+    {
+        $equipo = Equipo::with('encuentro')->where('token', $token)->firstOrFail();
+
+        if (empty($equipo->encuentro?->codigo_ia)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El docente todavía no ha generado un código para esta función.',
+            ], 422);
+        }
+
+        if (strtoupper(trim($request->validated('codigo'))) !== $equipo->encuentro->codigo_ia) {
+            return response()->json(['success' => false, 'message' => 'Código incorrecto.'], 401);
+        }
+
+        $equipo->update(['ia_desbloqueada' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * POST /api/equipo/{token}/fase/1/sugerir-hallazgo
      * Genera UN hallazgo de ejemplo a partir del contexto del microreto,
      * para que el equipo entienda qué se espera y añada al menos 3 propios.
@@ -294,6 +323,11 @@ class EquipoPublicoController extends Controller
     public function sugerirHallazgo(SugerirHallazgoRequest $request, $token): JsonResponse
     {
         $equipo = Equipo::with('microproyecto.microreto')->where('token', $token)->firstOrFail();
+
+        if (!$equipo->ia_desbloqueada) {
+            return response()->json(['error' => 'Esta función requiere el código de desbloqueo. Pídeselo a tu docente.'], 403);
+        }
+
         $mr = $equipo->microproyecto->microreto;
 
         $contexto = $this->contextoMicroreto($mr);
@@ -358,6 +392,11 @@ class EquipoPublicoController extends Controller
     public function sugerirTareas($token): JsonResponse
     {
         $equipo = Equipo::with('microproyecto.microreto', 'fases', 'tareas')->where('token', $token)->firstOrFail();
+
+        if (!$equipo->ia_desbloqueada) {
+            return response()->json(['error' => 'Esta función requiere el código de desbloqueo. Pídeselo a tu docente.'], 403);
+        }
+
         $mr           = $equipo->microproyecto->microreto;
         $fase2        = $equipo->fases->firstWhere('numero_fase', 2);
         $propuesta    = $fase2->datos['propuesta'] ?? null;
@@ -622,6 +661,7 @@ class EquipoPublicoController extends Controller
                 'nombre'        => $equipo->nombre,
                 'codigo_acceso' => $equipo->codigo_acceso,
                 'fase_actual'   => $equipo->fase_actual,
+                'ia_desbloqueada' => $equipo->ia_desbloqueada,
                 'miembros'      => $equipo->miembros->map(fn($m) => [
                     'id'         => $m->id,
                     'nombre'     => $m->nombre,

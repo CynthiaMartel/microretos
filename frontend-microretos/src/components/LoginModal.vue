@@ -30,6 +30,9 @@
                     class="field-input"
                     placeholder="admin@ejemplo.com"
                     autocomplete="email"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
                     @focus="errors.email = ''"
                   />
                 </div>
@@ -49,6 +52,9 @@
                     class="field-input"
                     placeholder="••••••••"
                     autocomplete="current-password"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
                     @focus="errors.password = ''"
                   />
                   <button type="button" class="toggle-password" @click="showPassword = !showPassword">
@@ -99,7 +105,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import api from '../api.js'
+import api, { primeCsrfCookie } from '../api.js'
 
 const authStore = useAuthStore()
 
@@ -143,28 +149,30 @@ async function handleLogin() {
   loginError.value = ''
 
   try {
+    // Sanctum SPA stateful: la cookie XSRF-TOKEN tiene que existir antes de un POST.
+    await primeCsrfCookie()
+
     const response = await api.post('/admin/login', {
       email: form.email,
       password: form.password
     })
 
     if (response.data.success) {
-      authStore.login(
-        response.data.token,
-        response.data.role,
-        response.data.name,
-        response.data.centro_educativo_id ?? null,
-        response.data.centro_nombre ?? '',
-        response.data.centro_img ?? ''
-      )
+      authStore.login(response.data)
       emit('login-success', response.data)
       emit('update:modelValue', false)
       form.email = ''
       form.password = ''
     }
   } catch (error) {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    if (status === 401) {
       loginError.value = 'Credenciales incorrectas. Inténtalo de nuevo.'
+    } else if (status === 403 || status === 429) {
+      loginError.value = error.response?.data?.message || 'No se ha podido iniciar sesión.'
+    } else if (status === 422) {
+      const errs = error.response?.data?.errors ?? {}
+      loginError.value = Object.values(errs)[0]?.[0] || 'Revisa el correo y la contraseña introducidos.'
     } else {
       loginError.value = 'Error de conexión. Inténtalo más tarde.'
     }

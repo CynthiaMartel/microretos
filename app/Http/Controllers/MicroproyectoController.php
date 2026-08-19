@@ -14,8 +14,16 @@ class MicroproyectoController extends Controller
         $query = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto'])
             ->orderByDesc('updated_at');
 
-        if (!$user->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
+            // sin filtro
+        } elseif ($user->isAdmin()) {
             $query->where('centro_id', $user->centro_educativo_id);
+        } else {
+            // Docente: solo los proyectos que creó, o cuyos encuentros comparte.
+            $query->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhereHas('encuentros', fn ($eq) => $eq->visiblesPara($user));
+            });
         }
 
         $proyectos = $query->get()->map(fn($p) => $this->formatProyecto($p));
@@ -38,6 +46,8 @@ class MicroproyectoController extends Controller
         if (!$request->user()->isSuperAdmin()) {
             $data['centro_id'] = $request->user()->centro_educativo_id;
         }
+
+        $data['user_id'] = $request->user()->id;
 
         $proyecto = Microproyecto::create($data);
 
@@ -115,6 +125,7 @@ class MicroproyectoController extends Controller
 
         if ($encuentroId) {
             \App\Models\Encuentro::where('id', $encuentroId)
+                ->editablesPara($request->user())
                 ->update(['microproyecto_id' => $proyecto->id]);
         }
 

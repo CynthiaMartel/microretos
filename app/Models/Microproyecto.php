@@ -16,7 +16,7 @@ class Microproyecto extends Model
     // toda sugerencia/validación de fecha_fin de sesiones pasa por aquí.
     public const SEMANAS_POR_CLASE = 1;
     protected $fillable = [
-        'uuid', 'microreto_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
+        'uuid', 'user_id', 'microreto_id', 'empresa_id', 'centro_id', 'familia_id', 'ciclo_id',
         'titulo', 'curso',
         'datos_empresa', 'datos_centro', 'equipo', 'modulos_seleccionados', 'ra_ce',
         'evaluacion_oficial',
@@ -71,6 +71,49 @@ class Microproyecto extends Model
     public function encuentros()
     {
         return $this->hasMany(Encuentro::class);
+    }
+
+    public function docente()
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
+    // El proyecto es visible si: eres el docente que lo creó, o tienes acceso (propio o
+    // colaborador) a alguno de sus encuentros. Admin ve todo su centro; superadmin, todo.
+    public function esVisiblePara(\App\Models\User $user): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($user->isAdmin()) {
+            return $user->centro_educativo_id !== null && $this->centro_id === $user->centro_educativo_id;
+        }
+
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->encuentros()->visiblesPara($user)->exists();
+    }
+
+    // Igual que esVisiblePara pero exige permiso de edición sobre el encuentro (no basta
+    // con ser colaborador de solo lectura).
+    public function esEditablePara(\App\Models\User $user): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($user->isAdmin()) {
+            return $user->centro_educativo_id !== null && $this->centro_id === $user->centro_educativo_id;
+        }
+
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->encuentros()->editablesPara($user)->exists();
     }
 
     // Nº de clases del calendario definido en el paso 5 del wizard (una clase

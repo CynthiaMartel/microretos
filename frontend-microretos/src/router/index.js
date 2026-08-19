@@ -18,12 +18,12 @@ import PapeleraBaseDatos from '../views/PapeleraBaseDatos.vue'
 import GestionUsuarios from '../views/GestionUsuarios.vue'
 import InicioDocente from '../views/InicioDocente.vue'
 import MiUsuario from '../views/MiUsuario.vue'
-import WorkspaceDocente from '../views/WorkspaceDocente.vue'
+import MisGruposDetalle from '../views/MisGruposDetalle.vue'
 import PantallaAcceso from '../views/PantallaAcceso.vue'
 import PantallaAccesoLista from '../views/PantallaAccesoLista.vue'
 import MisGrupos from '../views/MisGrupos.vue'
 import EntrarWorkspace from '../views/EntrarWorkspace.vue'
-import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth.js'
+import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, useAuthStore } from '../stores/auth.js'
 
 const SA = ROLE_SUPERADMIN  // 1
 const AD = ROLE_ADMIN       // 4
@@ -39,23 +39,27 @@ const router = createRouter({
       component: Home
     },
     {
-      path: '/microretos',
+      path: '/retos/crear',
       name: 'microretos',
       component: GeneradorMicroretos,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/biblioteca',
+      path: '/retos',
       name: 'biblioteca',
       component: BibliotecaMicroretos,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {
-      path: '/biblioteca/:id',
+      path: '/retos/:id',
       name: 'detalle-microreto',
       component: DetalleMicroreto,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
+    // Compatibilidad: enlaces antiguos con el prefijo /microretos y /biblioteca
+    { path: '/microretos', redirect: to => ({ path: '/retos/crear', query: to.query }) },
+    { path: '/biblioteca', redirect: to => ({ path: '/retos', query: to.query }) },
+    { path: '/biblioteca/:id', redirect: to => ({ path: `/retos/${to.params.id}`, query: to.query }) },
     {
       path: '/base-datos',
       name: 'base-datos',
@@ -66,40 +70,51 @@ const router = createRouter({
       path: '/papelera',
       name: 'papelera',
       component: PapeleraBaseDatos,
-      meta: { requiresAuth: true, roles: [SA, AD] }
+      meta: { requiresAuth: true, roles: [SA] }
     },
     {
       path: '/empresas',
       name: 'empresas',
       component: EmpresasView,
-      meta: { requiresAuth: true, roles: [SA, DO] }
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/dashboard',
+      path: '/encuentros/crear',
       name: 'dashboard-docente',
       component: DashboardDocente,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      path: '/dashboard/encuentros',
+      path: '/encuentros',
       name: 'encuentros-registrados',
       component: EncuentrosRegistrados,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     // Compatibilidad: enlaces antiguos con el nombre "sesiones"
-    { path: '/dashboard/sesiones', redirect: to => ({ path: '/dashboard/encuentros', query: to.query }) },
+    { path: '/sesiones', redirect: to => ({ path: '/encuentros', query: to.query }) },
     {
-      path: '/dashboard/workspace/:id',
-      name: 'workspace-docente',
-      component: WorkspaceDocente,
-      meta: { requiresAuth: true, roles: [SA, AD, DO] }
-    },
-    {
-      path: '/dashboard/mis-grupos',
-      name: 'mis-grupos',
+      // "equipos", no "grupos": "grupo" ya se usa en el dominio para la clase/curso del
+      // encuentro (campo Encuentro.grupo, ej. "2ºB"); esta pantalla sigue el progreso de
+      // los EQUIPOS de alumnado (modelo Equipo), de ahí el path y el name en plural "equipos".
+      // El componente sigue llamándose MisGrupos.vue (no renombrado a propósito, ver el
+      // comentario en ese archivo) — solo cambia la URL/nombre de ruta expuestos.
+      path: '/mis-equipos',
+      name: 'mis-equipos',
       component: MisGrupos,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
+    {
+      // Antes /workspace/:id (name: workspace-docente), y antes de eso /mis-grupos/:id —
+      // mismo motivo de renombrado que la ruta de arriba (equipos, no grupos).
+      path: '/mis-equipos/:id',
+      name: 'mis-equipos-detalle',
+      component: MisGruposDetalle,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    // Compatibilidad: enlaces antiguos con el prefijo /workspace y /mis-grupos
+    { path: '/workspace/:id', redirect: to => ({ path: `/mis-equipos/${to.params.id}`, query: to.query }) },
+    { path: '/mis-grupos', redirect: to => ({ path: '/mis-equipos', query: to.query }) },
+    { path: '/mis-grupos/:id', redirect: to => ({ path: `/mis-equipos/${to.params.id}`, query: to.query }) },
     {
       // Vista pública para alumnado — acceso mediante token temporal (QR)
       path: '/reto/:token',
@@ -139,7 +154,7 @@ const router = createRouter({
     },
     {
       // Elegir qué encuentro proyectar antes de abrir su pantalla de acceso
-      path: '/dashboard/pantalla-acceso',
+      path: '/pantalla-acceso',
       name: 'pantalla-acceso-lista',
       component: PantallaAccesoLista,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
@@ -174,17 +189,21 @@ const router = createRouter({
       component: EquipoWorkspace
     },
     {
-      path: '/admin/usuarios',
+      path: '/usuarios',
       name: 'gestion-usuarios',
       component: GestionUsuarios,
       meta: { requiresAuth: true, roles: [SA, AD] }
     },
+    // Compatibilidad: enlaces antiguos con el prefijo /admin
+    { path: '/admin/usuarios', redirect: to => ({ path: '/usuarios', query: to.query }) },
     {
-      path: '/inicio-docente',
+      path: '/panel-docente',
       name: 'inicio-docente',
       component: InicioDocente,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
+    // Compatibilidad: enlaces antiguos con el nombre "inicio-docente"
+    { path: '/inicio-docente', redirect: to => ({ path: '/panel-docente', query: to.query }) },
     {
       path: '/mi-usuario',
       name: 'mi-usuario',
@@ -194,35 +213,28 @@ const router = createRouter({
   ]
 })
 
-// Duración del token en ms — debe coincidir con TOKEN_DURATION_MINUTES en auth.js
-const TOKEN_DURATION_MS = 1440 * 60 * 1000
-
-// Guard global: verifica autenticación y permisos de rol.
+// Guard global: verifica autenticación y permisos de rol. La sesión vive en una cookie
+// HttpOnly (Sanctum stateful) — no hay nada que leer en localStorage; en la primera
+// navegación se pregunta al backend (GET /perfil) si la cookie es válida.
 // Si no hay sesión → redirige a / con ?redirect=<ruta>
 // Si hay sesión pero el rol no tiene acceso → redirige a /
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   if (!to.meta.requiresAuth) {
     next()
     return
   }
 
-  const token     = localStorage.getItem('admin_token')
-  const createdAt = Number(localStorage.getItem('admin_token_created_at') || 0)
-  const isValid   = token && createdAt && (Date.now() - createdAt) < TOKEN_DURATION_MS
+  const auth = useAuthStore()
+  if (!auth.isInitialized) await auth.init()
 
-  if (!isValid) {
-    localStorage.removeItem('admin_token')
-    localStorage.removeItem('admin_token_created_at')
-    localStorage.removeItem('user_role')
-    localStorage.removeItem('user_name')
+  if (!auth.isAuthenticated) {
     next({ path: '/', query: { redirect: to.fullPath } })
     return
   }
 
-  // Verificar permiso de rol para esta ruta
-  const role         = Number(localStorage.getItem('user_role') || ROLE_SUPERADMIN)
+  // Verificar permiso de rol para esta ruta — nunca asumir superadmin por defecto
   const allowedRoles = to.meta.roles ?? []
-  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(auth.userRole)) {
     next({ path: '/' })
     return
   }

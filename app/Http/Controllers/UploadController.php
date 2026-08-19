@@ -41,6 +41,10 @@ class UploadController extends Controller
 
         $proyecto = Microproyecto::where('uuid', $request->input('microproyecto_uuid'))->firstOrFail();
 
+        if (!$proyecto->esEditablePara($request->user())) {
+            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+        }
+
         $cloudName = config('services.cloudinary.cloud_name');
         $apiKey    = config('services.cloudinary.api_key');
         $apiSecret = config('services.cloudinary.api_secret');
@@ -125,7 +129,7 @@ class UploadController extends Controller
 
         $proyecto = Microproyecto::where('uuid', $uuid)->first();
 
-        if (!$proyecto) {
+        if (!$proyecto || !$proyecto->esVisiblePara($request->user())) {
             return response()->json(['videos' => [], 'documentos' => []]);
         }
 
@@ -158,6 +162,11 @@ class UploadController extends Controller
 
         $publicId     = $request->input('public_id');
         $resourceType = $request->input('resource_type', 'raw');
+
+        $recurso = MicroproyectoRecurso::where('public_id', $publicId)->with('microproyecto')->first();
+        if ($recurso && (!$recurso->microproyecto || !$recurso->microproyecto->esEditablePara($request->user()))) {
+            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+        }
 
         // Eliminar de BD primero
         MicroproyectoRecurso::where('public_id', $publicId)->delete();

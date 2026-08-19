@@ -202,7 +202,10 @@ async function archivar() {
         <!-- Barra de navegación y acciones (fuera del cuaderno) -->
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div class="flex flex-wrap items-center gap-2">
-            <button @click="router.push({ name: 'startup-day' })"
+            <!-- router.back() y no push a la lista: esta ficha se abre desde varios sitios
+                 (lista de proyectos, wizard, "Ver proyecto" en mis-equipos/:id...) — forzar
+                 siempre la lista rompía el "atrás" cuando se llegaba desde otro lado. -->
+            <button @click="router.back()"
                     class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
                            text-gray-400 hover:text-[#00A859] hover:border-[#00A859]/30 transition-all shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

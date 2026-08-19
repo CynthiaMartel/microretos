@@ -19,6 +19,13 @@ export default defineConfig(({ mode }) => {
           target: `http://localhost:${env.APP_PORT || 8000}`,
           changeOrigin: true,
           headers: { Accept: 'application/json' },
+        },
+        // Sanctum SPA stateful: /sanctum/csrf-cookie vive en el grupo 'web' del backend,
+        // fuera de /api — necesita el mismo proxy para que la cookie de sesión se plante
+        // en el origen que el navegador ve (localhost:5173), no en localhost:8000.
+        '/sanctum': {
+          target: `http://localhost:${env.APP_PORT || 8000}`,
+          changeOrigin: true,
         }
       }
     }

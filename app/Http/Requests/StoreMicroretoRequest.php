@@ -95,6 +95,7 @@ class StoreMicroretoRequest extends FormRequest
             'ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',
             'ciclo'                => 'nullable|string|max:255',
             'modulo'               => 'nullable|string|max:255',
+            'multimodulo'          => 'nullable|boolean',
             'duracion'             => 'nullable|string|max:100',
             'es_simulado'          => 'nullable|boolean',
         ];
