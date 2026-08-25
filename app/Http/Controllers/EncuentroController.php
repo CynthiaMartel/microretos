@@ -306,17 +306,23 @@ class EncuentroController extends Controller
      * Dashboard docente: progreso de todos los equipos del encuentro. El nombre de este
      * endpoint es independiente de la ruta del SPA que lo consume — esa ruta se llama
      * /mis-grupos/:id (antes /workspace/:id); no renombrar este endpoint junto a aquella.
+     *
+     * Los equipos se obtienen vía encuentro->equipos (FK real equipos.encuentro_id), no vía
+     * encuentro->microproyecto->equipos — varios encuentros pueden compartir microproyecto
+     * (p.ej. distintos grupos/clases trabajando el mismo reto), y navegar por el proyecto
+     * mezclaría equipos de encuentros distintos en esta misma pantalla (ver misGrupos()).
      */
     public function workspace(Request $request, $id)
     {
         $user      = $request->user();
-        $encuentro = Encuentro::where('id', $id)->visiblesPara($user)->firstOrFail();
-
-        $proyecto = $encuentro->microproyecto?->load([
-            'equipos.miembros',
-            'equipos.fases',
-            'equipos.reflexiones',
-        ]);
+        $encuentro = Encuentro::where('id', $id)->visiblesPara($user)
+            ->with([
+                'microproyecto.familia',
+                'equipos.microproyecto.familia',
+                'equipos.miembros',
+                'equipos.fases',
+                'equipos.reflexiones',
+            ])->firstOrFail();
 
         return response()->json([
             'encuentro' => [
@@ -329,13 +335,8 @@ class EncuentroController extends Controller
                 'num_alumnos'      => $encuentro->num_alumnos,
                 'codigo_ia'        => $encuentro->codigo_ia,
             ],
-            'proyecto' => $proyecto ? [
-                'uuid'               => $proyecto->uuid,
-                'titulo'             => $proyecto->titulo,
-                'estado'             => $proyecto->estado,
-                'evaluacion_oficial' => $proyecto->evaluacion_oficial,
-            ] : null,
-            'equipos' => $proyecto ? $this->formatEquiposConProgreso($proyecto->equipos) : collect(),
+            'proyecto' => $this->formatProyecto($encuentro->microproyecto),
+            'equipos' => $this->formatEquiposConProgreso($encuentro->equipos),
         ]);
     }
 
@@ -345,20 +346,23 @@ class EncuentroController extends Controller
      * que ya tienen equipos, con el mismo detalle de progreso que el endpoint
      * /encuentros/{id}/workspace (ver workspace() arriba) pero para todos a la vez —
      * pensada para "Mis grupos" (seguimiento sin entrar encuentro por encuentro).
+     *
+     * Los equipos se obtienen vía encuentro->equipos (FK real equipos.encuentro_id),
+     * no vía encuentro->microproyecto->equipos: cada equipo lleva su propio proyecto
+     * (equipos.microproyecto_id), que no tiene por qué coincidir entre equipos del
+     * mismo encuentro.
      */
     public function misGrupos(Request $request)
     {
         $user  = $request->user();
         $query = Encuentro::with([
-            'microproyecto.familia',
-            'microproyecto.equipos.miembros',
-            'microproyecto.equipos.fases',
-            'microproyecto.equipos.reflexiones',
-        ])->whereHas('microproyecto.equipos')->visiblesPara($user)->orderBy('created_at', 'desc');
+            'equipos.microproyecto.familia',
+            'equipos.miembros',
+            'equipos.fases',
+            'equipos.reflexiones',
+        ])->whereHas('equipos')->visiblesPara($user)->orderBy('created_at', 'desc');
 
         $grupos = $query->get()->map(function ($encuentro) {
-            $proyecto = $encuentro->microproyecto;
-
             return [
                 'encuentro' => [
                     'id'               => $encuentro->id,
@@ -370,18 +374,23 @@ class EncuentroController extends Controller
                     'codigo_clase'     => $encuentro->codigo_clase,
                     'codigo_ia'        => $encuentro->codigo_ia,
                 ],
-                'proyecto' => $proyecto ? [
-                    'uuid'               => $proyecto->uuid,
-                    'titulo'             => $proyecto->titulo,
-                    'estado'             => $proyecto->estado,
-                    'evaluacion_oficial' => $proyecto->evaluacion_oficial,
-                    'familia'            => $proyecto->familia?->nombre,
-                ] : null,
-                'equipos' => $proyecto ? $this->formatEquiposConProgreso($proyecto->equipos) : collect(),
+                'equipos' => $this->formatEquiposConProgreso($encuentro->equipos),
             ];
         });
 
         return response()->json($grupos->values());
+    }
+
+    private function formatProyecto(?Microproyecto $proyecto)
+    {
+        return $proyecto ? [
+            'uuid'               => $proyecto->uuid,
+            'titulo'             => $proyecto->titulo,
+            'estado'             => $proyecto->estado,
+            'evaluacion_oficial' => $proyecto->evaluacion_oficial,
+            'familia'            => $proyecto->familia?->nombre,
+            'microreto_id'       => $proyecto->microreto_id,
+        ] : null;
     }
 
     private function formatEquiposConProgreso($equipos)
@@ -405,6 +414,7 @@ class EncuentroController extends Controller
             return [
                 'id'              => $equipo->id,
                 'nombre'          => $equipo->nombre,
+                'proyecto'        => $this->formatProyecto($equipo->microproyecto),
                 'codigo_acceso'   => $equipo->codigo_acceso,
                 'token'           => $equipo->token,
                 'fase_actual'     => $equipo->fase_actual,

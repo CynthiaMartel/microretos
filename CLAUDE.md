@@ -12,7 +12,7 @@ Complementa las instrucciones globales de `~/.claude/CLAUDE.md`. Las reglas de L
 - **Hosting:** Hostinger compartido — sin Redis, sin workers persistentes
   - `CACHE_STORE=file` (no database, no redis)
   - `QUEUE_CONNECTION=database` + scheduler de Laravel para colas
-  - Ruta producción: `/home/u197312986/domains/dualab.es/public_html/api-backend/`
+  - Ruta producción: ver `.env` de producción (no versionada) — no incluir la ruta real ni el ID de cuenta de hosting aquí, este archivo es público en GitHub
 
 ## Ramas Git
 
@@ -31,6 +31,20 @@ Complementa las instrucciones globales de `~/.claude/CLAUDE.md`. Las reglas de L
 
 Middleware disponibles: `auth:sanctum`, `EnsureIsAdmin`, `EnsureIsSuperAdmin`.
 Los roles `docente` y `empresa` no tienen middleware propio todavía — pendiente en SECURITY_FIXES.md.
+
+## Base de datos — nunca modificar sin permiso explícito
+
+**Regla absoluta, sin excepciones:** bajo ningún concepto se modifica ningún dato en ninguna base de datos de este proyecto — ni siquiera en local/Docker, ni siquiera en registros de prueba — sin preguntar antes y recibir confirmación explícita de Cynthia.
+
+Esto incluye, entre otros:
+- Cambiar contraseñas de usuarios (aunque sean cuentas de prueba) para poder loguearse y verificar algo visualmente.
+- Crear, editar o borrar filas en cualquier tabla para probar una feature.
+- Ejecutar `php artisan tinker` con cualquier operación que escriba en BD (`->save()`, `->update()`, `->delete()`, `Model::create()`, etc.).
+- Ejecutar seeders, factories o comandos artisan que muten datos.
+
+Si para verificar una tarea (visual o funcionalmente) hace falta tocar la base de datos, la única acción permitida es **preguntar primero**, explicando qué se necesita cambiar y por qué — por ejemplo: *"para probar esto en el navegador necesito una sesión de [rol] — ¿me das credenciales de un usuario existente, o prefieres comprobarlo tú visualmente mientras yo me limito a revisar el código?"*. Nunca actuar primero y avisar después.
+
+Esta regla aplica incluso cuando el cambio parece trivial, reversible o de bajo riesgo (entorno local, cuenta de prueba, dato ya obsoleto) — el criterio no es "cuánto importa el dato", es que ninguna mutación de BD ocurre sin supervisión y confirmación explícita previa.
 
 ## Estructura de directorios relevante
 

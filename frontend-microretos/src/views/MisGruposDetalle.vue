@@ -9,6 +9,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
+import DiagnosticoModal from '../components/DiagnosticoModal.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -149,6 +150,13 @@ const errorDiagnostico     = ref({})
 // información que un click normal, dejando a la vista el botón de dentro del panel.
 function abrirDiagnostico(equipo) {
   equipoAbierto.value = equipo.id
+}
+
+// Modal "Ver diagnóstico" — una vez generado, se consulta en el modal en vez del
+// panel inline (que sigue existiendo para generar/regenerar).
+const diagnosticoModalEquipo = ref(null)
+function verDiagnostico(equipo) {
+  diagnosticoModalEquipo.value = equipo
 }
 
 async function generarDiagnostico(equipo) {
@@ -444,14 +452,21 @@ onMounted(cargar)
                 </div>
               </div>
 
-              <!-- Solo cuando el equipo ha completado sus 5 fases. Abre el detalle (igual que
-                   pulsar en cualquier otra parte de la cabecera) para dejar a la vista el
-                   mismo botón dentro del panel de diagnóstico — ver sección más abajo. -->
-              <button v-if="equipo.fases_completas === 5"
+              <!-- Solo cuando el equipo ha completado sus 5 fases. Sin diagnóstico aún: abre
+                   el detalle (igual que pulsar en cualquier otra parte de la cabecera) para
+                   dejar a la vista el botón de generar dentro del panel. Con diagnóstico ya
+                   generado: abre directamente el modal, sin pasar por el panel inline. -->
+              <button v-if="equipo.fases_completas === 5 && !equipo.diagnostico_final"
                       @click.stop="abrirDiagnostico(equipo)"
                       class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700
                              hover:bg-emerald-100 transition-colors text-[10px] font-black uppercase tracking-wider">
                 Generar diagnóstico final
+              </button>
+              <button v-else-if="equipo.fases_completas === 5"
+                      @click.stop="verDiagnostico(equipo)"
+                      class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500 text-white
+                             hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
+                Ver diagnóstico
               </button>
 
               <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', equipoAbierto === equipo.id ? 'rotate-180' : '']"
@@ -641,13 +656,21 @@ onMounted(cargar)
 
                 <p v-if="errorDiagnostico[equipo.id]" class="text-xs text-red-500 font-semibold">{{ errorDiagnostico[equipo.id] }}</p>
 
-                <button @click="generarDiagnostico(equipo)"
-                        :disabled="generandoDiagnostico[equipo.id]"
-                        class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700
-                               hover:bg-emerald-100 transition-colors text-[10px] font-black uppercase tracking-wider
-                               disabled:opacity-50 disabled:cursor-not-allowed">
-                  {{ generandoDiagnostico[equipo.id] ? 'Generando…' : 'Generar diagnóstico final' }}
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button v-if="equipo.diagnostico_final"
+                          @click="verDiagnostico(equipo)"
+                          class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500 text-white
+                                 hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
+                    Ver diagnóstico completo
+                  </button>
+                  <button @click="generarDiagnostico(equipo)"
+                          :disabled="generandoDiagnostico[equipo.id]"
+                          class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700
+                                 hover:bg-emerald-100 transition-colors text-[10px] font-black uppercase tracking-wider
+                                 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {{ generandoDiagnostico[equipo.id] ? 'Generando…' : (equipo.diagnostico_final ? 'Regenerar diagnóstico' : 'Generar diagnóstico final') }}
+                  </button>
+                </div>
               </div>
 
               <!-- Reflexiones -->
@@ -679,5 +702,7 @@ onMounted(cargar)
 
       </template>
     </div>
+
+    <DiagnosticoModal :equipo="diagnosticoModalEquipo" :encuentro="encuentro" @close="diagnosticoModalEquipo = null" />
   </div>
 </template>

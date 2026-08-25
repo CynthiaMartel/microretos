@@ -38,7 +38,13 @@ class AdminAuthController extends Controller
 
         if (!Auth::attempt($request->only('email', 'password'))) {
             RateLimiter::hit($throttleKey, 900); // ventana de 15 minutos
-            Log::warning('Login fallido: credenciales incorrectas', ['email' => $this->maskEmail($email), 'ip' => $request->ip()]);
+            // Nunca la contraseña en sí (PII/secreto) — solo su longitud, para poder distinguir
+            // "se ha escrito otra contraseña" de "la cuenta cambió" sin loguear el valor real.
+            Log::warning('Login fallido: credenciales incorrectas', [
+                'email'            => $this->maskEmail($email),
+                'ip'               => $request->ip(),
+                'password_length'  => strlen((string) $request->input('password')),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Credenciales incorrectas.',
@@ -85,6 +91,8 @@ class AdminAuthController extends Controller
             DB::table('sessions')->whereIn('id', $idsAntiguos)->delete();
         }
 
+        Log::info('Login correcto', ['user_id' => $user->id, 'ip' => $request->ip()]);
+
         return response()->json([
             'success'             => true,
             'role'                => $user->role,
@@ -92,6 +100,7 @@ class AdminAuthController extends Controller
             'centro_educativo_id' => $user->centro_educativo_id,
             'centro_nombre'       => $user->centroEducativo?->nombre,
             'centro_img'          => $user->centroEducativo?->img,
+            'minutos_restantes'   => $this->minutosRestantesSesion($request),
             'message'             => 'Acceso concedido.',
         ]);
     }
@@ -133,8 +142,27 @@ class AdminAuthController extends Controller
                 'centro_educativo_id' => $user->centro_educativo_id,
                 'centro_nombre'       => $user->centroEducativo?->nombre,
                 'centro_img'          => $user->centroEducativo?->img,
+                'minutos_restantes'   => $this->minutosRestantesSesion($request),
             ],
         ]);
+    }
+
+    // Sesión de Laravel (driver 'database'): expira 'session.lifetime' minutos después
+    // del último request que la tocó (last_activity), no en un instante fijo — por eso
+    // se recalcula en cada /perfil en vez de derivarse de un timestamp de login.
+    private function minutosRestantesSesion(Request $request): int
+    {
+        $lastActivity = DB::table('sessions')
+            ->where('id', $request->session()->getId())
+            ->value('last_activity');
+
+        if (!$lastActivity) {
+            return (int) config('session.lifetime');
+        }
+
+        $transcurridos = (time() - (int) $lastActivity) / 60;
+
+        return max(0, (int) floor(config('session.lifetime') - $transcurridos));
     }
 
     public function updatePerfil(UpdatePerfilRequest $request): JsonResponse
@@ -161,8 +189,6 @@ class AdminAuthController extends Controller
                 ->where('user_id', $user->id)
                 ->where('id', '!=', $request->session()->getId())
                 ->delete();
-
-            Log::info('Contraseña cambiada por el propio usuario', ['user_id' => $user->id]);
 
             Log::info('Contraseña cambiada por el propio usuario', ['user_id' => $user->id]);
 

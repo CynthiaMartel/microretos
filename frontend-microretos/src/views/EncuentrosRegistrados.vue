@@ -9,6 +9,8 @@ import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
 import ReestructurarEquipoModal from '../components/ReestructurarEquipoModal.vue'
 import CompartirEncuentroModal from '../components/CompartirEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
+import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
+import GenerarCodigoBoton from '../components/GenerarCodigoBoton.vue'
 import api from '../api.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -638,50 +640,19 @@ function formatFecha(isoDate) {
                   <!-- Códigos: acceso del alumnado al workspace + desbloqueo IA -->
                   <div v-if="s.codigo_clase || s.codigo_ia" @click.stop
                        class="flex flex-wrap items-end gap-2 pt-1">
-                    <div v-if="s.codigo_clase" class="space-y-1">
-                      <p class="text-[9px] font-black uppercase tracking-wide text-gray-400">Código acceso al alumnado</p>
-                      <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full w-fit
-                                   bg-[#00A859]/10 border border-[#00A859]/20">
-                        <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-pulse shrink-0"></span>
-                        <span class="text-[11px] font-black tracking-widest text-[#00A859]">{{ s.codigo_clase }}</span>
-                        <button @click.stop="copiarCodigo(s.codigo_clase)"
-                                class="p-0.5 rounded hover:bg-[#00A859]/10 text-[#00A859]/50 hover:text-[#00A859] transition-all"
-                                title="Copiar código">
-                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                          </svg>
-                        </button>
-                      </span>
-                    </div>
-                    <span v-if="s.codigo_ia" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                                 bg-orange-50 border border-orange-200">
-                      <span class="text-[10px] shrink-0">✨</span>
-                      <span class="text-[11px] font-black tracking-widest text-orange-600">{{ s.codigo_ia }}</span>
-                      <button @click.stop="copiarCodigo(s.codigo_ia)"
-                              class="p-0.5 rounded hover:bg-orange-100 text-orange-300 hover:text-orange-600 transition-all"
-                              title="Copiar código">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                      </button>
-                    </span>
+                    <CodigoBadgeMini v-if="s.codigo_clase" :code="s.codigo_clase" variant="clase"
+                                     label="Código acceso al alumnado" @copiar="copiarCodigo" />
+                    <CodigoBadgeMini v-if="s.codigo_ia" :code="s.codigo_ia" variant="ia" @copiar="copiarCodigo" />
                   </div>
                   <div v-if="!s.codigo_clase && s.num_equipos && s.puede_editar" @click.stop class="pt-1">
-                    <button @click.stop="crearCodigo(s)"
-                            :disabled="creandoCodigo[s.id]"
-                            class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest
-                                   text-gray-400 hover:text-[#00A859] transition-colors disabled:opacity-50">
-                      <svg class="w-3 h-3" :class="creandoCodigo[s.id] ? 'animate-spin' : ''"
-                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path v-if="!creandoCodigo[s.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                        <path v-else fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-                      </svg>
-                      {{ creandoCodigo[s.id] ? 'Creando...' : 'Generar código workspace alumnado' }}
-                    </button>
-                    <p v-if="errorCodigo[s.id]" class="text-[10px] text-red-400 mt-1">{{ errorCodigo[s.id] }}</p>
+                    <GenerarCodigoBoton variant="clase" label="Generar código workspace alumnado" loading-label="Creando..."
+                                        :loading="!!creandoCodigo[s.id]" :error="errorCodigo[s.id]"
+                                        @generar="crearCodigo(s)" />
+                  </div>
+                  <div v-if="!s.codigo_ia && s.num_equipos && s.puede_editar" @click.stop class="pt-1">
+                    <GenerarCodigoBoton variant="ia" label="Generar código sugerencia IA alumnado" loading-label="Generando..."
+                                        :loading="!!creandoCodigoIa[s.id]" :error="errorCodigoIa[s.id]"
+                                        @generar="crearCodigoIa(s)" />
                   </div>
                 </div>
 

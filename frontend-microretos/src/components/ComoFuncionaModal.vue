@@ -37,9 +37,9 @@ const roles = [
   { label: 'Docente',            icon: AcademicCapIcon,    ...ROL.docente,
     desc: 'Crea retos y proyectos, los comparte con el alumnado y hace seguimiento del progreso.' },
   { label: 'Alumnado / Equipo',  icon: UserGroupIcon,       ...ROL.alumnado,
-    desc: 'Accede sin necesidad de cuenta y resuelve retos o avanza en el proyecto por fases.' },
+    desc: 'Accede sin necesidad de cuenta y resuelve retos, avanza en el proyecto por fases.' },
   { label: 'Empresa',            icon: BuildingOfficeIcon,  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-600',
-    desc: 'Valida la entrega del equipo desde un enlace público, sin necesidad de cuenta.' },
+    desc: 'Valida la entrega del equipo desde un enlace público, sin necesidad de cuenta. El alumnado resuelve sus necesidades a partir de un reto.' },
   { label: 'Admin',               icon: ShieldCheckIcon,     bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600',
     desc: 'Gestiona centros, ciclos formativos y usuarios de forma transversal.' },
 ]
@@ -170,16 +170,32 @@ const pasosEncuentro = [
               </div>
 
               <!-- Tres bloques de flujo -->
+              <!-- lg:contents en cada bloque "desenvuelve" sus 3 partes (título/definición/pasos) para que
+                   se coloquen como filas explícitas de esta misma grid — así las 3 columnas quedan a la
+                   misma altura fila a fila, aunque el texto de la definición tenga longitudes distintas. -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
                 <!-- Bloque: Retos -->
-                <div>
-                  <p class="text-[11px] font-black uppercase tracking-widest text-lime-700 mb-1">
-                    Retos
-                  </p>
-                  <h3 class="text-lg font-black text-[#121212] mb-4">Generador y biblioteca</h3>
+                <div class="lg:contents">
+                  <div class="lg:col-start-1 lg:row-start-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-lime-700 mb-1">
+                      Retos
+                    </p>
+                    <h3 class="text-lg font-black text-[#121212] mb-2">Generador y biblioteca</h3>
+                  </div>
 
-                  <div>
+                  <div class="lg:col-start-1 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-lime-50 border-2 border-lime-300 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-lime-200 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-lime-800">?</span>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-relaxed">
+                      Un <span class="font-black text-lime-700">RETO</span> es la necesidad real de una
+                      empresa, transformada (con ayuda de la IA) en una
+                      <span class="font-black text-lime-700">pregunta</span> que el alumnado deberá responder.
+                    </p>
+                  </div>
+
+                  <div class="lg:col-start-1 lg:row-start-3">
                     <template v-for="(paso, i) in pasosRetos" :key="'r-'+i">
                       <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
                         <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
@@ -199,13 +215,27 @@ const pasosEncuentro = [
                 </div>
 
                 <!-- Bloque: Taller de Ideas -->
-                <div>
-                  <p class="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-1">
-                    Taller de Ideas
-                  </p>
-                  <h3 class="text-lg font-black text-[#121212] mb-4">Propuestas y proyectos</h3>
+                <div class="lg:contents">
+                  <div class="lg:col-start-2 lg:row-start-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-1">
+                      Taller de Ideas
+                    </p>
+                    <h3 class="text-lg font-black text-[#121212] mb-2">Propuestas y proyectos</h3>
+                  </div>
 
-                  <div>
+                  <div class="lg:col-start-2 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-amber-50 border-2 border-amber-300 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-amber-200 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-amber-800">?</span>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-relaxed">
+                      Una <span class="font-black text-amber-700">PROPUESTA</span> es la concreción
+                      curricular del reto que hace el docente. Al validarla la empresa y el propio docente,
+                      pasa a ser <span class="font-black text-amber-700">PROYECTO</span>: la respuesta que
+                      elaborará el alumnado, con sus fases, entregables y evaluación.
+                    </p>
+                  </div>
+
+                  <div class="lg:col-start-2 lg:row-start-3">
                     <template v-for="(paso, i) in pasosProyecto" :key="'tp-'+i">
                       <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
                         <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
@@ -225,13 +255,27 @@ const pasosEncuentro = [
                 </div>
 
                 <!-- Bloque: Encuentro con alumnado -->
-                <div>
-                  <p class="text-[11px] font-black uppercase tracking-widest text-blue-600 mb-1">
-                    Encuentro con alumnado
-                  </p>
-                  <h3 class="text-lg font-black text-[#121212] mb-4">Acceso y seguimiento</h3>
+                <div class="lg:contents">
+                  <div class="lg:col-start-3 lg:row-start-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-blue-600 mb-1">
+                      Encuentro con alumnado
+                    </p>
+                    <h3 class="text-lg font-black text-[#121212] mb-2">Acceso y seguimiento</h3>
+                  </div>
 
-                  <div>
+                  <div class="lg:col-start-3 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-blue-50 border-2 border-blue-300 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-blue-200 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-blue-800">?</span>
+                    </div>
+                    <p class="text-sm text-gray-900 leading-relaxed">
+                      Un <span class="font-black text-blue-700">ENCUENTRO</span> es el
+                      <span class="font-black text-blue-700">cuándo</span>: la fecha y los equipos con los
+                      que ese proyecto se trabaja en el aula. A partir de ahí, cada equipo avanza el
+                      proyecto por fases en su <span class="font-black text-blue-700">workspace</span>.
+                    </p>
+                  </div>
+
+                  <div class="lg:col-start-3 lg:row-start-3">
                     <template v-for="(paso, i) in pasosEncuentro" :key="'e-'+i">
                       <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
                         <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"

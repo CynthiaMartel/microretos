@@ -132,7 +132,11 @@ const cerrarSesionIdle = async () => {
   router.push('/')
 }
 
-// ── Toast de expiración de token (bocadillo esquina inferior derecha) ────────
+// ── Toast de expiración de sesión (bocadillo esquina inferior derecha) ────────
+// Distinto del modal de inactividad: este avisa cuando la sesión de Laravel está a
+// punto de caducar en el SERVIDOR (sliding, basada en last_activity), algo que puede
+// ocurrir incluso con el usuario "activo" en pantalla si no se ha disparado ningún
+// request autenticado en un rato largo.
 const TOAST_THRESHOLD_MINUTES = 20
 const tokenToastDismissedAt = ref(null) // minutos restantes en el momento del cierre manual
 const tokenToastForceHidden = ref(false) // oculta el toast tras "Extender" sin esperar a que recalculen los minutos
@@ -168,7 +172,7 @@ const cerrarTokenToast = () => {
 
 const extenderDesdeToast = async () => {
   tokenToastRefreshing.value = true
-  const ok = await authStore.refresh()
+  const ok = await authStore.ping()
   tokenToastFeedback.value = ok ? 'ok' : 'error'
   tokenToastRefreshing.value = false
   // Deja el mensaje de confirmación/error visible 2s antes de desvanecer el aviso
@@ -240,7 +244,7 @@ const extenderDesdeToast = async () => {
     </div>
   </Transition>
 
-  <!-- Bocadillo: token de sesión a punto de expirar -->
+  <!-- Bocadillo: sesión a punto de expirar en el servidor -->
   <Transition name="toast-slide">
     <div
       v-if="showTokenToast"

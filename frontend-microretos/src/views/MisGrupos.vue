@@ -4,10 +4,11 @@
      encuentro (Encuentro.grupo, ej. "2ºB"), y esta vista sigue el progreso de los EQUIPOS de
      alumnado — el endpoint de backend GET /encuentros/mis-grupos tampoco se ha tocado. -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
+import { formatCurso } from '../utils/formatCurso.js'
 
 const router = useRouter()
 
@@ -15,8 +16,10 @@ const cargando = ref(true)
 const error    = ref('')
 const grupos   = ref([])
 
-const encuentroAbierto = ref(null)
-const equipoAbierto    = ref(null)
+// Sets (no un único id) porque el filtro por estado puede necesitar desplegar
+// varios encuentros/equipos a la vez, no solo el último que el usuario clicó.
+const encuentrosAbiertos = ref(new Set())
+const equiposAbiertos    = ref(new Set())
 
 // ── Copiar código (acceso workspace / desbloqueo IA) ────────────────────────
 const codigoCopiado = ref(null)
@@ -49,16 +52,22 @@ async function cargar() {
 }
 
 function toggleEncuentro(id) {
-  encuentroAbierto.value = encuentroAbierto.value === id ? null : id
-  equipoAbierto.value = null
+  if (encuentrosAbiertos.value.has(id)) encuentrosAbiertos.value.delete(id)
+  else encuentrosAbiertos.value.add(id)
 }
 
 function toggleEquipo(id) {
-  equipoAbierto.value = equipoAbierto.value === id ? null : id
+  if (equiposAbiertos.value.has(id)) equiposAbiertos.value.delete(id)
+  else equiposAbiertos.value.add(id)
 }
 
 function progresoPct(equipo) {
   return progresoPonderado(equipo.fases)
+}
+
+function formatoFecha(fecha) {
+  if (!fecha) return ''
+  return new Date(fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // Estado del chip de fase (color + texto) — misma jerarquía que MisGruposDetalle, pero
@@ -83,8 +92,24 @@ const gruposConAlerta = computed(() =>
 
 // Un grupo (encuentro) se considera "completado" solo si TODOS sus equipos han
 // terminado las 5 fases — con un solo equipo a medias, el grupo sigue "en progreso".
+// Se usa solo para la sección "Todos" (separar visualmente ambos bloques); el filtro
+// de pestañas (Completados/En progreso) mira el estado de cada EQUIPO, no del grupo
+// entero — un encuentro puede tener equipos completados y otros a medias a la vez.
 function grupoCompletado(g) {
   return g.equipos.length > 0 && g.equipos.every(e => e.fases_completas === 5)
+}
+
+function equipoCumpleEstado(equipo) {
+  if (filtroEstado.value === 'completado') return equipo.fases_completas === 5
+  if (filtroEstado.value === 'progreso')   return equipo.fases_completas !== 5
+  return true
+}
+
+// Equipos de un grupo a mostrar: todos, salvo que haya una pestaña de estado activa,
+// en cuyo caso solo los que la cumplen (así "Completados" no lista también los que
+// siguen a medias dentro del mismo encuentro).
+function equiposDeGrupo(g) {
+  return filtroEstado.value ? g.equipos.filter(equipoCumpleEstado) : g.equipos
 }
 
 // ── Búsqueda y filtros ──────────────────────────────────────────────────────
@@ -97,7 +122,7 @@ const cursosDisponibles = computed(() =>
   [...new Set(grupos.value.map(g => g.encuentro.curso).filter(Boolean))].sort()
 )
 const familiasDisponibles = computed(() =>
-  [...new Set(grupos.value.map(g => g.proyecto?.familia).filter(Boolean))].sort()
+  [...new Set(grupos.value.flatMap(g => g.equipos.map(e => e.proyecto?.familia)).filter(Boolean))].sort()
 )
 
 const hayFiltrosActivos = computed(() => !!(busqueda.value || filtroCurso.value || filtroFamilia.value || filtroEstado.value))
@@ -112,14 +137,15 @@ const gruposFiltrados = computed(() => {
   const q = busqueda.value.toLowerCase().trim()
   return grupos.value.filter(g => {
     if (filtroCurso.value   && g.encuentro.curso !== filtroCurso.value) return false
-    if (filtroFamilia.value && g.proyecto?.familia !== filtroFamilia.value) return false
-    if (filtroEstado.value === 'completado' && !grupoCompletado(g)) return false
-    if (filtroEstado.value === 'progreso'   &&  grupoCompletado(g)) return false
+    if (filtroFamilia.value && !g.equipos.some(e => e.proyecto?.familia === filtroFamilia.value)) return false
+    if (filtroEstado.value  && !g.equipos.some(equipoCumpleEstado)) return false
     if (!q) return true
-    const enTexto = [g.encuentro.grupo, g.encuentro.ciclo_formativo, g.proyecto?.titulo, g.proyecto?.familia]
+    const enTexto = [g.encuentro.grupo, g.encuentro.ciclo_formativo]
       .filter(Boolean)
       .some(t => t.toLowerCase().includes(q))
-    const enEquipos = g.equipos.some(e => e.nombre?.toLowerCase().includes(q))
+    const enEquipos = g.equipos.some(e =>
+      [e.nombre, e.proyecto?.titulo, e.proyecto?.familia].filter(Boolean).some(t => t.toLowerCase().includes(q))
+    )
     return enTexto || enEquipos
   })
 })
@@ -131,13 +157,36 @@ const gruposEnProgreso  = computed(() => gruposFiltrados.value.filter(g => !grup
 const gruposCompletados = computed(() => gruposFiltrados.value.filter(g => grupoCompletado(g)))
 const gruposOrdenados   = computed(() => [...gruposEnProgreso.value, ...gruposCompletados.value])
 
-// Contadores — sobre lo que hay visible tras aplicar búsqueda/filtros, para que
-// sirvan también como resumen de "cuántos equipos hay en este recorte".
-const equiposVisibles    = computed(() => gruposFiltrados.value.flatMap(g => g.equipos))
+// Contadores — sobre lo que hay visible tras aplicar búsqueda/filtros (y la pestaña
+// de estado, vía equiposDeGrupo), para que sirvan también como resumen de "cuántos
+// equipos hay en este recorte".
+const equiposVisibles    = computed(() => gruposFiltrados.value.flatMap(equiposDeGrupo))
 const totalEquipos       = computed(() => equiposVisibles.value.length)
 const equiposCompletados = computed(() => equiposVisibles.value.filter(e => e.fases_completas === 5).length)
 const equiposSinIniciar  = computed(() => equiposVisibles.value.filter(e => e.fase_actual === 0 && e.fases_completas === 0).length)
 const equiposEnProgreso  = computed(() => totalEquipos.value - equiposCompletados.value - equiposSinIniciar.value)
+
+// Al activar una pestaña de estado (Completados / En progreso), desplegar automáticamente
+// los encuentros y equipos que la cumplen — si no, el usuario tendría que abrir cada
+// acordeón a mano para comprobar cuál de sus equipos es el que cumple el filtro.
+watch([filtroEstado, gruposFiltrados], ([estado, gruposVisibles]) => {
+  if (!estado) {
+    encuentrosAbiertos.value = new Set()
+    equiposAbiertos.value = new Set()
+    return
+  }
+  const encIds = new Set()
+  const eqIds  = new Set()
+  gruposVisibles.forEach(g => {
+    const coinciden = g.equipos.filter(equipoCumpleEstado)
+    if (coinciden.length) {
+      encIds.add(g.encuentro.id)
+      coinciden.forEach(e => eqIds.add(e.id))
+    }
+  })
+  encuentrosAbiertos.value = encIds
+  equiposAbiertos.value = eqIds
+})
 
 onMounted(cargar)
 </script>
@@ -239,7 +288,7 @@ onMounted(cargar)
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
                              focus:bg-white focus:border-[#00A859] outline-none transition-all disabled:opacity-50">
                 <option value="">Todos los cursos</option>
-                <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ c }}º curso</option>
+                <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ formatCurso(c) }} curso</option>
               </select>
               <select v-model="filtroFamilia" :disabled="!familiasDisponibles.length"
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
@@ -272,7 +321,7 @@ onMounted(cargar)
         <template v-for="(g, idx) in gruposOrdenados" :key="g.encuentro.id">
           <!-- Cabecera de sección — separación explícita entre "en progreso" y "completados",
                no solo un contador arriba. Se pinta una sola vez, al cambiar de grupo. -->
-          <p v-if="idx === 0 || grupoCompletado(gruposOrdenados[idx - 1]) !== grupoCompletado(g)"
+          <p v-if="!filtroEstado && (idx === 0 || grupoCompletado(gruposOrdenados[idx - 1]) !== grupoCompletado(g))"
              class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-2">
             {{ grupoCompletado(g) ? `Completados (${gruposCompletados.length})` : `En progreso (${gruposEnProgreso.length})` }}
           </p>
@@ -282,8 +331,11 @@ onMounted(cargar)
           <button @click="toggleEncuentro(g.encuentro.id)"
                   class="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left">
             <div class="flex-1 min-w-0">
-              <p class="font-black text-[#121212]">{{ g.encuentro.grupo || g.proyecto?.titulo || 'Sin nombre' }}</p>
-              <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ g.equipos.length }} equipo(s)</p>
+              <p class="font-black text-[#121212]">
+                {{ g.encuentro.grupo || g.equipos[0]?.proyecto?.titulo || 'Sin nombre' }}
+                <span v-if="g.encuentro.fecha" class="font-bold text-gray-400">· {{ formatoFecha(g.encuentro.fecha) }}</span>
+              </p>
+              <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ equiposDeGrupo(g).length }} equipo(s)</p>
               <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span v-if="g.encuentro.codigo_clase" @click.stop="copiarCodigo(g.encuentro.codigo_clase)"
                       :title="codigoCopiado === g.encuentro.codigo_clase ? '¡Copiado!' : 'Copiar código workspace alumnado'"
@@ -304,14 +356,14 @@ onMounted(cargar)
                            text-[10px] font-black text-gray-600 uppercase tracking-wider">
               Detalle equipos →
             </button>
-            <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', encuentroAbierto === g.encuentro.id ? 'rotate-180' : '']"
+            <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', encuentrosAbiertos.has(g.encuentro.id) ? 'rotate-180' : '']"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
           </button>
 
-          <div v-if="encuentroAbierto === g.encuentro.id" class="border-t border-gray-100 px-5 py-4 space-y-3">
-            <div v-for="equipo in g.equipos" :key="equipo.id"
+          <div v-if="encuentrosAbiertos.has(g.encuentro.id)" class="border-t border-gray-100 px-5 py-4 space-y-3">
+            <div v-for="equipo in equiposDeGrupo(g)" :key="equipo.id"
                  class="rounded-2xl border border-gray-100 overflow-hidden">
 
               <button @click="toggleEquipo(equipo.id)"
@@ -333,6 +385,10 @@ onMounted(cargar)
                       {{ estadoBadge(equipo).label }}
                     </span>
                   </div>
+                  <p v-if="equipo.proyecto" class="text-[11px] font-semibold text-gray-500 truncate">
+                    {{ equipo.proyecto.titulo }}
+                    <span v-if="equipo.proyecto.familia" class="text-gray-400">· {{ equipo.proyecto.familia }}</span>
+                  </p>
                   <div class="flex flex-wrap gap-1 mt-1">
                     <span v-for="m in equipo.miembros" :key="m.id"
                           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
@@ -343,13 +399,13 @@ onMounted(cargar)
                     </span>
                   </div>
                 </div>
-                <svg :class="['w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform', equipoAbierto === equipo.id ? 'rotate-180' : '']"
+                <svg :class="['w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform', equiposAbiertos.has(equipo.id) ? 'rotate-180' : '']"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
 
-              <div v-if="equipoAbierto === equipo.id" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+              <div v-if="equiposAbiertos.has(equipo.id)" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
                 <!-- Resumen de fases — solo estado, sin contenido: el detalle vive en "Detalle equipos" -->
                 <div class="flex flex-wrap gap-1.5">
                   <div v-for="f in FASES_PROYECTO" :key="f.num" :title="f.label"

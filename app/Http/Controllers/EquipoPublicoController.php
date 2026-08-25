@@ -347,39 +347,53 @@ class EquipoPublicoController extends Controller
         // (aunque el equipo lo haya borrado de su lista): en ambos casos no queremos repetirlo.
         $noRepetir = $existentes->merge($sugeridasIa)->unique()->values();
 
-        $prompt = $contexto;
-        if ($noRepetir->isNotEmpty()) {
-            $prompt .= "\n\nHallazgos ya propuestos en esta sesión, tuyos o del equipo (genera uno DISTINTO, no los repitas ni parafrasees):\n- "
-                . $noRepetir->implode("\n- ");
-        }
+        $coincide = fn($h) => $noRepetir->contains(fn($nr) => mb_strtolower($nr) === mb_strtolower($h));
 
-        // La lista de hallazgos ya propuestos forma parte de la clave de caché: cada clic sucesivo
-        // cambia el prompt (evita repetir), así que también cambia la clave y dispara una llamada nueva.
-        // El sufijo de versión cambia cuando se retoca el prompt — evita servir de caché una
-        // respuesta generada con una redacción antigua para el mismo contexto.
-        $cacheKey  = 'hallazgo_ejemplo_v2_' . md5($prompt);
-        $resultado = Cache::remember($cacheKey, now()->addHours(6), function () use ($prompt) {
+        // Cola de hallazgos pre-generados por equipo: pedimos 4 a la IA en una sola llamada
+        // y los servimos de uno en uno en clics sucesivos sin volver a llamar a OpenAI, para
+        // que de cara al equipo cada clic siga pareciendo una generación nueva.
+        $cacheKey = 'hallazgos_ia_cola_v1_' . $equipo->id;
+        $cola = collect(Cache::get($cacheKey, []))->reject($coincide)->values();
+
+        if ($cola->isEmpty()) {
+            $prompt = $contexto;
+            if ($noRepetir->isNotEmpty()) {
+                $prompt .= "\n\nHallazgos ya propuestos en esta sesión, tuyos o del equipo (genera 4 DISTINTOS, no los repitas ni parafrasees):\n- "
+                    . $noRepetir->implode("\n- ");
+            }
+
             $response = Http::withToken(config('services.openai.key'))
                 ->timeout(60)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model'    => 'gpt-4o',
                     'messages' => [
-                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a analizar el reto de una empresa. Redacta UN hallazgo de ejemplo: una OBSERVACIÓN sobre la situación o el problema actual de la empresa, apoyada en el contexto (quiénes son, su día a día, qué necesitan, sus dificultades) — algo que ya está pasando o que falta hoy, no algo que la empresa podría hacer en el futuro. Un hallazgo NUNCA debe mencionar una solución, tecnología, sistema o proceso a construir, ni predecir resultados de algo que todavía no existe — eso es una propuesta de solución, no un hallazgo, y se trabaja en otra fase distinta. Ejemplo de hallazgo VÁLIDO: "La empresa no lleva ningún registro histórico de cuándo florecen sus plantas cada año." Ejemplo NO VÁLIDO porque ya describe una solución: "Registrando la temperatura se podría predecir la cosecha con un 85% de precisión." No inventes cifras, porcentajes ni estadísticas que no estén explícitas en el contexto — si no hay datos numéricos, razona en términos cualitativos. Es solo un ejemplo para guiar al equipo — ellos añadirán más hallazgos propios. Escríbelo en UNA sola frase corta (máximo 25 palabras), con lenguaje sencillo y directo, fácil de entender para alumnado de FP — nada de tecnicismos ni frases largas.'],
-                        ['role' => 'user',   'content' => "Contexto del reto:\n{$prompt}\nDevuelve SOLO este JSON:\n{\"hallazgo\":\"texto del hallazgo de ejemplo\"}"],
+                        ['role' => 'system', 'content' => 'Eres un docente de Formación Profesional que ayuda a un equipo de alumnado a analizar el reto de una empresa. Redacta 4 hallazgos de ejemplo, DISTINTOS entre sí: cada uno es una OBSERVACIÓN sobre la situación o el problema actual de la empresa, apoyada en el contexto (quiénes son, su día a día, qué necesitan, sus dificultades) — algo que ya está pasando o que falta hoy, no algo que la empresa podría hacer en el futuro. Un hallazgo NUNCA debe mencionar una solución, tecnología, sistema o proceso a construir, ni predecir resultados de algo que todavía no existe — eso es una propuesta de solución, no un hallazgo, y se trabaja en otra fase distinta. Ejemplo de hallazgo VÁLIDO: "La empresa no lleva ningún registro histórico de cuándo florecen sus plantas cada año." Ejemplo NO VÁLIDO porque ya describe una solución: "Registrando la temperatura se podría predecir la cosecha con un 85% de precisión." No inventes cifras, porcentajes ni estadísticas que no estén explícitas en el contexto — si no hay datos numéricos, razona en términos cualitativos. Los 4 hallazgos deben ser observaciones distintas entre sí, no reformulaciones de la misma idea — son solo ejemplos para guiar al equipo, ellos añadirán más hallazgos propios. Escribe cada uno en UNA sola frase corta (máximo 25 palabras), con lenguaje sencillo y directo, fácil de entender para alumnado de FP — nada de tecnicismos ni frases largas.'],
+                        ['role' => 'user',   'content' => "Contexto del reto:\n{$prompt}\nDevuelve SOLO este JSON:\n{\"hallazgos\":[\"hallazgo 1\",\"hallazgo 2\",\"hallazgo 3\",\"hallazgo 4\"]}"],
                     ],
                     'response_format' => ['type' => 'json_object'],
-                    'temperature'     => 0.6,
+                    'temperature'     => 0.7,
                 ]);
 
-            if (!$response->successful()) return null;
-            return json_decode($response->json()['choices'][0]['message']['content'], true);
-        });
+            if (!$response->successful()) {
+                return response()->json(['error' => 'No se pudo generar la sugerencia. Inténtalo de nuevo.'], 502);
+            }
 
-        if (!$resultado || empty($resultado['hallazgo'])) {
+            $resultado = json_decode($response->json()['choices'][0]['message']['content'], true);
+            $cola = collect($resultado['hallazgos'] ?? [])
+                ->map(fn($h) => trim($h))
+                ->filter()
+                ->reject($coincide)
+                ->values();
+        }
+
+        if ($cola->isEmpty()) {
             return response()->json(['error' => 'No se pudo generar la sugerencia. Inténtalo de nuevo.'], 502);
         }
 
-        return response()->json(['hallazgo' => $resultado['hallazgo']]);
+        $hallazgo = $cola->shift();
+        Cache::put($cacheKey, $cola->values()->all(), now()->addHours(6));
+
+        return response()->json(['hallazgo' => $hallazgo]);
     }
 
     /**

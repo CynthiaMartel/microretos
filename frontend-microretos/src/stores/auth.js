@@ -44,6 +44,22 @@ export const useAuthStore = defineStore('auth', () => {
   const userCentroNombre = ref('')
   const userCentroImg    = ref('')
 
+  // La sesión de Laravel expira 'minutos' después del último request que la tocó
+  // (sliding, no un instante fijo), así que el backend manda en cada /perfil los
+  // minutos restantes EN ESE momento. Para no repreguntar cada minuto solo para
+  // hacer bajar un contador, se ancla aquí (minutosRestantesServidor + medidoEn) y
+  // se descuenta localmente con un reloj que tickea cada minuto.
+  const minutosRestantesServidor = ref(-1)
+  const medidoEn                 = ref(0)
+  const now                      = ref(Date.now())
+  setInterval(() => { now.value = Date.now() }, 60_000)
+
+  const minutosRestantes = computed(() => {
+    if (!isAuthenticated.value || minutosRestantesServidor.value < 0) return -1
+    const transcurridos = (now.value - medidoEn.value) / 1000 / 60
+    return Math.max(0, Math.floor(minutosRestantesServidor.value - transcurridos))
+  })
+
   const clearLocalSession = () => {
     isAuthenticated.value  = false
     userRole.value         = ROLE_NONE
@@ -51,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
     userCentroId.value     = null
     userCentroNombre.value = ''
     userCentroImg.value    = ''
+    minutosRestantesServidor.value = -1
   }
 
   // data = payload de /perfil (data.data) o del login — misma forma en ambos.
@@ -61,6 +78,8 @@ export const useAuthStore = defineStore('auth', () => {
     userCentroId.value     = data.centro_educativo_id ?? null
     userCentroNombre.value = data.centro_nombre || ''
     userCentroImg.value    = data.centro_img || ''
+    minutosRestantesServidor.value = Number(data.minutos_restantes ?? -1)
+    medidoEn.value = Date.now()
   }
 
   // Compartido entre logout() y la sesión caducada detectada por el interceptor de
@@ -152,6 +171,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     isInitialized, isAuthenticated, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
+    minutosRestantes,
     isSuperAdmin, isAdmin, isDocente, isEmpresa, roleLabel,
     init, login, logout, ping, updateName, updateCentroImg, canAccess,
   }

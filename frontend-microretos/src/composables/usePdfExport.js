@@ -1,164 +1,11 @@
-import { jsPDF } from 'jspdf';
-
-const GREEN  = [0, 168, 89];
-const DARK   = [31, 41, 55];
-const GRAY   = [107, 114, 128];
-const LGRAY  = [75, 85, 99];
-const YELLOW = [161, 128, 0];
-const RED    = [220, 38, 38];
-const BLUE   = [37, 99, 235];
-const PURPLE = [126, 34, 206];
-const ORANGE = [194, 65, 12];
-
-const PAGE_W    = 210;
-const PAGE_H    = 297;
-const MARGIN    = 14;
-const CONTENT_W = PAGE_W - MARGIN * 2;
-const BOTTOM    = PAGE_H - 14; // margen inferior seguro (footer en PAGE_H - 9)
-
-function slugify(text) {
-  return (text || 'documento')
-    .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
-
-function addFooters(doc) {
-  const pageCount = doc.internal.getNumberOfPages();
-  const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(156, 163, 175);
-    doc.text(
-      `DuaLab · Generado el ${today} · Página ${i} de ${pageCount}`,
-      MARGIN,
-      PAGE_H - 6
-    );
-    doc.setDrawColor(229, 231, 235);
-    doc.setLineWidth(0.2);
-    doc.line(MARGIN, PAGE_H - 9, MARGIN + CONTENT_W, PAGE_H - 9);
-  }
-}
+import {
+  GREEN, DARK, GRAY, LGRAY, YELLOW, RED, BLUE, PURPLE, ORANGE,
+  PAGE_W, MARGIN, CONTENT_W,
+  slugify, crearDocumento, addFooters, makeBaseRenderer,
+} from './pdfHelpers.js';
 
 function makeRenderer(doc) {
-  const s = { y: 0 };
-
-  // ── helpers ──────────────────────────────────────────────────────────────────
-
-  const checkBreak = (needed = 20) => {
-    if (s.y + needed > BOTTOM) {
-      doc.addPage();
-      s.y = MARGIN;
-    }
-  };
-
-  const setFont = (size, style = 'normal', color = LGRAY) => {
-    doc.setFontSize(size);
-    doc.setFont('helvetica', style);
-    doc.setTextColor(...color);
-  };
-
-  const addSectionTitle = (text, color = DARK) => {
-    checkBreak(12);
-    setFont(6.5, 'bold', color);
-    doc.text(text.toUpperCase(), MARGIN, s.y);
-    doc.setDrawColor(...color);
-    doc.setLineWidth(0.25);
-    doc.line(MARGIN, s.y + 1, MARGIN + CONTENT_W, s.y + 1);
-    s.y += 7;
-  };
-
-  // Texto párrafo: cada línea con su propio checkBreak para soportar saltos de página
-  const addParagraph = (text, maxW = CONTENT_W, indent = 0) => {
-    if (!text) return;
-    setFont(8.5, 'normal', LGRAY);
-    const lines = doc.splitTextToSize(String(text), maxW);
-    for (const line of lines) {
-      checkBreak(6);
-      doc.text(line, MARGIN + indent, s.y);
-      s.y += 4.5;
-    }
-    s.y += 3;
-  };
-
-  // Lista de puntos: cada ítem y cada línea con checkBreak individual
-  const addBulletList = (items, bulletColor = GREEN) => {
-    if (!items?.length) return;
-    items.forEach(item => {
-      const lines = doc.splitTextToSize(String(item), CONTENT_W - 6);
-      checkBreak(5);
-      setFont(9, 'bold', bulletColor);
-      doc.text('•', MARGIN, s.y);
-      setFont(8.5, 'normal', LGRAY);
-      doc.text(lines[0], MARGIN + 5, s.y);
-      s.y += 4.5;
-      for (let i = 1; i < lines.length; i++) {
-        checkBreak(5);
-        doc.text(lines[i], MARGIN + 5, s.y);
-        s.y += 4.5;
-      }
-      s.y += 1.5;
-    });
-    s.y += 2;
-  };
-
-  // Badge: omite silenciosamente si sobrepasaría el margen derecho
-  const drawBadge = (text, bgColor, txtColor, x, badgeY) => {
-    setFont(6.5, 'bold', txtColor);
-    const tw = doc.getTextWidth(text);
-    const bw = tw + 5;
-    if (x + bw > MARGIN + CONTENT_W) return 0;
-    doc.setFillColor(...bgColor);
-    doc.roundedRect(x, badgeY - 3.5, bw, 6, 1.5, 1.5, 'F');
-    doc.text(text, x + 2.5, badgeY);
-    return bw + 2.5;
-  };
-
-  // Tarjeta con fondo y borde de color, replicando visualmente una tarjeta destacada de la
-  // ficha en pantalla (no solo un título de sección con texto plano debajo). Pre-calcula la
-  // altura total antes de dibujar el rectángulo de fondo, porque en jsPDF hay que dibujar el
-  // fondo antes que el texto que va encima.
-  const addHighlightedCard = (title, titleColor, bgColor, borderColor, fields) => {
-    const present = fields.filter(f => f.text);
-    if (!present.length) return;
-
-    const measured = present.map(f => {
-      setFont(8.5, 'normal', LGRAY);
-      const lines = doc.splitTextToSize(String(f.text), CONTENT_W - 12);
-      return { ...f, lines };
-    });
-    let contentH = 12; // padding superior + título
-    measured.forEach(f => { contentH += 5 + f.lines.length * 4.5 + 3; });
-    contentH += 3; // padding inferior
-
-    checkBreak(contentH + 6);
-    const boxY = s.y;
-    doc.setFillColor(...bgColor);
-    doc.setDrawColor(...borderColor);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(MARGIN, boxY, CONTENT_W, contentH, 3, 3, 'FD');
-
-    setFont(7, 'bold', titleColor);
-    doc.text(title.toUpperCase(), MARGIN + 5, boxY + 7);
-
-    let y = boxY + 14;
-    measured.forEach(f => {
-      setFont(7.5, 'bold', DARK);
-      doc.text(f.label, MARGIN + 5, y);
-      y += 4.5;
-      setFont(8.5, 'normal', LGRAY);
-      f.lines.forEach(line => {
-        doc.text(line, MARGIN + 5, y);
-        y += 4.5;
-      });
-      y += 3;
-    });
-
-    s.y = boxY + contentH + 7;
-  };
+  const { s, checkBreak, setFont, addSectionTitle, addParagraph, addBulletList, drawBadge, addHighlightedCard } = makeBaseRenderer(doc);
 
   // ── renderReto ───────────────────────────────────────────────────────────────
 
@@ -313,9 +160,15 @@ function makeRenderer(doc) {
       addSectionTitle('RA/CE Seleccionados', DARK);
 
       reto.evaluacion_oficial.forEach((evalObj, idx) => {
+        // La fuente se fija ANTES de medir con splitTextToSize (no solo antes de
+        // imprimir) — jsPDF mide con la fuente activa en ese instante, y medir con
+        // una más estrecha que la usada al imprimir hace que el texto desborde el margen.
+        setFont(8.5, 'bold', DARK);
         const modLines = doc.splitTextToSize(evalObj.modulo || '', CONTENT_W - 6);
+        setFont(8.5, 'normal', LGRAY);
         const raLines  = doc.splitTextToSize(evalObj.ra || '', CONTENT_W - 6);
         const ceItems  = evalObj.ce || [];
+        setFont(7.5, 'italic', LGRAY);
         const aplLines = evalObj.aplicacion ? doc.splitTextToSize(evalObj.aplicacion, CONTENT_W - 6) : [];
 
         // Cabecera del módulo (altura acotada, nunca desborda)
@@ -353,6 +206,7 @@ function makeRenderer(doc) {
           doc.text('CRITERIOS DE EVALUACIÓN', MARGIN + 2, s.y);
           s.y += 4.5;
           ceItems.forEach(ce => {
+            setFont(8, 'normal', LGRAY);
             const ceL = doc.splitTextToSize(String(ce), CONTENT_W - 10);
             checkBreak(ceL.length * 4.5 + 2);
             setFont(7, 'bold', GREEN);
@@ -394,6 +248,7 @@ function makeRenderer(doc) {
         const hasColon  = varItem.includes(':');
         const label     = hasColon ? varItem.split(':')[0] : null;
         const body      = hasColon ? varItem.substring(varItem.indexOf(':') + 1).trim() : varItem;
+        setFont(8.5, 'normal', LGRAY);
         const bodyLines = doc.splitTextToSize(body, CONTENT_W - 8);
 
         // Cabecera con etiqueta en box pequeño
@@ -432,6 +287,7 @@ function makeRenderer(doc) {
         const hasColon  = tip.includes(':');
         const label     = hasColon ? tip.split(':')[0] : null;
         const body      = hasColon ? tip.substring(tip.indexOf(':') + 1).trim() : tip;
+        setFont(8.5, 'normal', LGRAY);
         const bodyLines = doc.splitTextToSize(body, CONTENT_W - 8);
 
         // Cabecera con etiqueta en box pequeño
@@ -617,7 +473,7 @@ function makeRenderer(doc) {
 
 export function usePdfExport() {
   const descargarPDF = (reto) => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const doc = crearDocumento();
     const { renderReto } = makeRenderer(doc);
     renderReto(reto);
     addFooters(doc);
@@ -626,7 +482,7 @@ export function usePdfExport() {
 
   const descargarPDFGrupo = (retos, titulo, subtitulo = '') => {
     if (!retos?.length) return;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const doc = crearDocumento();
     const { renderReto, renderCoverPage } = makeRenderer(doc);
 
     renderCoverPage(retos, titulo, subtitulo);

@@ -25,24 +25,24 @@ use App\Http\Controllers\EquipoGestionController;
 // --- RUTAS PÚBLICAS (sin autenticación) ---
 
 // Datos académicos: familias públicas para formularios de contacto u otros usos
-Route::middleware('throttle:60,1')->group(function () {
+Route::middleware('throttle:publico-lectura')->group(function () {
     Route::get('/familias', [DatosFPController::class, 'getFamilias']);
 });
 
 // Acceso público por token temporal (QR para alumnado — ficha del microreto)
-Route::middleware('throttle:60,1')
+Route::middleware('throttle:microreto-publico')
      ->get('/public/microreto/{token}', [MicroretoTokenController::class, 'show']);
 
 // ── Workspace de equipos (alumnado) — acceso público por código o token ────
 // throttle más restrictivo para evitar fuerza bruta sobre códigos cortos
-Route::middleware('throttle:20,1')->group(function () {
+Route::middleware('throttle:workspace-codigo')->group(function () {
     // Código de clase → devuelve proyecto + lista de equipos para seleccionar
     Route::get('/clase/{codigo}',          [EquipoPublicoController::class, 'porCodigoClase']);
     // Código de equipo → acceso directo al workspace (backwards compat)
     Route::get('/equipo/unirse/{codigo}',  [EquipoPublicoController::class, 'unirse']);
 });
 
-Route::middleware('throttle:120,1')->group(function () {
+Route::middleware('throttle:workspace-lectura')->group(function () {
     Route::get('/equipo/{token}',                          [EquipoPublicoController::class, 'show']);
     Route::get('/equipo/{token}/reto',                     [EquipoPublicoController::class, 'verReto']);
     Route::put('/equipo/{token}/fase/{fase}',              [EquipoPublicoController::class, 'guardarFase'])
@@ -58,32 +58,32 @@ Route::middleware('throttle:120,1')->group(function () {
     Route::post('/equipo/{token}/reflexiones',             [EquipoPublicoController::class, 'storeReflexion']);
 });
 
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware('throttle:workspace-prototipos')->group(function () {
     Route::post('/equipo/{token}/prototipos',       [EquipoPublicoController::class, 'storePrototipo']);
     Route::delete('/equipo/{token}/prototipos/{id}', [EquipoPublicoController::class, 'destroyPrototipo'])
         ->whereNumber('id');
 });
 
-// Sugerencias IA del workspace de alumnado — throttle propio, más restrictivo
-// (llamadas a OpenAI, no comparten cupo con el resto de endpoints públicos)
-Route::middleware('throttle:10,1')->group(function () {
+// Sugerencias IA del workspace de alumnado — cupo propio por equipo (no por IP),
+// así no comparte contador ni con el resto de endpoints públicos ni con otros equipos
+Route::middleware('throttle:workspace-ia')->group(function () {
     Route::post('/equipo/{token}/fase/1/sugerir-hallazgo', [EquipoPublicoController::class, 'sugerirHallazgo']);
     Route::post('/equipo/{token}/fase/2/sugerir-tareas',   [EquipoPublicoController::class, 'sugerirTareas']);
 });
 
-// Desbloqueo del módulo IA del workspace — throttle propio y restrictivo
+// Desbloqueo del módulo IA del workspace — cupo propio por equipo
 // (evita fuerza bruta sobre el código corto que reparte el docente)
-Route::middleware('throttle:15,1')
+Route::middleware('throttle:workspace-ia-codigo')
     ->post('/equipo/{token}/ia/verificar-codigo', [EquipoPublicoController::class, 'verificarCodigoIa']);
 
 // Validación pública del microproyecto por parte de la empresa (acceso por token)
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware('throttle:startup-landing')->group(function () {
     Route::get('/startup/landing/{token}',          [MicroproyectoController::class, 'showByToken']);
     Route::post('/startup/landing/{token}/validar', [MicroproyectoController::class, 'validarEmpresa']);
 });
 
 // Datos académicos (ciclos, módulos) — throttle estándar
-Route::middleware('throttle:120,1')->group(function () {
+Route::middleware('throttle:datos-academicos')->group(function () {
     Route::get('/familias/{familia}/ciclos',  [DatosFPController::class, 'getCiclos']);
     Route::get('/ciclos/{idCiclo}/modulos',   [DatosFPController::class, 'getModulos']);
     Route::get('/modulos/{idModulo}/ra-ce',   [DatosFPController::class, 'getRaCe']);
@@ -97,7 +97,7 @@ Route::get('/demos/{familia}', [DemoController::class, 'show'])
     ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
 
 // Auth pública — throttle estricto para prevenir fuerza bruta
-Route::middleware('throttle:5,1')
+Route::middleware('throttle:admin-login')
     ->post('/admin/login', [AdminAuthController::class, 'login']);
 
 
