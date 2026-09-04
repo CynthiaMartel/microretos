@@ -50,6 +50,7 @@ const estadoOpciones = {
   archivado:  { label: 'Archivar',   dot: 'bg-gray-400',   text: 'text-gray-500',   bg: 'bg-gray-50' },
   propuesta:  { label: 'Propuesta',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
   validado:   { label: 'Validado',   dot: 'bg-[#00A859]',  text: 'text-[#00A859]',  bg: 'bg-[#00A859]/10' },
+  completado: { label: 'Completado', dot: 'bg-sky-500',    text: 'text-sky-700',    bg: 'bg-sky-50' },
 };
 
 // Label dinámico del botón de estado — distingue si ya se envió por mail o no
@@ -267,12 +268,15 @@ const form = ref({
 // ── Estado local de recursos (no se guarda en BD — vive en Cloudinary) ────────
 const videosLocales     = ref([])
 const documentosLocales = ref([])
+const imagenesLocales   = ref([])
+const imagenPortadaId   = ref(null)
 
 // ── Helpers recursos (Cloudinary) ────────────────────────────────────────────
 const labelVideo     = ref('')
 const labelDocumento = ref('')
 const subiendoVideo  = ref(false)
 const subiendoDoc    = ref(false)
+const subiendoImagen = ref(false)
 const errorSubida    = ref('')
 
 // Subida genérica — etiqueta el archivo con el UUID del microproyecto en Cloudinary
@@ -285,9 +289,11 @@ async function subirArchivo(tipo, event) {
     return
   }
 
-  const esvideo = tipo === 'video'
+  const esvideo  = tipo === 'video'
+  const esimagen = tipo === 'imagen'
   if (esvideo) subiendoVideo.value = true
-  else         subiendoDoc.value   = true
+  else if (esimagen) subiendoImagen.value = true
+  else subiendoDoc.value = true
   errorSubida.value = ''
 
   try {
@@ -296,12 +302,13 @@ async function subirArchivo(tipo, event) {
     formData.append('microproyecto_uuid', uuid.value)
     formData.append('tipo', tipo)
     const etiqueta = esvideo ? labelVideo.value : labelDocumento.value
-    if (etiqueta) formData.append('label', etiqueta)
+    if (!esimagen && etiqueta) formData.append('label', etiqueta)
 
     const res = await api.post('/upload/recurso', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     const entrada = {
+      id:            res.data.id,
       label:         res.data.label || res.data.filename,
       url:           res.data.url,
       public_id:     res.data.public_id,
@@ -311,15 +318,19 @@ async function subirArchivo(tipo, event) {
     if (esvideo) {
       videosLocales.value.push(entrada)
       labelVideo.value = ''
+    } else if (esimagen) {
+      imagenesLocales.value.push(entrada)
+      if (!imagenPortadaId.value) imagenPortadaId.value = entrada.id
     } else {
       documentosLocales.value.push(entrada)
       labelDocumento.value = ''
     }
   } catch (e) {
-    errorSubida.value = e.response?.data?.message || 'Error al subir el archivo a Cloudinary.'
+    errorSubida.value = e.response?.data?.message || e.response?.data?.errors?.file?.[0] || 'Error al subir el archivo a Cloudinary.'
   } finally {
-    if (esvideo) subiendoVideo.value = false
-    else         subiendoDoc.value   = false
+    subiendoVideo.value  = false
+    subiendoDoc.value    = false
+    subiendoImagen.value = false
     if (event.target) event.target.value = ''
   }
 }
@@ -346,6 +357,31 @@ async function removeVideo(i) {
       })
     } catch { /* idem */ }
   }
+}
+
+async function removeImagen(i) {
+  const img = imagenesLocales.value[i]
+  imagenesLocales.value.splice(i, 1)
+  if (img?.id === imagenPortadaId.value) {
+    imagenPortadaId.value = imagenesLocales.value[0]?.id ?? null
+  }
+  if (img?.public_id) {
+    try {
+      await api.delete('/upload/recurso', {
+        data: { public_id: img.public_id, resource_type: 'image' },
+      })
+    } catch { /* idem */ }
+  }
+}
+
+async function marcarPortada(img) {
+  imagenPortadaId.value = img.id
+  try {
+    await api.put('/upload/recurso/portada', {
+      microproyecto_uuid: uuid.value,
+      recurso_id: img.id,
+    })
+  } catch { /* si falla, se corrige solo al recargar el proyecto */ }
 }
 
 // ── Fases del proyecto ──────────────────────────────────────────────────────
@@ -1010,6 +1046,8 @@ async function cargarProyecto() {
     // Recursos viven en Cloudinary — se cargan aparte
     videosLocales.value     = recRes.data.videos    || [];
     documentosLocales.value = recRes.data.documentos || [];
+    imagenesLocales.value   = recRes.data.imagenes  || [];
+    imagenPortadaId.value   = recRes.data.imagen_portada_id ?? null;
   } finally {
     cargandoProyecto.value = false;
     cargando.value = false;
@@ -2685,9 +2723,64 @@ onUnmounted(() => { tourActivo.value = false; });
                 </div>
               </div>
 
+              <!-- ── BANCO DE IMÁGENES ─────────────────────────────────── -->
+              <div>
+                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Banco de imágenes</p>
+                <p class="text-[10px] text-gray-400 mb-3">
+                  También puede subir imágenes el alumnado desde su workspace. La primera
+                  se marca como portada automáticamente; puedes cambiarla cuando quieras.
+                </p>
+
+                <!-- Galería -->
+                <div v-if="imagenesLocales.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+                  <div v-for="(img, i) in imagenesLocales" :key="img.id"
+                       class="relative group/img rounded-xl overflow-hidden border-2"
+                       :class="img.id === imagenPortadaId ? 'border-[#00A859]' : 'border-gray-100'">
+                    <img :src="img.url" :alt="img.label || img.filename" class="w-full h-20 object-cover" />
+                    <span v-if="img.id === imagenPortadaId"
+                          class="absolute top-1 left-1 bg-[#00A859] text-white text-[8px] font-black
+                                 uppercase tracking-wider px-1.5 py-0.5 rounded-full">Portada</span>
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100
+                                transition-opacity flex items-center justify-center gap-1.5">
+                      <button v-if="img.id !== imagenPortadaId" @click="marcarPortada(img)" type="button"
+                              title="Marcar como portada"
+                              class="w-6 h-6 rounded-lg bg-white/90 flex items-center justify-center text-[#00A859] hover:bg-white">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                      </button>
+                      <button @click.stop="removeImagen(i)" type="button"
+                              class="w-6 h-6 rounded-lg bg-white/90 flex items-center justify-center text-red-400 hover:bg-white">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Uploader -->
+                <label class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
+                              border-2 border-dashed border-gray-200 bg-gray-50
+                              cursor-pointer hover:border-[#00A859]/40 hover:bg-[#00A859]/5 transition-all"
+                       :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
+                  <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span class="text-xs text-gray-400 font-medium">
+                    {{ subiendoImagen ? 'Subiendo imagen...' : 'Seleccionar imagen (PNG, JPG, GIF, WEBP)' }}
+                  </span>
+                  <input type="file" accept="image/png,image/jpeg,image/gif,image/webp"
+                         class="sr-only" @change="subirArchivo('imagen', $event)" :disabled="subiendoImagen"/>
+                </label>
+                <p class="text-[9px] text-gray-300 mt-1.5 pl-1">Máx. 8 MB por imagen.</p>
+              </div>
+
               <!-- ── DOCUMENTOS ─────────────────────────────────────── -->
               <div>
-                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Documentos, imágenes, etc...</p>
+                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Documentos, otros archivos...</p>
 
                 <!-- Lista -->
                 <div v-if="documentosLocales.length" class="space-y-2 mb-3">

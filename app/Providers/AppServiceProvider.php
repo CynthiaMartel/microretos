@@ -36,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->route('token') ?? $request->ip());
         });
 
+        RateLimiter::for('workspace-imagenes', function (Request $request) {
+            return Limit::perMinute(30)->by($request->route('token') ?? $request->ip());
+        });
+
         RateLimiter::for('workspace-ia', function (Request $request) {
             return Limit::perMinute(10)->by($request->route('token') ?? $request->ip());
         });

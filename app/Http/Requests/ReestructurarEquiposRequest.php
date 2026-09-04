@@ -16,6 +16,7 @@ class ReestructurarEquiposRequest extends FormRequest
         if ($this->has('alumnados') && is_array($this->input('alumnados'))) {
             $sanitized = collect($this->input('alumnados'))
                 ->map(fn($a) => [
+                    'id'         => !empty($a['id'])        ? (int) $a['id']               : null,
                     'nombre'     => isset($a['nombre'])     ? strip_tags($a['nombre'])     : '',
                     'equipo_num' => isset($a['equipo_num']) ? (int) $a['equipo_num']       : null,
                     'rol'        => isset($a['rol'])        ? strip_tags($a['rol'])        : null,
@@ -35,6 +36,7 @@ class ReestructurarEquiposRequest extends FormRequest
         return [
             'num_equipos'            => 'required|integer|min:1|max:30',
             'alumnados'              => 'required|array|min:1|max:200',
+            'alumnados.*.id'         => 'nullable|integer',
             'alumnados.*.nombre'     => 'required|string|max:100',
             'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
                 if ($numEquipos > 0 && $value > $numEquipos) {

@@ -888,20 +888,23 @@ onMounted(async () => {
            @click.self="modalCrear = false">
         <Transition name="modal-scale">
           <div v-if="modalCrear"
-               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md p-8">
+               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
             <button @click="modalCrear = false"
               class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
-                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all">
+                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
 
-            <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
-            <p class="text-xs text-gray-500 mb-6">
-              La cuenta quedará pendiente de activación hasta que la valides.
-            </p>
+            <div class="px-8 pt-8 pb-4 shrink-0">
+              <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
+              <p class="text-xs text-gray-500">
+                La cuenta quedará pendiente de activación hasta que la valides.
+              </p>
+            </div>
 
+            <div class="overflow-y-auto px-8 pb-8 pt-1">
             <form @submit.prevent="crearUsuario" class="space-y-4">
               <!-- Nombre -->
               <div>
@@ -1076,6 +1079,7 @@ onMounted(async () => {
                 {{ creando ? 'Creando...' : 'Crear cuenta' }}
               </button>
             </form>
+            </div>
           </div>
         </Transition>
       </div>
@@ -1087,7 +1091,7 @@ onMounted(async () => {
            class="fixed inset-0 z-[9100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <Transition name="modal-scale">
           <div v-if="modalExito"
-               class="bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-sm p-8 text-center">
+               class="bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-sm p-8 text-center overflow-y-auto max-h-[90vh]">
 
             <!-- Icono -->
             <div class="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
@@ -1500,7 +1504,7 @@ onMounted(async () => {
       <div v-if="confirm.show"
            class="fixed inset-0 z-[9200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
            @click.self="confirm.show = false">
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-sm p-6 overflow-y-auto max-h-[90vh]">
           <h3 class="font-black text-base mb-2 text-[#121212]">{{ confirm.title }}</h3>
           <p class="text-sm text-gray-500 mb-6">{{ confirm.body }}</p>
           <div class="flex gap-3">

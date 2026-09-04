@@ -151,6 +151,7 @@ onBeforeRouteUpdate(async () => {
 function getEtiqueta(p) {
   if (p.estado === 'en_edicion') return 'En edición';
   if (p.estado === 'archivado')  return 'Archivado';
+  if (p.estado === 'completado') return 'Completado';
   if (p.estado === 'validado') {
     if (p.empresa_validado && p.docente_validado) return 'Validado · Completo';
     if (p.empresa_validado)  return 'Validado · Empresa';
@@ -164,6 +165,7 @@ function getEtiqueta(p) {
 function getColor(p) {
   if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700';
   if (p.estado === 'archivado')  return 'bg-gray-100 border-gray-200 text-gray-400';
+  if (p.estado === 'completado') return 'bg-sky-50 border-sky-300 text-sky-700';
   if (p.estado === 'validado') {
     if (p.docente_validado && !p.empresa_validado) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
     return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';
@@ -173,11 +175,12 @@ function getColor(p) {
   return 'bg-violet-50 border-violet-300 text-violet-700';
 }
 
-const filtroOpciones = ['validado', 'propuesta', 'en_edicion', 'archivado', 'todos'];
-const filtroLabels   = { todos: 'Todos', en_edicion: 'En edición', propuesta: 'Pendiente validar', validado: 'Validados', archivado: 'Archivado' };
+const filtroOpciones = ['validado', 'completado', 'propuesta', 'en_edicion', 'archivado', 'todos'];
+const filtroLabels   = { todos: 'Todos', en_edicion: 'En edición', propuesta: 'Pendiente validar', validado: 'Validados', completado: 'Completados', archivado: 'Archivado' };
 
 const conteosPorEstado = computed(() => ({
   validado:   proyectos.value.filter(p => p.estado === 'validado').length,
+  completado: proyectos.value.filter(p => p.estado === 'completado').length,
   propuesta:  proyectos.value.filter(p => p.estado === 'propuesta').length,
   en_edicion: proyectos.value.filter(p => p.estado === 'en_edicion').length,
   archivado:  proyectos.value.filter(p => p.estado === 'archivado').length,
@@ -464,6 +467,8 @@ function mostrarSnack(mensaje, accion = null) {
                    transition-all duration-300 cursor-pointer flex flex-col"
             @click="router.push({ name: 'startup-day-detalle', params: { uuid: p.uuid } })"
           >
+            <img v-if="p.imagen_portada_url" :src="p.imagen_portada_url" :alt="p.titulo"
+                 class="w-full h-32 object-cover rounded-t-[1.5rem]" />
             <div class="p-5 flex-1 flex flex-col gap-3">
               <!-- Estado + paso -->
               <div class="flex items-center justify-between">

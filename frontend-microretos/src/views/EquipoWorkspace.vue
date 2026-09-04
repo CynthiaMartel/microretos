@@ -239,18 +239,23 @@ const rolesInfo = {
 // Los miembros se precargan desde equipo.miembros (ya dados de alta por el docente al crear
 // el encuentro, ver EncuentroController::crearCodigo()), no desde equipo_fases.datos — así el
 // alumnado parte del reparto real y solo confirma/corrige, en vez de reescribirlo de cero.
+const nombresConfirmados = ref(false)
+
 function inicializarF0() {
   const datos = getFase(0).datos ?? {}
+  nombresConfirmados.value = !!equipo.value?.nombres_confirmados
   f0.value = {
     contrato_firmado: datos.contrato_firmado ?? false,
     miembros: (equipo.value?.miembros ?? []).map(m => ({
       id:               m.id,
       nombre:           m.nombre ?? '',
+      alias:            m.alias ?? '',
       rol:              m.rol ?? '',
       fortalezas:       Array.isArray(m.fortalezas) ? m.fortalezas : [],
       puntosMejora:     Array.isArray(m.puntos_mejora) ? m.puntos_mejora : [],
       nuevaFortaleza:   '',
       nuevoPuntoMejora: '',
+      editandoAlias:    false,
     })),
   }
 }
@@ -259,14 +264,29 @@ function addMiembro() {
   if (!nuevoMiembro.value.nombre.trim()) return
   f0.value.miembros.push({
     ...nuevoMiembro.value,
+    alias: '',
     fortalezas: [],
     puntosMejora: [],
     nuevaFortaleza: '',
     nuevoPuntoMejora: '',
+    editandoAlias: false,
   })
   nuevoMiembro.value = { nombre: '', rol: '' }
 }
 function removeMiembro(i) { f0.value.miembros.splice(i, 1) }
+
+// Estilo Kahoot: "generar otro" elige un animal al azar en el momento, sin ir al
+// backend — el backend solo genera el alias inicial (determinista) al dar de alta.
+const ANIMALES_ALIAS = [
+  'Panda', 'Tigre', 'León', 'Delfín', 'Águila', 'Lobo', 'Zorro', 'Koala',
+  'Halcón', 'Pingüino', 'Jaguar', 'Puma', 'Búho', 'Colibrí', 'Nutria',
+  'Lince', 'Gacela', 'Cóndor', 'Orca', 'Mapache',
+]
+function regenerarAlias(m) {
+  const primerNombre = (m.nombre || 'Alumno').trim().split(' ')[0] || 'Alumno'
+  const animal = ANIMALES_ALIAS[Math.floor(Math.random() * ANIMALES_ALIAS.length)]
+  m.alias = `${primerNombre} ${animal}`
+}
 
 function addFortaleza(m) {
   const v = m.nuevaFortaleza.trim()
@@ -289,7 +309,7 @@ const f0Valido = computed(() =>
 function serializarF0() {
   return {
     contrato_firmado: f0.value.contrato_firmado,
-    miembros: f0.value.miembros.map(({ nuevaFortaleza, nuevoPuntoMejora, puntosMejora, ...m }) => ({
+    miembros: f0.value.miembros.map(({ nuevaFortaleza, nuevoPuntoMejora, puntosMejora, editandoAlias, ...m }) => ({
       ...m,
       puntos_mejora: puntosMejora,
     })),
@@ -311,6 +331,24 @@ async function completarF0() {
   await guardarFase(0, serializarF0())
   await refrescarMiembros()
   await completarFase(0)
+}
+
+const confirmandoNombres = ref(false)
+const errorConfirmarNombres = ref('')
+async function confirmarNombres() {
+  if (confirmandoNombres.value || nombresConfirmados.value) return
+  confirmandoNombres.value = true
+  errorConfirmarNombres.value = ''
+  try {
+    await guardarF0()
+    await api.post(`/equipo/${token}/fase/0/confirmar-nombres`)
+    nombresConfirmados.value = true
+    mostrarOk('Nombres confirmados. Ya no se pueden editar.')
+  } catch (e) {
+    errorConfirmarNombres.value = e.response?.data?.error || 'Error al confirmar los nombres.'
+  } finally {
+    confirmandoNombres.value = false
+  }
 }
 
 const intentoF0 = ref(false)
@@ -428,6 +466,64 @@ const archivosEntregable = computed(() => prototipos.value.filter(p => p.context
 
 function inicializarPrototipos() {
   prototipos.value = workspace.value?.prototipos ?? []
+}
+
+// ── Banco de imágenes del proyecto — compartido con el docente, no privado del equipo ──
+const imagenes         = ref([])
+const imagenPortadaId  = ref(null)
+const subiendoImagen   = ref(false)
+const errorImagen      = ref('')
+
+function inicializarImagenes() {
+  imagenes.value        = workspace.value?.proyecto?.imagenes ?? []
+  imagenPortadaId.value = workspace.value?.proyecto?.imagen_portada_id ?? null
+}
+
+async function subirImagen(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  if (file.size > 8 * 1024 * 1024) {
+    errorImagen.value = 'La imagen supera el límite de 8 MB.'
+    return
+  }
+
+  errorImagen.value = ''
+  subiendoImagen.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post(`/equipo/${token}/imagenes`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    imagenes.value.push(res.data)
+    if (!imagenPortadaId.value) imagenPortadaId.value = res.data.id
+    mostrarOk('Imagen subida correctamente')
+  } catch (e) {
+    errorImagen.value = e.response?.data?.message
+      ?? e.response?.data?.errors?.file?.[0]
+      ?? 'Error al subir la imagen.'
+  } finally {
+    subiendoImagen.value = false
+  }
+}
+
+async function eliminarImagen(img) {
+  try {
+    await api.delete(`/equipo/${token}/imagenes/${img.id}`)
+    imagenes.value = imagenes.value.filter(i => i.id !== img.id)
+    if (imagenPortadaId.value === img.id) {
+      imagenPortadaId.value = imagenes.value[0]?.id ?? null
+    }
+  } catch { /* si falla el borrado remoto, no bloqueamos al usuario */ }
+}
+
+async function marcarPortadaImagen(img) {
+  imagenPortadaId.value = img.id
+  try {
+    await api.put(`/equipo/${token}/imagenes/${img.id}/portada`)
+  } catch { /* si falla, se corrige solo al recargar el workspace */ }
 }
 
 function formatBytes(bytes) {
@@ -869,6 +965,7 @@ watch(workspace, (val) => {
     inicializarF3()
     inicializarF4()
     inicializarPrototipos()
+    inicializarImagenes()
   }
 }, { once: true })
 </script>
@@ -1053,6 +1150,13 @@ watch(workspace, (val) => {
                   </div>
                 </div>
 
+                <div class="px-3 py-2 mb-3 bg-emerald-50 rounded-xl border border-emerald-100
+                            text-[11px] text-emerald-700 flex items-start gap-1.5">
+                  <span class="shrink-0">🔒</span>
+                  <span>Creamos un alias para tu protección de datos — es lo que verán fuera del
+                  equipo. Puedes cambiarlo cuando quieras.</span>
+                </div>
+
                 <div class="space-y-2 mb-4">
                   <div v-for="(m, i) in f0.miembros" :key="i"
                        class="bg-slate-50 rounded-xl px-3 py-2.5 space-y-2">
@@ -1061,7 +1165,29 @@ watch(workspace, (val) => {
                       <span class="text-[10px] text-slate-500 capitalize bg-white border border-slate-200 px-2 py-0.5 rounded-full">
                         {{ m.rol || 'sin rol' }}
                       </span>
-                      <button @click="removeMiembro(i)" class="text-gray-300 hover:text-red-400 transition-colors text-xs font-black">✕</button>
+                      <button v-if="!nombresConfirmados" @click="removeMiembro(i)"
+                              class="text-gray-300 hover:text-red-400 transition-colors text-xs font-black">✕</button>
+                    </div>
+
+                    <!-- Alias: lo que se mostrará fuera del equipo (informes, empresas...) en vez
+                         del nombre real. Se genera solo; el alumnado puede cambiarlo si quiere. -->
+                    <div class="flex items-center gap-2 pl-0.5">
+                      <span class="text-[10px] font-black uppercase tracking-wider text-[#00A859]">Alias</span>
+                      <template v-if="m.editandoAlias">
+                        <input v-model="m.alias" type="text" maxlength="60" placeholder="Alias visible fuera del equipo"
+                               class="flex-1 min-w-0 text-xs border border-emerald-300 rounded-lg px-2 py-1 bg-white
+                                      focus:outline-none focus:border-emerald-500"
+                               @keydown.enter.prevent="m.editandoAlias = false" />
+                        <button @click="regenerarAlias(m)" type="button" title="Generar otro al azar"
+                                class="shrink-0 text-sm hover:scale-110 transition-transform">🎲</button>
+                        <button @click="m.editandoAlias = false" type="button"
+                                class="text-[10px] font-black text-emerald-600 uppercase">Listo</button>
+                      </template>
+                      <template v-else>
+                        <span class="flex-1 text-xs text-gray-600">{{ m.alias || 'se genera al guardar' }}</span>
+                        <button @click="m.editandoAlias = true" type="button"
+                                class="text-[10px] font-black text-gray-400 hover:text-emerald-600 uppercase">Editar</button>
+                      </template>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
@@ -1121,7 +1247,7 @@ watch(workspace, (val) => {
                   </p>
                 </div>
 
-                <div class="flex gap-2 flex-wrap">
+                <div v-if="!nombresConfirmados" class="flex gap-2 flex-wrap">
                   <input v-model="nuevoMiembro.nombre" type="text" placeholder="Nombre del alumno/a"
                          class="flex-1 min-w-32 text-sm border border-gray-200 rounded-xl px-3 py-2
                                 focus:outline-none focus:border-slate-400 bg-gray-50"
@@ -1136,6 +1262,30 @@ watch(workspace, (val) => {
                           class="px-4 py-2 rounded-xl bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
                     + Añadir
                   </button>
+                </div>
+
+                <!-- Confirmar nombres: paso explícito, distinto de guardar/completar la fase.
+                     A partir de aquí el nombre real queda bloqueado (el alias sigue editable). -->
+                <div v-if="nombresConfirmados"
+                     class="mt-3 px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200
+                            text-xs font-bold text-emerald-700 flex items-center gap-2">
+                  <span>✅</span>
+                  <span>Nombres confirmados — ya no se pueden añadir, quitar ni cambiar (el docente tampoco puede).</span>
+                </div>
+                <div v-else class="mt-3">
+                  <button @click="confirmarNombres" type="button"
+                          :disabled="confirmandoNombres || !f0.miembros.length"
+                          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                                 bg-emerald-600 text-white text-xs font-black uppercase tracking-wider
+                                 hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                    {{ confirmandoNombres ? 'Confirmando...' : '🔒 Confirmar nombres del equipo' }}
+                  </button>
+                  <p class="text-[10px] text-gray-400 mt-1.5 text-center">
+                    Comprobad que todos los nombres están bien escritos: después no se podrán cambiar.
+                  </p>
+                  <p v-if="errorConfirmarNombres" class="text-xs text-red-500 font-medium mt-1.5 text-center">
+                    {{ errorConfirmarNombres }}
+                  </p>
                 </div>
 
                 <label class="mt-4 flex items-center gap-3 cursor-pointer group">
@@ -2149,6 +2299,56 @@ watch(workspace, (val) => {
                   <span v-else class="text-gray-300 text-sm flex-1">—</span>
                 </div>
               </div>
+            </div>
+
+            <!-- Tarjeta banco de imágenes del proyecto -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+              <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                Imágenes del proyecto
+              </h3>
+              <p class="text-[11px] text-gray-400 mb-3">
+                También las ve el docente. La primera que subáis es la portada; podéis cambiarla.
+              </p>
+
+              <div v-if="imagenes.length" class="grid grid-cols-3 gap-1.5 mb-3">
+                <div v-for="img in imagenes" :key="img.id"
+                     class="relative group/img rounded-lg overflow-hidden border-2"
+                     :class="img.id === imagenPortadaId ? 'border-[#00A859]' : 'border-gray-100'">
+                  <img :src="img.url" :alt="img.label" class="w-full h-14 object-cover" />
+                  <span v-if="img.id === imagenPortadaId"
+                        class="absolute top-0.5 left-0.5 bg-[#00A859] text-white text-[7px] font-black
+                               uppercase tracking-wider px-1 py-0.5 rounded-full">Portada</span>
+                  <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100
+                              transition-opacity flex items-center justify-center gap-1">
+                    <button v-if="img.id !== imagenPortadaId" @click="marcarPortadaImagen(img)" type="button"
+                            title="Marcar como portada"
+                            class="w-5 h-5 rounded bg-white/90 flex items-center justify-center text-[#00A859]">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                      </svg>
+                    </button>
+                    <button @click.stop="eliminarImagen(img)" type="button"
+                            class="w-5 h-5 rounded bg-white/90 flex items-center justify-center text-red-400">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                            border-2 border-dashed border-gray-200 bg-gray-50 text-center
+                            cursor-pointer hover:border-[#00A859]/40 hover:bg-[#00A859]/5 transition-all"
+                     :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
+                <span class="text-[11px] text-gray-400 font-medium">
+                  {{ subiendoImagen ? 'Subiendo...' : '+ Añadir imagen' }}
+                </span>
+                <input type="file" accept="image/png,image/jpeg,image/gif,image/webp"
+                       class="sr-only" @change="subirImagen" :disabled="subiendoImagen"/>
+              </label>
+              <p v-if="errorImagen" class="text-[10px] text-red-500 font-medium mt-1.5">{{ errorImagen }}</p>
             </div>
 
             <!-- Tarjeta empresa / startup day -->

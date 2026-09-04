@@ -24,6 +24,7 @@ class Microproyecto extends Model
         'objetivos', 'kpis', 'validacion_empresa',
         'paso_actual', 'estado', 'token_empresa', 'empresa_validado',
         'empresa_no_valida_aun', 'enviado_a_empresa_mail', 'docente_validado',
+        'imagen_portada_id',
     ];
 
     protected $casts = [
@@ -61,6 +62,11 @@ class Microproyecto extends Model
     public function recursos()
     {
         return $this->hasMany(MicroproyectoRecurso::class)->orderBy('created_at');
+    }
+
+    public function imagenPortada()
+    {
+        return $this->belongsTo(MicroproyectoRecurso::class, 'imagen_portada_id');
     }
 
     public function microreto()

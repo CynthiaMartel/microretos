@@ -49,6 +49,7 @@ Route::middleware('throttle:workspace-lectura')->group(function () {
         ->whereNumber('fase');
     Route::post('/equipo/{token}/fase/{fase}/completar',   [EquipoPublicoController::class, 'completarFase'])
         ->whereNumber('fase');
+    Route::post('/equipo/{token}/fase/0/confirmar-nombres', [EquipoPublicoController::class, 'confirmarNombres']);
     Route::post('/equipo/{token}/tareas',                  [EquipoPublicoController::class, 'storeTarea']);
     Route::post('/equipo/{token}/fase/2/restablecer-tareas-genericas', [EquipoPublicoController::class, 'restablecerTareasGenericas']);
     Route::put('/equipo/{token}/tareas/{tarea}',           [EquipoPublicoController::class, 'updateTarea'])
@@ -61,6 +62,16 @@ Route::middleware('throttle:workspace-lectura')->group(function () {
 Route::middleware('throttle:workspace-prototipos')->group(function () {
     Route::post('/equipo/{token}/prototipos',       [EquipoPublicoController::class, 'storePrototipo']);
     Route::delete('/equipo/{token}/prototipos/{id}', [EquipoPublicoController::class, 'destroyPrototipo'])
+        ->whereNumber('id');
+});
+
+// Banco de imágenes del proyecto — el alumnado sube al mismo banco que el docente,
+// cupo propio por equipo (no comparte cuota con prototipos ni con otros endpoints públicos)
+Route::middleware('throttle:workspace-imagenes')->group(function () {
+    Route::post('/equipo/{token}/imagenes',                [EquipoPublicoController::class, 'storeImagen']);
+    Route::delete('/equipo/{token}/imagenes/{id}',          [EquipoPublicoController::class, 'destroyImagen'])
+        ->whereNumber('id');
+    Route::put('/equipo/{token}/imagenes/{id}/portada',     [EquipoPublicoController::class, 'marcarPortadaImagen'])
         ->whereNumber('id');
 });
 
@@ -126,9 +137,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('superadmin')->group(function () {
 
         // Centros educativos
-        Route::post('/centros',        [DatosFPController::class, 'guardarCentro']);
-        Route::put('/centros/{id}',    [DatosFPController::class, 'actualizarCentro']);
-        Route::delete('/centros/{id}', [DatosFPController::class, 'eliminarCentro']);
+        Route::post('/centros',                      [DatosFPController::class, 'guardarCentro']);
+        Route::put('/centros/{id}',                  [DatosFPController::class, 'actualizarCentro']);
+        Route::delete('/centros/{id}',                [DatosFPController::class, 'eliminarCentro']);
+        Route::post('/centros/{id}/empresas/asociar', [DatosFPController::class, 'asociarEmpresas']);
+        Route::post('/centros/imagen',                [UploadController::class, 'imagenCentro']);
 
         // Familias profesionales
         Route::post('/familias',       [DatosFPController::class, 'storeFamilia']);
@@ -209,9 +222,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Subida y gestión de recursos (Cloudinary)
         Route::middleware('throttle:30,1')->group(function () {
-            Route::get('/upload/recursos',   [UploadController::class, 'listar']);
-            Route::post('/upload/recurso',   [UploadController::class, 'recurso']);
-            Route::delete('/upload/recurso', [UploadController::class, 'destroy']);
+            Route::get('/upload/recursos',           [UploadController::class, 'listar']);
+            Route::post('/upload/recurso',           [UploadController::class, 'recurso']);
+            Route::delete('/upload/recurso',         [UploadController::class, 'destroy']);
+            Route::put('/upload/recurso/portada',    [UploadController::class, 'marcarPortada']);
         });
 
         // Módulo Empresas — contacto y validación

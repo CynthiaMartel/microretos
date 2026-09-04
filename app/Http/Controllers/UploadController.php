@@ -32,7 +32,7 @@ class UploadController extends Controller
                 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,png,jpg,jpeg,gif,webp,mp4,mov,avi,mkv,webm,zip',
             ],
             'microproyecto_uuid' => 'required|string|max:100',
-            'tipo'               => 'required|in:video,documento',
+            'tipo'               => 'required|in:video,documento,imagen',
             'label'              => 'nullable|string|max:200',
         ], [
             'file.mimes' => 'Tipo no permitido. Sube PDF, documentos Office, imágenes, vídeos o ZIP.',
@@ -104,6 +104,11 @@ class UploadController extends Controller
             'size'             => $data['bytes'] ?? null,
         ]);
 
+        // Primera imagen del proyecto -> portada automática (editable después).
+        if ($recurso->tipo === 'imagen' && $proyecto->imagen_portada_id === null) {
+            $proyecto->update(['imagen_portada_id' => $recurso->id]);
+        }
+
         return response()->json([
             'id'            => $recurso->id,
             'url'           => $recurso->url,
@@ -114,6 +119,56 @@ class UploadController extends Controller
             'size'          => $recurso->size,
             'mime'          => $recurso->mime,
         ], 201);
+    }
+
+    /**
+     * POST /centros/imagen
+     * Sube una imagen de portada de centro educativo a Cloudinary y devuelve su URL.
+     * No crea ningún registro en BD — la URL se guarda en centro_educativo.img al
+     * crear/editar el centro (ver DatosFPController::guardarCentro/actualizarCentro).
+     */
+    public function imagenCentro(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:5000', 'mimes:png,jpg,jpeg,gif,webp'],
+        ], [
+            'file.mimes' => 'Solo se admiten imágenes (PNG, JPG, GIF o WEBP).',
+            'file.max'   => 'La imagen supera el límite de 5 MB.',
+        ]);
+
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+        $folder    = config('services.cloudinary.folder', 'dualab/recursos');
+
+        if (!$cloudName || !$apiKey || !$apiSecret) {
+            return response()->json([
+                'message' => 'Cloudinary no está configurado. Añade CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET al .env.',
+            ], 503);
+        }
+
+        $file         = $request->file('file');
+        $timestamp    = time();
+        $paramsToSign = "folder={$folder}&timestamp={$timestamp}";
+        $signature    = hash('sha1', $paramsToSign . $apiSecret);
+
+        $response = Http::timeout(60)
+            ->attach('file', fopen($file->getRealPath(), 'r'), $file->getClientOriginalName())
+            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'signature' => $signature,
+                'folder'    => $folder,
+            ]);
+
+        if ($response->failed()) {
+            return response()->json([
+                'message' => 'Error al subir la imagen a Cloudinary.',
+                'detail'  => $response->json('error.message', 'Respuesta inesperada'),
+            ], 502);
+        }
+
+        return response()->json(['url' => $response->json('secure_url')]);
     }
 
     /**
@@ -130,7 +185,7 @@ class UploadController extends Controller
         $proyecto = Microproyecto::where('uuid', $uuid)->first();
 
         if (!$proyecto || !$proyecto->esVisiblePara($request->user())) {
-            return response()->json(['videos' => [], 'documentos' => []]);
+            return response()->json(['videos' => [], 'documentos' => [], 'imagenes' => [], 'imagen_portada_id' => null]);
         }
 
         $recursos = $proyecto->recursos;
@@ -145,9 +200,39 @@ class UploadController extends Controller
         ];
 
         return response()->json([
-            'videos'     => $recursos->where('tipo', 'video')->map($formato)->values(),
-            'documentos' => $recursos->where('tipo', 'documento')->map($formato)->values(),
+            'videos'            => $recursos->where('tipo', 'video')->map($formato)->values(),
+            'documentos'        => $recursos->where('tipo', 'documento')->map($formato)->values(),
+            'imagenes'          => $recursos->where('tipo', 'imagen')->map($formato)->values(),
+            'imagen_portada_id' => $proyecto->imagen_portada_id,
         ]);
+    }
+
+    /**
+     * Marca una imagen ya subida como portada del proyecto (la que se ve en las
+     * tarjetas). Por defecto se asigna la primera imagen subida, pero se puede
+     * cambiar en cualquier momento a otra de la galería.
+     */
+    public function marcarPortada(Request $request): JsonResponse
+    {
+        $request->validate([
+            'microproyecto_uuid' => 'required|string|max:100',
+            'recurso_id'         => 'required|integer',
+        ]);
+
+        $proyecto = Microproyecto::where('uuid', $request->input('microproyecto_uuid'))->firstOrFail();
+
+        if (!$proyecto->esEditablePara($request->user())) {
+            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+        }
+
+        $recurso = MicroproyectoRecurso::where('id', $request->input('recurso_id'))
+            ->where('microproyecto_id', $proyecto->id)
+            ->where('tipo', 'imagen')
+            ->firstOrFail();
+
+        $proyecto->update(['imagen_portada_id' => $recurso->id]);
+
+        return response()->json(['ok' => true, 'imagen_portada_id' => $recurso->id]);
     }
 
     /**

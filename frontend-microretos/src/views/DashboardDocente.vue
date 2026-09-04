@@ -504,6 +504,11 @@ function cerrarEncuentroModal() {
 }
 
 function alumnadosDeEquipoEn(encuentro, n) {
+  const equipo = (encuentro?.equipos || []).find(e => e.numero_equipo === n)
+  if (equipo) {
+    return equipo.miembros.map(m => m.alias ? `${m.nombre} (${m.alias})` : m.nombre)
+  }
+  // Encuentros sin equipos cargados todavía (o antiguos): snapshot plano, sin alias.
   return (encuentro?.alumnados || [])
     .filter(a => a.equipo_num === n)
     .map(a => a.nombre)
@@ -1050,6 +1055,13 @@ function formatFecha(isoDate) {
                       {{ form.alumnados.length }}/{{ limiteAlumnados }}
                     </span>
                   </label>
+
+                  <div class="px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100
+                              text-[11px] text-emerald-700 flex items-start gap-1.5">
+                    <span class="shrink-0">🔒</span>
+                    <span>Creamos un alias automático para cada alumno/a (protección de datos) —
+                    el nombre real que escribas aquí no se muestra fuera del equipo ni del panel docente.</span>
+                  </div>
 
                   <!-- Formulario añadir alumno/a -->
                   <div class="flex flex-wrap gap-2">

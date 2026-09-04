@@ -10,6 +10,7 @@ use App\Models\ResultadoAprendizaje;
 use App\Models\Empresa;
 use App\Models\Familia;
 use App\Models\CentroEducativo;
+use App\Http\Requests\AsociarEmpresasCentroRequest;
 
 class DatosFPController extends Controller
 {
@@ -259,7 +260,7 @@ class DatosFPController extends Controller
 
         return response()->json([
             'message' => 'Centro actualizado correctamente',
-            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre],
+            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'img' => $centro->img],
         ]);
     }
 
@@ -288,8 +289,30 @@ class DatosFPController extends Controller
 
         return response()->json([
             'message' => 'Centro educativo creado correctamente',
-            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre],
+            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'img' => $centro->img],
         ], 201);
+    }
+
+    /**
+     * POST /centros/{id}/empresas/asociar
+     * Asocia empresas ya existentes (sin centro o de otro centro) a este centro,
+     * reasignando su centro_id. No crea empresas nuevas.
+     */
+    public function asociarEmpresas(AsociarEmpresasCentroRequest $request, $id)
+    {
+        $centro = CentroEducativo::find($id);
+
+        if (!$centro) {
+            return response()->json(['error' => 'Centro no encontrado'], 404);
+        }
+
+        Empresa::whereIn('id', $request->validated('empresa_ids'))
+            ->update([
+                'centro_id'        => $centro->id,
+                'centro_educativo' => $centro->nombre, // legacy
+            ]);
+
+        return response()->json(['message' => 'Empresas asociadas correctamente']);
     }
 
     // ==========================================

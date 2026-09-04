@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   numEquipos: { type: Number, default: 0 },
-  alumnadosDelEquipo: { type: Function, required: true }, // (n) => string[]
+  alumnadosDelEquipo: { type: Function, required: true }, // (n) => { nombre, alias }[]
   cargandoRaCe: { type: Boolean, default: false },
   raCeBlocks: { type: Array, default: () => [] },
   modulosExpandidos: { type: Set, default: () => new Set() },
@@ -26,10 +26,11 @@ defineEmits(['toggle-modulo'])
           </p>
         </div>
         <div v-if="alumnadosDelEquipo(n).length" class="flex flex-wrap gap-1">
-          <span v-for="nombre in alumnadosDelEquipo(n)" :key="nombre"
+          <span v-for="a in alumnadosDelEquipo(n)" :key="a.nombre"
                 class="text-[11px] font-semibold text-[#1F2937] bg-white border border-gray-200
                        rounded-full px-2 py-0.5">
-            {{ nombre }}
+            {{ a.nombre }}
+            <span v-if="a.alias" class="font-normal text-gray-400"> · {{ a.alias }}</span>
           </span>
         </div>
         <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>

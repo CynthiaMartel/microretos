@@ -17,6 +17,7 @@ import EmpresasView from '../views/EmpresasView.vue'
 import PapeleraBaseDatos from '../views/PapeleraBaseDatos.vue'
 import GestionUsuarios from '../views/GestionUsuarios.vue'
 import InicioDocente from '../views/InicioDocente.vue'
+import NoticiasListado from '../views/NoticiasListado.vue'
 import MiUsuario from '../views/MiUsuario.vue'
 import MisGruposDetalle from '../views/MisGruposDetalle.vue'
 import PantallaAcceso from '../views/PantallaAcceso.vue'
@@ -204,6 +205,12 @@ const router = createRouter({
     },
     // Compatibilidad: enlaces antiguos con el nombre "inicio-docente"
     { path: '/inicio-docente', redirect: to => ({ path: '/panel-docente', query: to.query }) },
+    {
+      path: '/noticias/:tipo',
+      name: 'noticias-listado',
+      component: NoticiasListado,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
     {
       path: '/mi-usuario',
       name: 'mi-usuario',

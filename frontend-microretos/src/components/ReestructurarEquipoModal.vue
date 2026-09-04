@@ -19,7 +19,21 @@ watch(() => props.visible, (v) => {
   if (v && props.encuentro) {
     numEquipos.value  = props.encuentro.num_equipos || 3
     // Copia propia — no se toca el objeto del padre hasta guardar con éxito.
-    alumnados.value   = (props.encuentro.alumnados || []).map(a => ({ ...a }))
+    // Se parte de encuentro.equipos (tiene el id real de equipo_miembros, necesario
+    // para poder renombrar sin que el backend lo trate como borrar+crear) y, si un
+    // encuentro antiguo no lo trae, se cae al snapshot plano `alumnados` (sin id).
+    const equipos = props.encuentro.equipos
+    if (equipos?.length) {
+      alumnados.value = equipos.flatMap(e =>
+        e.miembros.map(m => ({
+          id: m.id, nombre: m.nombre, alias: m.alias, equipo_num: e.numero_equipo, rol: m.rol,
+          // El equipo ya pulsó "Confirmar nombres" en su F0: el nombre real ya no se puede tocar aquí.
+          bloqueado: !!e.nombres_confirmados,
+        }))
+      )
+    } else {
+      alumnados.value = (props.encuentro.alumnados || []).map(a => ({ ...a, bloqueado: false }))
+    }
     nuevoNombre.value = ''
     nuevoEquipo.value = 1
     error.value       = ''
@@ -84,7 +98,7 @@ async function guardar() {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="req-title">Reestructurar equipo</h2>
+                <h2 class="req-title">Editar equipo</h2>
                 <p class="req-sub">
                   Cambia el reparto de alumnado sin perder el progreso ya hecho — se actualiza,
                   no se borra y recrea.
@@ -96,6 +110,12 @@ async function guardar() {
               Si algún equipo tiene progreso real (fases completadas, tareas, reflexiones o
               prototipos) y reduces el número de equipos hasta eliminarlo, se bloqueará el
               guardado explicando cuál.
+            </div>
+
+            <div class="mt-2 px-4 py-2.5 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-700 flex items-start gap-2">
+              <span class="shrink-0">🔒</span>
+              <span>Creamos un alias automático para cada alumno/a (protección de datos) — el
+              nombre real que escribas aquí no se muestra fuera del equipo ni del panel docente.</span>
             </div>
 
             <!-- Número de equipos -->
@@ -143,7 +163,15 @@ async function guardar() {
                   </div>
                   <div v-if="alumnadosDeEquipo(n).length" class="space-y-1">
                     <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="flex items-center gap-1 text-xs">
-                      <span class="flex-1 truncate font-medium text-[#1F2937]">{{ a.nombre }}</span>
+                      <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
+                            class="shrink-0 text-gray-300">🔒</span>
+                      <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
+                             :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
+                             class="flex-1 min-w-0 truncate font-medium text-[#1F2937] bg-transparent
+                                    border border-transparent hover:border-gray-200 focus:border-violet-300
+                                    focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
+                                    disabled:text-gray-400 disabled:hover:border-transparent disabled:cursor-not-allowed" />
+                      <span v-if="a.alias" class="shrink-0 text-[10px] text-gray-400 truncate max-w-[80px]">{{ a.alias }}</span>
                       <button type="button" @click="removeAlumno(a._i)"
                               class="text-gray-300 hover:text-red-400 font-black transition-colors
                                      text-sm leading-none flex-shrink-0">×</button>
@@ -160,7 +188,15 @@ async function guardar() {
                 </p>
                 <div class="space-y-1">
                   <div v-for="a in alumnadosSinEquipo" :key="a._i" class="flex items-center gap-1 text-xs">
-                    <span class="flex-1 truncate font-medium text-amber-700">{{ a.nombre }}</span>
+                    <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
+                          class="shrink-0 text-amber-300">🔒</span>
+                    <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
+                           :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
+                           class="flex-1 min-w-0 truncate font-medium text-amber-700 bg-transparent
+                                  border border-transparent hover:border-amber-200 focus:border-amber-400
+                                  focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
+                                  disabled:text-amber-400/60 disabled:hover:border-transparent disabled:cursor-not-allowed" />
+                    <span v-if="a.alias" class="shrink-0 text-[10px] text-amber-400/80 truncate max-w-[80px]">{{ a.alias }}</span>
                     <button type="button" @click="removeAlumno(a._i)"
                             class="text-amber-300 hover:text-red-400 font-black transition-colors
                                    text-sm leading-none flex-shrink-0">×</button>

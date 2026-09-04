@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import api from '../api.js'
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
+import { noticiasDualab, novedadesPlataforma } from '../data/noticiasMock.js'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -82,10 +83,6 @@ function formatFecha(isoDate) {
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-const totalAlumnos = computed(() =>
-  encuentros.value.reduce((sum, s) => sum + (s.num_alumnos || 0), 0)
-)
-
 const primerNombre = computed(() => {
   const n = authStore.userName || ''
   return n.split(' ')[0] || n
@@ -93,6 +90,15 @@ const primerNombre = computed(() => {
 
 const userCentroNombre = computed(() => authStore.userCentroNombre || '')
 const userCentroImg    = computed(() => authStore.userCentroImg || '')
+
+// Preview de las noticias — el listado completo vive en NoticiasListado.vue,
+// ambas vistas comparten la misma fuente de datos (ver src/data/noticiasMock.js).
+const previewNoticiasDualab = noticiasDualab.slice(0, 3)
+const previewNovedadesPlataforma = novedadesPlataforma.slice(0, 3)
+
+function abrirNoticias(tipo) {
+  router.push({ name: 'noticias-listado', params: { tipo } })
+}
 
 // ── Carga ──────────────────────────────────────────────────────────────────────
 onMounted(() => {
@@ -452,15 +458,15 @@ function removeNota(id) {
                     group-hover:text-blue-500 transition-colors">Ver todos →</p>
         </button>
 
-        <!-- Alumnado total de encuentros -->
+        <!-- Total de encuentros -->
         <button @click="irA('/encuentros')"
                 class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
                        hover:border-purple-300/50 hover:shadow-sm transition-all duration-200">
           <div v-if="!cargandoEncuentros" class="text-2xl font-black text-purple-500 tabular-nums leading-none mb-1">
-            {{ totalAlumnos }}
+            {{ encuentros.length }}
           </div>
           <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Alumnado</p>
+          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Encuentros</p>
           <p class="text-[9px] font-black text-purple-400/60 uppercase tracking-widest mt-1
                     group-hover:text-purple-500 transition-colors">Ver encuentros →</p>
         </button>
@@ -1416,113 +1422,89 @@ function removeNota(id) {
         </div>
       </section>
 
-      <!-- ── Últimas noticias ──────────────────────────────────────────────────── -->
-      <div class="mt-4 transition-all duration-700 delay-[400ms]"
+      <!-- ── Noticias ──────────────────────────────────────────────────────────── -->
+      <div class="mt-4 space-y-5 transition-all duration-700 delay-[400ms]"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
 
-        <!-- Últimas noticias — Pinterest -->
-        <div>
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 shrink-0">
-              Últimas noticias
+        <!-- Novedades plataforma DuaLab — Pinterest -->
+        <div class="group cursor-pointer rounded-2xl p-3 -m-1 border border-indigo-100
+                    bg-indigo-50/40 hover:bg-indigo-50/70 transition-colors duration-200"
+             role="button" tabindex="0"
+             @click="abrirNoticias('plataforma')"
+             @keydown.enter="abrirNoticias('plataforma')"
+             @keydown.space.prevent="abrirNoticias('plataforma')">
+          <div class="flex items-center gap-3 mb-3 w-full text-left">
+            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#00A859] to-[#99CC33] shrink-0"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest shrink-0
+                         text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">
+              Novedades plataforma DuaLab
             </span>
-            <div class="flex-1 h-px bg-gray-200"></div>
+            <div class="flex-1 h-px bg-[#00A859]/20 group-hover:bg-[#00A859]/40 transition-colors duration-200"></div>
+            <svg class="w-3.5 h-3.5 text-[#00A859]/40 shrink-0 group-hover:text-[#00A859]
+                        group-hover:translate-x-0.5 transition-all duration-200"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
           </div>
           <div class="columns-2 gap-3 space-y-3">
-
-            <!-- Noticia 1: Startup Day -->
-            <div class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50 cursor-default">
-              <div class="relative h-40 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=600&q=80"
-                     alt="Startup Day presentación" class="w-full h-full object-cover" loading="lazy" />
+            <div v-for="novedad in previewNovedadesPlataforma" :key="novedad.id"
+                 class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50">
+              <div class="relative overflow-hidden" :class="novedad.alturaClase">
+                <img :src="novedad.imagen" :alt="novedad.alt" class="w-full h-full object-cover" loading="lazy" />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
                             flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">Convocatoria</span>
+                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">{{ novedad.categoria }}</span>
                   <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    Startup Day 2025-2026 · Inscripciones abiertas
+                    {{ novedad.titulo }}
                   </p>
                 </div>
               </div>
               <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">Plazo hasta el 15 de julio</p>
+                <p class="text-[10px] text-gray-400 font-medium">{{ novedad.subtitulo }}</p>
               </div>
             </div>
-
-            <!-- Noticia 2: Taller IA -->
-            <div class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50 cursor-default">
-              <div class="relative h-24 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=600&q=80"
-                     alt="Taller tecnología educativa" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">Formación</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    Taller de retos con IA · 10 de julio
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">Plazas limitadas</p>
-              </div>
-            </div>
-
-            <!-- Noticia 3: Guía microproyectos -->
-            <div class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50 cursor-default">
-              <div class="relative h-32 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=600&q=80"
-                     alt="Guía microproyectos" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">Recurso</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    Nueva guía de microproyectos disponible
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">Biblioteca de recursos</p>
-              </div>
-            </div>
-
-            <!-- Noticia 4: Actualización plataforma -->
-            <div class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50 cursor-default">
-              <div class="relative h-48 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=600&q=80"
-                     alt="Plataforma tecnológica" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">DuaLab</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    Actualización de la plataforma · Nuevas funciones
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">Hace 2 semanas</p>
-              </div>
-            </div>
-
-            <!-- Noticia 5: Proyectos destacados -->
-            <div class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50 cursor-default">
-              <div class="relative h-28 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80"
-                     alt="Trabajo en equipo" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">Comunidad</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    Proyectos destacados del trimestre
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">Ver selección →</p>
-              </div>
-            </div>
-
           </div>
         </div>
 
+        <!-- Noticias DuaLab — Pinterest -->
+        <div class="group cursor-pointer rounded-2xl p-3 -m-1 border border-orange-100
+                    bg-orange-50/40 hover:bg-orange-50/70 transition-colors duration-200"
+             role="button" tabindex="0"
+             @click="abrirNoticias('dualab')"
+             @keydown.enter="abrirNoticias('dualab')"
+             @keydown.space.prevent="abrirNoticias('dualab')">
+          <div class="flex items-center gap-3 mb-3 w-full text-left">
+            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#00A859] to-[#99CC33] shrink-0"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest shrink-0
+                         text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">
+              Noticias DuaLab
+            </span>
+            <div class="flex-1 h-px bg-[#00A859]/20 group-hover:bg-[#00A859]/40 transition-colors duration-200"></div>
+            <svg class="w-3.5 h-3.5 text-[#00A859]/40 shrink-0 group-hover:text-[#00A859]
+                        group-hover:translate-x-0.5 transition-all duration-200"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+          <div class="columns-2 gap-3 space-y-3">
+            <div v-for="noticia in previewNoticiasDualab" :key="noticia.id"
+                 class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50">
+              <div class="relative overflow-hidden" :class="noticia.alturaClase">
+                <img :src="noticia.imagen" :alt="noticia.alt" class="w-full h-full object-cover" loading="lazy" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
+                            flex flex-col justify-end p-3">
+                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">{{ noticia.categoria }}</span>
+                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
+                    {{ noticia.titulo }}
+                  </p>
+                </div>
+              </div>
+              <div class="bg-white px-3 py-2">
+                <p class="text-[10px] text-gray-400 font-medium">{{ noticia.subtitulo }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
 

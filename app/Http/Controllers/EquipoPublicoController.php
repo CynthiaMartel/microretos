@@ -11,6 +11,7 @@ use App\Http\Requests\StoreEquipoTareaRequest;
 use App\Http\Requests\UpdateEquipoTareaRequest;
 use App\Http\Requests\StoreEquipoReflexionRequest;
 use App\Http\Requests\StoreEquipoPrototipoRequest;
+use App\Http\Requests\StoreImagenProyectoRequest;
 use App\Http\Requests\SugerirHallazgoRequest;
 use App\Http\Requests\VerificarCodigoIaRequest;
 use App\Http\Resources\MicroretoFichaResource;
@@ -21,7 +22,9 @@ use App\Models\EquipoPrototipo;
 use App\Models\EquipoTarea;
 use App\Models\EquipoReflexion;
 use App\Models\Encuentro;
+use App\Models\MicroproyectoRecurso;
 use App\Services\MicroretoFichaService;
+use App\Support\AliasGenerator;
 
 class EquipoPublicoController extends Controller
 {
@@ -51,7 +54,7 @@ class EquipoPublicoController extends Controller
         }
 
         $proyecto = $encuentro->microproyecto()
-            ->whereIn('estado', ['propuesta', 'validado'])
+            ->whereIn('estado', ['propuesta', 'validado', 'completado'])
             ->first();
 
         if (!$proyecto) {
@@ -94,7 +97,7 @@ class EquipoPublicoController extends Controller
             return response()->json(['error' => 'Código no válido. Comprueba que lo has escrito bien.'], 404);
         }
 
-        if (!in_array($equipo->microproyecto->estado, ['propuesta', 'validado'])) {
+        if (!in_array($equipo->microproyecto->estado, ['propuesta', 'validado', 'completado'])) {
             return response()->json(['error' => 'El proyecto aún no está activo. Espera a que el docente lo publique.'], 403);
         }
 
@@ -116,6 +119,7 @@ class EquipoPublicoController extends Controller
     {
         $equipo = Equipo::with([
             'microproyecto.microreto',
+            'microproyecto.recursos',
             'miembros',
             'fases',
             'tareas',
@@ -127,7 +131,7 @@ class EquipoPublicoController extends Controller
             return response()->json(['error' => 'Enlace no válido.'], 404);
         }
 
-        if (!in_array($equipo->microproyecto->estado, ['propuesta', 'validado'])) {
+        if (!in_array($equipo->microproyecto->estado, ['propuesta', 'validado', 'completado'])) {
             return response()->json(['error' => 'El proyecto no está activo.'], 403);
         }
 
@@ -219,6 +223,26 @@ class EquipoPublicoController extends Controller
         }
 
         return response()->json(['ok' => true, 'fase_actual' => $equipo->fresh()->fase_actual]);
+    }
+
+    /**
+     * POST /api/equipo/{token}/fase/0/confirmar-nombres
+     * Paso explícito de F0, distinto de guardar/completar la fase: a partir de aquí el
+     * nombre real de cada miembro queda bloqueado (ni el equipo ni el docente pueden
+     * cambiarlo desde "Editar equipo" — ver sincronizarMiembros() aquí y
+     * EncuentroController::sincronizarMiembrosPorNombre()).
+     */
+    public function confirmarNombres($token): JsonResponse
+    {
+        $equipo = Equipo::where('token', $token)->firstOrFail();
+
+        if ($equipo->miembros()->count() === 0) {
+            return response()->json(['error' => 'Añade al menos un integrante antes de confirmar los nombres.'], 422);
+        }
+
+        $equipo->update(['nombres_confirmados' => true]);
+
+        return response()->json(['ok' => true, 'nombres_confirmados' => true]);
     }
 
     // Secuencia genérica de tareas — proceso de trabajo (buscar, organizar, idear, elegir,
@@ -662,6 +686,122 @@ class EquipoPublicoController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    // ── Banco de imágenes del proyecto (compartido con el docente, no privado del equipo) ──
+
+    /**
+     * POST /api/equipo/{token}/imagenes
+     * El alumnado sube imágenes al mismo banco que gestiona el docente desde el panel
+     * (microproyecto_recursos, tipo 'imagen') — no es una galería privada del equipo.
+     */
+    public function storeImagen(StoreImagenProyectoRequest $request, $token): JsonResponse
+    {
+        $equipo   = Equipo::with('microproyecto')->where('token', $token)->firstOrFail();
+        $proyecto = $equipo->microproyecto;
+
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+        $folder    = config('services.cloudinary.folder', 'dualab/recursos');
+
+        if (!$cloudName || !$apiKey || !$apiSecret) {
+            return response()->json(['error' => 'Cloudinary no configurado.'], 503);
+        }
+
+        $file = $request->file('file');
+        $timestamp    = time();
+        $paramsToSign = "folder={$folder}&timestamp={$timestamp}";
+        $signature    = hash('sha1', $paramsToSign . $apiSecret);
+
+        $response = Http::attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+            ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'signature' => $signature,
+                'folder'    => $folder,
+            ]);
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Error al subir la imagen a Cloudinary.'], 502);
+        }
+
+        $data = $response->json();
+
+        $recurso = MicroproyectoRecurso::create([
+            'microproyecto_id' => $proyecto->id,
+            'tipo'             => 'imagen',
+            'label'            => $request->input('label') ?: null,
+            'filename'         => $file->getClientOriginalName(),
+            'url'              => $data['secure_url'],
+            'public_id'        => $data['public_id'],
+            'resource_type'    => 'image',
+            'mime'             => $file->getMimeType(),
+            'size'             => $data['bytes'] ?? null,
+        ]);
+
+        if ($proyecto->imagen_portada_id === null) {
+            $proyecto->update(['imagen_portada_id' => $recurso->id]);
+        }
+
+        return response()->json([
+            'id'        => $recurso->id,
+            'url'       => $recurso->url,
+            'public_id' => $recurso->public_id,
+            'filename'  => $recurso->filename,
+            'label'     => $recurso->label ?? '',
+            'size'      => $recurso->size,
+        ], 201);
+    }
+
+    /**
+     * DELETE /api/equipo/{token}/imagenes/{id}
+     */
+    public function destroyImagen($token, int $id): JsonResponse
+    {
+        $equipo  = Equipo::with('microproyecto')->where('token', $token)->firstOrFail();
+        $recurso = MicroproyectoRecurso::where('id', $id)
+            ->where('microproyecto_id', $equipo->microproyecto_id)
+            ->where('tipo', 'imagen')
+            ->firstOrFail();
+
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey    = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+
+        $publicId = $recurso->public_id;
+        $recurso->delete(); // portada se limpia sola (FK nullOnDelete) si era la elegida
+
+        if ($cloudName && $apiKey && $apiSecret) {
+            $timestamp    = time();
+            $paramsToSign = "public_id={$publicId}&timestamp={$timestamp}";
+            $signature    = hash('sha1', $paramsToSign . $apiSecret);
+
+            Http::post("https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy", [
+                'public_id' => $publicId,
+                'api_key'   => $apiKey,
+                'timestamp' => $timestamp,
+                'signature' => $signature,
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * PUT /api/equipo/{token}/imagenes/{id}/portada
+     */
+    public function marcarPortadaImagen($token, int $id): JsonResponse
+    {
+        $equipo   = Equipo::with('microproyecto')->where('token', $token)->firstOrFail();
+        $recurso  = MicroproyectoRecurso::where('id', $id)
+            ->where('microproyecto_id', $equipo->microproyecto_id)
+            ->where('tipo', 'imagen')
+            ->firstOrFail();
+
+        $equipo->microproyecto->update(['imagen_portada_id' => $recurso->id]);
+
+        return response()->json(['ok' => true, 'imagen_portada_id' => $recurso->id]);
+    }
+
     // ── Helpers privados ─────────────────────────────────────────────────────
 
     private function formatWorkspace(Equipo $equipo): array
@@ -675,10 +815,12 @@ class EquipoPublicoController extends Controller
                 'nombre'        => $equipo->nombre,
                 'codigo_acceso' => $equipo->codigo_acceso,
                 'fase_actual'   => $equipo->fase_actual,
+                'nombres_confirmados' => $equipo->nombres_confirmados,
                 'ia_desbloqueada' => $equipo->ia_desbloqueada,
                 'miembros'      => $equipo->miembros->map(fn($m) => [
                     'id'         => $m->id,
                     'nombre'     => $m->nombre,
+                    'alias'      => $m->alias,
                     'rol'        => $m->rol,
                     'fortalezas'    => $m->fortalezas,
                     'puntos_mejora' => $m->puntos_mejora,
@@ -693,6 +835,12 @@ class EquipoPublicoController extends Controller
                 'objetivos'     => $mp->objetivos['lista'] ?? [],
                 'kpis'          => $mp->kpis['lista'] ?? [],
                 'diseno_microproyecto' => $mp->diseno_microproyecto,
+                'imagenes'          => $mp->recursos->where('tipo', 'imagen')->map(fn($r) => [
+                    'id'    => $r->id,
+                    'url'   => $r->url,
+                    'label' => $r->label ?? '',
+                ])->values(),
+                'imagen_portada_id' => $mp->imagen_portada_id,
             ],
             // Diagnóstico de empresa del microreto origen (solo lectura en F0)
             'diagnostico' => $mr ? [
@@ -773,24 +921,37 @@ class EquipoPublicoController extends Controller
     // Upsert, no destructivo: F0 ya se precarga con los miembros que el docente dio de alta
     // al crear el encuentro (ver EncuentroController::crearCodigo()). Un delete()+create()
     // completo aquí borraría ese reparto en cuanto el equipo guardara F0 la primera vez.
+    //
+    // Nombre bloqueado una vez el equipo pulsa "Confirmar nombres" en su F0 — a partir de
+    // ahí ni el propio equipo ni el docente (ver EncuentroController) pueden cambiarlo.
     private function sincronizarMiembros(Equipo $equipo, array $miembros): void
     {
+        $nombreBloqueado = $equipo->nombres_confirmados;
         $existentes  = $equipo->miembros()->pluck('id')->all();
         $conservados = [];
 
-        foreach ($miembros as $m) {
+        foreach ($miembros as $posicion => $m) {
             if (empty($m['nombre'])) {
                 continue;
             }
 
+            $alias = trim((string) ($m['alias'] ?? ''));
+            if ($alias === '') {
+                $alias = AliasGenerator::generar($m['nombre'], $posicion);
+            }
+
             $datos = [
                 'nombre'        => $m['nombre'],
+                'alias'         => mb_substr($alias, 0, 255),
                 'rol'           => $m['rol'] ?? null,
                 'fortalezas'    => $m['fortalezas'] ?? [],
                 'puntos_mejora' => $m['puntos_mejora'] ?? [],
             ];
 
             if (!empty($m['id']) && in_array($m['id'], $existentes, true)) {
+                if ($nombreBloqueado) {
+                    unset($datos['nombre']);
+                }
                 $equipo->miembros()->whereKey($m['id'])->update($datos);
                 $conservados[] = $m['id'];
             } else {

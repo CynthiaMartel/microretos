@@ -11,7 +11,7 @@ class Equipo extends Model
 {
     protected $fillable = [
         'microproyecto_id', 'encuentro_id', 'nombre', 'numero_equipo', 'token', 'codigo_acceso', 'fase_actual',
-        'ia_desbloqueada', 'diagnostico_final', 'diagnostico_generado_en',
+        'ia_desbloqueada', 'diagnostico_final', 'diagnostico_generado_en', 'nombres_confirmados',
     ];
 
     protected $casts = [
@@ -20,6 +20,7 @@ class Equipo extends Model
         'ia_desbloqueada'         => 'boolean',
         'diagnostico_final'       => 'array',
         'diagnostico_generado_en' => 'datetime',
+        'nombres_confirmados'     => 'boolean',
     ];
 
     protected static function booted(): void

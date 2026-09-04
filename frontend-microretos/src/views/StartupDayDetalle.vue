@@ -112,6 +112,8 @@ function getEstadoBadge(p) {
     return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
   if (p.estado === 'archivado')
     return { label: 'Archivado', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
+  if (p.estado === 'completado')
+    return { label: 'Completado', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
   if (p.estado === 'validado') {
     if (p.empresa_validado && p.docente_validado)
       return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
@@ -134,7 +136,7 @@ function getEstadoKey(p) {
   if (!p) return 'en_edicion';
   if (p.estado === 'en_edicion') return 'en_edicion';
   if (p.estado === 'archivado')  return 'archivado';
-  return (p.estado === 'validado' || p.empresa_validado) ? 'proyecto' : 'propuesta';
+  return (p.estado === 'validado' || p.estado === 'completado' || p.empresa_validado) ? 'proyecto' : 'propuesta';
 }
 
 const landingUrl = computed(() => {
@@ -168,6 +170,12 @@ async function archivar() {
   if (!confirm('¿Archivar este proyecto?')) return;
   await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'archivado' });
   proyecto.value.estado = 'archivado';
+}
+
+async function completar() {
+  if (!confirm('¿Marcar este proyecto como completado?')) return;
+  await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'completado' });
+  proyecto.value.estado = 'completado';
 }
 </script>
 
@@ -282,7 +290,20 @@ async function archivar() {
             >
               Editar
             </button>
-            <button v-if="!['archivado', 'validado'].includes(proyecto.estado) && !authStore.isEmpresa"
+            <button
+              v-if="proyecto.estado === 'validado' && !authStore.isEmpresa"
+              @click="completar"
+              class="px-4 py-2 bg-sky-50 border border-sky-200 rounded-full text-xs font-black
+                     uppercase tracking-widest text-sky-700 shadow-sm
+                     hover:bg-sky-100 transition-all flex items-center gap-1.5"
+              title="El proyecto ha terminado su ejecución"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Marcar completado
+            </button>
+            <button v-if="!['archivado', 'validado', 'completado'].includes(proyecto.estado) && !authStore.isEmpresa"
                     @click="archivar"
                     class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
                            uppercase tracking-widest text-gray-400 shadow-sm
@@ -291,6 +312,9 @@ async function archivar() {
             </button>
           </div>
         </div>
+
+        <img v-if="proyecto.imagen_portada_url" :src="proyecto.imagen_portada_url" :alt="proyecto.titulo"
+             class="w-full h-48 sm:h-64 object-cover rounded-3xl mb-5" />
 
         <!-- ══ HOJA DE CUADERNO ═══════════════════════════════════════════════ -->
         <div class="notebook-page">

@@ -184,9 +184,14 @@ function irAAccesoAlumnado() {
 }
 
 function alumnadosDelEquipoAbierto(n) {
+  const equipo = (encuentroAbierto.value?.equipos || []).find(e => e.numero_equipo === n)
+  if (equipo) {
+    return equipo.miembros.map(m => ({ nombre: m.nombre, alias: m.alias }))
+  }
+  // Encuentros sin equipos cargados todavía (o antiguos): snapshot plano, sin alias.
   return (encuentroAbierto.value?.alumnados || [])
     .filter(a => a.equipo_num === n)
-    .map(a => a.nombre)
+    .map(a => ({ nombre: a.nombre, alias: null }))
 }
 
 // ─── Reestructurar equipo ──────────────────────────────────────────────────────
@@ -200,12 +205,12 @@ function abrirCompartir(s) { compartiendo.value = s }
 function cerrarCompartir()  { compartiendo.value = null }
 function cerrarReestructurar() { reestructurando.value = null }
 
-function onEquipoReestructurado({ id, num_equipos, alumnados }) {
+function onEquipoReestructurado({ id, num_equipos, alumnados, equipos }) {
   encuentros.value = encuentros.value.map(s =>
-    s.id === id ? { ...s, num_equipos, alumnados } : s
+    s.id === id ? { ...s, num_equipos, alumnados, equipos } : s
   )
   if (encuentroAbierto.value?.id === id) {
-    encuentroAbierto.value = { ...encuentroAbierto.value, num_equipos, alumnados }
+    encuentroAbierto.value = { ...encuentroAbierto.value, num_equipos, alumnados, equipos }
   }
   reestructurando.value = null
   mostrarSnack('Reparto de equipos actualizado.')
@@ -658,7 +663,7 @@ function formatFecha(isoDate) {
 
                 <!-- Acciones -->
                 <div @click.stop class="px-5 py-3 border-t border-gray-100 flex flex-wrap gap-1.5">
-                  <button v-if="s.num_equipos && s.puede_editar"
+                  <button v-if="s.puede_editar"
                           @click.stop="abrirReestructurar(s)"
                           class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
                                  bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
@@ -667,7 +672,7 @@ function formatFecha(isoDate) {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
-                    Reestructurar equipo
+                    Editar equipo
                   </button>
                   <button v-if="s.es_propietario"
                           @click.stop="abrirCompartir(s)"
@@ -865,7 +870,7 @@ function formatFecha(isoDate) {
                 Regen.
               </button>
             </div>
-            <div v-if="encuentroAbierto.num_equipos && encuentroAbierto.puede_editar" class="mt-2">
+            <div v-if="encuentroAbierto.puede_editar" class="mt-2">
               <button @click="abrirReestructurar(encuentroAbierto)"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
                              bg-violet-50 border border-violet-200 text-violet-600
@@ -874,7 +879,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Reestructurar equipo
+                Editar equipo
               </button>
             </div>
             <div v-if="!encuentroAbierto.codigo_clase && encuentroAbierto.puede_editar">
@@ -952,7 +957,7 @@ function formatFecha(isoDate) {
 
             <!-- Acciones (mismo estilo que la card de encuentro) -->
             <div class="grid grid-cols-2 gap-1.5">
-              <button v-if="encuentroAbierto.num_equipos && encuentroAbierto.puede_editar"
+              <button v-if="encuentroAbierto.puede_editar"
                       @click="abrirReestructurar(encuentroAbierto)"
                       class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
                              bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
@@ -961,7 +966,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Reestructurar equipo
+                Editar equipo
               </button>
               <button v-if="encuentroAbierto.es_propietario"
                       @click="abrirCompartir(encuentroAbierto)"

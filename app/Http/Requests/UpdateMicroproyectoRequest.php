@@ -79,7 +79,7 @@ class UpdateMicroproyectoRequest extends FormRequest
             'kpis'                 => 'sometimes|nullable|array',
             'validacion_empresa'   => 'sometimes|nullable|array',
             'paso_actual'          => 'sometimes|integer|min:1|max:13',
-            'estado'               => 'sometimes|in:en_edicion,propuesta,validado,archivado',
+            'estado'               => 'sometimes|in:en_edicion,propuesta,validado,completado,archivado',
             'enviado_a_empresa_mail' => 'sometimes|boolean',
         ];
     }

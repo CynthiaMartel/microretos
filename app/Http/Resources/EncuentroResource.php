@@ -27,6 +27,20 @@ class EncuentroResource extends JsonResource
             'notas'              => $this->notas,
             'num_equipos'        => $this->num_equipos,
             'alumnados'          => $this->alumnados,
+            'equipos'            => $this->whenLoaded('equipos', fn() => $this->equipos->map(fn($e) => [
+                'id'            => $e->id,
+                'numero_equipo' => $e->numero_equipo,
+                'fase_actual'   => $e->fase_actual,
+                // El equipo confirmó nombres en su F0 (paso explícito) — el frontend usa esto
+                // para bloquear el nombre en "Editar equipo".
+                'nombres_confirmados' => $e->nombres_confirmados,
+                'miembros'      => $e->miembros->map(fn($m) => [
+                    'id'     => $m->id,
+                    'nombre' => $m->nombre,
+                    'alias'  => $m->alias,
+                    'rol'    => $m->rol,
+                ]),
+            ])),
             'codigo_clase'       => $this->codigo_clase,
             'codigo_ia'          => $this->codigo_ia,
             'microproyecto_uuid' => $this->microproyecto?->uuid,

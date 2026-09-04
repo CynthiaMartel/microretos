@@ -11,7 +11,7 @@ class MicroproyectoController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $query = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto'])
+        $query = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto', 'imagenPortada'])
             ->orderByDesc('updated_at');
 
         if ($user->isSuperAdmin()) {
@@ -56,7 +56,7 @@ class MicroproyectoController extends Controller
 
     public function show($uuid)
     {
-        $proyecto = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto'])
+        $proyecto = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto', 'imagenPortada'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
@@ -149,7 +149,7 @@ class MicroproyectoController extends Controller
     {
         $proyecto = Microproyecto::with(['recursos', 'microreto'])
             ->where('token_empresa', $token)
-            ->whereIn('estado', ['propuesta', 'validado'])
+            ->whereIn('estado', ['propuesta', 'validado', 'completado'])
             ->firstOrFail();
 
         $formato = fn($r) => [
@@ -567,6 +567,7 @@ class MicroproyectoController extends Controller
             'datos_empresa'    => $p->datos_empresa,
             'datos_centro'     => $p->datos_centro,
             'equipo'           => $p->equipo,
+            'imagen_portada_url' => $p->imagenPortada?->url,
             'modulos_seleccionados' => $p->modulos_seleccionados,
             'ra_ce'            => $p->ra_ce,
             'evaluacion_oficial' => $this->evaluacionOficialDeProyecto($p),

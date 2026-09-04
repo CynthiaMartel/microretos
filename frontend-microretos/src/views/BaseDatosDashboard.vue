@@ -1861,7 +1861,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     <!-- ══════════════ MODAL: CONFIRMAR NUEVA EMPRESA ══════════════ -->
     <Transition name="modal-fade">
       <div v-if="mostrarConfirmNuevaEmpresa"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+           class="fixed inset-0 z-[10060] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
            @click.self="mostrarConfirmNuevaEmpresa = false">
         <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
           <div class="flex items-center gap-3 mb-4">
@@ -2147,6 +2147,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     <CentroEducativoModal
       :visible="mostrarNuevoCentro"
       @centro-creado="onCentroCreado"
+      @crear-empresa="pedirNuevaEmpresa"
       @cerrar="mostrarNuevoCentro = false"
     />
 
@@ -2155,15 +2156,19 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       :visible="mostrarEditarCentro"
       :centro="centroAEditar"
       @centro-guardado="onCentroGuardado"
+      @crear-empresa="pedirNuevaEmpresa"
       @cerrar="mostrarEditarCentro = false"
     />
 
     <!-- ════════════ MODALES: NUEVA / EDITAR EMPRESA ════════════ -->
+    <!-- elevar-z-index: cuando se abre desde el botón "Crear nueva empresa" de uno de los
+         modales de centro de arriba, ese modal sigue visible detrás y este debe quedar encima. -->
     <InsertModifyEmpresa
       v-model:mostrarNuevaEmpresa="mostrarNuevaEmpresa"
       v-model:mostrarEditarEmpresa="mostrarEditarEmpresa"
       :familiasProfesionales="familiasProfesionales"
       :empresaAEditar="empresaAEditar"
+      :elevar-z-index="mostrarNuevoCentro || mostrarEditarCentro"
       @empresa-creada="onEmpresaCreada"
       @empresa-actualizada="onEmpresaActualizada"
     />

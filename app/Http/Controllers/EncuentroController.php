@@ -23,6 +23,7 @@ class EncuentroController extends Controller
             'colaboradores:id,name',
             'microproyecto:id,uuid,titulo,microreto_id,estado',
             'microproyecto.microreto:id,titulo,empresa_nombre',
+            'equipos.miembros',
         ])->visiblesPara($user)->orderBy('created_at', 'desc');
 
         // response()->json() evita el envoltorio {"data": [...]} que Laravel aplica
@@ -267,28 +268,48 @@ class EncuentroController extends Controller
         $encuentro->update(['num_equipos' => $numEquipos, 'alumnados' => $alumnados]);
 
         $equipos = $encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get()->map(fn($e) => [
-            'id'       => $e->id,
-            'nombre'   => $e->nombre,
-            'token'    => $e->token,
-            'miembros' => $e->miembros->map(fn($m) => ['nombre' => $m->nombre, 'rol' => $m->rol]),
+            'id'            => $e->id,
+            'numero_equipo' => $e->numero_equipo,
+            'nombre'        => $e->nombre,
+            'token'         => $e->token,
+            'fase_actual'   => $e->fase_actual,
+            'nombres_confirmados' => $e->nombres_confirmados,
+            'miembros' => $e->miembros->map(fn($m) => [
+                'id'     => $m->id,
+                'nombre' => $m->nombre,
+                'alias'  => $m->alias,
+                'rol'    => $m->rol,
+            ]),
         ]);
 
         return response()->json(['equipos' => $equipos]);
     }
 
-    // Upsert por nombre (el docente no ve ids de equipo_miembros, solo nombres): actualiza el
-    // rol de los que ya existan, crea los nuevos, borra los que ya no aparezcan en el reparto.
+    // Upsert por id cuando el frontend lo manda (permite renombrar sin perder el progreso
+    // ya asociado a ese equipo_miembro: fortalezas, puntos de mejora, alias). Si no viene id
+    // (alta nueva desde el modal, o llamadas antiguas) cae a upsert por nombre como antes.
+    //
+    // Nombre bloqueado una vez el equipo confirma nombres en su F0 (paso explícito, no basta
+    // con guardar/completar la fase): a partir de ahí el docente ya no puede cambiarlo desde
+    // "Editar equipo" (solo mover de equipo o cambiar el rol).
     private function sincronizarMiembrosPorNombre(Equipo $equipo, \Illuminate\Support\Collection $alumnados): void
     {
-        $existentes  = $equipo->miembros()->get()->keyBy(fn($m) => mb_strtolower(trim($m->nombre)));
+        $nombreBloqueado     = $equipo->nombres_confirmados;
+        $existentesPorId     = $equipo->miembros()->get()->keyBy('id');
+        $existentesPorNombre = $equipo->miembros()->get()->keyBy(fn($m) => mb_strtolower(trim($m->nombre)));
         $conservados = [];
 
         foreach ($alumnados as $a) {
-            $clave     = mb_strtolower(trim($a['nombre']));
-            $existente = $existentes->get($clave);
+            $existente = !empty($a['id']) ? $existentesPorId->get((int) $a['id']) : null;
+            if (!$existente) {
+                $existente = $existentesPorNombre->get(mb_strtolower(trim($a['nombre'])));
+            }
 
             if ($existente) {
-                $existente->update(['rol' => $a['rol'] ?? $existente->rol]);
+                $existente->update([
+                    'nombre' => $nombreBloqueado ? $existente->nombre : $a['nombre'],
+                    'rol'    => $a['rol'] ?? $existente->rol,
+                ]);
                 $conservados[] = $existente->id;
             } else {
                 $conservados[] = $equipo->miembros()->create([
@@ -424,6 +445,7 @@ class EncuentroController extends Controller
                 'miembros'        => $equipo->miembros->map(fn($m) => [
                     'id'         => $m->id,
                     'nombre'     => $m->nombre,
+                    'alias'      => $m->alias,
                     'rol'        => $m->rol,
                     'fortalezas' => $m->fortalezas,
                     'dafo'       => $m->dafo,
