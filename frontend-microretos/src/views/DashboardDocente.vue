@@ -51,9 +51,10 @@ const ciclosDisponiblesProy = computed(() => {
 })
 
 const proyectosFiltrados = computed(() => {
-  // Solo propuestas ya publicadas o proyectos validados pueden asociarse a un
-  // encuentro — un borrador o un archivado no tiene sentido programarlo en clase.
-  let base = todosMisProyectos.value.filter(p => p.estado === 'propuesta' || p.estado === 'validado')
+  // Solo proyectos ya validados (al menos por el docente) pueden asociarse a un
+  // encuentro — una propuesta sin validar, un borrador o un archivado no tiene
+  // sentido programarlo en clase (ver StoreEncuentroRequest, mismo criterio en backend).
+  let base = todosMisProyectos.value.filter(p => p.estado === 'validado' || p.estado === 'completado')
   if (filtroProyCurso.value)  base = base.filter(p => p.curso === filtroProyCurso.value)
   if (filtroProyCiclo.value)  base = base.filter(p => p.ciclo_nombre === filtroProyCiclo.value)
   if (filtroProyEstado.value) base = base.filter(p => p.estado === filtroProyEstado.value)
@@ -790,9 +791,9 @@ function formatFecha(isoDate) {
 
                   <!-- Filtro estado -->
                   <select v-model="filtroProyEstado" class="field-input !w-auto !text-xs cursor-pointer">
-                    <option value="">Todos (propuesta o validado)</option>
-                    <option value="propuesta">Pendiente validar</option>
+                    <option value="">Todos (validado o completado)</option>
                     <option value="validado">Validado</option>
+                    <option value="completado">Completado</option>
                   </select>
                 </div>
 
