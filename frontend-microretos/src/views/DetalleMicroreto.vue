@@ -336,9 +336,12 @@ async function copiarUrl() {
                          tracking-tight leading-tight mb-3">
                 {{ reto.titulo }}
               </h1>
-              <h2 class="text-base md:text-xl text-gray-500 font-medium leading-relaxed mb-8">
-                {{ reto.subtitulo }}
+              <h2 class="text-lg md:text-2xl text-gray-600 font-bold leading-snug mb-3">
+                {{ reto.pregunta_reto }}
               </h2>
+              <h3 class="text-base md:text-xl text-gray-500 font-medium leading-relaxed mb-8">
+                {{ reto.subtitulo }}
+              </h3>
 
               <div class="flex flex-wrap gap-2 md:gap-3">
                 <span class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
@@ -576,7 +579,7 @@ async function copiarUrl() {
             <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
                         p-6 md:p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
               <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
-                Pregunta del Reto
+                Este reto consiste en responder a:
               </h3>
               <p class="text-lg md:text-2xl font-bold text-[#1F2937] leading-snug">
                 {{ reto.pregunta_reto }}

@@ -157,9 +157,12 @@ function cerrar() {
                   <h1 class="text-2xl md:text-4xl font-black text-[#1F2937] tracking-tight leading-tight mb-2">
                     {{ reto.titulo }}
                   </h1>
-                  <h2 class="text-sm md:text-base text-gray-500 font-medium leading-relaxed mb-6">
-                    {{ reto.subtitulo }}
+                  <h2 class="text-base md:text-lg text-gray-600 font-bold leading-snug mb-2">
+                    {{ reto.pregunta_reto }}
                   </h2>
+                  <h3 class="text-sm md:text-base text-gray-500 font-medium leading-relaxed mb-6">
+                    {{ reto.subtitulo }}
+                  </h3>
 
                   <div class="flex flex-wrap gap-2">
                     <span class="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F2937] text-white
@@ -320,7 +323,7 @@ function cerrar() {
                   <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
                               p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
                     <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
-                      Pregunta del Reto
+                      Este reto consiste en responder a:
                     </h3>
                     <p class="text-lg md:text-xl font-bold text-[#1F2937] leading-snug">
                       {{ reto.pregunta_reto }}

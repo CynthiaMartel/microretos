@@ -1,14 +1,16 @@
 <!-- Ruta: /retos (name: biblioteca). Antes vivía en /biblioteca — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js';
 import LoginModal from '../components/LoginModal.vue';
 import EliminarMicrorretoModal from '../components/EliminarMicrorretoModal.vue';
 import { usePdfExport } from '../composables/usePdfExport.js';
+import { iconoFamilia, colorFamilia } from '../utils/familiaIconos.js';
 
 const router = useRouter();
+const route = useRoute();
 const isLoaded = ref(false);
 const microretos = ref([]);
 const centros = ref([]);
@@ -146,10 +148,23 @@ const conteoPorFamilia = computed(() => {
   return mapa;
 });
 
-const familiasFiltradas = computed(() => {
-  if (!filtroCentro.value) return familias.value;
-  return familias.value.filter(f => (conteoPorFamilia.value[f.nombre] || 0) > 0);
+// Familias con mayor peso institucional: siempre arriba, mismo tamaño que el resto
+const FAMILIAS_DESTACADAS = ['Comercio y Marketing', 'Administración y Gestión', 'Informática y Comunicaciones'];
+// Nº de familias adicionales visibles antes de agruparlas tras "Ver más familias"
+const FAMILIAS_VISIBLES_EXTRA = 8;
+
+const familiasResto = computed(() =>
+  familias.value.filter(f => !FAMILIAS_DESTACADAS.includes(f.nombre))
+);
+
+const familiasVisibles = computed(() => {
+  const destacadas = FAMILIAS_DESTACADAS
+    .map(nombre => familias.value.find(f => f.nombre === nombre))
+    .filter(Boolean);
+  return [...destacadas, ...familiasResto.value.slice(0, FAMILIAS_VISIBLES_EXTRA)];
 });
+
+const familiasOcultas = computed(() => familiasResto.value.slice(FAMILIAS_VISIBLES_EXTRA));
 
 const nivelClase = (nivel) => ({
   Bajo:  'bg-[#00A859]/10 border-[#00A859]/20 text-[#00A859]',
@@ -206,6 +221,10 @@ onMounted(async () => {
     return;
   }
   await cargarDatos();
+  if (route.query.familia) {
+    seleccionarFamilia(route.query.familia);
+    router.replace({ name: 'biblioteca' });
+  }
 });
 
 // ── ACCIONES ──────────────────────────────────────────────
@@ -222,6 +241,10 @@ const seleccionarCentro = (centro) => {
   filtroCentro.value = centro;
   familiaSeleccionada.value = null;
   resetFiltrosDetalle();
+};
+
+const verMasFamilias = () => {
+  router.push({ name: 'mas-familias', query: filtroCentro.value ? { centro: filtroCentro.value } : {} });
 };
 
 const seleccionarFamilia = (nombre) => {
@@ -478,10 +501,9 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               Selecciona una familia profesional para explorar sus micro-retos
             </p>
 
-            <div v-if="familiasFiltradas.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <!-- Tarjeta de familia: div en lugar de button para poder anidar el botón de descarga -->
+            <div v-if="familiasVisibles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div
-                v-for="familia in familiasFiltradas"
+                v-for="familia in familiasVisibles"
                 :key="familia.nombre"
                 @click="seleccionarFamilia(familia.nombre)"
                 @keydown.enter.prevent="seleccionarFamilia(familia.nombre)"
@@ -490,23 +512,15 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 tabindex="0"
                 class="group relative rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 cursor-pointer">
 
-                <div class="relative h-44 overflow-hidden">
-                  <img
-                    v-if="familia.imagen_url"
-                    :src="familia.imagen_url"
-                    :alt="familia.nombre"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                <div :class="['relative h-44 overflow-hidden bg-gradient-to-br flex items-center justify-center', colorFamilia(familia.nombre).bg]">
+                  <svg :class="['w-16 h-16 group-hover:scale-110 transition-transform duration-300', colorFamilia(familia.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-for="d in iconoFamilia(familia.nombre)" :key="d"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="d" />
+                  </svg>
                   <div
-                    v-else
-                    class="w-full h-full bg-gradient-to-br from-[#00A859]/10 via-[#99CC33]/10 to-gray-100 flex items-center justify-center">
-                    <svg class="w-16 h-16 text-[#00A859]/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                        d="M12 14l9-5-9-5-9 5 9 5zm0 7V14m0 0l-6.16-3.422M12 21a11.952 11.952 0 01-5.835-6.578" />
-                    </svg>
-                  </div>
-                  <div class="absolute top-3 right-3 bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
-                    {{ conteoPorFamilia[familia.nombre] || 0 }} reto{{ (conteoPorFamilia[familia.nombre] || 0) !== 1 ? 's' : '' }}
+                    v-if="conteoPorFamilia[familia.nombre]"
+                    class="absolute top-3 right-3 bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
+                    {{ conteoPorFamilia[familia.nombre] }} reto{{ conteoPorFamilia[familia.nombre] !== 1 ? 's' : '' }}
                   </div>
                 </div>
 
@@ -540,6 +554,24 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </button>
                 </div>
               </div>
+
+              <!-- Tarjeta "ver más familias": agrupa el resto, homogénea con las demás -->
+              <button
+                v-if="familiasOcultas.length > 0"
+                @click="verMasFamilias"
+                class="group relative rounded-[1.5rem] overflow-hidden border-2 border-dashed border-gray-200 hover:border-[#00A859]/40 transition-all duration-300 bg-gray-50 hover:bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 flex flex-col items-center justify-center gap-3 min-h-[15.5rem] p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-white border border-gray-200 group-hover:border-[#00A859]/40 flex items-center justify-center shadow-sm">
+                  <svg class="w-6 h-6 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-black text-[#1F2937] text-base leading-tight">Ver más familias</h3>
+                  <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
+                    +{{ familiasOcultas.length }} familia{{ familiasOcultas.length !== 1 ? 's' : '' }}
+                  </p>
+                </div>
+              </button>
             </div>
 
             <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">

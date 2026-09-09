@@ -3,6 +3,7 @@ import GeneradorMicroretos from '../views/GeneradorMicroretos.vue'
 import BibliotecaMicroretos from '../views/BibliotecaMicroretos.vue'
 import Home from '../views/Home.vue'
 import DetalleMicroreto from '../views/DetalleMicroreto.vue'
+import MasFamilias from '../views/MasFamilias.vue'
 import BaseDatosDashboard from '../views/BaseDatosDashboard.vue'
 import PublicMicroreto from '../views/PublicMicroreto.vue'
 import DashboardDocente from '../views/DashboardDocente.vue'
@@ -49,6 +50,12 @@ const router = createRouter({
       path: '/retos',
       name: 'biblioteca',
       component: BibliotecaMicroretos,
+      meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
+    },
+    {
+      path: '/retos/familias',
+      name: 'mas-familias',
+      component: MasFamilias,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {

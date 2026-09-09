@@ -49,8 +49,17 @@ class StoreEncuentroRequest extends FormRequest
                 $user = $this->user();
                 $proyecto = Microproyecto::find($value);
 
-                if ($proyecto && !$proyecto->esVisiblePara($user)) {
+                if (!$proyecto) {
+                    return;
+                }
+
+                if (!$proyecto->esVisiblePara($user)) {
                     $fail('No tienes acceso a este proyecto. Pide al docente propietario que lo comparta contigo o crea uno nuevo.');
+                    return;
+                }
+
+                if (!in_array($proyecto->estado, ['validado', 'completado'], true)) {
+                    $fail('Solo se pueden asociar proyectos ya validados a un encuentro. Valida el proyecto antes de crear el encuentro.');
                 }
             }],
             'fecha'                  => 'required|date',
