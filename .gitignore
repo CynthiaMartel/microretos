@@ -3,11 +3,14 @@
 INSERT_*.sql
 INSERT_*.sql.zip
 
-# Informes generados (se regeneran, no se versionan) — TAREAS_*.md/.txt sí se versionan
+# Informes generados (se regeneran, no se versionan) — TAREAS_YA_REALIZADAS_PARA_LOVABLE.md sí se versiona
 INFORME_*.md
 INFORME_*.pdf
 RESUMEN_*.md
 RESUMEN_*.pdf
+
+# Notas internas de tareas pendientes — no debe ser público
+/TAREAS_PENDIENTES.txt
 
 # Scripts sueltos de prueba manual en la raíz (Playwright ad-hoc, no son tests del repo)
 /test_*.js
