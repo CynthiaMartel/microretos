@@ -3,6 +3,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import api from '../api.js'
 import { useAuthStore } from '../stores/auth.js'
+import Modal from '../components/Modal.vue'
 
 const authStore = useAuthStore()
 
@@ -882,21 +883,7 @@ onMounted(async () => {
     </div>
 
     <!-- ══ MODAL: Crear cuenta ═════════════════════════════════════ -->
-    <Transition name="overlay">
-      <div v-if="modalCrear"
-           class="fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-           @click.self="modalCrear = false">
-        <Transition name="modal-scale">
-          <div v-if="modalCrear"
-               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-            <button @click="modalCrear = false"
-              class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
-                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-
+    <Modal :visible="modalCrear" @cerrar="modalCrear = false">
             <div class="px-8 pt-8 pb-4 shrink-0">
               <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
               <p class="text-xs text-gray-500">
@@ -1080,18 +1067,10 @@ onMounted(async () => {
               </button>
             </form>
             </div>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
+    </Modal>
 
     <!-- ══ MODAL: Éxito al crear cuenta ═══════════════════════════ -->
-    <Transition name="overlay">
-      <div v-if="modalExito"
-           class="fixed inset-0 z-[9100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-        <Transition name="modal-scale">
-          <div v-if="modalExito"
-               class="bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-sm p-8 text-center overflow-y-auto max-h-[90vh]">
+    <Modal :visible="modalExito" max-width="max-w-sm" :z-index="9100" :closable="false" card-class="p-8 text-center overflow-y-auto">
 
             <!-- Icono -->
             <div class="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
@@ -1136,10 +1115,7 @@ onMounted(async () => {
                      font-black text-xs uppercase tracking-widest transition-all">
               Entendido, ir a activar
             </button>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
+    </Modal>
 
     <!-- ══ MODAL: Asociar centro ═══════════════════════════════════ -->
     <Transition name="overlay">
@@ -1255,23 +1231,7 @@ onMounted(async () => {
     </Transition>
 
     <!-- ══ MODAL: Editar cuenta ══════════════════════════════════ -->
-    <Transition name="overlay">
-      <div v-if="modalEditar"
-           class="fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-           @click.self="modalEditar = false">
-        <Transition name="modal-scale">
-          <div v-if="modalEditar"
-               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-
-            <!-- Botón cerrar -->
-            <button @click="modalEditar = false"
-              class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
-                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-
+    <Modal :visible="modalEditar" @cerrar="modalEditar = false">
             <!-- Cabecera fija -->
             <div class="px-8 pt-8 pb-4 shrink-0">
               <!-- Aviso de seguridad -->
@@ -1494,10 +1454,7 @@ onMounted(async () => {
               </button>
             </form>
             </div>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
+    </Modal>
 
     <!-- ══ MODAL: Confirmación ════════════════════════════════════ -->
     <Transition name="overlay">

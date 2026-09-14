@@ -74,7 +74,7 @@ const tieneDatosRecogidos = computed(() => {
   const e = reto.value?.empresa
   if (!e) return false
   return !!(e.dia_a_normal || e.friccion_area || e.friccion_problema
-    || e.consecuencias || e.restricciones || e.lo_que_no_quieren)
+    || e.consecuencias || e.restricciones || e.lo_que_no_quieren || e.expectativas_alumno)
 })
 
 // --- QR TEMPORAL ---
@@ -513,6 +513,10 @@ async function copiarUrl() {
                 <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
                   <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
                   <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+                </div>
+                <div v-if="reto.empresa.expectativas_alumno" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Qué esperan del alumnado</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.expectativas_alumno }}</p>
                 </div>
               </div>
             </div>

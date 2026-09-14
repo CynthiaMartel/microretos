@@ -8,7 +8,12 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Microreto;
 use App\Models\Modulo;
 use App\Models\Empresa;
+use App\Models\CentroEducativo;
+use App\Models\Familia;
 use App\Http\Requests\StoreMicroretoRequest;
+use App\Http\Requests\GenerarEmpresaFicticiaRequest;
+use App\Http\Requests\SimularInfoEmpresaRequest;
+use App\Http\Requests\GenerarMicroretoRequest;
 use App\Http\Resources\MicroretoFichaResource;
 use App\Services\MicroretoFichaService;
 
@@ -77,15 +82,8 @@ class MicroretoIAController extends Controller
         return response()->json(new MicroretoFichaResource(MicroretoFichaService::enriquecer($reto)));
     }
 
-    public function simularInfoEmpresa(Request $request)
+    public function simularInfoEmpresa(SimularInfoEmpresaRequest $request)
     {
-        $request->validate([
-            'empresaNombre'    => 'required|string',
-            'empresaSector'    => 'required|string',
-            'empresaTamano'    => 'nullable|string',
-            'empresaUbicacion' => 'nullable|string',
-        ]);
-
         $contextoEmpresa = "EMPRESA: {$request->empresaNombre} (Sector: {$request->empresaSector})";
         if ($request->filled('empresaTamano'))    $contextoEmpresa .= ", Tamaño: {$request->empresaTamano}";
         if ($request->filled('empresaUbicacion')) $contextoEmpresa .= ", Ubicación: {$request->empresaUbicacion}";
@@ -143,27 +141,69 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         return response()->json(['error' => 'Error al contactar con la IA'], 500);
     }
 
-    public function generar(Request $request)
+    public function generarEmpresaFicticia(GenerarEmpresaFicticiaRequest $request)
     {
-        // El frontend manda empresaId (camelCase), normalizamos antes de validar
-        $request->merge([
-            'empresa_id' => $request->empresa_id ?? $request->empresaId,
-        ]);
+        $datos   = $request->validated();
+        $centro  = CentroEducativo::findOrFail($datos['centroId']);
+        $familia = Familia::findOrFail($datos['familiaId']);
 
-        $request->validate([
-            'empresa_id'       => 'required|integer|exists:empresas,id',
-            'empresaNombre'    => 'required|string',
-            'empresaSector'    => 'required|string',
-            'friccionProblema' => 'required|string',
-            'ciclo_nombre'     => 'required|string',
-            'ciclo_id'         => 'required',
-            'nivelGrupo'       => 'required|string',
-            'cursoSeleccionado'=> 'required|in:1,2,ambos_cursos',
-            'modulo_id'        => 'nullable|array',
-            'cantidad'         => 'required|integer|min:1|max:5',
-            'familia'          => 'nullable|string',
-        ]);
+        $tamanosOpciones = ['Micropyme (1-10)', 'Pequeña (10-50)', 'Mediana (50-250)', 'Grande (+250)'];
+        $tamanosStr      = implode('", "', $tamanosOpciones);
 
+        $systemPrompt = "Eres un generador de datos ficticios y realistas para uso educativo. Inventas empresas creíbles del sector correspondiente a una familia profesional de Formación Profesional, ubicadas en España. Nunca reutilizas nombres, CIF, direcciones, teléfonos o webs de empresas reales que puedan existir — todo el contenido es inventado desde cero.";
+
+        $userPrompt = "Genera los datos de una empresa ficticia que colabora con el centro educativo '{$centro->nombre}' en la familia profesional '{$familia->nombre}'.
+
+Responde ÚNICAMENTE con este JSON exacto, sin texto adicional ni comentarios:
+{
+  \"nombre_comercial\": \"...\",
+  \"razon_social\": \"...\",
+  \"cif\": \"...\",
+  \"sector\": \"...\",
+  \"tamano\": \"...\",
+  \"web\": \"...\",
+  \"actividad\": \"...\",
+  \"persona_contacto\": \"...\",
+  \"telefono\": \"...\",
+  \"email_general\": \"...\",
+  \"direccion\": \"...\",
+  \"municipio\": \"...\",
+  \"provincia\": \"...\",
+  \"codigo_postal\": \"...\"
+}
+
+Reglas:
+- El sector y la actividad deben encajar de forma realista con la familia profesional '{$familia->nombre}'.
+- El CIF debe tener formato español válido (una letra + 8 dígitos) pero completamente inventado.
+- El teléfono debe tener formato español de 9 dígitos (fijo o móvil), sin prefijo internacional.
+- El email_general debe usar un dominio ficticio coherente con el nombre_comercial (nunca gmail/hotmail ni dominios de empresas reales).
+- La dirección, municipio, provincia y código postal deben ser coherentes entre sí dentro de España.
+- tamano debe ser EXACTAMENTE uno de estos valores: \"{$tamanosStr}\".
+- Todo el contenido en español.";
+
+        $response = Http::withToken(config('services.openai.key'))
+            ->timeout(60)
+            ->post("https://api.openai.com/v1/chat/completions", [
+                "model"           => "gpt-4o",
+                "messages"        => [
+                    ["role" => "system", "content" => $systemPrompt],
+                    ["role" => "user",   "content" => $userPrompt],
+                ],
+                "response_format" => ["type" => "json_object"],
+                "temperature"     => 0.9,
+            ]);
+
+        if ($response->successful()) {
+            return response()->json(json_decode($response->json()['choices'][0]['message']['content'], true));
+        }
+
+        Log::error('Fallo al generar empresa ficticia con IA', ['status' => $response->status()]);
+
+        return response()->json(['error' => 'Error al contactar con la IA'], 500);
+    }
+
+    public function generar(GenerarMicroretoRequest $request)
+    {
         // Docentes y admin de centro solo pueden generar retos con empresas de su centro
         $user = $request->user();
         if (($user->isDocente() || $user->isAdmin())) {

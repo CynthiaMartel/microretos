@@ -1,5 +1,9 @@
 *.log
 .claude/
+
+# Proyecto del frontoffice — repo git propio e independiente (frontoffice_dualab),
+# solo vive anidado aquí en disco. Nunca debe entrar en este repo.
+/FRONTOFFICE/
 INSERT_*.sql
 INSERT_*.sql.zip
 
@@ -39,3 +43,4 @@ RESUMEN_*.pdf
 Homestead.json
 Homestead.yaml
 Thumbs.db
+desahucio_.png

@@ -41,6 +41,18 @@ const router = createRouter({
       component: Home
     },
     {
+      // Entrada directa desde fuera del dominio (p. ej. el botón "Iniciar sesión"
+      // de la home del frontoffice en dualab.es/info.dualab.es) — la raíz "/" ya
+      // no está disponible como primer punto de entrada porque un carve-out de
+      // Apache la reserva para esa home; esta ruta reutiliza el mismo Home.vue
+      // (con el modal de login, ver App.vue) para que dualab.es/login funcione
+      // como un enlace externo normal. Admite ?redirect=/ruta para abrir el modal
+      // ya apuntando a esa ruta tras iniciar sesión (ver el watch en App.vue).
+      path: '/login',
+      name: 'login',
+      component: Home
+    },
+    {
       path: '/retos/crear',
       name: 'microretos',
       component: GeneradorMicroretos,

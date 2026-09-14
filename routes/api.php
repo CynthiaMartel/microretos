@@ -15,6 +15,7 @@ use App\Http\Controllers\PapeleraController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\EquipoPublicoController;
 use App\Http\Controllers\EquipoGestionController;
+use App\Http\Controllers\PublicMicroretoCatalogoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -107,6 +108,15 @@ Route::get('/demos/{familia}/microretos', [DemoController::class, 'microretos'])
 Route::get('/demos/{familia}', [DemoController::class, 'show'])
     ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
 
+// Escaparate público de microretos (frontoffice dualab.es / info.dualab.es) — solo
+// lectura, solo retos marcados visible_publico=true. Rutas específicas antes de la
+// paramétrica {uuid} para que "familias" no se interprete como un uuid.
+Route::middleware('throttle:catalogo-publico')->group(function () {
+    Route::get('/public/microretos/familias', [PublicMicroretoCatalogoController::class, 'familias']);
+    Route::get('/public/microretos/{uuid}',    [PublicMicroretoCatalogoController::class, 'show']);
+    Route::get('/public/microretos',           [PublicMicroretoCatalogoController::class, 'index']);
+});
+
 // Auth pública — throttle estricto para prevenir fuerza bruta
 Route::middleware('throttle:admin-login')
     ->post('/admin/login', [AdminAuthController::class, 'login']);
@@ -186,8 +196,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Generación IA: throttle estricto (5/min por usuario)
         Route::middleware('throttle:5,1')->group(function () {
-            Route::post('/generar-microreto',    [MicroretoIAController::class, 'generar']);
-            Route::post('/simular-info-empresa', [MicroretoIAController::class, 'simularInfoEmpresa']);
+            Route::post('/generar-microreto',        [MicroretoIAController::class, 'generar']);
+            Route::post('/simular-info-empresa',     [MicroretoIAController::class, 'simularInfoEmpresa']);
+            Route::post('/generar-empresa-ficticia', [MicroretoIAController::class, 'generarEmpresaFicticia']);
         });
 
         // Guardado y borrado de microretos

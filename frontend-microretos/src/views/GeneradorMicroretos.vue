@@ -540,7 +540,11 @@ const cargarEmpresas = async () => {
       api.get('/familias'),
     ]);
     empresas.value = resEmpresas.data;
-    todasLasFamilias.value = resFamilias.data.map(f => f.nombre ?? f).filter(Boolean).sort();
+    // Se conservan los objetos completos {id, nombre} — InsertModifyEmpresa.vue
+    // necesita el id para filtrar las familias por centro educativo.
+    todasLasFamilias.value = resFamilias.data
+      .filter(Boolean)
+      .sort((a, b) => (a.nombre ?? a).localeCompare(b.nombre ?? b));
   } catch (e) {
     console.error(e);
   }
@@ -826,6 +830,7 @@ const generarReto = async () => {
                 duracion:     seleccion.value.duracion,
                 nivel_grupo:  seleccion.value.nivelGrupo,
                 es_simulado:  esInfoSimulada.value || !!(empresaDetalle.value?.es_simulada),
+                empresa_es_simulada: !!(empresaDetalle.value?.es_simulada),
                 _ui_familia:  seleccion.value.familia,
                 _ui_guardado: false,
                 _ui_guardando: false
@@ -2379,14 +2384,40 @@ async function guardarEstadoGen(nuevoEstado) {
               <h1 class="text-3xl md:text-5xl font-black text-[#1F2937] tracking-tight leading-tight mb-2">
                 {{ reto.titulo }}
               </h1>
-              <h2 class="text-lg md:text-xl text-gray-500 font-medium leading-relaxed mb-8">
-                {{ reto.subtitulo }}
+              <h2 class="text-xl md:text-2xl text-gray-600 font-bold leading-snug mb-2">
+                {{ reto.pregunta_reto }}
               </h2>
+              <h3 class="text-base md:text-lg text-gray-500 font-medium leading-relaxed mb-8">
+                {{ reto.subtitulo }}
+              </h3>
               
               <div class="flex flex-wrap gap-3">
                 <span class="flex items-center gap-2 px-4 py-2 bg-[#1F2937] text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                   {{ reto.empresa_nombre }}
+                </span>
+                <span v-if="reto.empresa_es_simulada != null"
+                      :class="reto.empresa_es_simulada
+                        ? 'bg-amber-50 border-amber-200 text-amber-700'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'"
+                      class="flex items-center gap-2 px-4 py-2 border rounded-lg text-xs font-bold uppercase tracking-wider">
+                  <svg v-if="reto.empresa_es_simulada" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3
+                             m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374
+                             3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                  <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
+                </span>
+                <span v-if="reto.es_simulado"
+                      class="flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold uppercase tracking-wider">
+                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                  Info simulada
                 </span>
                 <span class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#1F2937] rounded-lg text-xs font-bold uppercase tracking-wider">
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2-2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -2430,7 +2461,7 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
 
               <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859] p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-                <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-2 flex items-center gap-2">Pregunta del Reto</h3>
+                <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-2 flex items-center gap-2">Este reto consiste en responder a:</h3>
                 <p class="text-xl md:text-2xl font-bold text-[#1F2937] leading-snug">{{ reto.pregunta_reto }}</p>
               </div>
 

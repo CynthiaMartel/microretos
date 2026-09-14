@@ -74,5 +74,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('admin-login', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        // Escaparate público de microretos (frontoffice) — throttle propio, no
+        // comparte cupo con el resto de rutas públicas.
+        RateLimiter::for('catalogo-publico', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
     }
 }

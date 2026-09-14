@@ -12,7 +12,7 @@
  *     this.$refs.modalesRef.abrirTrasLogin(accion)
  *  4. Este componente abre el modal correspondiente
  */
-import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import api from '../api.js'
 import CentroEducativoModal from './CentroEducativoModal.vue'
 
@@ -94,6 +94,9 @@ watch(() => props.mostrarNuevaEmpresa, (v) => {
     nuevaForm.es_simulada = false
     nuevaConfirmando.value = false
     tabNueva.value = 'basico'
+    iaAvisoCentro.value = false
+    iaError.value = ''
+    campoDestacado.value = null
   }
   estadoDropdownNuevaAbierto.value = false
 })
@@ -105,11 +108,34 @@ watch(() => nuevaForm.centro_educativo, (val) => {
     mostrarModalCentro.value = true
     return
   }
+  if (val) {
+    iaAvisoCentro.value = false
+    limpiarDestacado('centro')
+  }
   // Resetear familia si ya no pertenece al centro seleccionado
   if (nuevaForm.familia && familiasFiltradas.value.length &&
       !familiasFiltradas.value.some(f => (f.nombre ?? f) === nuevaForm.familia)) {
     nuevaForm.familia = ''
   }
+  // Guiar al siguiente paso natural: tras elegir centro, toca elegir la familia profesional.
+  if (val && !nuevaForm.familia) {
+    destacarCampo(familiaSelectRef, 'familia', 'Sigue por aquí')
+  }
+})
+
+watch(() => nuevaForm.familia, (val) => {
+  if (val) {
+    delete nuevaErrors.familia
+    limpiarDestacado('familia')
+    // Guiar al siguiente paso: con centro y familia ya elegidos, toca pulsar "Crear con IA".
+    if (nuevaForm.es_simulada && nuevaForm.centro_educativo) {
+      destacarCampo(crearIaBtnRef, 'crear_ia', 'Ahora clica aquí')
+    }
+  }
+})
+
+watch(() => nuevaForm.nombre_comercial, (val) => {
+  if (val) limpiarDestacado('nombre_comercial')
 })
 
 const familiasFiltradas = computed(() => {
@@ -117,12 +143,133 @@ const familiasFiltradas = computed(() => {
   if (!centroNombre) return props.familiasProfesionales
   const centro = centrosInternos.value.find(c => c.nombre === centroNombre)
   if (!centro?.ciclos?.length) return props.familiasProfesionales
-  const ids = new Set(centro.ciclos.map(c => c.familia_id).filter(Boolean))
-  return props.familiasProfesionales.filter(f => ids.has(f.id))
+  // Se filtra por nombre (no por id): algunos padres (GeneradorMicroretos.vue)
+  // pasan familiasProfesionales ya reducido a strings, sin id.
+  const nombres = new Set(centro.ciclos.map(c => c.familia_nombre).filter(Boolean))
+  return props.familiasProfesionales.filter(f => nombres.has(f.nombre ?? f))
 })
 
 const nuevaConfirmando = ref(false)
 const nuevaCardRef     = ref(null)
+
+// ── Generación de datos con IA (empresa ficticia) ──
+const iaGenerando    = ref(false)
+const iaAvisoCentro  = ref(false)
+const iaError        = ref('')
+const centroSelectRef        = ref(null)
+const familiaSelectRef       = ref(null)
+const nombreComercialInputRef = ref(null)
+const crearIaBtnRef            = ref(null)
+
+// Resalta visualmente (scroll + focus + flecha animada) el campo que el usuario
+// debe rellenar a continuación, tanto en el camino manual como en el de IA.
+const campoDestacado   = ref(null)   // 'centro' | 'familia' | 'crear_ia' | 'nombre_comercial' | null
+const mensajeDestacado = ref('')
+let destacadoTimeoutId = null
+
+function destacarCampo(elRef, key, mensaje) {
+  clearTimeout(destacadoTimeoutId)
+  campoDestacado.value   = key
+  mensajeDestacado.value = mensaje
+  nextTick(() => {
+    const el = elRef.value
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.focus({ preventScroll: true })
+  })
+  destacadoTimeoutId = setTimeout(() => {
+    if (campoDestacado.value === key) campoDestacado.value = null
+  }, 6000)
+}
+
+function limpiarDestacado(key) {
+  if (campoDestacado.value === key) {
+    clearTimeout(destacadoTimeoutId)
+    campoDestacado.value = null
+  }
+}
+
+function iniciarRellenoManual() {
+  tabNueva.value = 'basico'
+  destacarCampo(nombreComercialInputRef, 'nombre_comercial', 'Empieza por aquí')
+}
+
+// Campos "de contenido" de la empresa: los que rellena la IA o se escriben a mano.
+// Deliberadamente fuera: centro_educativo, familia, es_simulada, estado_contacto
+// (son selección/estado del formulario, no datos de la empresa en sí).
+const CAMPOS_VACIABLES = [
+  'nombre_comercial', 'razon_social', 'cif', 'sector', 'tamano', 'web', 'actividad',
+  'persona_contacto', 'telefono', 'email_general', 'direccion', 'municipio',
+  'provincia', 'codigo_postal',
+]
+
+const hayDatosParaVaciar = computed(() => CAMPOS_VACIABLES.some(k => !!nuevaForm[k]))
+
+function vaciarCampos() {
+  CAMPOS_VACIABLES.forEach(k => { nuevaForm[k] = '' })
+  CAMPOS_VACIABLES.forEach(k => delete nuevaErrors[k])
+  iaError.value = ''
+  campoDestacado.value = null
+}
+
+function iniciarCreacionIA() {
+  iaError.value = ''
+  if (!nuevaForm.centro_educativo) {
+    iaAvisoCentro.value = true
+    tabNueva.value = 'basico'
+    destacarCampo(centroSelectRef, 'centro', 'Selecciona aquí')
+    return
+  }
+  iaAvisoCentro.value = false
+  if (!nuevaForm.familia) {
+    nuevaErrors.familia = 'Selecciona la familia profesional para que la IA genere datos coherentes'
+    tabNueva.value = 'basico'
+    destacarCampo(familiaSelectRef, 'familia', 'Ahora la familia')
+    return
+  }
+  generarEmpresaConIA()
+}
+
+async function generarEmpresaConIA() {
+  const centro    = centrosInternos.value.find(c => c.nombre === nuevaForm.centro_educativo)
+  const familiaObj = familiasFiltradas.value.find(f => (f.nombre ?? f) === nuevaForm.familia)
+  if (!centro || !familiaObj?.id) {
+    iaError.value = 'No se pudo identificar el centro o la familia seleccionada.'
+    return
+  }
+  iaGenerando.value = true
+  try {
+    const { data } = await api.post('/generar-empresa-ficticia', {
+      centroId:  centro.id,
+      familiaId: familiaObj.id,
+    })
+    nuevaForm.nombre_comercial = data.nombre_comercial || nuevaForm.nombre_comercial
+    nuevaForm.razon_social     = data.razon_social     || nuevaForm.razon_social
+    nuevaForm.cif              = data.cif              || nuevaForm.cif
+    nuevaForm.sector           = data.sector           || nuevaForm.sector
+    nuevaForm.tamano           = data.tamano           || nuevaForm.tamano
+    nuevaForm.web              = data.web              || nuevaForm.web
+    nuevaForm.actividad        = data.actividad        || nuevaForm.actividad
+    nuevaForm.persona_contacto = data.persona_contacto || nuevaForm.persona_contacto
+    nuevaForm.telefono         = data.telefono         || nuevaForm.telefono
+    nuevaForm.email_general    = data.email_general    || nuevaForm.email_general
+    nuevaForm.direccion        = data.direccion        || nuevaForm.direccion
+    nuevaForm.municipio        = data.municipio        || nuevaForm.municipio
+    nuevaForm.provincia        = data.provincia        || nuevaForm.provincia
+    nuevaForm.codigo_postal    = data.codigo_postal    || nuevaForm.codigo_postal
+    tabNueva.value = 'basico'
+    destacarCampo(nombreComercialInputRef, 'nombre_comercial', 'Revisa lo generado')
+  } catch (e) {
+    if (e.response?.status === 401) {
+      emit('update:mostrarNuevaEmpresa', false)
+      emit('necesita-login', 'nueva')
+      return
+    }
+    iaError.value = e.response?.data?.error || 'No se ha podido generar la empresa con IA. Inténtalo de nuevo.'
+  } finally {
+    iaGenerando.value = false
+  }
+}
 
 function nuevaAvisosDatosIncompletos() {
   const avisos = []
@@ -378,6 +525,68 @@ defineExpose({ abrirTrasLogin })
                 <template v-if="!nuevaForm.es_simulada">Contacto real: la empresa ha sido o será contactada para recabar información.</template>
                 <template v-else>Empresa con datos inventados o generados por IA. No ha habido contacto real.</template>
               </p>
+
+              <!-- Explicación + opciones al elegir "Ficticia" -->
+              <div v-if="nuevaForm.es_simulada" class="mt-3 p-3 rounded-xl bg-white border border-gray-200">
+                <p class="text-[11px] font-bold text-gray-600 mb-1">¿Cómo quieres rellenar los datos de esta empresa ficticia?</p>
+                <p class="text-[10px] text-gray-400 mb-2 leading-relaxed flex items-start gap-1.5">
+                  <svg class="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <span>
+                    <strong class="text-gray-500">Crear con IA:</strong> elige primero el centro educativo y la familia
+                    profesional (abajo, en "Datos básicos") — la IA usa esos dos datos para inventar una empresa coherente
+                    y rellena el resto del formulario por ti. Puedes editar cualquier campo después.
+                  </span>
+                </p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <button type="button" @click="iniciarRellenoManual"
+                    class="flex-1 py-2 rounded-lg border-2 border-gray-200 text-gray-600 hover:border-gray-400 font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Introducir manualmente
+                  </button>
+                  <div class="relative flex-1">
+                    <Transition name="ime-fade">
+                      <div v-if="campoDestacado === 'crear_ia'"
+                        class="absolute -top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+                        <span class="bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">{{ mensajeDestacado }}</span>
+                        <svg class="w-4 h-4 text-amber-500 -mt-0.5 animate-bounce" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-6-6h12l-6 6z"/></svg>
+                      </div>
+                    </Transition>
+                    <button ref="crearIaBtnRef" type="button" @click="iniciarCreacionIA" :disabled="iaGenerando"
+                      :class="campoDestacado === 'crear_ia' ? 'ring-4 ring-amber-400/60 ring-offset-2' : ''"
+                      class="w-full py-2 rounded-lg border-2 border-[#1F2937] bg-[#1F2937] text-white hover:bg-[#374151] font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                      <svg v-if="iaGenerando" class="animate-spin w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+                      </svg>
+                      <svg v-else class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                      </svg>
+                      {{ iaGenerando ? 'Generando...' : 'Crear con IA' }}
+                    </button>
+                  </div>
+                </div>
+                <button v-if="hayDatosParaVaciar" type="button" @click="vaciarCampos"
+                  class="mt-3 w-full py-2.5 rounded-lg border-2 border-red-500 bg-red-500 text-white
+                         font-black text-[11px] uppercase tracking-widest shadow-md shadow-red-500/25
+                         hover:bg-red-600 hover:border-red-600 active:scale-[.98] transition-all
+                         flex items-center justify-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/>
+                  </svg>
+                  Vaciar campos rellenados
+                </button>
+                <Transition name="ime-fade">
+                  <p v-if="iaAvisoCentro" class="mt-2 text-[11px] font-bold text-amber-600 leading-relaxed">
+                    Primero has de seleccionar el centro educativo. Dicho centro educativo tiene asociado ciertas familias profesionales concretas.
+                  </p>
+                </Transition>
+                <Transition name="ime-fade">
+                  <p v-if="iaError" class="mt-2 text-[11px] font-bold text-red-600 leading-relaxed">{{ iaError }}</p>
+                </Transition>
+              </div>
             </div>
 
             <div class="ime-tabs mt-7">
@@ -474,10 +683,17 @@ defineExpose({ abrirTrasLogin })
                 </div>
               </div>
               <div class="ime-g2">
-                <div>
+                <div class="relative">
+                  <Transition name="ime-fade">
+                    <div v-if="campoDestacado === 'nombre_comercial'"
+                      class="absolute -top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+                      <span class="bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">{{ mensajeDestacado }}</span>
+                      <svg class="w-4 h-4 text-amber-500 -mt-0.5 animate-bounce" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-6-6h12l-6 6z"/></svg>
+                    </div>
+                  </Transition>
                   <label class="ime-label">Nombre Comercial *</label>
-                  <input v-model="nuevaForm.nombre_comercial" class="ime-input"
-                    :class="{'ime-input-err': nuevaErrors.nombre_comercial}"
+                  <input ref="nombreComercialInputRef" v-model="nuevaForm.nombre_comercial" class="ime-input"
+                    :class="[{'ime-input-err': nuevaErrors.nombre_comercial}, campoDestacado === 'nombre_comercial' ? 'ring-4 ring-amber-400/60 ring-offset-2' : '']"
                     placeholder="Ej: Acme Solutions SL"/>
                   <p v-if="nuevaErrors.nombre_comercial" class="ime-err">{{ nuevaErrors.nombre_comercial }}</p>
                 </div>
@@ -517,19 +733,34 @@ defineExpose({ abrirTrasLogin })
                 </div>
               </div>
               <div class="ime-g2">
-                <div>
+                <div class="relative">
+                  <Transition name="ime-fade">
+                    <div v-if="campoDestacado === 'centro'"
+                      class="absolute -top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+                      <span class="bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">{{ mensajeDestacado }}</span>
+                      <svg class="w-4 h-4 text-amber-500 -mt-0.5 animate-bounce" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-6-6h12l-6 6z"/></svg>
+                    </div>
+                  </Transition>
                   <label class="ime-label">Centro Educativo *</label>
-                  <select v-model="nuevaForm.centro_educativo" class="ime-input"
-                    :class="{'ime-input-err': nuevaErrors.centro_educativo}">
+                  <select ref="centroSelectRef" v-model="nuevaForm.centro_educativo" class="ime-input"
+                    :class="[{'ime-input-err': nuevaErrors.centro_educativo}, campoDestacado === 'centro' ? 'ring-4 ring-amber-400/60 ring-offset-2' : '']">
                     <option value="">Selecciona un centro...</option>
                     <option v-for="c in centrosInternos" :key="c.id" :value="c.nombre">{{ c.nombre }}</option>
                     <option value="__nuevo__">+ Crear nuevo centro educativo...</option>
                   </select>
                   <p v-if="nuevaErrors.centro_educativo" class="ime-err">{{ nuevaErrors.centro_educativo }}</p>
                 </div>
-                <div>
+                <div class="relative">
+                  <Transition name="ime-fade">
+                    <div v-if="campoDestacado === 'familia'"
+                      class="absolute -top-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+                      <span class="bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">{{ mensajeDestacado }}</span>
+                      <svg class="w-4 h-4 text-amber-500 -mt-0.5 animate-bounce" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-6-6h12l-6 6z"/></svg>
+                    </div>
+                  </Transition>
                   <label class="ime-label">Familia Profesional *</label>
-                  <select v-model="nuevaForm.familia" class="ime-input" :class="{'ime-input-err': nuevaErrors.familia}"
+                  <select ref="familiaSelectRef" v-model="nuevaForm.familia" class="ime-input"
+                          :class="[{'ime-input-err': nuevaErrors.familia}, campoDestacado === 'familia' ? 'ring-4 ring-amber-400/60 ring-offset-2' : '']"
                           :disabled="!nuevaForm.centro_educativo">
                     <option value="">{{ nuevaForm.centro_educativo ? 'Selecciona familia...' : 'Primero elige un centro' }}</option>
                     <option v-for="f in familiasFiltradas" :key="f.id ?? f" :value="f.nombre ?? f">{{ f.nombre ?? f }}</option>

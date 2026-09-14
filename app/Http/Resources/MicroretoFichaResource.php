@@ -44,19 +44,21 @@ class MicroretoFichaResource extends JsonResource
             'familia'             => $this->familia,
             'centro_educativo'    => $this->centro_educativo,
             'empresa_es_simulada' => $this->empresa_es_simulada,
+            'es_simulado'         => (bool) $this->es_simulado,
             // Sector/tamaño + diagnóstico crudo de la empresa ("Datos recogidos de la empresa"
             // en la ficha — la materia prima que la IA resume en quien_es/dia_a_dia/dificultades/
             // que_necesitan/limitaciones, mostrada aparte para lectura comparativa). Nunca
             // CIF/teléfono/email/contacto/dirección/web.
             'empresa' => $this->whenLoaded('empresa', fn () => $this->empresa ? [
-                'sector'            => $this->empresa->sector,
-                'tamano'            => $this->empresa->tamano,
-                'dia_a_normal'      => $this->empresa->dia_a_normal,
-                'friccion_area'     => $this->empresa->friccion_area,
-                'friccion_problema' => $this->empresa->friccion_problema,
-                'consecuencias'     => $this->empresa->consecuencias,
-                'restricciones'     => $this->empresa->restricciones,
-                'lo_que_no_quieren' => $this->empresa->lo_que_no_quieren,
+                'sector'              => $this->empresa->sector,
+                'tamano'              => $this->empresa->tamano,
+                'dia_a_normal'        => $this->empresa->dia_a_normal,
+                'friccion_area'       => $this->empresa->friccion_area,
+                'friccion_problema'   => $this->empresa->friccion_problema,
+                'consecuencias'       => $this->empresa->consecuencias,
+                'restricciones'       => $this->empresa->restricciones,
+                'lo_que_no_quieren'   => $this->empresa->lo_que_no_quieren,
+                'expectativas_alumno' => $this->empresa->expectativas_alumno,
             ] : null),
         ];
     }

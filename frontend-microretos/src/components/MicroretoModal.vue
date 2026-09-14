@@ -53,7 +53,7 @@ const tieneDatosRecogidos = computed(() => {
   const e = reto.value?.empresa
   if (!e) return false
   return !!(e.dia_a_normal || e.friccion_area || e.friccion_problema
-    || e.consecuencias || e.restricciones || e.lo_que_no_quieren)
+    || e.consecuencias || e.restricciones || e.lo_que_no_quieren || e.expectativas_alumno)
 })
 
 function cerrar() {
@@ -175,6 +175,33 @@ function cerrar() {
                       </svg>
                       {{ reto.empresa_nombre }}
                     </span>
+                    <span v-if="reto.empresa_es_simulada != null"
+                          :class="reto.empresa_es_simulada
+                            ? 'bg-amber-50 border-amber-200 text-amber-700'
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-700'"
+                          class="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg
+                                 text-[10px] font-bold uppercase tracking-wider">
+                      <svg v-if="reto.empresa_es_simulada" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3
+                                 m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374
+                                 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                      </svg>
+                      <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
+                    </span>
+                    <span v-if="reto.es_simulado"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200
+                                 text-rose-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                      </svg>
+                      Info simulada
+                    </span>
                     <span v-if="reto.familia"
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
                                  text-[#1F2937] rounded-lg text-[10px] font-bold uppercase tracking-wider">
@@ -254,6 +281,10 @@ function cerrar() {
                     <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
                       <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+                    </div>
+                    <div v-if="reto.empresa.expectativas_alumno" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+                      <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Qué esperan del alumnado</p>
+                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.expectativas_alumno }}</p>
                     </div>
                   </div>
                 </div>
