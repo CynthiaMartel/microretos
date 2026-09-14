@@ -68,14 +68,14 @@ async function confirmarEliminacion() {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="epm-title">Eliminar proyecto</h2>
-                <p class="epm-sub">El proyecto se moverá a la <span class="font-black text-amber-600">papelera</span> y podrá restaurarse desde allí</p>
+                <h2 class="epm-title">Eliminar propuesta/proyecto</h2>
+                <p class="epm-sub">Se moverá a la <span class="font-black text-amber-600">papelera</span> y podrá restaurarse desde allí</p>
               </div>
             </div>
 
-            <!-- Identificación del proyecto -->
+            <!-- Identificación de la propuesta/proyecto -->
             <div class="mt-5 px-4 py-3 bg-gray-50 rounded-2xl border border-gray-100">
-              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Proyecto a eliminar</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Propuesta/Proyecto a eliminar</p>
               <p class="font-black text-[#1F2937] text-sm leading-snug">{{ proyecto?.titulo }}</p>
               <div class="flex flex-wrap gap-1.5 mt-2">
                 <span v-if="proyecto?.empresa_nombre"
@@ -97,7 +97,7 @@ async function confirmarEliminacion() {
             <Transition name="epm-fase" mode="out-in">
               <div v-if="fase === 1" key="f1" class="mt-5 space-y-3">
 
-                <p class="text-sm font-semibold text-gray-600">Al eliminar este proyecto ocurrirá lo siguiente:</p>
+                <p class="text-sm font-semibold text-gray-600">Al eliminarla ocurrirá lo siguiente:</p>
 
                 <!-- Movido a papelera -->
                 <div class="epm-impact-row epm-impact-warn">
@@ -108,7 +108,7 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-amber-800">El proyecto se moverá a la papelera</p>
+                    <p class="font-black text-sm text-amber-800">Se moverá a la papelera</p>
                     <p class="text-xs text-amber-600 mt-0.5">Podrás recuperarlo desde la sección Papelera si lo necesitas.</p>
                   </div>
                 </div>
@@ -122,8 +122,8 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de proyectos</p>
-                    <p class="text-xs text-red-500 mt-0.5">El equipo no podrá acceder al proyecto mientras esté en la papelera.</p>
+                    <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de propuestas y proyectos</p>
+                    <p class="text-xs text-red-500 mt-0.5">El equipo no podrá acceder a ella mientras esté en la papelera.</p>
                   </div>
                 </div>
 
@@ -137,7 +137,7 @@ async function confirmarEliminacion() {
                   </div>
                   <div class="flex-1">
                     <p class="font-black text-sm text-blue-700">El enlace de validación de empresa se desactivará</p>
-                    <p class="text-xs text-blue-500 mt-0.5">Si el proyecto está en fase de propuesta, la empresa no podrá validarlo mientras esté en la papelera.</p>
+                    <p class="text-xs text-blue-500 mt-0.5">Si todavía está en fase de propuesta, la empresa no podrá validarla mientras esté en la papelera.</p>
                   </div>
                 </div>
 
@@ -165,7 +165,7 @@ async function confirmarEliminacion() {
                     Confirmación final requerida
                   </p>
                   <p class="text-xs text-red-600">
-                    Escribe el título exacto del proyecto para confirmar que no es un error accidental.
+                    Escribe el título exacto para confirmar que no es un error accidental.
                   </p>
                 </div>
 
@@ -186,7 +186,7 @@ async function confirmarEliminacion() {
                     El título no coincide. Comprueba mayúsculas, espacios y caracteres especiales.
                   </p>
                   <p v-if="confirmTitulo && tituloValido" class="epm-hint-ok">
-                    Título confirmado. Ya puedes mover el proyecto a la papelera.
+                    Título confirmado. Ya puedes moverla a la papelera.
                   </p>
                 </div>
 

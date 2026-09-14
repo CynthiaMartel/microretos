@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "axios": "^1.13.5",
     "jspdf": "^4.2.1",
     "pinia": "^3.0.4",

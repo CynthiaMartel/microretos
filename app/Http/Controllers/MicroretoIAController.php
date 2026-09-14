@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\Microreto;
 use App\Models\Modulo;
-use App\Models\CicloFormativo;
 use App\Models\Empresa;
+use App\Http\Requests\StoreMicroretoRequest;
+use App\Http\Resources\MicroretoFichaResource;
+use App\Services\MicroretoFichaService;
 
+// Endpoint API: /microretos (sin cambios). El frontend renombró su URL a /retos y /retos/crear,
+// pero el modelo, la tabla y este controlador siguen llamándose "Microreto" — no renombrado a propósito.
 class MicroretoIAController extends Controller
 {
     public function index(Request $request)
@@ -18,12 +23,6 @@ class MicroretoIAController extends Controller
         // Cuando el volumen crezca habrá que añadir filtros server-side.
         $limit = min((int) $request->query('limit', 500), 500);
 
-        // Pre-cargar módulos y ciclos para derivar curso sin N+1
-        $modulosPorCiclo = \App\Models\Modulo::select('idcicloformativo', 'nombre', 'curso')
-            ->get()
-            ->groupBy('idcicloformativo');
-        $ciclosPorNombre = CicloFormativo::pluck('id', 'nombre');
-
         $user  = $request->user();
         $query = Microreto::with([
             'empresa.centroEducativo',
@@ -32,8 +31,8 @@ class MicroretoIAController extends Controller
         ->orderByDesc('created_at')
         ->limit($limit);
 
-        // Docentes solo ven microretos de su centro educativo
-        if ($user->isDocente() && $user->centro_educativo_id) {
+        // Docentes y admins docentes solo ven microretos de su centro educativo
+        if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
             $centroId     = $user->centro_educativo_id;
             $centroNombre = $user->centroEducativo?->nombre;
             $query->whereHas('empresa', function ($q) use ($centroId, $centroNombre) {
@@ -44,47 +43,12 @@ class MicroretoIAController extends Controller
             });
         }
 
-        $microretos = $query->get()
-        ->map(function ($reto) use ($modulosPorCiclo, $ciclosPorNombre) {
-
-            $reto->es_simulado = (bool) $reto->es_simulado;
-
-            if ($reto->empresa) {
-                $reto->centro_educativo  = $reto->empresa->centroEducativo?->nombre
-                    ?? $reto->empresa->centro_educativo
-                    ?? 'Centro Desconocido';
-
-                $reto->familia           = $reto->empresa->familias->first()?->nombre
-                    ?? 'Familia Desconocida';
-
-                $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
-            } else {
-                $reto->centro_educativo    = 'Centro Desconocido';
-                $reto->familia             = 'Familia Desconocida';
-                $reto->empresa_es_simulada = false;
-            }
-
-            // Derivar curso en memoria si no está guardado (evita N+1)
-            if (is_null($reto->curso) && $reto->modulo && $reto->modulo !== 'Transversal') {
-                $cicloId = $reto->ciclo_id ?? $ciclosPorNombre->get($reto->ciclo);
-                if ($cicloId) {
-                    $primerModulo    = trim(explode(' y ', $reto->modulo)[0]);
-                    $modulosDelCiclo = $modulosPorCiclo->get($cicloId, collect());
-                    $modulo = $modulosDelCiclo->first(fn($m) =>
-                        $m->nombre === $primerModulo ||
-                        str_starts_with($m->nombre, rtrim($primerModulo, '.'))
-                    );
-                    $reto->curso = $modulo?->curso;
-                }
-            }
-
-            return $reto;
-        });
+        $microretos = MicroretoFichaService::enriquecerLote($query->get());
 
         return response()->json($microretos);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         // Acepta UUID (formato preferido, IDOR-safe) o ID entero (legacy: sesiones antiguas
         // guardadas antes de que el frontend migrara a uuid).
@@ -93,100 +57,24 @@ class MicroretoIAController extends Controller
             'empresa.familias',
         ]);
 
+        // Docentes y admins docentes solo pueden ver microretos de su centro
+        $user = $request->user();
+        if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
+            $centroId     = $user->centro_educativo_id;
+            $centroNombre = $user->centroEducativo?->nombre;
+            $query->whereHas('empresa', function ($q) use ($centroId, $centroNombre) {
+                $q->where('centro_id', $centroId);
+                if ($centroNombre) {
+                    $q->orWhere('centro_educativo', $centroNombre);
+                }
+            });
+        }
+
         $reto = is_numeric($id)
             ? $query->findOrFail((int) $id)
             : $query->where('uuid', $id)->firstOrFail();
 
-        $reto->es_simulado = (bool) $reto->es_simulado;
-
-        if ($reto->empresa) {
-            $reto->centro_educativo = $reto->empresa->centroEducativo?->nombre
-                ?? $reto->empresa->centro_educativo
-                ?? 'Centro Desconocido';
-
-            $reto->familia = $reto->empresa->familias->first()?->nombre
-                ?? 'Familia Desconocida';
-
-            $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
-        } else {
-            $reto->centro_educativo    = 'Centro Desconocido';
-            $reto->familia             = 'Familia Desconocida';
-            $reto->empresa_es_simulada = false;
-        }
-
-        // Derivar curso si no está guardado aún
-        if (is_null($reto->curso)) {
-            $reto->curso = $this->derivarCurso($reto->ciclo_id, $reto->ciclo, $reto->modulo);
-        }
-
-        // Fallback: intentar derivarlo de evaluacion_oficial cuando modulo es 'Transversal'
-        if (is_null($reto->curso) && $reto->evaluacion_oficial && $reto->ciclo_id) {
-            $reto->curso = $this->derivarCursoDeEvaluacion($reto->ciclo_id, $reto->evaluacion_oficial);
-        }
-
-        return response()->json($reto);
-    }
-
-    /**
-     * Deduce el número de curso (1 o 2) a partir del módulo guardado en el microreto.
-     * Primero intenta por ciclo_id (FK), luego por nombre de ciclo (legacy).
-     * Tolerante al punto final en nombres de módulo (datos BOE vs. texto libre).
-     */
-    private function derivarCurso(?int $cicloId, ?string $cicloNombre, ?string $moduloTexto): ?int
-    {
-        if (!$moduloTexto || $moduloTexto === 'Transversal') {
-            return null;
-        }
-
-        // El campo 'modulo' puede ser "Módulo A y Módulo B" — tomamos el primero
-        $primerModulo = trim(explode(' y ', $moduloTexto)[0]);
-
-        $cicloIdResuelto = $cicloId;
-
-        if (!$cicloIdResuelto && $cicloNombre) {
-            $cicloIdResuelto = CicloFormativo::where('nombre', $cicloNombre)->value('id');
-        }
-
-        if (!$cicloIdResuelto) {
-            return null;
-        }
-
-        // Intento exacto primero; si falla, toleramos punto final (nombres BOE acaban en '.')
-        $curso = Modulo::where('idcicloformativo', $cicloIdResuelto)
-            ->where('nombre', $primerModulo)
-            ->value('curso');
-
-        if (is_null($curso)) {
-            $curso = Modulo::where('idcicloformativo', $cicloIdResuelto)
-                ->where('nombre', 'LIKE', rtrim($primerModulo, '.') . '%')
-                ->orderByRaw('LENGTH(nombre) ASC') // preferir el más corto (más específico)
-                ->value('curso');
-        }
-
-        return $curso;
-    }
-
-    /**
-     * Fallback: cuando modulo = 'Transversal', intentamos derivar el curso
-     * mirando los módulos referenciados en el JSON de evaluacion_oficial.
-     */
-    private function derivarCursoDeEvaluacion(int $cicloId, array $evaluacionOficial): ?int
-    {
-        foreach ($evaluacionOficial as $item) {
-            $nombreModulo = $item['modulo'] ?? null;
-            if (!$nombreModulo) continue;
-
-            $curso = Modulo::where('idcicloformativo', $cicloId)
-                ->where('nombre', 'LIKE', rtrim($nombreModulo, '.') . '%')
-                ->orderByRaw('LENGTH(nombre) ASC')
-                ->value('curso');
-
-            if (!is_null($curso)) {
-                return $curso;
-            }
-        }
-
-        return null;
+        return response()->json(new MicroretoFichaResource(MicroretoFichaService::enriquecer($reto)));
     }
 
     public function simularInfoEmpresa(Request $request)
@@ -270,54 +158,107 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'ciclo_nombre'     => 'required|string',
             'ciclo_id'         => 'required',
             'nivelGrupo'       => 'required|string',
-            'cursoSeleccionado'=> 'required|integer',
+            'cursoSeleccionado'=> 'required|in:1,2,ambos_cursos',
             'modulo_id'        => 'nullable|array',
             'cantidad'         => 'required|integer|min:1|max:5',
             'familia'          => 'nullable|string',
         ]);
 
-        // Docentes solo pueden generar retos con empresas de su centro
+        // Docentes y admin de centro solo pueden generar retos con empresas de su centro
         $user = $request->user();
-        if ($user->isDocente() && $user->centro_educativo_id) {
-            $empresa      = Empresa::find($request->empresa_id);
-            $centroNombre = $user->centroEducativo?->nombre;
-            $perteneceAlCentro = $empresa &&
-                ($empresa->centro_id === $user->centro_educativo_id ||
-                 ($centroNombre && $empresa->centro_educativo === $centroNombre));
-            if (!$perteneceAlCentro) {
+        if (($user->isDocente() || $user->isAdmin())) {
+            $empresa = Empresa::find($request->empresa_id);
+            if (!$empresa || !$empresa->perteneceAlCentroDe($user)) {
                 return response()->json(['error' => 'No autorizado: la empresa no pertenece a tu centro educativo.'], 403);
             }
         }
 
         $consecuencias = implode(", ", $request->consecuencias ?? []);
 
+        // Escenario B: "ambos cursos" — el reto cruza módulos de 1º y 2º a la vez.
+        // Se puede forzar módulos concretos de ambos cursos (modulo_id), o dejar que la
+        // IA use el currículo completo de los dos cursos si no se fuerza ninguno.
+        $esAmbosCursos   = $request->cursoSeleccionado === 'ambos_cursos';
+        $moduloIdForzado = $request->filled('modulo_id') && is_array($request->modulo_id) && count($request->modulo_id) > 0
+            ? $request->modulo_id
+            : null;
+
         $query = Modulo::with(['ras.criteriosEvaluacion']);
 
-        if ($request->filled('modulo_id') && is_array($request->modulo_id) && count($request->modulo_id) > 0) {
-            $query->whereIn('id', $request->modulo_id);
+        if ($esAmbosCursos) {
+            $query->where('idcicloformativo', $request->ciclo_id);
+            $moduloIdForzado
+                ? $query->whereIn('id', $moduloIdForzado)
+                : $query->whereIn('curso', [1, 2]);
+        } elseif ($moduloIdForzado) {
+            $query->whereIn('id', $moduloIdForzado);
         } else {
             $query->where('idcicloformativo', $request->ciclo_id)
                   ->where('curso', $request->cursoSeleccionado);
         }
         $modulos = $query->get();
 
-        $curriculumTexto = "--- INICIO CURRÍCULO DE {$request->cursoSeleccionado}º CURSO ---\n";
-        foreach ($modulos as $modulo) {
-            $curriculumTexto .= "\n[MÓDULO]: {$modulo->nombre}\n";
-            foreach ($modulo->ras as $ra) {
-                $curriculumTexto .= "  - [RA]: {$ra->descripcion}\n";
-                foreach ($ra->criteriosEvaluacion as $ce) {
-                    $curriculumTexto .= "    * [CE]: {$ce->descripcion}\n";
-                }
+        // Defensa: en "Ambos Cursos" con módulos forzados, nunca confiar en el cliente —
+        // exigir que la selección resultante cubra realmente curso 1 y curso 2.
+        if ($esAmbosCursos && $moduloIdForzado) {
+            $cursosCubiertos = $modulos->pluck('curso')->unique();
+            if (!$cursosCubiertos->contains(1) || !$cursosCubiertos->contains(2)) {
+                return response()->json([
+                    'error' => 'En modo "Ambos Cursos" hay que forzar al menos un módulo de 1º y uno de 2º.',
+                ], 422);
             }
         }
-        $curriculumTexto .= "\n--- FIN CURRÍCULO ---";
+
+        // Índice ra_id -> {ra, modulo} + texto de currículo con ids reales embebidos.
+        // Lógica compartida con MicroproyectoController::sugerirRaCe() — mismo
+        // enfoque closed-book en ambos flujos (ver RaCeCatalogoService).
+        $raCeCatalogo = app(\App\Services\RaCeCatalogoService::class);
+        [$raIndex, $curriculumCuerpo, $hayCurriculumDisponible] = $raCeCatalogo->construirIndiceYTexto($modulos);
+
+        // Sin esta regla la IA cumple el esquema con una sola entrada en
+        // evaluacion_oficial y listo — "Ambos Cursos"/"Multi-módulo" solo amplían
+        // qué currículo VE la IA, pero nada la obliga a usar más de un módulo.
+        //
+        // Mínimo de módulos a cubrir: si se han forzado módulos concretos, se exige
+        // cubrirlos TODOS (así, forzar solo 2 pide 2, nunca se inventa un tercero);
+        // si no se ha forzado ninguno (la IA decide libremente), se pide un mínimo
+        // de 3 para que el "curado" resulte realmente representativo del currículo.
+        // Nunca se pide más módulos de los que el currículo realmente tiene.
+        $minModulos = $moduloIdForzado ? $modulos->count() : 3;
+        $minModulos = min($minModulos, $modulos->count());
+
+        $totalEntradasObjetivo = $minModulos * 2;
+
+        if ($esAmbosCursos) {
+            $nombresCurso1  = $modulos->where('curso', 1)->pluck('nombre')->implode(', ');
+            $nombresCurso2  = $modulos->where('curso', 2)->pluck('nombre')->implode(', ');
+            $reglaCobertura = "COBERTURA OBLIGATORIA (Ambos Cursos) — sigue este checklist al elegir los módulos, EN ESTE ORDEN:\n"
+                . "  1. Elige un TOTAL de al menos {$minModulos} módulos DISTINTOS.\n"
+                . "  2. De esos módulos, AL MENOS UNO tiene que ser de 1º (elige entre: {$nombresCurso1}).\n"
+                . "  3. Y AL MENOS OTRO (distinto del anterior) tiene que ser de 2º (elige entre: {$nombresCurso2}).\n"
+                . "  4. El resto de módulos, si los hay, puede ser indistintamente de 1º o de 2º.\n"
+                . "  5. PROHIBIDO que los {$minModulos}+ módulos sean todos del mismo curso — NO es válido \"todos de 1º\" ni \"todos de 2º\". Antes de responder, revisa tu lista final de módulos y confirma que hay representación real de AMBOS cursos; si no la hay, corrige la selección.\n"
+                . "Además, por CADA módulo que cubras incluye 2 entradas distintas (2 ra_id diferentes de ESE módulo, cada una con 2 ce_ids), salvo que ese módulo no tenga 2 RA con criterios disponibles en el currículo, en cuyo caso incluye solo los que tenga. El array \"evaluacion_oficial\" completo debe tener por tanto, orientativamente, {$totalEntradasObjetivo} entradas en total (2 por cada uno de los {$minModulos} módulos).";
+        } elseif ($minModulos > 1) {
+            $nombresModulos = $modulos->pluck('nombre')->unique()->implode(', ');
+            $reglaCobertura = "COBERTURA OBLIGATORIA (Multi-módulo): cubre al menos {$minModulos} módulos distintos entre: {$nombresModulos} — nunca limites la selección a un único módulo. Además, por CADA módulo que cubras incluye 2 entradas distintas (2 ra_id diferentes de ESE módulo, cada una con 2 ce_ids), salvo que ese módulo no tenga 2 RA con criterios disponibles en el currículo, en cuyo caso incluye solo los que tenga. El array \"evaluacion_oficial\" completo debe tener por tanto, orientativamente, {$totalEntradasObjetivo} entradas en total (2 por cada uno de los {$minModulos} módulos).";
+        } else {
+            $reglaCobertura = "";
+        }
+
+        $cursoLabelIA = $esAmbosCursos
+            ? '1º y 2º curso (contenidos transversales de ambos años)'
+            : "{$request->cursoSeleccionado}º curso";
+
+        $curriculumTexto = "--- INICIO CURRÍCULO DE {$cursoLabelIA} ---\n"
+            . $curriculumCuerpo
+            . "\n--- FIN CURRÍCULO ---";
 
         $esBasica    = ($request->nivelGrupo === 'Bajo');
         $reglaExtra  = $esBasica
             ? "REGLA: Nivel Básico (FP Básica). Reto eminentemente manual, paso a paso y muy guiado."
             : "REGLA: Nivel {$request->nivelGrupo}. Adapta la complejidad técnica al nivel indicado.";
-        $reglaExtra .= " TEN EN CUENTA QUE ES PARA ALUMNADO DE {$request->cursoSeleccionado}º CURSO. Adapta el prototipo a sus conocimientos.";
+        $reglaExtra .= " TEN EN CUENTA QUE ES PARA ALUMNADO DE {$cursoLabelIA}. Adapta el prototipo a sus conocimientos.";
 
         $familia = $request->filled('familia') ? $request->familia : null;
 
@@ -325,7 +266,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         if ($request->filled('empresaTamano'))    $contextoEmpresa .= "Tamaño: {$request->empresaTamano}. ";
         if ($request->filled('empresaUbicacion')) $contextoEmpresa .= "Ubicación: {$request->empresaUbicacion}. ";
 
-        $contextoFormativo  = "CICLO FORMATIVO: {$request->ciclo_nombre} ({$request->cursoSeleccionado}º curso).\n";
+        $contextoFormativo  = "CICLO FORMATIVO: {$request->ciclo_nombre} ({$cursoLabelIA}).\n";
         if ($familia) {
             $contextoFormativo .= "FAMILIA PROFESIONAL: {$familia}.\n";
             $contextoFormativo .= "IMPORTANTE: Todos los prototipos, soluciones sugeridas y terminología deben ser específicos de la Familia Profesional «{$familia}». Usa herramientas, técnicas, documentos y procesos propios de ese perfil profesional. No propongas entregables genéricos.\n";
@@ -347,7 +288,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         REGLAS ESTRICTAS:
         1. NO proponer soluciones cerradas. Puedes sugerir el tipo de prototipo a entregar. El alumno debe idear la solución final.
         2. Genera EXACTAMENTE {$request->cantidad} microreto(s) totalmente distintos entre sí para la misma empresa.
-        3. Para lograr variedad, selecciona diferentes Resultados de Aprendizaje (RA) y Criterios de Evaluación (CE) para cada reto.
+        3. Para \"evaluacion_oficial\": SELECCIONA únicamente ids de RA y CE que aparezcan literalmente en el currículo proporcionado (marcados como [RA id=...] y [CE id=...]). NUNCA inventes un id ni redactes tú el texto del RA o el CE — el sistema recupera el texto real de la base de datos a partir del id que elijas. Si el currículo proporcionado no tiene RA/CE disponibles, devuelve evaluacion_oficial como array vacío []. Para lograr variedad entre retos, elige distintos RA/CE de la lista para cada uno. {$reglaCobertura}
         {$familiaRegla}";
 
         $prototiposHint = $familia
@@ -369,7 +310,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         {$curriculumTexto}
         {$reglaExtra}
 
-        Basándote en los módulos del currículo, DEVUELVE ESTE JSON EXACTO CON UN ARRAY DE EXACTAMENTE {$request->cantidad} MICRORETO(S):
+        Basándote en los módulos del currículo, DEVUELVE ESTE JSON EXACTO CON UN ARRAY DE EXACTAMENTE {$request->cantidad} MICRORETO(S) (el array \"evaluacion_oficial\" puede tener 1 o más entradas según las reglas anteriores; se muestran 2 solo como ejemplo de formato):
         {
             \"microretos\": [
                 {
@@ -386,10 +327,14 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
                     \"ods_sugeridos\": [\"ODS X: Nombre completo del ODS\"],
                     \"evaluacion_oficial\": [
                         {
-                            \"modulo\": \"Nombre exacto del Módulo 1\",
-                            \"ra\": \"Texto del RA asociado\",
-                            \"ce\": [\"Texto CE 1\"],
+                            \"ra_id\": 123,
+                            \"ce_ids\": [45, 46],
                             \"aplicacion\": \"Breve frase explicando cómo se aterriza este aprendizaje en el contexto de la Familia Profesional.\"
+                        },
+                        {
+                            \"ra_id\": 789,
+                            \"ce_ids\": [12],
+                            \"aplicacion\": \"Breve frase explicando cómo se aterriza este otro aprendizaje.\"
                         }
                     ],
                     \"variantes\": [
@@ -401,6 +346,27 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
                 }
             ]
         }";
+
+        // Mapa nombre de módulo -> curso, para comprobar después si la IA realmente mezcló
+        // 1º y 2º (o cubrió el mínimo de módulos) — el prompt es solo una petición, la IA
+        // puede incumplirlo. Nunca se reintenta la llamada: un reintento duplica el gasto de
+        // tokens de un prompt ya largo y puede disparar el rate-limit de OpenAI (tokens por
+        // minuto), lo que arruina la experiencia con un 500. En su lugar, si no se cumple,
+        // se avisa en el propio reto para que el profesorado lo revise manualmente.
+        $moduloCursoPorNombre = $modulos->pluck('curso', 'nombre')->all();
+        $cumpleCobertura = function (array $reto) use ($esAmbosCursos, $minModulos, $moduloCursoPorNombre) {
+            $modulosCubiertos = collect($reto['evaluacion_oficial'] ?? [])->pluck('modulo')->filter()->unique();
+            if ($modulosCubiertos->count() < $minModulos) {
+                return false;
+            }
+            if ($esAmbosCursos) {
+                $cursosCubiertos = $modulosCubiertos->map(fn ($m) => $moduloCursoPorNombre[$m] ?? null);
+                if (!$cursosCubiertos->contains(1) || !$cursosCubiertos->contains(2)) {
+                    return false;
+                }
+            }
+            return true;
+        };
 
         $response = Http::withToken(config('services.openai.key'))
             ->timeout(120)
@@ -414,37 +380,71 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
                 "temperature"     => 0.9,
             ]);
 
-        if ($response->successful()) {
-            return response()->json(json_decode($response->json()['choices'][0]['message']['content'], true));
+        if (!$response->successful()) {
+            // Sin esto, un fallo de OpenAI (rate-limit, timeout, cuota agotada, prompt
+            // rechazado...) llega al frontend como un 500 sin ninguna pista de la causa.
+            Log::error('Fallo al contactar con OpenAI en generación de microreto.', [
+                'status'     => $response->status(),
+                'body'       => substr($response->body(), 0, 2000),
+                'empresa_id' => $request->empresa_id,
+                'ciclo_id'   => $request->ciclo_id,
+            ]);
+            return response()->json(['error' => 'Error al contactar con la IA'], 500);
         }
 
-        return response()->json(['error' => 'Error al contactar con la IA'], 500);
+        $contenido = $response->json('choices.0.message.content');
+        $data      = json_decode((string) $contenido, true);
+        if (!isset($data['microretos']) || !is_array($data['microretos'])) {
+            Log::error('Respuesta de OpenAI sin el formato esperado en generación de microreto.', [
+                'contenido_bruto' => substr((string) $contenido, 0, 2000),
+                'empresa_id'      => $request->empresa_id,
+                'ciclo_id'        => $request->ciclo_id,
+            ]);
+            return response()->json($data);
+        }
+
+        foreach ($data['microretos'] as &$reto) {
+            $reto['evaluacion_oficial'] = $raCeCatalogo->resolver(
+                $reto['evaluacion_oficial'] ?? [],
+                $raIndex
+            );
+
+            if (!empty($reglaCobertura) && !$cumpleCobertura($reto)) {
+                $reto['aviso_cobertura_incompleta'] = true;
+                Log::warning('Microreto generado sin cumplir la cobertura de módulos/cursos.', [
+                    'empresa_id'   => $request->empresa_id,
+                    'ciclo_id'     => $request->ciclo_id,
+                    'ambos_cursos' => $esAmbosCursos,
+                    'min_modulos'  => $minModulos,
+                    'modulos_cubiertos' => collect($reto['evaluacion_oficial'])->pluck('modulo')->unique()->values()->all(),
+                ]);
+            }
+        }
+        unset($reto);
+
+        return response()->json($data);
     }
 
-    public function guardarEnBD(Request $request)
+    public function guardarEnBD(StoreMicroretoRequest $request)
     {
-        // Docentes solo pueden guardar microretos de empresas de su centro
+        // Docentes y admin de centro solo pueden guardar microretos de empresas de su centro
         $user = $request->user();
-        if ($user->isDocente() && $user->centro_educativo_id && !empty($request->empresa_id)) {
-            $empresa      = Empresa::find($request->empresa_id);
-            $centroNombre = $user->centroEducativo?->nombre;
-            $perteneceAlCentro = $empresa &&
-                ($empresa->centro_id === $user->centro_educativo_id ||
-                 ($centroNombre && $empresa->centro_educativo === $centroNombre));
-            if (!$perteneceAlCentro) {
+        if (($user->isDocente() || $user->isAdmin()) && !empty($request->empresa_id)) {
+            $empresa = Empresa::find($request->empresa_id);
+            if (!$empresa || !$empresa->perteneceAlCentroDe($user)) {
                 return response()->json(['error' => 'No autorizado: la empresa no pertenece a tu centro educativo.'], 403);
             }
         }
 
         try {
-            $datos = $request->except(['_ui_guardado', '_ui_guardando']);
+            $datos = $request->validated();
 
             // Derivar y persistir el curso a partir del módulo y ciclo guardados
             if (empty($datos['curso'])) {
                 $cicloId   = isset($datos['ciclo_id']) ? (int) $datos['ciclo_id'] : null;
                 $cicloNom  = $datos['ciclo']  ?? null;
                 $moduloNom = $datos['modulo'] ?? null;
-                $datos['curso'] = $this->derivarCurso($cicloId, $cicloNom, $moduloNom);
+                $datos['curso'] = MicroretoFichaService::derivarCurso($cicloId, $cicloNom, $moduloNom);
             }
 
             $microreto = Microreto::create($datos);
@@ -456,23 +456,64 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
 
     public function guardarLote(Request $request)
     {
-        $request->validate([
-            'microretos' => 'required|array',
+        $validated = $request->validate([
+            'microretos'                        => 'required|array|max:50',
+            'microretos.*.demo_id'              => 'nullable|integer|exists:demos,id',
+            'microretos.*.empresa_id'           => 'nullable|integer|exists:empresas,id',
+            'microretos.*.empresa_nombre'       => 'nullable|string|max:255',
+            'microretos.*.titulo'               => 'nullable|string|max:500',
+            'microretos.*.subtitulo'            => 'nullable|string|max:500',
+            'microretos.*.quien_es'             => 'nullable|string|max:5000',
+            'microretos.*.dia_a_dia'            => 'nullable|string|max:5000',
+            'microretos.*.pregunta_reto'        => 'nullable|string|max:5000',
+            'microretos.*.dificultades'         => 'nullable|array',
+            'microretos.*.dificultades.*'       => 'nullable|string|max:1000',
+            'microretos.*.que_necesitan'        => 'nullable|array',
+            'microretos.*.que_necesitan.*'      => 'nullable|string|max:1000',
+            'microretos.*.limitaciones'         => 'nullable|array',
+            'microretos.*.limitaciones.*'       => 'nullable|string|max:1000',
+            'microretos.*.prototipos'           => 'nullable|array',
+            'microretos.*.prototipos.*'         => 'nullable|string|max:1000',
+            'microretos.*.ods_sugeridos'        => 'nullable|array',
+            'microretos.*.ods_sugeridos.*'      => 'nullable|string|max:255',
+            'microretos.*.soft_skills'          => 'nullable|array',
+            'microretos.*.soft_skills.*'        => 'nullable|string|max:255',
+            'microretos.*.evaluacion_oficial'              => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.modulo'     => 'nullable|string|max:255',
+            'microretos.*.evaluacion_oficial.*.ra_id'      => 'nullable|integer|exists:resultados_aprendizaje,id',
+            'microretos.*.evaluacion_oficial.*.ra'         => 'nullable|string|max:2000',
+            'microretos.*.evaluacion_oficial.*.ce_ids'     => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.ce_ids.*'   => 'integer|exists:criterios_evaluacion,id',
+            'microretos.*.evaluacion_oficial.*.ce'         => 'nullable|array',
+            'microretos.*.evaluacion_oficial.*.ce.*'       => 'nullable|string|max:1000',
+            'microretos.*.evaluacion_oficial.*.aplicacion' => 'nullable|string|max:1000',
+            'microretos.*.tips_profesorado'     => 'nullable|array',
+            'microretos.*.tips_profesorado.*'   => 'nullable|string|max:2000',
+            'microretos.*.variantes'            => 'nullable|array',
+            'microretos.*.variantes.*'          => 'nullable|string|max:2000',
+            'microretos.*.nivel_grupo'          => 'nullable|string|max:100',
+            'microretos.*.curso'                => 'nullable|integer',
+            'microretos.*.ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',
+            'microretos.*.ciclo'                => 'nullable|string|max:255',
+            'microretos.*.modulo'               => 'nullable|string|max:255',
+            'microretos.*.multimodulo'          => 'nullable|boolean',
+            'microretos.*.duracion'             => 'nullable|string|max:100',
+            'microretos.*.es_simulado'          => 'nullable|boolean',
         ]);
 
-        // Docentes solo pueden guardar microretos de empresas de su centro
+        $textFields = ['empresa_nombre', 'titulo', 'subtitulo', 'quien_es', 'dia_a_dia', 'pregunta_reto',
+                       'ciclo', 'modulo', 'duracion', 'nivel_grupo'];
+        $arrayFields = ['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
+                        'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes'];
+
+        // Docentes y admin de centro solo pueden guardar microretos de empresas de su centro
         $user = $request->user();
-        if ($user->isDocente() && $user->centro_educativo_id) {
-            $centroId     = $user->centro_educativo_id;
-            $centroNombre = $user->centroEducativo?->nombre;
-            foreach ($request->microretos as $retoData) {
+        if ($user->isDocente() || $user->isAdmin()) {
+            foreach ($validated['microretos'] as $retoData) {
                 $empresaId = $retoData['empresa_id'] ?? null;
                 if ($empresaId) {
                     $empresa = Empresa::find($empresaId);
-                    $perteneceAlCentro = $empresa &&
-                        ($empresa->centro_id === $centroId ||
-                         ($centroNombre && $empresa->centro_educativo === $centroNombre));
-                    if (!$perteneceAlCentro) {
+                    if (!$empresa || !$empresa->perteneceAlCentroDe($user)) {
                         return response()->json(['error' => 'No autorizado: alguna empresa no pertenece a tu centro educativo.'], 403);
                     }
                 }
@@ -481,14 +522,23 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
 
         try {
             $insertados = [];
-            foreach ($request->microretos as $retoData) {
-                unset($retoData['_ui_guardado'], $retoData['_ui_guardando']);
+            foreach ($validated['microretos'] as $retoData) {
+                foreach ($textFields as $field) {
+                    if (isset($retoData[$field]) && is_string($retoData[$field])) {
+                        $retoData[$field] = strip_tags($retoData[$field]);
+                    }
+                }
+                foreach ($arrayFields as $field) {
+                    if (isset($retoData[$field]) && is_array($retoData[$field])) {
+                        $retoData[$field] = $this->sanitizeRecursively($retoData[$field]);
+                    }
+                }
 
                 if (empty($retoData['curso'])) {
                     $cicloId   = isset($retoData['ciclo_id']) ? (int) $retoData['ciclo_id'] : null;
                     $cicloNom  = $retoData['ciclo']  ?? null;
                     $moduloNom = $retoData['modulo'] ?? null;
-                    $retoData['curso'] = $this->derivarCurso($cicloId, $cicloNom, $moduloNom);
+                    $retoData['curso'] = MicroretoFichaService::derivarCurso($cicloId, $cicloNom, $moduloNom);
                 }
 
                 $insertados[] = Microreto::create($retoData);
@@ -499,10 +549,36 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         }
     }
 
-    public function destroy($id)
+    /**
+     * evaluacion_oficial contiene objetos anidados (modulo, ra, ce[], aplicacion),
+     * a diferencia del resto de campos array que son listas planas de strings.
+     */
+    private function sanitizeRecursively(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            return strip_tags($value);
+        }
+
+        if (is_array($value)) {
+            return array_map(fn ($item) => $this->sanitizeRecursively($item), $value);
+        }
+
+        return $value;
+    }
+
+    public function destroy(Request $request, $id)
     {
         try {
-            Microreto::findOrFail($id)->delete();
+            $microreto = Microreto::with('empresa')->findOrFail($id);
+            $user      = $request->user();
+
+            if (!$user->isSuperAdmin() && ($user->isDocente() || $user->isAdmin())) {
+                if (!$microreto->empresa || !$microreto->empresa->perteneceAlCentroDe($user)) {
+                    return response()->json(['error' => 'No autorizado: este micro-reto no pertenece a tu centro educativo.'], 403);
+                }
+            }
+
+            $microreto->delete();
             return response()->json(['mensaje' => 'Micro-reto eliminado correctamente'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al eliminar: ' . $e->getMessage()], 500);

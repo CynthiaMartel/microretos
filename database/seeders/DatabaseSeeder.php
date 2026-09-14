@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
         [
             'name'     => 'Administrador DuaLab',
             'password' => bcrypt(config('services.admin.password')),
-            'role'     => \App\Models\User::ROLE_ADMIN,
+            'role'     => \App\Models\User::ROLE_SUPERADMIN,
         ]
     );
 
@@ -84,5 +84,6 @@ class DatabaseSeeder extends Seeder
     $this->call(EnergiasRenovablesSeeder::class);
     $this->call(DemosSeeder::class);
     $this->call(MicorretosDemoSeeder::class);
+    $this->call(CentroImgSeeder::class);
 }
 }

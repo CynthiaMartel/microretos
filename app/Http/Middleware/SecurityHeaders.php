@@ -21,6 +21,15 @@ class SecurityHeaders
         // Controla qué información de referencia se envía en las peticiones salientes
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
+        // Las respuestas de la API son JSON — no necesitan cargar ningún recurso externo
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+
+        // Evita que ventanas abiertas desde esta app puedan manipular el contexto de navegación
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+
+        // Las respuestas de la API solo deben ser leídas desde el mismo sitio (SPA en mismo dominio)
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-site');
+
         // Fuerza HTTPS durante 1 año e incluye subdominios (activo solo en producción)
         if (app()->environment('production')) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

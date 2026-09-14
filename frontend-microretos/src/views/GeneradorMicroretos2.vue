@@ -175,6 +175,11 @@ watch(() => seleccion.value.cicloId, async (val) => {
 const avanzarPaso = () => { if (pasoActual.value < totalPasos) pasoActual.value++; window.scrollTo({top: 0, behavior: 'smooth'}); };
 const retrocederPaso = () => { if (pasoActual.value > 1) pasoActual.value--; window.scrollTo({top: 0, behavior: 'smooth'}); };
 
+const safeUrl = (url) => {
+  if (!url) return '#';
+  return /^https?:\/\//i.test(url) ? url : '#';
+};
+
 // --- ACTUALIZAR CRM (AHORA GUARDA PASO 1 Y PASO 2) ---
 const guardarInfoEmpresa = async () => {
   if (!seleccion.value.empresaId) return;
@@ -256,6 +261,7 @@ const guardar = async () => {
       ...microretoGenerado.value,
       ciclo: ciclos.value.find(c => c.id === seleccion.value.cicloId)?.nombre,
       modulo: nombresModulosSeleccionados.length > 0 ? nombresModulosSeleccionados.join(' y ') : 'Transversal',
+      curso: nombresModulosSeleccionados.length === 0 ? 'ambos_cursos' : undefined,
       duracion: seleccion.value.duracion,
       nivel_grupo: seleccion.value.nivelGrupo,
       es_simulado: !!(empresaDetalle.value?.es_simulada),
@@ -266,7 +272,7 @@ const guardar = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 dark:bg-[#0a0c10] p-4 md:p-12 transition-colors duration-500 font-sans text-slate-900 dark:text-slate-200">
+  <div class="min-h-screen dark:bg-[#0a0c10] p-4 md:p-12 transition-colors duration-500 font-sans text-slate-900 dark:text-slate-200">
     <div class="max-w-6xl mx-auto">
       
       <header class="mb-10 text-center">
@@ -295,7 +301,7 @@ const guardar = async () => {
               <span v-else>{{ step }}</span>
             </div>
             <span class="text-[10px] font-black uppercase mt-3 tracking-widest text-center" :class="pasoActual >= step ? 'text-emerald-500' : 'text-slate-400'">
-              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. El Problema' : '3. Match Académico' }}
+              {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. Diagnóstico de Empresa' : '3. Match Académico' }}
             </span>
           </div>
         </div>
@@ -369,7 +375,11 @@ const guardar = async () => {
                   <div v-if="empresaDetalle.actividad || empresaDetalle.web">
                     <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Actividad / Web</p>
                     <p v-if="empresaDetalle.actividad" class="text-sm text-slate-700 dark:text-slate-300 line-clamp-2" :title="empresaDetalle.actividad">{{ empresaDetalle.actividad }}</p>
-                    <a v-if="empresaDetalle.web" :href="empresaDetalle.web" target="_blank" class="text-emerald-500 hover:text-emerald-600 font-bold text-sm truncate flex items-center gap-1 mt-1">
+                    <a v-if="empresaDetalle.web"
+                       :href="safeUrl(empresaDetalle.web)"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="text-emerald-500 hover:text-emerald-600 font-bold text-sm truncate flex items-center gap-1 mt-1">
                       {{ empresaDetalle.web.replace(/^https?:\/\//, '') }}
                     </a>
                   </div>

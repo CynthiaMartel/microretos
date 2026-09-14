@@ -1,119 +1,11 @@
-import { jsPDF } from 'jspdf';
-
-const GREEN  = [0, 168, 89];
-const DARK   = [31, 41, 55];
-const GRAY   = [107, 114, 128];
-const LGRAY  = [75, 85, 99];
-const YELLOW = [161, 128, 0];
-const RED    = [220, 38, 38];
-const BLUE   = [37, 99, 235];
-
-const PAGE_W    = 210;
-const PAGE_H    = 297;
-const MARGIN    = 14;
-const CONTENT_W = PAGE_W - MARGIN * 2;
-const BOTTOM    = PAGE_H - 14; // margen inferior seguro (footer en PAGE_H - 9)
-
-function slugify(text) {
-  return (text || 'documento')
-    .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
-
-function addFooters(doc) {
-  const pageCount = doc.internal.getNumberOfPages();
-  const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(156, 163, 175);
-    doc.text(
-      `DuaLab · Generado el ${today} · Página ${i} de ${pageCount}`,
-      MARGIN,
-      PAGE_H - 6
-    );
-    doc.setDrawColor(229, 231, 235);
-    doc.setLineWidth(0.2);
-    doc.line(MARGIN, PAGE_H - 9, MARGIN + CONTENT_W, PAGE_H - 9);
-  }
-}
+import {
+  GREEN, DARK, GRAY, LGRAY, YELLOW, RED, BLUE, PURPLE, ORANGE,
+  PAGE_W, MARGIN, CONTENT_W,
+  slugify, crearDocumento, addFooters, makeBaseRenderer,
+} from './pdfHelpers.js';
 
 function makeRenderer(doc) {
-  const s = { y: 0 };
-
-  // ── helpers ──────────────────────────────────────────────────────────────────
-
-  const checkBreak = (needed = 20) => {
-    if (s.y + needed > BOTTOM) {
-      doc.addPage();
-      s.y = MARGIN;
-    }
-  };
-
-  const setFont = (size, style = 'normal', color = LGRAY) => {
-    doc.setFontSize(size);
-    doc.setFont('helvetica', style);
-    doc.setTextColor(...color);
-  };
-
-  const addSectionTitle = (text, color = DARK) => {
-    checkBreak(12);
-    setFont(6.5, 'bold', color);
-    doc.text(text.toUpperCase(), MARGIN, s.y);
-    doc.setDrawColor(...color);
-    doc.setLineWidth(0.25);
-    doc.line(MARGIN, s.y + 1, MARGIN + CONTENT_W, s.y + 1);
-    s.y += 7;
-  };
-
-  // Texto párrafo: cada línea con su propio checkBreak para soportar saltos de página
-  const addParagraph = (text, maxW = CONTENT_W, indent = 0) => {
-    if (!text) return;
-    setFont(8.5, 'normal', LGRAY);
-    const lines = doc.splitTextToSize(String(text), maxW);
-    for (const line of lines) {
-      checkBreak(6);
-      doc.text(line, MARGIN + indent, s.y);
-      s.y += 4.5;
-    }
-    s.y += 3;
-  };
-
-  // Lista de puntos: cada ítem y cada línea con checkBreak individual
-  const addBulletList = (items, bulletColor = GREEN) => {
-    if (!items?.length) return;
-    items.forEach(item => {
-      const lines = doc.splitTextToSize(String(item), CONTENT_W - 6);
-      checkBreak(5);
-      setFont(9, 'bold', bulletColor);
-      doc.text('•', MARGIN, s.y);
-      setFont(8.5, 'normal', LGRAY);
-      doc.text(lines[0], MARGIN + 5, s.y);
-      s.y += 4.5;
-      for (let i = 1; i < lines.length; i++) {
-        checkBreak(5);
-        doc.text(lines[i], MARGIN + 5, s.y);
-        s.y += 4.5;
-      }
-      s.y += 1.5;
-    });
-    s.y += 2;
-  };
-
-  // Badge: omite silenciosamente si sobrepasaría el margen derecho
-  const drawBadge = (text, bgColor, txtColor, x, badgeY) => {
-    setFont(6.5, 'bold', txtColor);
-    const tw = doc.getTextWidth(text);
-    const bw = tw + 5;
-    if (x + bw > MARGIN + CONTENT_W) return 0;
-    doc.setFillColor(...bgColor);
-    doc.roundedRect(x, badgeY - 3.5, bw, 6, 1.5, 1.5, 'F');
-    doc.text(text, x + 2.5, badgeY);
-    return bw + 2.5;
-  };
+  const { s, checkBreak, setFont, addSectionTitle, addParagraph, addBulletList, drawBadge, addHighlightedCard } = makeBaseRenderer(doc);
 
   // ── renderReto ───────────────────────────────────────────────────────────────
 
@@ -150,6 +42,8 @@ function makeRenderer(doc) {
     if (reto.familia)        bx += drawBadge(reto.familia,        [229,231,235], DARK,   bx, s.y);
     if (reto.ciclo)          bx += drawBadge(reto.ciclo,          [209,250,229], GREEN,  bx, s.y);
     if (reto.nivel_grupo)    bx += drawBadge(`Nivel ${reto.nivel_grupo}`, [243,244,246], GRAY, bx, s.y);
+    if (reto.empresa?.sector) bx += drawBadge(reto.empresa.sector, [243,244,246], GRAY, bx, s.y);
+    if (reto.empresa?.tamano) bx += drawBadge(reto.empresa.tamano, [243,244,246], GRAY, bx, s.y);
     if (reto.centro_educativo || reto.centro)
       drawBadge(reto.centro_educativo || reto.centro, [243,244,246], GRAY, bx, s.y);
 
@@ -160,6 +54,29 @@ function makeRenderer(doc) {
     doc.setLineWidth(0.3);
     doc.line(MARGIN, s.y, MARGIN + CONTENT_W, s.y);
     s.y += 6;
+
+    // ── DATOS RECOGIDOS DE LA EMPRESA ────────────────────────────────────────
+    // Tarjeta destacada (fondo + borde naranja), igual que la tarjeta en pantalla — no un
+    // simple título de sección. Diagnóstico crudo, antes del resumen que redacta la IA debajo.
+    const emp = reto.empresa;
+    if (emp) {
+      addHighlightedCard('Datos recogidos de la empresa', ORANGE, [255, 247, 237], [253, 186, 116], [
+        { label: 'Su día a día', text: emp.dia_a_normal },
+        { label: 'Fricciones de la empresa', text: [emp.friccion_area, emp.friccion_problema].filter(Boolean).join('\n') },
+        { label: 'Consecuencias', text: emp.consecuencias },
+        { label: 'Restricciones', text: emp.restricciones },
+        { label: 'Lo que no quieren', text: emp.lo_que_no_quieren },
+      ]);
+    }
+
+    // ── RESUMEN DE DIAGNÓSTICO (lectura de la IA a partir de los datos de arriba) ──
+    checkBreak(10);
+    setFont(7.5, 'bold', DARK);
+    doc.text('RESUMEN DE DIAGNÓSTICO', MARGIN, s.y);
+    doc.setDrawColor(...DARK);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, s.y + 1.5, MARGIN + CONTENT_W, s.y + 1.5);
+    s.y += 7;
 
     // ── QUIÉN ES / DÍA A DÍA ────────────────────────────────────────────────
     if (reto.quien_es) {
@@ -224,14 +141,34 @@ function makeRenderer(doc) {
       s.y += 3;
     }
 
+    // ── SOFT SKILLS ──────────────────────────────────────────────────────────
+    if (reto.soft_skills?.length) {
+      addSectionTitle('Soft Skills', PURPLE);
+      reto.soft_skills.forEach(skill => {
+        checkBreak(5);
+        setFont(8.5, 'bold', PURPLE);
+        doc.text('•', MARGIN + 2, s.y);
+        setFont(8.5, 'normal', DARK);
+        doc.text(String(skill), MARGIN + 7, s.y);
+        s.y += 5;
+      });
+      s.y += 3;
+    }
+
     // ── RA / CE ──────────────────────────────────────────────────────────────
     if (reto.evaluacion_oficial?.length) {
       addSectionTitle('RA/CE Seleccionados', DARK);
 
       reto.evaluacion_oficial.forEach((evalObj, idx) => {
+        // La fuente se fija ANTES de medir con splitTextToSize (no solo antes de
+        // imprimir) — jsPDF mide con la fuente activa en ese instante, y medir con
+        // una más estrecha que la usada al imprimir hace que el texto desborde el margen.
+        setFont(8.5, 'bold', DARK);
         const modLines = doc.splitTextToSize(evalObj.modulo || '', CONTENT_W - 6);
+        setFont(8.5, 'normal', LGRAY);
         const raLines  = doc.splitTextToSize(evalObj.ra || '', CONTENT_W - 6);
         const ceItems  = evalObj.ce || [];
+        setFont(7.5, 'italic', LGRAY);
         const aplLines = evalObj.aplicacion ? doc.splitTextToSize(evalObj.aplicacion, CONTENT_W - 6) : [];
 
         // Cabecera del módulo (altura acotada, nunca desborda)
@@ -269,6 +206,7 @@ function makeRenderer(doc) {
           doc.text('CRITERIOS DE EVALUACIÓN', MARGIN + 2, s.y);
           s.y += 4.5;
           ceItems.forEach(ce => {
+            setFont(8, 'normal', LGRAY);
             const ceL = doc.splitTextToSize(String(ce), CONTENT_W - 10);
             checkBreak(ceL.length * 4.5 + 2);
             setFont(7, 'bold', GREEN);
@@ -310,6 +248,7 @@ function makeRenderer(doc) {
         const hasColon  = varItem.includes(':');
         const label     = hasColon ? varItem.split(':')[0] : null;
         const body      = hasColon ? varItem.substring(varItem.indexOf(':') + 1).trim() : varItem;
+        setFont(8.5, 'normal', LGRAY);
         const bodyLines = doc.splitTextToSize(body, CONTENT_W - 8);
 
         // Cabecera con etiqueta en box pequeño
@@ -348,6 +287,7 @@ function makeRenderer(doc) {
         const hasColon  = tip.includes(':');
         const label     = hasColon ? tip.split(':')[0] : null;
         const body      = hasColon ? tip.substring(tip.indexOf(':') + 1).trim() : tip;
+        setFont(8.5, 'normal', LGRAY);
         const bodyLines = doc.splitTextToSize(body, CONTENT_W - 8);
 
         // Cabecera con etiqueta en box pequeño
@@ -533,7 +473,7 @@ function makeRenderer(doc) {
 
 export function usePdfExport() {
   const descargarPDF = (reto) => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const doc = crearDocumento();
     const { renderReto } = makeRenderer(doc);
     renderReto(reto);
     addFooters(doc);
@@ -542,7 +482,7 @@ export function usePdfExport() {
 
   const descargarPDFGrupo = (retos, titulo, subtitulo = '') => {
     if (!retos?.length) return;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    const doc = crearDocumento();
     const { renderReto, renderCoverPage } = makeRenderer(doc);
 
     renderCoverPage(retos, titulo, subtitulo);

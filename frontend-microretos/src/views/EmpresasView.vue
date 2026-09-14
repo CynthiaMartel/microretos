@@ -38,7 +38,8 @@ const empresaExpandida = ref(null)
 const panelActivo      = ref('')
 
 // ─── Modal bienvenida ─────────────────────────────────────────────────────────
-const mostrarBienvenida = ref(true)
+// Auto-disparo desactivado — reactivar poniendo mostrarBienvenida.value = true si se necesita de nuevo.
+const mostrarBienvenida = ref(false)
 const mostrarEjemplo    = ref(false)
 const modoEjemplo       = ref('')   // 'contactar' | 'validar'
 
@@ -92,8 +93,6 @@ onActivated(() => {
   if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
-  } else {
-    mostrarBienvenida.value = true
   }
 })
 
@@ -102,8 +101,6 @@ watch(() => route.fullPath, () => {
   if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
-  } else {
-    mostrarBienvenida.value = true
   }
 })
 
@@ -141,7 +138,7 @@ async function cargarDatos() {
     ])
     empresas.value  = empRes.data
     familias.value  = famRes.data
-    proyectos.value = proRes.data.filter(p => p.estado === 'publicado')
+    proyectos.value = proRes.data.filter(p => p.estado === 'propuesta' || p.estado === 'validado')
     // Inicializar todos los centros cerrados por defecto
     centrosCerrados.value = new Set(empRes.data.map(e => e.centro_educativo || SIN_CENTRO))
   } finally {
@@ -308,7 +305,7 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen font-sans text-[#1F2937] pt-12 md:pt-12">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 right-0 w-150 h-100

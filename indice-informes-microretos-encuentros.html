@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informes — Proyectos/Encuentros y Calidad de datos de Microretos</title>
+<style>
+  :root {
+    --green: #00A859;
+    --dark: #1F2937;
+    --gray: #6B7280;
+    --border: #E5E7EB;
+    --bg-soft: #F8FAFC;
+    --amber-bg: #FFFBEB;
+    --amber-border: #FDE68A;
+    --amber-text: #92400E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--dark);
+    line-height: 1.6;
+    background: #fff;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  header {
+    border-bottom: 3px solid var(--green);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+  header .eyebrow {
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    margin: 0 0 8px;
+  }
+  header h1 { font-size: 28px; margin: 0 0 8px; font-weight: 900; }
+  header p.meta { color: var(--gray); font-size: 14px; margin: 0; }
+
+  nav.toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+  }
+  nav.toc p.label {
+    font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--gray); margin: 0 0 12px;
+  }
+  nav.toc ol { margin: 0; padding-left: 20px; }
+  nav.toc li { margin-bottom: 6px; }
+  nav.toc a { color: var(--green); font-weight: 700; text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section.informe {
+    margin-bottom: 56px;
+    padding-top: 8px;
+  }
+  section.informe > h2 {
+    font-size: 22px;
+    font-weight: 900;
+    border-left: 5px solid var(--green);
+    padding-left: 14px;
+    margin: 0 0 4px;
+  }
+  section.informe > p.subtitulo {
+    color: var(--gray);
+    font-size: 14px;
+    margin: 0 0 24px;
+    padding-left: 19px;
+  }
+
+  h3 { font-size: 17px; font-weight: 800; margin: 28px 0 10px; }
+  p { margin: 0 0 14px; }
+  ul, ol.content { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code {
+    background: #F1F5F9;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: #0F172A;
+    color: #E2E8F0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  .callout {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14.5px;
+  }
+  .callout.fixed { background: #ECFDF5; border: 1px solid #A7F3D0; }
+  .callout.pending { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber-text); }
+  .callout strong { font-weight: 800; }
+
+  .recomendaciones {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-top: 20px;
+  }
+  .recomendaciones p.label {
+    font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--green); margin: 0 0 12px;
+  }
+  .cruzada {
+    font-size: 13px;
+    color: var(--gray);
+    font-style: italic;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+
+  hr.divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--gray);
+    font-size: 12.5px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #0B1220; color: #E2E8F0; }
+    header .eyebrow { color: #34D399; }
+    header p.meta { color: #94A3B8; }
+    nav.toc, .recomendaciones { background: #111A2E; border-color: #263149; }
+    nav.toc p.label, .recomendaciones p.label { color: #94A3B8; }
+    .recomendaciones p.label { color: #34D399; }
+    nav.toc a { color: #34D399; }
+    section.informe > h2 { border-left-color: #34D399; }
+    section.informe > p.subtitulo { color: #94A3B8; }
+    code { background: #1E293B; border-color: #334155; color: #E2E8F0; }
+    .callout.fixed { background: #052e21; border-color: #0f5132; }
+    .callout.pending { background: #2b2110; border-color: #57450f; color: #FCD34D; }
+    hr.divider { border-top-color: #263149; }
+    footer { border-top-color: #263149; color: #94A3B8; }
+    .cruzada { border-top-color: #263149; color: #94A3B8; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">microretos · dualab</p>
+    <h1>Informes de auditoría — julio 2026</h1>
+    <p class="meta">Página autocontenida, sin dependencias externas. Puede abrirse localmente o enviarse a cualquier persona.</p>
+  </header>
+
+  <nav class="toc">
+    <p class="label">Índice</p>
+    <ol>
+      <li><a href="#proyectos-encuentros">Informe 1 — Correspondencia Microproyecto ↔ Encuentro</a></li>
+      <li><a href="#calidad-datos-microretos">Informe 2 — Calidad de datos en la biblioteca de Microretos</a></li>
+    </ol>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- INFORME 1 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <section class="informe" id="proyectos-encuentros">
+    <h2>1 · Correspondencia Microproyecto ↔ Encuentro</h2>
+    <p class="subtitulo">Auditoría de cómo se asocian microproyectos (propuestas/proyectos) con encuentros (antes "sesiones").</p>
+
+    <h3>Flujo confirmado</h3>
+    <p><code>en_edicion → propuesta → validado → archivado</code> es el único enum real en <code>microproyectos.estado</code>. <strong>No existe un estado <code>'proyecto'</code> en BD</strong> — "proyecto" es la palabra que usa la UI cuando <code>estado === 'validado'</code> (antes de eso se llama "propuesta"). La biblioteca <code>/proyectos</code> sí distingue pestañas ("Validados" vs "Pendiente validar" vs "En edición" vs "Archivado"), consistente con esa idea.</p>
+    <p>Un microproyecto validado (= "proyecto") se guarda en la biblioteca <code>/proyectos</code> y desde ahí puede asociarse a un Encuentro.</p>
+
+    <h3>Bug crítico corregido</h3>
+    <p><code>EquipoPublicoController::porCodigoClase()</code> (ruta pública <code>/clase/{codigo}</code>, usada por el alumnado para unirse a clase) llamaba a <code>$encuentro-&gt;microproyectos()</code> (plural), un método <strong>inexistente</strong> en el modelo <code>Encuentro</code> (solo define <code>microproyecto()</code> singular <code>belongsTo</code>). Rompía en tiempo de ejecución cada vez que un alumno intentaba entrar con un código de clase.</p>
+    <div class="callout fixed"><strong>Arreglado:</strong> se usa <code>$encuentro-&gt;microproyecto()</code> como query builder singular con las mismas condiciones.</div>
+
+    <h3>Coherencia del selector de proyectos al crear un Encuentro</h3>
+    <p>El buscador de proyectos en <code>DashboardDocente.vue</code> mostraba proyectos en <strong>cualquier estado</strong>, incluidos borradores y archivados — permitía asociar un encuentro a un proyecto que ni siquiera se puede usar.</p>
+    <div class="callout fixed"><strong>Arreglado:</strong> el selector ahora solo muestra proyectos <code>propuesta</code>/<code>validado</code>. Se limpiaron las opciones muertas del filtro y el código zombi asociado.</div>
+
+    <h3>Botón "Crear encuentro" desde el detalle del proyecto</h3>
+    <p><code>StartupDayDetalle.vue</code> ahora tiene un botón "Crear encuentro", visible solo cuando <code>estado === 'validado'</code>, que navega a <code>dashboard-docente?microproyecto_id={id}</code>. <code>DashboardDocente.vue</code> lee ese parámetro al montar y preselecciona el proyecto automáticamente.</p>
+
+    <h3>KPIs en el detalle del proyecto</h3>
+    <p>Se revirtió a fijo/siempre visible (antes era desplegable), junto a Objetivos, por decisión explícita del usuario.</p>
+
+    <h3>Pendiente</h3>
+    <ul>
+      <li><strong>Columna legacy <code>microproyectos.sesion_id</code></strong>: no se usa para nada real, pero <code>PapeleraController::limpiarSesion()</code> y el comando <code>PurgarPapelera</code> la siguen referenciando. Código zombi, bajo riesgo pero pendiente de limpieza.</li>
+      <li><strong>Rename Sesion→Encuentro</strong>: completado en modelo/controlador, pero la tabla física sigue llamándose <code>sesiones</code> y las rutas siguen siendo <code>/sesiones</code> — documentado como "Nivel 3 pendiente de decidir" en el propio código.</li>
+    </ul>
+
+    <div class="recomendaciones">
+      <p class="label">Recomendaciones para producción</p>
+      <ol class="content">
+        <li>Limpiar el código zombi de <code>microproyectos.sesion_id</code> antes de que confunda a alguien nuevo en el equipo.</li>
+        <li>Decidir y cerrar el rename Sesion→Encuentro (tabla + rutas) en un momento de baja actividad.</li>
+        <li>Monitorizar los 422 nuevos ("Este proyecto no tiene un reto vinculado...") tras desplegar la validación de reto obligatorio.</li>
+        <li>Antes del push real a producción, correr el checklist de deploy existente del proyecto (verifica <code>APP_DEBUG=false</code>, config cacheada, etc.).</li>
+      </ol>
+      <p class="cruzada">Ver también las recomendaciones del informe 2 (migración de <code>curso</code>, revalidación RA/CE) antes de desplegar ambos cambios juntos.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- INFORME 2 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <section class="informe" id="calidad-datos-microretos">
+    <h2>2 · Calidad de datos en la biblioteca de Microretos</h2>
+    <p class="subtitulo">Columna <code>curso</code> y contenido de <code>evaluacion_oficial</code> (RA/CE) en la tabla <code>microretos</code>.</p>
+
+    <h3><code>microretos.curso</code> — backfill de "transversal" (hecho)</h3>
+    <p>Hallazgo: <strong>877 de 880 microretos (99.7%) tenían <code>curso = NULL</code></strong>. Investigando si era derivable mecánicamente desde <code>modulo</code>/<code>ciclo_id</code>:</p>
+    <ul>
+      <li><code>modulos</code> sí tiene columna <code>curso</code>, pero <strong>868/880 (98.6%) tienen <code>modulo = "Transversal"</code></strong> — no hay fila real de <code>modulos</code> contra la que hacer join.</li>
+      <li>Solo 12 microretos tienen un módulo específico con nombre real; de esos, 3 ya tenían <code>curso='2'</code> explícito y 9 siguen sin curso (candidatos a revisión manual, no tocados).</li>
+    </ul>
+    <p><strong>Interpretación aceptada:</strong> "Transversal" significa que el reto vale tanto para 1º como para 2º de su ciclo.</p>
+    <div class="callout fixed">
+      <strong>Cambios aplicados:</strong> migración <code>microretos.curso</code> de <code>tinyint</code> a <code>varchar(20)</code>; backfill de 868 filas a <code>curso = 'transversal'</code>; filtro y badge "Transversal: 1º y/o 2º" añadidos en el wizard, la biblioteca de microretos y las vistas de detalle.
+    </div>
+    <div class="callout pending"><strong>Pendiente:</strong> 9 microretos con módulo específico y curso nulo — revisión manual caso a caso.</div>
+
+    <h3><code>evaluacion_oficial</code> (RA/CE) — comando de reparación ya existe, no ejecutado</h3>
+    <p>Ya existe un comando Artisan dedicado: <code>app/Console/Commands/RepararRaCeMicroretos.php</code> (<code>microretos:reparar-ra-ce</code>), en 3 niveles de coste creciente:</p>
+    <ol class="content">
+      <li><strong>Match por similitud de texto</strong> contra el catálogo real del módulo (gratis, umbral configurable, 70% por defecto).</li>
+      <li><strong>Selección por IA closed-book</strong> si no hay match de texto suficiente — la IA solo elige <code>ra_id</code>/<code>ce_ids</code> de un currículo cerrado, nunca redacta texto.</li>
+      <li><strong>Manual</strong> si el módulo ni siquiera existe en el catálogo — se reporta para revisión.</li>
+    </ol>
+    <p>Incluye una lista blanca de "ciclos hermanos" para currículos de familias muy cercanas, es idempotente, y por defecto es <strong>dry-run</strong> (no persiste nada sin <code>--commit</code>).</p>
+    <div class="callout pending"><strong>Estado actual (verificado):</strong> el comando existe pero no se ha ejecutado con <code>--commit</code> — de 878 entradas en 872 microretos candidatos, <strong>299 entradas siguen sin <code>ra_id</code> real</strong>.</div>
+
+    <pre><code># 1. Dry-run primero
+php artisan microretos:reparar-ra-ce
+
+# 2. Si el reparto parece razonable, aplicar de verdad
+php artisan microretos:reparar-ra-ce --commit
+
+# Opcional: limitar el lote o ajustar el umbral de similitud de texto
+php artisan microretos:reparar-ra-ce --commit --limit=100 --umbral=75</code></pre>
+
+    <h3>Pendiente</h3>
+    <ul>
+      <li>Ejecutar <code>microretos:reparar-ra-ce --commit</code> — 299 entradas pendientes.</li>
+      <li>9 microretos con módulo específico y curso nulo — revisión manual.</li>
+      <li>Tras ejecutar el comando, revisar la tabla de "sin resolver" para los casos que queden para revisión manual.</li>
+    </ul>
+
+    <div class="recomendaciones">
+      <p class="label">Recomendaciones para producción</p>
+      <ol class="content">
+        <li>Ejecutar el comando de RA/CE en dry-run primero y revisar el reparto texto/IA/sin-resolver antes de fijar el umbral definitivo.</li>
+        <li>Backup antes de <code>--commit</code> — modifica <code>evaluacion_oficial</code> en potencialmente cientos de filas.</li>
+        <li>Ejecutar el <code>--commit</code> fuera de horas punta o en varias tandas con <code>--limit</code>, para no competir con los endpoints <code>/startup/sugerir-*</code> en producción.</li>
+        <li>Revisar los 9 microretos sin curso pendientes antes de que un docente los encuentre sin aparecer en ningún filtro.</li>
+        <li>Smoke test de <code>/api/demos</code> y <code>/api/demos/{familia}/microretos</code> tras el cambio de tipo de <code>curso</code> — son rutas públicas sin autenticación.</li>
+      </ol>
+      <p class="cruzada">Ver también las recomendaciones del informe 1 (limpieza de código zombi, rename Sesion→Encuentro) antes de desplegar ambos cambios juntos.</p>
+    </div>
+  </section>
+
+  <footer>
+    Generado el 2026-07-16 a partir de <code>INFORME_PROYECTOS_ENCUENTROS.md</code> e <code>INFORME_CALIDAD_DATOS_MICRORETOS.md</code> en el repositorio del proyecto. Esta página es una copia autocontenida — los <code>.md</code> del repositorio son la fuente actualizable.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -12,7 +12,7 @@ class EnsureIsAdmin
     {
         $user = $request->user();
 
-        if (!$user || !$user->isAdmin()) {
+        if (!$user || (!$user->isSuperAdmin() && !$user->isAdmin())) {
             return response()->json([
                 'success' => false,
                 'message' => 'Acceso restringido a administradores.',

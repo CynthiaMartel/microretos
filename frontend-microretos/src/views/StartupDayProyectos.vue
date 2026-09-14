@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { useRouter, onBeforeRouteUpdate } from 'vue-router';
+import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import api from '../api.js';
 import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
@@ -8,6 +8,7 @@ import { useUIState } from '../composables/useUIState.js';
 import { useAuthStore } from '../stores/auth.js';
 
 const router = useRouter();
+const route  = useRoute();
 const { tourActivo } = useUIState();
 const authStore = useAuthStore();
 
@@ -34,10 +35,10 @@ const refBtnGuia  = ref(null);
 const tourRefs = { refBusqueda, refFiltros, refGrid, refBtnNuevo, refBtnGuia };
 
 const guiaPasosDataBase = [
-  { ref: 'refBusqueda', seccion: 'busqueda',  texto: 'Usa el buscador para encontrar proyectos por título, empresa o centro educativo. La búsqueda filtra en tiempo real a medida que escribes.' },
-  { ref: 'refFiltros',  seccion: 'filtros',   texto: 'Filtra los proyectos por estado: Todos, Borrador (aún en edición), Propuesta (enviada a empresa, pendiente de validación), Validados (validados por empresa) o Archivado. Puedes combinar filtro y buscador a la vez.' },
-  { ref: 'refGrid',     seccion: 'grid',      texto: 'Aquí aparecen los proyectos registrados. Cada tarjeta muestra título, empresa, ciclo y estado. Pulsa en una tarjeta para ver el detalle completo.' },
-  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear un nuevo proyecto StartUp Day. Necesitarás haber registrado previamente una sesión en el Dashboard Docente para poder vincularlo al reto correspondiente.' },
+  { ref: 'refBusqueda', seccion: 'busqueda',  texto: 'Usa el buscador para encontrar propuestas y proyectos por título, empresa o centro educativo. La búsqueda filtra en tiempo real a medida que escribes.' },
+  { ref: 'refFiltros',  seccion: 'filtros',   texto: 'Filtra por estado: Validados (proyectos aprobados por empresa), Pendiente validar (propuestas enviadas, esperando respuesta), En edición (borradores), Archivados o Todos. Puedes combinar filtro y buscador a la vez.' },
+  { ref: 'refGrid',     seccion: 'grid',      texto: 'Aquí aparecen las propuestas y proyectos registrados. Cada tarjeta muestra título, empresa, ciclo y estado. Pulsa en una tarjeta para ver el detalle completo.' },
+  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear una nueva propuesta StartUp Day. Necesitarás haber registrado previamente un encuentro en el Dashboard Docente para poder vincularla al reto correspondiente.' },
   { ref: 'refBtnGuia',  seccion: null,        texto: 'Pulsa este botón en cualquier momento para volver a ver esta guía y repasar el funcionamiento de la sección.' },
 ];
 
@@ -125,6 +126,7 @@ function seleccionarOpcionBienvenida(opcion) {
 
 onMounted(async () => {
   setTimeout(() => { isLoaded.value = true; }, 80);
+  if (route.query.filtro) filtroEstado.value = String(route.query.filtro);
   try {
     const res = await api.get('/startup/proyectos');
     proyectos.value = res.data;
@@ -132,7 +134,7 @@ onMounted(async () => {
     cargando.value = false;
   }
   await nextTick();
-  guiaBienvenida.value = true;
+  // Auto-disparo desactivado — reactivar poniendo guiaBienvenida.value = true si se necesita de nuevo.
 });
 
 onUnmounted(() => {
@@ -144,32 +146,51 @@ onBeforeRouteUpdate(async () => {
   modoGuia.value = false;
   pasoGuia.value = 1;
   await nextTick();
-  guiaBienvenida.value = true;
 });
 
 function getEtiqueta(p) {
-  if (p.estado === 'borrador')  return 'Borrador';
-  if (p.estado === 'archivado') return 'Archivado';
-  return p.empresa_validado ? 'Validado' : 'Propuesta';
+  if (p.estado === 'en_edicion') return 'En edición';
+  if (p.estado === 'archivado')  return 'Archivado';
+  if (p.estado === 'completado') return 'Completado';
+  if (p.estado === 'validado') {
+    if (p.empresa_validado && p.docente_validado) return 'Validado · Completo';
+    if (p.empresa_validado)  return 'Validado · Empresa';
+    if (p.docente_validado)  return 'Validado · Docente';
+    return 'Validado';
+  }
+  if (p.empresa_no_valida_aun)    return 'No validar aún';
+  if (p.enviado_a_empresa_mail)   return 'Esperando respuesta';
+  return 'Pendiente enviar';
 }
 function getColor(p) {
-  if (p.estado === 'borrador')  return 'bg-amber-50 border-amber-200 text-amber-700';
-  if (p.estado === 'archivado') return 'bg-gray-100 border-gray-200 text-gray-400';
-  if (p.empresa_validado)       return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';  // Validado → verde
-  return 'bg-blue-50 border-blue-200 text-blue-700';  // Propuesta → azul
+  if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700';
+  if (p.estado === 'archivado')  return 'bg-gray-100 border-gray-200 text-gray-400';
+  if (p.estado === 'completado') return 'bg-sky-50 border-sky-300 text-sky-700';
+  if (p.estado === 'validado') {
+    if (p.docente_validado && !p.empresa_validado) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
+    return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';
+  }
+  if (p.empresa_no_valida_aun)   return 'bg-red-50 border-red-300 text-red-700';
+  if (p.enviado_a_empresa_mail)  return 'bg-blue-50 border-blue-200 text-blue-700';
+  return 'bg-violet-50 border-violet-300 text-violet-700';
 }
 
-const filtroOpciones = ['todos', 'borrador', 'propuesta', 'proyecto', 'archivado'];
-const filtroLabels   = { todos: 'Todos', borrador: 'Borrador', propuesta: 'Propuesta', proyecto: 'Validados', archivado: 'Archivado' };
+const filtroOpciones = ['validado', 'completado', 'propuesta', 'en_edicion', 'archivado', 'todos'];
+const filtroLabels   = { todos: 'Todos', en_edicion: 'En edición', propuesta: 'Pendiente validar', validado: 'Validados', completado: 'Completados', archivado: 'Archivado' };
+
+const conteosPorEstado = computed(() => ({
+  validado:   proyectos.value.filter(p => p.estado === 'validado').length,
+  completado: proyectos.value.filter(p => p.estado === 'completado').length,
+  propuesta:  proyectos.value.filter(p => p.estado === 'propuesta').length,
+  en_edicion: proyectos.value.filter(p => p.estado === 'en_edicion').length,
+  archivado:  proyectos.value.filter(p => p.estado === 'archivado').length,
+  todos:      proyectos.value.length,
+}));
 
 const proyectosFiltrados = computed(() => {
   let lista = proyectos.value;
   if (filtroEstado.value !== 'todos') {
-    lista = lista.filter(p => {
-      if (filtroEstado.value === 'propuesta') return p.estado === 'publicado' && !p.empresa_validado;
-      if (filtroEstado.value === 'proyecto')  return !!p.empresa_validado;
-      return p.estado === filtroEstado.value;
-    });
+    lista = lista.filter(p => p.estado === filtroEstado.value);
   }
   if (busqueda.value.trim()) {
     const q = busqueda.value.toLowerCase();
@@ -199,7 +220,11 @@ function cerrarModalEliminar() {
 function onProyectoEliminado({ uuid, titulo }) {
   proyectos.value = proyectos.value.filter(p => p.uuid !== uuid);
   cerrarModalEliminar();
-  mostrarSnack(`"${titulo}" movido a la papelera.`, { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) });
+  // La papelera de "Base de datos" es solo superadmin — el resto de roles ya no tiene esa ruta.
+  mostrarSnack(
+    `"${titulo}" movido a la papelera.`,
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null,
+  );
 }
 
 // ── Snackbar ────────────────────────────────────────────────────────────────
@@ -211,7 +236,7 @@ function mostrarSnack(mensaje, accion = null) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
 
     <!-- Modal bienvenida -->
     <BienvenidaStartupDayModal :show="guiaBienvenida" @seleccionar="seleccionarOpcionBienvenida" />
@@ -282,10 +307,10 @@ function mostrarSnack(mensaje, accion = null) {
             <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">Startup Day · Fase 2</span>
           </div>
           <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Proyectos</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Propuestas-Proyecto</span>
           </h1>
           <p class="text-gray-500 text-sm mt-1">
-            Aquí se trabajan los retos para convertirlos en proyectos de empresa.
+            Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa.
           </p>
           <div class="mt-3 flex flex-wrap gap-2">
             <!-- Botón Guía -->
@@ -302,9 +327,9 @@ function mostrarSnack(mensaje, accion = null) {
               </svg>
               Guía
             </button>
-            <!-- Botón Papelera -->
+            <!-- Botón Papelera — la papelera de "Base de datos" es solo superadmin -->
             <button
-              v-if="!authStore.isEmpresa"
+              v-if="authStore.isSuperAdmin"
               @click="router.push({ name: 'papelera' })"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-full
                      bg-amber-400/10 border border-amber-400/20 text-amber-600
@@ -338,12 +363,12 @@ function mostrarSnack(mensaje, accion = null) {
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
           </svg>
-          Nuevo proyecto
+          Nueva propuesta
         </button>
       </header>
 
       <!-- Filtros -->
-      <div class="flex flex-col sm:flex-row gap-3 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
 
         <!-- Búsqueda -->
         <div ref="refBusqueda"
@@ -351,7 +376,7 @@ function mostrarSnack(mensaje, accion = null) {
                'tour-active': pasoRefActivo === 'refBusqueda',
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda'
              }"
-             class="relative flex-1">
+             class="relative w-full lg:flex-1 lg:min-w-[240px]">
           <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -372,16 +397,22 @@ function mostrarSnack(mensaje, accion = null) {
                'tour-active': pasoRefActivo === 'refFiltros',
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'filtros'
              }"
-             class="flex gap-2">
+             class="flex flex-wrap gap-2 lg:justify-end lg:min-w-0">
           <button v-for="op in filtroOpciones" :key="op"
                   @click="filtroEstado = op"
                   :class="[
-                    'px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all',
+                    'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all',
                     filtroEstado === op
                       ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md'
                       : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]'
                   ]">
             {{ filtroLabels[op] }}
+            <span :class="[
+              'inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] rounded-full text-[9px] font-black transition-all',
+              filtroEstado === op
+                ? 'bg-white/20 text-white'
+                : 'bg-gray-100 text-gray-500 group-hover:bg-[#00A859]/10'
+            ]">{{ conteosPorEstado[op] }}</span>
           </button>
         </div>
 
@@ -413,10 +444,10 @@ function mostrarSnack(mensaje, accion = null) {
             </svg>
           </div>
           <h3 class="text-[#1F2937] font-black text-xl mb-2">
-            {{ busqueda || filtroEstado !== 'todos' ? 'Sin resultados' : 'Todavía no hay proyectos' }}
+            {{ busqueda || filtroEstado !== 'todos' ? 'Sin resultados' : 'Todavía no hay propuestas ni proyectos' }}
           </h3>
           <p class="text-gray-400 text-sm mb-6">
-            {{ busqueda || filtroEstado !== 'todos' ? 'Prueba con otros filtros' : 'Crea tu primer proyecto StartUp Day' }}
+            {{ busqueda || filtroEstado !== 'todos' ? 'Prueba con otros filtros' : 'Crea tu primera propuesta StartUp Day' }}
           </p>
           <button v-if="!busqueda && filtroEstado === 'todos' && !authStore.isEmpresa"
                   @click="router.push({ name: 'startup-day-crear' })"
@@ -436,6 +467,8 @@ function mostrarSnack(mensaje, accion = null) {
                    transition-all duration-300 cursor-pointer flex flex-col"
             @click="router.push({ name: 'startup-day-detalle', params: { uuid: p.uuid } })"
           >
+            <img v-if="p.imagen_portada_url" :src="p.imagen_portada_url" :alt="p.titulo"
+                 class="w-full h-32 object-cover rounded-t-[1.5rem]" />
             <div class="p-5 flex-1 flex flex-col gap-3">
               <!-- Estado + paso -->
               <div class="flex items-center justify-between">
@@ -480,7 +513,7 @@ function mostrarSnack(mensaje, accion = null) {
               </div>
 
               <!-- ── Etiquetas de sub-estado en miniatura ───────────────── -->
-              <div v-if="p.estado === 'publicado' && !p.empresa_validado"
+              <div v-if="p.estado === 'propuesta' && !p.empresa_validado"
                    class="flex flex-col gap-1.5 mt-1">
 
                 <!-- Propuesta NO enviada por mail aún -->

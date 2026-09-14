@@ -17,7 +17,7 @@ async function verificarAcceso() {
   verificando.value = true
   errorAcceso.value = ''
   try {
-    await api.post('/empresas/verificar-acceso', { password: passwordInput.value })
+    await api.post('/empresas/verificar-acceso', { password: passwordInput.value }, { skipAuthRedirect: true })
     exitoso.value = true
     sessionStorage.setItem('empresas_module_unlocked', 'true')
     setTimeout(() => emit('desbloqueado'), 900)

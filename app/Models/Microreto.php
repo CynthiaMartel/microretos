@@ -11,18 +11,18 @@ class Microreto extends Model
     use SoftDeletes;
     protected $fillable = [
         'uuid',
-        'titulo',
+        'titulo', 'subtitulo',
         'demo_id',          // FK → demos (para microretos de demo)
         'empresa_id',       // FK (nueva)
         'empresa_nombre',   // legacy — se mantiene hasta completar backfill
         'quien_es', 'dia_a_dia', 'pregunta_reto',
         'dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
-        'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado',
+        'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes',
         'nivel_grupo',
         'curso',
         'ciclo_id',         // FK (nueva)
         'ciclo',            // legacy — se mantiene hasta completar backfill
-        'modulo', 'duracion', 'es_simulado',
+        'modulo', 'multimodulo', 'duracion', 'es_simulado',
     ];
 
     // Genera un UUID automáticamente al crear cada microreto nuevo
@@ -44,7 +44,9 @@ class Microreto extends Model
         'soft_skills'        => 'array',
         'evaluacion_oficial' => 'array',
         'tips_profesorado'   => 'array',
+        'variantes'          => 'array',
         'es_simulado'        => 'boolean',
+        'multimodulo'        => 'boolean',
     ];
 
     public function demo()

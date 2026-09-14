@@ -13,34 +13,19 @@ import CatalogoBoeIntroModal from '../components/CatalogoBoeIntroModal.vue'
 import DbSecurityModal from '../components/DbSecurityModal.vue'
 import { useUIState } from '../composables/useUIState.js'
 import { useDbSecurity } from '../composables/useDbSecurity.js'
+import TourPromptModal from '../components/TourPromptModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const { tourActivo } = useUIState()
 const dbSecurity = useDbSecurity()
 
-// ─── Aviso de expiración de sesión ───────────────────────
-const minutosRestantes = ref(authStore.minutosRestantes)
-let tokenTimer = null
 onMounted(() => {
-  tokenTimer = setInterval(() => {
-    minutosRestantes.value = authStore.minutosRestantes
-    if (minutosRestantes.value === 0) {
-      clearInterval(tokenTimer)
-      authStore.logout()
-      router.push('/')
-    }
-  }, 60_000)
   document.addEventListener('click', cerrarEstadoDropdown)
 })
 onUnmounted(() => {
-  clearInterval(tokenTimer)
   document.removeEventListener('click', cerrarEstadoDropdown)
 })
-
-const mostrarAvisoToken = computed(() =>
-  minutosRestantes.value >= 0 && minutosRestantes.value <= 60
-)
 
 // ─── Datos ───────────────────────────────────────────────
 const empresas             = ref([])
@@ -213,10 +198,9 @@ onMounted(async () => {
     return
   }
   await cargarDatos()
-  // Arrancar el tour por defecto al abrir la vista
-  await nextTick()
-  modoGuia.value = true
-  pasoGuia.value = 1
+  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
+  // await nextTick()
+  // showTourPrompt.value = true
 })
 
 async function cargarDatos() {
@@ -549,6 +533,9 @@ function onEmpresaEliminada(data) {
 //  TOUR GUIADO
 // ═══════════════════════════════════════════════════════════
 const modoGuia = ref(false)
+const showTourPrompt = ref(false)
+function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true; pasoGuia.value = 1 }
+function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const pasoGuia = ref(1)
 
 const refContadores      = ref(null)
@@ -685,7 +672,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] p-4 md:p-10 font-sans text-[#1F2937] overflow-x-hidden pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] overflow-x-hidden pt-12 md:pt-12">
 
     <!-- ══════════ TOUR BOCADILLO ════════════════════════════ -->
     <Transition name="modal-fade">
@@ -742,32 +729,6 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       </div>
     </Transition>
 
-    <!-- ══════════════ AVISO EXPIRACIÓN DE SESIÓN ═══════════ -->
-    <Transition name="modal-fade">
-      <div
-        v-if="mostrarAvisoToken"
-        class="max-w-7xl mx-auto mb-4 flex items-center gap-3
-               px-5 py-3 rounded-2xl border
-               bg-amber-50 border-amber-300 text-amber-800"
-      >
-        <svg class="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <p class="text-sm font-semibold flex-1">
-          Tu sesión expira en
-          <span class="font-black">{{ minutosRestantes }} minuto{{ minutosRestantes !== 1 ? 's' : '' }}</span>.
-          Guarda tu trabajo y vuelve a iniciar sesión para no perder el acceso.
-        </p>
-        <button
-          @click="authStore.logout(); router.push('/')"
-          class="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl
-                 bg-amber-500 text-white hover:bg-amber-600 transition-all shrink-0"
-        >
-          Renovar sesión
-        </button>
-      </div>
-    </Transition>
 
     <!-- ══════════════════════ CABECERA ══════════════════════ -->
     <div class="max-w-7xl mx-auto">
@@ -1900,7 +1861,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     <!-- ══════════════ MODAL: CONFIRMAR NUEVA EMPRESA ══════════════ -->
     <Transition name="modal-fade">
       <div v-if="mostrarConfirmNuevaEmpresa"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+           class="fixed inset-0 z-[10060] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
            @click.self="mostrarConfirmNuevaEmpresa = false">
         <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
           <div class="flex items-center gap-3 mb-4">
@@ -2186,6 +2147,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     <CentroEducativoModal
       :visible="mostrarNuevoCentro"
       @centro-creado="onCentroCreado"
+      @crear-empresa="pedirNuevaEmpresa"
       @cerrar="mostrarNuevoCentro = false"
     />
 
@@ -2194,15 +2156,19 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       :visible="mostrarEditarCentro"
       :centro="centroAEditar"
       @centro-guardado="onCentroGuardado"
+      @crear-empresa="pedirNuevaEmpresa"
       @cerrar="mostrarEditarCentro = false"
     />
 
     <!-- ════════════ MODALES: NUEVA / EDITAR EMPRESA ════════════ -->
+    <!-- elevar-z-index: cuando se abre desde el botón "Crear nueva empresa" de uno de los
+         modales de centro de arriba, ese modal sigue visible detrás y este debe quedar encima. -->
     <InsertModifyEmpresa
       v-model:mostrarNuevaEmpresa="mostrarNuevaEmpresa"
       v-model:mostrarEditarEmpresa="mostrarEditarEmpresa"
       :familiasProfesionales="familiasProfesionales"
       :empresaAEditar="empresaAEditar"
+      :elevar-z-index="mostrarNuevoCentro || mostrarEditarCentro"
       @empresa-creada="onEmpresaCreada"
       @empresa-actualizada="onEmpresaActualizada"
     />
@@ -2290,6 +2256,15 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     </Transition>
 
   </div>
+
+  <!-- Modal: ¿Activar guía-tour? -->
+  <TourPromptModal
+    :show="showTourPrompt"
+    titulo="¿Quieres activar la guía-tour?"
+    descripcion="Explora la base de datos con una guía paso a paso que te muestra cada función."
+    @activar="activarTourDesdeModal"
+    @omitir="omitirTourDesdeModal"
+  />
 </template>
 
 <style scoped>

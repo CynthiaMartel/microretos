@@ -1,13 +1,16 @@
+<!-- Ruta: /retos (name: biblioteca). Antes vivía en /biblioteca — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js';
 import LoginModal from '../components/LoginModal.vue';
 import EliminarMicrorretoModal from '../components/EliminarMicrorretoModal.vue';
 import { usePdfExport } from '../composables/usePdfExport.js';
+import { iconoFamilia, colorFamilia } from '../utils/familiaIconos.js';
 
 const router = useRouter();
+const route = useRoute();
 const isLoaded = ref(false);
 const microretos = ref([]);
 const centros = ref([]);
@@ -34,6 +37,9 @@ const busqueda          = ref('');
 const empresaFiltroAbierto = ref(false);
 const infoFiltroAbierto    = ref(false);
 
+// Docentes y admins docentes solo pueden ver su propio centro
+const esCentroRestringido = computed(() => authStore.isDocente || authStore.isAdmin);
+
 const centrosDisponibles = computed(() => centros.value.map(c => c.nombre).sort());
 
 // Total de microretos del centro seleccionado (para mostrar en el botón de descarga)
@@ -51,7 +57,15 @@ const ciclosDisponibles = computed(() => {
 const cursosDisponibles = computed(() => {
   let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
-  return [...new Set(d.map(m => m.curso).filter(v => v != null))].sort((a, b) => a - b);
+  // 'ambos_cursos' se muestra aparte (botón fijo), no mezclado en el orden numérico 1º/2º.
+  return [...new Set(d.map(m => m.curso).filter(v => v != null && v !== 'ambos_cursos'))].sort((a, b) => a - b);
+});
+
+// Un reto "ambos cursos" vale para 1º y 2º a la vez (cruza módulos de los dos años).
+const hayRetosAmbosCursos = computed(() => {
+  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
+  return d.some(m => m.curso === 'ambos_cursos');
 });
 
 // Conteo por nivel dentro de familia+centro (sin aplicar otros filtros activos)
@@ -109,7 +123,11 @@ const microretosFiltrados = computed(() => {
       (filtroCentro.value === '' || centro === filtroCentro.value) &&
       (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
       (filtroNivel.value  === '' || reto.nivel_grupo === filtroNivel.value) &&
-      (filtroCurso.value  === '' || String(reto.curso) === filtroCurso.value) &&
+      (filtroCurso.value  === ''
+        || String(reto.curso) === filtroCurso.value
+        // 2º puede con todo: su propio curso, el de 1º (ya cursado) y los transversales.
+        || (filtroCurso.value === '2' && (reto.curso === 'ambos_cursos' || String(reto.curso) === '1'))
+      ) &&
       infoOk && empresaOk &&
       (!q || [reto.titulo, reto.pregunta_reto, reto.empresa_nombre, reto.ciclo]
         .some(f => f && f.toLowerCase().includes(q)))
@@ -130,10 +148,23 @@ const conteoPorFamilia = computed(() => {
   return mapa;
 });
 
-const familiasFiltradas = computed(() => {
-  if (!filtroCentro.value) return familias.value;
-  return familias.value.filter(f => (conteoPorFamilia.value[f.nombre] || 0) > 0);
+// Familias con mayor peso institucional: siempre arriba, mismo tamaño que el resto
+const FAMILIAS_DESTACADAS = ['Comercio y Marketing', 'Administración y Gestión', 'Informática y Comunicaciones'];
+// Nº de familias adicionales visibles antes de agruparlas tras "Ver más familias"
+const FAMILIAS_VISIBLES_EXTRA = 8;
+
+const familiasResto = computed(() =>
+  familias.value.filter(f => !FAMILIAS_DESTACADAS.includes(f.nombre))
+);
+
+const familiasVisibles = computed(() => {
+  const destacadas = FAMILIAS_DESTACADAS
+    .map(nombre => familias.value.find(f => f.nombre === nombre))
+    .filter(Boolean);
+  return [...destacadas, ...familiasResto.value.slice(0, FAMILIAS_VISIBLES_EXTRA)];
 });
+
+const familiasOcultas = computed(() => familiasResto.value.slice(FAMILIAS_VISIBLES_EXTRA));
 
 const nivelClase = (nivel) => ({
   Bajo:  'bg-[#00A859]/10 border-[#00A859]/20 text-[#00A859]',
@@ -164,7 +195,11 @@ const cargarDatos = async () => {
     );
     centros.value = resCentros.data;
     await nextTick();
-    if (centrosDisponibles.value.length > 0) filtroCentro.value = centrosDisponibles.value[0];
+    if (esCentroRestringido.value && authStore.userCentroNombre) {
+      filtroCentro.value = authStore.userCentroNombre;
+    } else if (centrosDisponibles.value.length > 0) {
+      filtroCentro.value = centrosDisponibles.value[0];
+    }
   } catch (error) {
     if (error.response?.status === 401) {
       accionPendiente.value = { tipo: 'cargar' };
@@ -186,6 +221,10 @@ onMounted(async () => {
     return;
   }
   await cargarDatos();
+  if (route.query.familia) {
+    seleccionarFamilia(route.query.familia);
+    router.replace({ name: 'biblioteca' });
+  }
 });
 
 // ── ACCIONES ──────────────────────────────────────────────
@@ -202,6 +241,10 @@ const seleccionarCentro = (centro) => {
   filtroCentro.value = centro;
   familiaSeleccionada.value = null;
   resetFiltrosDetalle();
+};
+
+const verMasFamilias = () => {
+  router.push({ name: 'mas-familias', query: filtroCentro.value ? { centro: filtroCentro.value } : {} });
 };
 
 const seleccionarFamilia = (nombre) => {
@@ -311,10 +354,13 @@ const cancelarEliminar = () => { modalVisible.value = false; retoAEliminar.value
 const onRetoEliminado = ({ id, titulo }) => {
   microretos.value = microretos.value.filter(m => m.id !== id);
   cancelarEliminar();
-  mostrarSnack(`"${titulo}" movido a la papelera.`, 'ok', {
-    label: 'Ir a la papelera',
-    fn: () => router.push({ name: 'papelera' }),
-  });
+  // La papelera de "Base de datos" es solo superadmin — para el resto de roles,
+  // el mensaje se queda sin acción de "ir a" (ya no tienen esa ruta disponible).
+  mostrarSnack(
+    `"${titulo}" movido a la papelera.`,
+    'ok',
+    authStore.isSuperAdmin ? { label: 'Ir a la papelera', fn: () => router.push({ name: 'papelera' }) } : null,
+  );
 };
 
 // ── SNACKBAR ─────────────────────────────────────────────
@@ -326,7 +372,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] p-4 md:p-12 font-sans text-[#1F2937] relative overflow-hidden pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-12 font-sans text-[#1F2937] relative overflow-hidden pt-12 md:pt-12">
 
     <div
       class="absolute top-[-10%] left-1/2 transform -translate-x-1/2 w-[800px] h-[500px] bg-[#99CC33] blur-[120px] rounded-full pointer-events-none transition-opacity duration-1000"
@@ -389,20 +435,28 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 </span>
               </label>
               <div class="flex flex-wrap items-center gap-2 flex-1">
-                <button
-                  v-for="centro in centrosDisponibles"
-                  :key="centro"
-                  @click="seleccionarCentro(centro)"
-                  class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-200 border"
-                  :class="filtroCentro === centro
-                    ? 'bg-[#00A859] text-white border-[#00A859] shadow-md'
-                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]'">
-                  {{ centro }}
-                </button>
+                <!-- Superadmin y empresa: selector completo de centros -->
+                <template v-if="!esCentroRestringido">
+                  <button
+                    v-for="centro in centrosDisponibles"
+                    :key="centro"
+                    @click="seleccionarCentro(centro)"
+                    class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-200 border"
+                    :class="filtroCentro === centro
+                      ? 'bg-[#00A859] text-white border-[#00A859] shadow-md'
+                      : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]'">
+                    {{ centro }}
+                  </button>
+                </template>
+                <!-- Docente / Admin docente: solo badge de su propio centro -->
+                <span v-else
+                  class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-[#00A859] text-white border border-[#00A859] shadow-md">
+                  {{ authStore.userCentroNombre || filtroCentro }}
+                </span>
 
-                <!-- Descarga de todos los microretos del centro seleccionado -->
+                <!-- Descarga de todos los microretos del centro: solo superadmin -->
                 <button
-                  v-if="filtroCentro && countCentroActual > 0 && !cargando"
+                  v-if="authStore.isSuperAdmin && filtroCentro && countCentroActual > 0 && !cargando"
                   @click="descargarGrupoCentro"
                   :disabled="generandoPDFGrupo"
                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all duration-200"
@@ -417,9 +471,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   {{ generandoPDFGrupo ? 'Generando...' : `PDF centro (${countCentroActual})` }}
                 </button>
 
-                <!-- Acceso directo a la papelera -->
+                <!-- Acceso directo a la papelera — la papelera de "Base de datos" es solo superadmin;
+                     admin gestiona su propia papelera de cuentas desde /usuarios, no desde aquí. -->
                 <button
-                  v-if="!authStore.isEmpresa"
+                  v-if="authStore.isSuperAdmin"
                   @click="router.push({ name: 'papelera' })"
                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-widest border border-gray-200 text-gray-500 bg-gray-50 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
                   title="Ver elementos eliminados en la papelera">
@@ -446,10 +501,9 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               Selecciona una familia profesional para explorar sus micro-retos
             </p>
 
-            <div v-if="familiasFiltradas.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <!-- Tarjeta de familia: div en lugar de button para poder anidar el botón de descarga -->
+            <div v-if="familiasVisibles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div
-                v-for="familia in familiasFiltradas"
+                v-for="familia in familiasVisibles"
                 :key="familia.nombre"
                 @click="seleccionarFamilia(familia.nombre)"
                 @keydown.enter.prevent="seleccionarFamilia(familia.nombre)"
@@ -458,23 +512,15 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 tabindex="0"
                 class="group relative rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 cursor-pointer">
 
-                <div class="relative h-44 overflow-hidden">
-                  <img
-                    v-if="familia.imagen_url"
-                    :src="familia.imagen_url"
-                    :alt="familia.nombre"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                <div :class="['relative h-44 overflow-hidden bg-gradient-to-br flex items-center justify-center', colorFamilia(familia.nombre).bg]">
+                  <svg :class="['w-16 h-16 group-hover:scale-110 transition-transform duration-300', colorFamilia(familia.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-for="d in iconoFamilia(familia.nombre)" :key="d"
+                      stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="d" />
+                  </svg>
                   <div
-                    v-else
-                    class="w-full h-full bg-gradient-to-br from-[#00A859]/10 via-[#99CC33]/10 to-gray-100 flex items-center justify-center">
-                    <svg class="w-16 h-16 text-[#00A859]/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                        d="M12 14l9-5-9-5-9 5 9 5zm0 7V14m0 0l-6.16-3.422M12 21a11.952 11.952 0 01-5.835-6.578" />
-                    </svg>
-                  </div>
-                  <div class="absolute top-3 right-3 bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
-                    {{ conteoPorFamilia[familia.nombre] || 0 }} reto{{ (conteoPorFamilia[familia.nombre] || 0) !== 1 ? 's' : '' }}
+                    v-if="conteoPorFamilia[familia.nombre]"
+                    class="absolute top-3 right-3 bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
+                    {{ conteoPorFamilia[familia.nombre] }} reto{{ conteoPorFamilia[familia.nombre] !== 1 ? 's' : '' }}
                   </div>
                 </div>
 
@@ -508,6 +554,24 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </button>
                 </div>
               </div>
+
+              <!-- Tarjeta "ver más familias": agrupa el resto, homogénea con las demás -->
+              <button
+                v-if="familiasOcultas.length > 0"
+                @click="verMasFamilias"
+                class="group relative rounded-[1.5rem] overflow-hidden border-2 border-dashed border-gray-200 hover:border-[#00A859]/40 transition-all duration-300 bg-gray-50 hover:bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 flex flex-col items-center justify-center gap-3 min-h-[15.5rem] p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-white border border-gray-200 group-hover:border-[#00A859]/40 flex items-center justify-center shadow-sm">
+                  <svg class="w-6 h-6 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-black text-[#1F2937] text-base leading-tight">Ver más familias</h3>
+                  <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
+                    +{{ familiasOcultas.length }} familia{{ familiasOcultas.length !== 1 ? 's' : '' }}
+                  </p>
+                </div>
+              </button>
             </div>
 
             <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
@@ -929,6 +993,16 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                         : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-400 hover:text-[#1F2937]'">
                       {{ curso }}º
                     </button>
+                    <button
+                      v-if="hayRetosAmbosCursos"
+                      @click="filtroCurso = filtroCurso === 'ambos_cursos' ? '' : 'ambos_cursos'"
+                      title="Ambos Cursos: posibilidad 1º y 2º"
+                      class="flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all border"
+                      :class="filtroCurso === 'ambos_cursos'
+                        ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-sm'
+                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-400 hover:text-[#1F2937]'">
+                      Ambos Cursos
+                    </button>
                   </div>
                 </div>
 
@@ -1081,8 +1155,9 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     <span class="inline-block bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium truncate max-w-full shadow-sm" :title="reto.ciclo">
                       {{ reto.ciclo }}
                     </span>
-                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0">
-                      {{ reto.curso }}º curso
+                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0"
+                          :title="reto.curso === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''">
+                      {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos' : reto.curso + 'º curso' }}
                     </span>
                   </div>
                 </div>

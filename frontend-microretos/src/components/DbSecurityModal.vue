@@ -31,7 +31,7 @@ async function verificar() {
   loading.value = true
   error.value   = ''
   try {
-    await api.post('/admin/verify-password', { password: password.value })
+    await api.post('/admin/verify-password', { password: password.value }, { skipAuthRedirect: true })
     emit('verified')
   } catch (e) {
     if (e.response?.status === 401) {
@@ -40,14 +40,14 @@ async function verificar() {
       if (esTokenExpirado) {
         error.value = 'Tu sesión ha expirado. Recarga la página e inicia sesión de nuevo.'
         // Disparar manualmente el evento para que App.vue limpie y redirija
-        localStorage.removeItem('admin_token')
-        localStorage.removeItem('admin_token_created_at')
         window.dispatchEvent(new CustomEvent('auth:token-expired'))
       } else {
         error.value = 'Contraseña incorrecta. Inténtalo de nuevo.'
         password.value = ''
         nextTick(() => inputRef.value?.focus())
       }
+    } else if (e.response?.status === 429) {
+      error.value = e.response?.data?.message || 'Demasiados intentos. Inténtalo más tarde.'
     } else {
       error.value = 'Error al verificar. Inténtalo de nuevo.'
       password.value = ''

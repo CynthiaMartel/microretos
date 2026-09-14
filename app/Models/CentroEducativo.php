@@ -9,7 +9,7 @@ class CentroEducativo extends Model
 {
     use SoftDeletes;
     protected $table    = 'centro_educativo';
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre', 'img'];
 
     public function empresas()
     {

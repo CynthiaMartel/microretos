@@ -207,7 +207,7 @@ onMounted(cargarPapelera)
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 pb-20 pt-12 md:pt-12">
+  <div class="min-h-screen pb-20 pt-12 md:pt-12">
 
     <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
     <div class="bg-white border-b border-gray-100 shadow-sm">

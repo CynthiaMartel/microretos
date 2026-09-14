@@ -23,6 +23,9 @@ const props = defineProps({
   familiasProfesionales: { type: Array,   default: () => [] },
   centrosDisponibles:    { type: Array,   default: () => [] },
   empresaAEditar:        { type: Object,  default: null },
+  // true cuando este modal se abre desde otro modal ya visible (ej. CentroEducativoModal)
+  // que no debe desaparecer detrás — eleva el overlay por encima de esos 10000.
+  elevarZIndex:          { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
@@ -323,6 +326,7 @@ defineExpose({ abrirTrasLogin })
       <div
         v-if="mostrarNuevaEmpresa"
         class="ime-overlay"
+        :class="{ 'ime-overlay--elevado': elevarZIndex }"
         @click.self="$emit('update:mostrarNuevaEmpresa', false)"
       >
         <Transition name="ime-card">
@@ -658,6 +662,7 @@ defineExpose({ abrirTrasLogin })
       <div
         v-if="mostrarEditarEmpresa"
         class="ime-overlay"
+        :class="{ 'ime-overlay--elevado': elevarZIndex }"
         @click.self="$emit('update:mostrarEditarEmpresa', false)"
       >
         <Transition name="ime-card">
@@ -919,6 +924,7 @@ defineExpose({ abrirTrasLogin })
   <!-- Modal para crear nuevo centro educativo (compartido por nueva y editar empresa) -->
   <CentroEducativoModal
     :visible="mostrarModalCentro"
+    :permitir-crear-empresa="false"
     @centro-creado="onCentroCreado"
     @cerrar="mostrarModalCentro = false"
   />
@@ -926,6 +932,8 @@ defineExpose({ abrirTrasLogin })
 </template>
 
 <style scoped>
+.ime-overlay--elevado { z-index: 10050 !important; }
+
 .ime-overlay {
   position: fixed; inset: 0;
   background: rgba(10, 18, 25, 0.75);

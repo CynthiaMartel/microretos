@@ -1,6 +1,10 @@
+<!-- Ruta: /usuarios (name: gestion-usuarios). Antes vivía en /admin/usuarios — ver router/index.js. Nota: el endpoint del backend sigue siendo /admin/usuarios, no confundir. -->
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import api from '../api.js'
+import { useAuthStore } from '../stores/auth.js'
+
+const authStore = useAuthStore()
 
 // ── Estado principal ────────────────────────────────────────────────
 const usuarios    = ref([])
@@ -12,7 +16,7 @@ const filtroRol   = ref(0)
 // ── Modal: crear cuenta ─────────────────────────────────────────────
 const modalCrear  = ref(false)
 const creando     = ref(false)
-const form        = ref({ name: '', email: '', password: '', role: '2' })
+const form        = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
 const formErrors  = ref({})
 const msgCrear    = ref('')
 
@@ -30,21 +34,75 @@ let   highlightTimer   = null
 const modalEditar        = ref(false)
 const editando           = ref(false)
 const usuarioEditando    = ref(null)
-const formEditar         = ref({ name: '', email: '', password: '', role: '2' })
+const formEditar         = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
+const confirmarCambioPassword = ref(false)   // switch que el admin debe marcar para autorizar el reseteo de contraseña
+
+// ── Requisitos de contraseña (mismos que valida el backend: min 8, mayúscula, minúscula, número, símbolo) ──
+function evaluarPassword(pwd) {
+  return [
+    { label: 'Mínimo 8 caracteres',  ok: pwd.length >= 8 },
+    { label: 'Una letra mayúscula',  ok: /[A-Z]/.test(pwd) },
+    { label: 'Una letra minúscula',  ok: /[a-z]/.test(pwd) },
+    { label: 'Un número',            ok: /[0-9]/.test(pwd) },
+    { label: 'Un carácter especial (!@#$…)', ok: /[^A-Za-z0-9]/.test(pwd) },
+  ]
+}
+const passwordRequisitos       = computed(() => evaluarPassword(form.value.password || ''))
+const passwordRequisitosEditar = computed(() => evaluarPassword(formEditar.value.password || ''))
+const formEmailLocal       = ref('')   // parte antes del @ en el form crear
+const formEditarEmailLocal = ref('')   // parte antes del @ en el form editar
 const formEditarErrors   = ref({})
 const msgEditar          = ref('')
 
-function abrirModalEditar(usuario) {
-  usuarioEditando.value  = usuario
-  formEditar.value       = { name: usuario.name, email: usuario.email, password: '', role: String(usuario.role) }
+async function abrirModalEditar(usuario) {
+  usuarioEditando.value      = usuario
+  formEditarEmailLocal.value = usuario.email?.includes('@') ? usuario.email.split('@')[0] : (usuario.email || '')
+  formEditar.value           = {
+    name:                 usuario.name,
+    email:                usuario.email,
+    password:             '',
+    password_confirmation: '',
+    role:                 String(usuario.role),
+    centro_educativo_id:  usuario.centro_educativo_id ?? null,
+    empresa_id:           usuario.empresa_id ?? null,
+  }
+  confirmarCambioPassword.value = false
   formEditarErrors.value = {}
   msgEditar.value        = ''
   modalEditar.value      = true
+
+  if (authStore.isSuperAdmin) {
+    await Promise.all([
+      centros.value.length === 0 ? api.get('/centros').then(r => { centros.value = r.data }) : Promise.resolve(),
+      empresasList.value.length === 0 ? api.get('/empresas').then(r => { empresasList.value = r.data }) : Promise.resolve(),
+    ])
+  }
 }
 
 async function guardarEdicion() {
   formEditarErrors.value = {}
   msgEditar.value        = ''
+
+  if (authStore.isSuperAdmin && ['2', '4'].includes(formEditar.value.role) && !formEditar.value.centro_educativo_id) {
+    formEditarErrors.value.centro_educativo_id = 'Debes asignar un centro educativo.'
+    return
+  }
+  if (authStore.isSuperAdmin && formEditar.value.role === '3' && !formEditar.value.empresa_id) {
+    formEditarErrors.value.empresa_id = 'Debes asignar una empresa.'
+    return
+  }
+
+  if (formEditar.value.password) {
+    if (formEditar.value.password !== formEditar.value.password_confirmation) {
+      formEditarErrors.value.password_confirmation = 'Las contraseñas no coinciden.'
+      return
+    }
+    if (!confirmarCambioPassword.value) {
+      formEditarErrors.value.password = 'Debes confirmar que quieres cambiar la contraseña de esta cuenta.'
+      return
+    }
+  }
+
   editando.value         = true
   try {
     const payload = {
@@ -52,17 +110,48 @@ async function guardarEdicion() {
       email: formEditar.value.email,
       role:  formEditar.value.role,
     }
-    if (formEditar.value.password) payload.password = formEditar.value.password
+    if (formEditar.value.password) {
+      payload.password              = formEditar.value.password
+      payload.password_confirmation = formEditar.value.password_confirmation
+      payload.confirm_password_change = true
+    }
+    if (authStore.isSuperAdmin && ['2', '4'].includes(formEditar.value.role)) {
+      payload.centro_educativo_id = formEditar.value.centro_educativo_id
+    }
+    if (authStore.isSuperAdmin && formEditar.value.role === '3') {
+      payload.empresa_id = formEditar.value.empresa_id
+    }
     const { data } = await api.patch(`/admin/usuarios/${usuarioEditando.value.id}`, payload)
     reemplazar(usuarios.value, data.data)
     modalEditar.value = false
-    mostrarToast('Cuenta actualizada correctamente.')
+    mostrarToast(
+      payload.password
+        ? 'Cuenta actualizada. Contraseña cambiada correctamente.'
+        : 'Cuenta actualizada correctamente.'
+    )
   } catch (e) {
-    if (e.response?.status === 422) {
+    const status = e.response?.status
+
+    if (status === 422) {
       const errs = e.response.data.errors ?? {}
       formEditarErrors.value = Object.fromEntries(
         Object.entries(errs).map(([k, v]) => [k, v[0]])
       )
+      // Si el fallo de validación viene del bloque de contraseña, dejarlo explícito
+      // además del error en el campo concreto (el switch queda lejos del mensaje genérico)
+      if (payload.password && (
+        formEditarErrors.value.password ||
+        formEditarErrors.value.password_confirmation ||
+        formEditarErrors.value.confirm_password_change
+      )) {
+        msgEditar.value = 'No se ha podido cambiar la contraseña. Revisa los campos marcados en rojo.'
+      }
+    } else if (status === 403) {
+      msgEditar.value = e.response?.data?.message || 'No tienes permiso para realizar este cambio.'
+    } else if (status === 429) {
+      msgEditar.value = e.response?.data?.message || 'Demasiados intentos. Inténtalo más tarde.'
+    } else if (!e.response) {
+      msgEditar.value = 'Error de conexión. Inténtalo más tarde.'
     } else {
       msgEditar.value = e.response?.data?.message ?? 'Error al actualizar la cuenta.'
     }
@@ -79,6 +168,10 @@ const cargandoCentros   = ref(false)
 const busquedaCentro    = ref('')
 const asociandoCentro   = ref(false)
 
+// ── Listas auxiliares en modales ────────────────────────────────────
+const empresasList      = ref([])
+const cargandoEmpresas  = ref(false)
+
 // ── Confirmación + Toast ────────────────────────────────────────────
 const confirm = ref({ show: false, title: '', body: '', action: null, danger: true })
 const toast   = ref({ show: false, msg: '', ok: true })
@@ -91,7 +184,7 @@ const usuariosFiltrados = computed(() => {
 })
 
 const totalActivos  = computed(() => usuarios.value.length)
-const totalDocentes = computed(() => usuarios.value.filter(u => u.role === 2).length)
+const totalDocentes = computed(() => usuarios.value.filter(u => u.role === 2 || u.role === 4).length)
 const totalEmpresas = computed(() => usuarios.value.filter(u => u.role === 3).length)
 const totalPapelera = computed(() => papelera.value.length)
 
@@ -107,6 +200,85 @@ const centrosFiltrados = computed(() => {
   )
 })
 
+// ── Email automático por centro ─────────────────────────────────────
+function centroSlug(nombre) {
+  return nombre
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+// Dominio por centro educativo (docente/admin)
+const emailDomain = computed(() => {
+  // Admin de centro: el dominio es siempre el de su propio centro (no necesita la lista)
+  if (authStore.isAdmin && authStore.userCentroNombre) {
+    return centroSlug(authStore.userCentroNombre) + '.dualab'
+  }
+  const id = form.value.centro_educativo_id
+  if (!id) return null
+  const c = centros.value.find(c => c.id === id)
+  return c ? centroSlug(c.nombre) + '.dualab' : null
+})
+const emailEditarDomain = computed(() => {
+  if (authStore.isAdmin && authStore.userCentroNombre) {
+    return centroSlug(authStore.userCentroNombre) + '.dualab'
+  }
+  const id = formEditar.value.centro_educativo_id
+  if (!id) return null
+  const c = centros.value.find(c => c.id === id)
+  return c ? centroSlug(c.nombre) + '.dualab' : null
+})
+
+// Dominio por empresa (role 3)
+const emailEmpresaDomain = computed(() => {
+  const id = form.value.empresa_id
+  if (!id) return null
+  const e = empresasList.value.find(e => e.id === id)
+  return e ? centroSlug(e.nombre_comercial) + '.dualab' : null
+})
+const emailEditarEmpresaDomain = computed(() => {
+  const id = formEditar.value.empresa_id
+  if (!id) return null
+  const e = empresasList.value.find(e => e.id === id)
+  return e ? centroSlug(e.nombre_comercial) + '.dualab' : null
+})
+
+// Dominio activo (centro tiene prioridad; si no hay, empresa)
+const activeEmailDomain       = computed(() => emailDomain.value || emailEmpresaDomain.value)
+const activeEmailEditarDomain = computed(() => emailEditarDomain.value || emailEditarEmpresaDomain.value)
+
+// ── Watchers de composición de email ────────────────────────────────
+
+// CREAR: cuando el dominio activo aparece/cambia → siembra local part desde el nombre
+watch(activeEmailDomain, (domain) => {
+  if (domain) {
+    formEmailLocal.value = centroSlug(form.value.name) || formEmailLocal.value
+    form.value.email = formEmailLocal.value + '@' + domain
+  }
+})
+// CREAR: el usuario edita el local part → recompone el email
+watch(formEmailLocal, (local) => {
+  if (activeEmailDomain.value) form.value.email = local + '@' + activeEmailDomain.value
+})
+// CREAR: el nombre cambia con dominio activo → actualiza el local part
+watch(() => form.value.name, (nombre) => {
+  if (activeEmailDomain.value) formEmailLocal.value = centroSlug(nombre)
+})
+
+// EDITAR: cuando el dominio activo aparece/cambia → preserva local part o siembra desde email
+watch(activeEmailEditarDomain, (domain) => {
+  if (domain) {
+    if (!formEditarEmailLocal.value && formEditar.value.email?.includes('@')) {
+      formEditarEmailLocal.value = formEditar.value.email.split('@')[0]
+    }
+    formEditar.value.email = formEditarEmailLocal.value + '@' + domain
+  }
+})
+// EDITAR: el usuario edita el local part → recompone el email
+watch(formEditarEmailLocal, (local) => {
+  if (activeEmailEditarDomain.value) formEditar.value.email = local + '@' + activeEmailEditarDomain.value
+})
+
 // ── API: usuarios ───────────────────────────────────────────────────
 async function cargar() {
   cargando.value = true
@@ -118,6 +290,8 @@ async function cargar() {
       const { data } = await api.get('/admin/usuarios')
       usuarios.value = data.data
     }
+  } catch (e) {
+    mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
   } finally {
     cargando.value = false
   }
@@ -126,13 +300,28 @@ async function cargar() {
 async function crearUsuario() {
   formErrors.value = {}
   msgCrear.value   = ''
+
+  if (authStore.isSuperAdmin && ['2', '4'].includes(form.value.role) && !form.value.centro_educativo_id) {
+    formErrors.value.centro_educativo_id = 'Debes asignar un centro educativo antes de crear la cuenta.'
+    return
+  }
+  if (authStore.isSuperAdmin && form.value.role === '3' && !form.value.empresa_id) {
+    formErrors.value.empresa_id = 'Debes asignar una empresa antes de crear la cuenta.'
+    return
+  }
+  if (form.value.password !== form.value.password_confirmation) {
+    formErrors.value.password_confirmation = 'Las contraseñas no coinciden.'
+    return
+  }
+
   creando.value    = true
   try {
     const { data } = await api.post('/admin/usuarios', form.value)
     usuarios.value.push(data.data)
     modalCrear.value      = false
     cuentaRecienCreada.value = data.data
-    form.value = { name: '', email: '', password: '', role: '2' }
+    form.value       = { name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null }
+    formEmailLocal.value = ''
     // Pequeño delay para que el DOM renderice la nueva fila antes del modal
     await nextTick()
     modalExito.value = true
@@ -147,6 +336,20 @@ async function crearUsuario() {
     }
   } finally {
     creando.value = false
+  }
+}
+
+async function abrirModalCrear() {
+  form.value = { name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null }
+  formEmailLocal.value = ''
+  formErrors.value = {}
+  msgCrear.value = ''
+  modalCrear.value = true
+  if (authStore.isSuperAdmin) {
+    const [, ] = await Promise.all([
+      centros.value.length === 0 ? api.get('/centros').then(r => { centros.value = r.data }) : Promise.resolve(),
+      empresasList.value.length === 0 ? api.get('/empresas').then(r => { empresasList.value = r.data }) : Promise.resolve(),
+    ])
   }
 }
 
@@ -194,6 +397,18 @@ async function activar(usuario) {
   try {
     const { data } = await api.patch(`/admin/usuarios/${usuario.id}/activar`)
     reemplazar(usuarios.value, data.data)
+    mostrarToast('Cuenta activada correctamente.')
+  } catch (e) {
+    mostrarToast(e.response?.data?.message ?? 'Error al activar.', false)
+  }
+}
+
+async function activarEnModal() {
+  if (!usuarioEditando.value) return
+  try {
+    const { data } = await api.patch(`/admin/usuarios/${usuarioEditando.value.id}/activar`)
+    reemplazar(usuarios.value, data.data)
+    usuarioEditando.value = data.data
     mostrarToast('Cuenta activada correctamente.')
   } catch (e) {
     mostrarToast(e.response?.data?.message ?? 'Error al activar.', false)
@@ -331,11 +546,12 @@ function cambiarVista(v) {
 
 // ── Formato ─────────────────────────────────────────────────────────
 const ROLE_COLORS = {
-  2: { bg: 'bg-blue-50 text-blue-600 border-blue-200',    label: 'Docente' },
-  3: { bg: 'bg-amber-50 text-amber-600 border-amber-200', label: 'Empresa' },
+  2: { bg: 'bg-blue-50 text-blue-600 border-blue-200',       label: 'Docente' },
+  3: { bg: 'bg-amber-50 text-amber-600 border-amber-200',    label: 'Empresa' },
+  4: { bg: 'bg-purple-50 text-purple-600 border-purple-200', label: 'Admin' },
 }
 function roleChip(role) {
-  return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-gray-500 border-gray-200', label: 'Admin' }
+  return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-gray-500 border-gray-200', label: 'Superadmin' }
 }
 function fmtDate(d) {
   if (!d) return '—'
@@ -351,6 +567,8 @@ onMounted(async () => {
     ])
     usuarios.value = resActivos.data.data
     papelera.value = resPapelera.data.data
+  } catch (e) {
+    mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
   } finally {
     cargando.value = false
   }
@@ -358,7 +576,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 text-[#121212] px-4 py-8 lg:px-8 pt-12 md:pt-12">
+  <div class="min-h-screen text-[#121212] px-4 py-8 lg:px-8 pt-12 md:pt-12">
 
     <!-- ── Cabecera ────────────────────────────────────────── -->
     <div class="max-w-5xl mx-auto mb-8 flex flex-col sm:flex-row sm:items-end gap-4">
@@ -368,7 +586,7 @@ onMounted(async () => {
         <p class="text-sm text-gray-500 mt-1">Crea, activa, bloquea y elimina cuentas de docentes y empresas.</p>
       </div>
       <button
-        @click="modalCrear = true"
+        @click="abrirModalCrear()"
         class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A859] hover:bg-[#009950]
                text-white font-black text-xs uppercase tracking-widest transition-all shrink-0"
       >
@@ -416,7 +634,7 @@ onMounted(async () => {
             d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
         </svg>
         <span class="font-black text-xl text-red-500">{{ totalPapelera }}</span>
-        <span class="text-xs font-semibold text-red-400 uppercase tracking-wider">reciclados</span>
+        <span class="text-xs font-semibold text-red-400 uppercase tracking-wider">En Papelera</span>
       </div>
     </div>
 
@@ -439,7 +657,11 @@ onMounted(async () => {
         </button>
       </div>
       <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-xl">
-        <button v-for="f in [{ val: 0, label: 'Todos' }, { val: 2, label: 'Docentes' }, { val: 3, label: 'Empresas' }]"
+        <button v-for="f in [
+            { val: 0, label: 'Todos' },
+            { val: 2, label: 'Docentes' },
+            ...(authStore.isSuperAdmin ? [{ val: 4, label: 'Admins Docentes' }, { val: 3, label: 'Empresas' }] : [])
+          ]"
           :key="f.val" @click="filtroRol = f.val"
           :class="filtroRol === f.val ? 'bg-white text-[#1F2937] shadow-sm' : 'text-gray-400 hover:text-gray-600'"
           class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
@@ -473,19 +695,41 @@ onMounted(async () => {
             <!-- Avatar + info -->
             <div class="flex items-center gap-3 flex-1 min-w-0">
               <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-black text-sm"
-                   :class="u.role === 2 ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
+                   :class="[2,4].includes(u.role) ? 'bg-blue-100 text-blue-600' : u.role === 3 ? 'bg-amber-100 text-amber-600' : 'bg-gray-200 text-gray-500'">
                 {{ u.name.charAt(0).toUpperCase() }}
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-bold text-sm text-[#1F2937] truncate">{{ u.name }}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border"
+                  <!-- Chip Docente siempre visible para roles 2 y 4 -->
+                  <span v-if="[2,4].includes(u.role)"
+                        class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border
+                               bg-blue-50 text-blue-600 border-blue-200">
+                    Docente
+                  </span>
+                  <!-- Chip Admin adicional solo para role 4 -->
+                  <span v-if="u.role === 4"
+                        class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border
+                               bg-purple-50 text-purple-600 border-purple-200">
+                    Admin
+                  </span>
+                  <!-- Chip para empresa y otros roles -->
+                  <span v-if="![2,4].includes(u.role)"
+                        class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border"
                         :class="roleChip(u.role).bg">
                     {{ roleChip(u.role).label }}
                   </span>
-                  <span v-if="!u.is_active"
+                  <span v-if="u.is_active"
                         class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
-                               bg-yellow-50 text-yellow-600 border border-yellow-200">
+                               bg-green-50 text-green-600 border border-green-200 flex items-center gap-1">
+                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Activada
+                  </span>
+                  <span v-else
+                        class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
+                               bg-orange-50 text-orange-500 border border-orange-200">
                     Sin activar
                   </span>
                   <span v-if="u.is_blocked"
@@ -494,9 +738,9 @@ onMounted(async () => {
                     Bloqueada
                   </span>
                 </div>
-                <p class="text-xs text-gray-400 truncate mt-0.5">{{ u.email }}</p>
-                <!-- Centro asociado (solo docentes) -->
-                <p v-if="u.role === 2 && u.centro_nombre"
+                <p class="text-xs text-gray-400 break-all mt-0.5">{{ u.email }}</p>
+                <!-- Centro asociado (docentes y admins de centro) -->
+                <p v-if="[2,4].includes(u.role) && u.centro_nombre"
                    class="text-[10px] text-blue-500 mt-0.5 flex items-center gap-1">
                   <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -544,9 +788,9 @@ onMounted(async () => {
                   @click="onActivarClick(u)"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
                          uppercase tracking-wider transition-all
-                         bg-[#00A859]/15 text-[#00A859] border border-[#00A859]/30
-                         hover:bg-[#00A859]/25"
-                  :class="highlightId === u.id ? 'ring-2 ring-[#00A859]/60 ring-offset-1 ring-offset-white animate-pulse-soft' : ''"
+                         bg-orange-50 text-orange-500 border border-orange-200
+                         hover:bg-orange-100"
+                  :class="highlightId === u.id ? 'ring-2 ring-orange-400/60 ring-offset-1 ring-offset-white animate-pulse-soft' : ''"
                 >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -620,8 +864,8 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Fila secundaria: asociar centro (solo docentes activos) -->
-          <div v-if="vista === 'activos' && u.role === 2" class="border-t border-gray-100 pt-2.5">
+          <!-- Fila secundaria: asociar centro (solo docentes activos; el backend restringe esta acción a superadmin) -->
+          <div v-if="authStore.isSuperAdmin && vista === 'activos' && [2,4].includes(u.role)" class="border-t border-gray-100 pt-2.5">
             <button @click="abrirModalCentro(u)"
               class="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider
                      text-gray-400 hover:text-blue-600 transition-colors">
@@ -644,57 +888,117 @@ onMounted(async () => {
            @click.self="modalCrear = false">
         <Transition name="modal-scale">
           <div v-if="modalCrear"
-               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md p-8">
+               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
             <button @click="modalCrear = false"
               class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
-                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all">
+                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
 
-            <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
-            <p class="text-xs text-gray-500 mb-6">
-              La cuenta quedará pendiente de activación hasta que la valides.
-            </p>
+            <div class="px-8 pt-8 pb-4 shrink-0">
+              <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
+              <p class="text-xs text-gray-500">
+                La cuenta quedará pendiente de activación hasta que la valides.
+              </p>
+            </div>
 
+            <div class="overflow-y-auto px-8 pb-8 pt-1">
             <form @submit.prevent="crearUsuario" class="space-y-4">
               <!-- Nombre -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
                 <input v-model="form.name" type="text" placeholder="Nombre completo"
+                  maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formErrors.name ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formErrors.name" class="text-[10px] text-red-500 mt-1">{{ formErrors.name }}</p>
+                <div class="flex justify-between items-center mt-1">
+                  <p v-if="formErrors.name" class="text-[10px] text-red-500">{{ formErrors.name }}</p>
+                  <span v-else></span>
+                  <span class="text-[10px]" :class="(form.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (form.name || '').length }}/255</span>
+                </div>
               </div>
 
-              <!-- Email -->
+              <!-- Correo electrónico -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
-                <input v-model="form.email" type="email" placeholder="correo@ejemplo.com"
+                <!-- Docente/Admin sin centro aún -->
+                <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role) && !activeEmailDomain"
+                  class="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-600">
+                  Selecciona un centro educativo para generar el correo
+                </div>
+                <!-- Empresa sin empresa asignada aún -->
+                <div v-else-if="authStore.isSuperAdmin && form.role === '3' && !activeEmailDomain"
+                  class="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-600">
+                  Selecciona una empresa para generar el correo
+                </div>
+                <!-- Con dominio (centro o empresa): input dividido -->
+                <div v-else-if="activeEmailDomain"
+                  class="flex items-center bg-gray-50 border rounded-xl overflow-hidden transition-all
+                         focus-within:border-[#00A859]/50 focus-within:ring-2 focus-within:ring-[#00A859]/10"
+                  :class="formErrors.email ? 'border-red-400' : 'border-gray-200'">
+                  <input v-model="formEmailLocal" type="text" placeholder="nombreusuario"
+                    class="flex-1 min-w-0 bg-transparent px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300 outline-none" />
+                  <span class="pr-4 text-sm text-gray-400 whitespace-nowrap select-none shrink-0">@{{ activeEmailDomain }}</span>
+                </div>
+                <!-- Fallback: input libre (no superadmin) -->
+                <input v-else v-model="form.email" type="email" placeholder="correo@ejemplo.com"
+                  maxlength="254"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formErrors.email ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formErrors.email" class="text-[10px] text-red-500 mt-1">{{ formErrors.email }}</p>
+                <div class="flex justify-between items-center mt-1">
+                  <p v-if="formErrors.email" class="text-[10px] text-red-500">{{ formErrors.email }}</p>
+                  <span v-else></span>
+                  <span v-if="activeEmailDomain" class="text-[10px]" :class="(form.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (form.email || '').length }}/254</span>
+                </div>
               </div>
 
               <!-- Contraseña -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Contraseña temporal</label>
-                <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas y números"
+                <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas, minúsculas, número y símbolo"
+                  maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formErrors.password ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formErrors.password" class="text-[10px] text-red-500 mt-1">{{ formErrors.password }}</p>
+                <p v-if="formErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formErrors.password }}</p>
+                <ul class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  <li v-for="req in passwordRequisitos" :key="req.label"
+                    class="flex items-center gap-1 text-[10px] transition-colors"
+                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="8" stroke-width="2"/>
+                    </svg>
+                    {{ req.label }}
+                  </li>
+                </ul>
               </div>
 
-              <!-- Rol -->
+              <!-- Repite contraseña -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Rol</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la contraseña</label>
+                <input v-model="form.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
+                  maxlength="128"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
+                <p v-if="formErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formErrors.password_confirmation }}</p>
+              </div>
+
+              <!-- Tipo de cuenta (solo visible para superadmin; admin de centro siempre crea docentes) -->
+              <div v-if="authStore.isSuperAdmin">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex gap-3">
-                  <button type="button" @click="form.role = '2'"
-                    :class="form.role === '2' ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'"
+                  <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
+                  <button type="button"
+                    @click="form.role = ['2','4'].includes(form.role) ? form.role : '2'"
+                    :class="['2','4'].includes(form.role) ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'"
                     class="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-bold transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -702,7 +1006,7 @@ onMounted(async () => {
                     </svg>
                     Docente
                   </button>
-                  <button type="button" @click="form.role = '3'"
+                  <button type="button" @click="form.role = '3'; form.centro_educativo_id = null"
                     :class="form.role === '3' ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'"
                     class="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-bold transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -712,7 +1016,57 @@ onMounted(async () => {
                     Empresa
                   </button>
                 </div>
+
+                <!-- Sub-opción anidada: ¿es admin del centro? Solo si Docente está seleccionado -->
+                <div v-if="['2','4'].includes(form.role)"
+                  class="mt-2 px-3.5 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox"
+                      :checked="form.role === '4'"
+                      @change="form.role = $event.target.checked ? '4' : '2'; if (!$event.target.checked) form.centro_educativo_id = null"
+                      class="mt-0.5 w-4 h-4 rounded accent-purple-600 shrink-0" />
+                    <div>
+                      <span class="text-xs font-bold text-gray-700">Administrador del centro</span>
+                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
+                    </div>
+                  </label>
+                </div>
+
                 <p v-if="formErrors.role" class="text-[10px] text-red-500 mt-1">{{ formErrors.role }}</p>
+              </div>
+
+              <!-- Centro educativo (requerido para docente/admin) -->
+              <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role)">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                  Centro educativo
+                  <span class="text-red-400 ml-0.5">*</span>
+                </label>
+                <div v-if="cargandoCentros" class="text-xs text-gray-400 py-2">Cargando centros…</div>
+                <select v-else v-model="form.centro_educativo_id"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formErrors.centro_educativo_id ? 'border-red-400' : 'border-gray-200'">
+                  <option :value="null">— Selecciona un centro —</option>
+                  <option v-for="c in centros" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                </select>
+                <p v-if="formErrors.centro_educativo_id" class="text-[10px] text-red-500 mt-1">{{ formErrors.centro_educativo_id }}</p>
+              </div>
+
+              <!-- Empresa (requerida para role empresa) -->
+              <div v-if="authStore.isSuperAdmin && form.role === '3'">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                  Empresa
+                  <span class="text-red-400 ml-0.5">*</span>
+                </label>
+                <div v-if="cargandoEmpresas" class="text-xs text-gray-400 py-2">Cargando empresas…</div>
+                <select v-else v-model="form.empresa_id"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formErrors.empresa_id ? 'border-red-400' : 'border-gray-200'">
+                  <option :value="null">— Selecciona una empresa —</option>
+                  <option v-for="e in empresasList" :key="e.id" :value="e.id">{{ e.nombre_comercial }}</option>
+                </select>
+                <p v-if="formErrors.empresa_id" class="text-[10px] text-red-500 mt-1">{{ formErrors.empresa_id }}</p>
               </div>
 
               <p v-if="msgCrear" class="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -725,6 +1079,7 @@ onMounted(async () => {
                 {{ creando ? 'Creando...' : 'Crear cuenta' }}
               </button>
             </form>
+            </div>
           </div>
         </Transition>
       </div>
@@ -736,7 +1091,7 @@ onMounted(async () => {
            class="fixed inset-0 z-[9100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <Transition name="modal-scale">
           <div v-if="modalExito"
-               class="bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-sm p-8 text-center">
+               class="bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-sm p-8 text-center overflow-y-auto max-h-[90vh]">
 
             <!-- Icono -->
             <div class="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
@@ -751,6 +1106,12 @@ onMounted(async () => {
               La cuenta de
               <span class="text-[#1F2937] font-bold">{{ cuentaRecienCreada?.name }}</span>
               se ha creado correctamente.
+            </p>
+            <p class="text-xs text-[#00A859] font-bold flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+              Contraseña creada correctamente
             </p>
 
             <!-- Aviso destacado -->
@@ -900,68 +1261,138 @@ onMounted(async () => {
            @click.self="modalEditar = false">
         <Transition name="modal-scale">
           <div v-if="modalEditar"
-               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md p-8">
+               class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
 
-            <!-- Aviso de seguridad -->
-            <div class="mb-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
-              <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              </svg>
-              <div>
-                <p class="text-xs font-black text-amber-600 uppercase tracking-wider mb-0.5">Edición de cuenta sensible</p>
-                <p class="text-xs text-gray-500">Estás modificando los datos de <span class="text-[#1F2937] font-bold">{{ usuarioEditando?.name }}</span>. Cualquier cambio tendrá efecto inmediato.</p>
-              </div>
-            </div>
-
+            <!-- Botón cerrar -->
             <button @click="modalEditar = false"
               class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
-                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all">
+                     flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
 
-            <h2 class="text-lg font-black mb-1 text-[#121212]">Editar cuenta</h2>
-            <p class="text-xs text-gray-500 mb-6">Modifica los datos de la cuenta. Deja la contraseña en blanco para no cambiarla.</p>
+            <!-- Cabecera fija -->
+            <div class="px-8 pt-8 pb-4 shrink-0">
+              <!-- Aviso de seguridad -->
+              <div class="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
+                <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <div>
+                  <p class="text-xs font-black text-amber-600 uppercase tracking-wider mb-0.5">Edición de cuenta sensible</p>
+                  <p class="text-xs text-gray-500">Estás modificando los datos de <span class="text-[#1F2937] font-bold">{{ usuarioEditando?.name }}</span>. Cualquier cambio tendrá efecto inmediato.</p>
+                </div>
+              </div>
+              <h2 class="text-lg font-black mb-1 text-[#121212]">Editar cuenta</h2>
+              <p class="text-xs text-gray-500">Modifica los datos de la cuenta. Deja la contraseña en blanco para no cambiarla.</p>
+            </div>
 
+            <!-- Cuerpo scrollable -->
+            <div class="overflow-y-auto px-8 pb-8 pt-1">
             <form @submit.prevent="guardarEdicion" class="space-y-4">
               <!-- Nombre -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
                 <input v-model="formEditar.name" type="text" placeholder="Nombre completo"
+                  maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formEditarErrors.name ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formEditarErrors.name" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.name }}</p>
+                <div class="flex justify-between items-center mt-1">
+                  <p v-if="formEditarErrors.name" class="text-[10px] text-red-500">{{ formEditarErrors.name }}</p>
+                  <span v-else></span>
+                  <span class="text-[10px]" :class="(formEditar.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.name || '').length }}/255</span>
+                </div>
               </div>
 
-              <!-- Email -->
+              <!-- Correo electrónico -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
-                <input v-model="formEditar.email" type="email" placeholder="correo@ejemplo.com"
+                <!-- Con dominio (centro o empresa): input dividido -->
+                <div v-if="activeEmailEditarDomain"
+                  class="flex items-center bg-gray-50 border rounded-xl overflow-hidden transition-all
+                         focus-within:border-[#00A859]/50 focus-within:ring-2 focus-within:ring-[#00A859]/10"
+                  :class="formEditarErrors.email ? 'border-red-400' : 'border-gray-200'">
+                  <input v-model="formEditarEmailLocal" type="text" placeholder="nombreusuario"
+                    class="flex-1 min-w-0 bg-transparent px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300 outline-none" />
+                  <span class="pr-4 text-sm text-gray-400 whitespace-nowrap select-none shrink-0">@{{ activeEmailEditarDomain }}</span>
+                </div>
+                <!-- Sin dominio: input libre -->
+                <input v-else v-model="formEditar.email" type="email" placeholder="correo@ejemplo.com"
+                  maxlength="254"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formEditarErrors.email ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formEditarErrors.email" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.email }}</p>
+                <div class="flex justify-between items-center mt-1">
+                  <p v-if="formEditarErrors.email" class="text-[10px] text-red-500">{{ formEditarErrors.email }}</p>
+                  <span v-else></span>
+                  <span class="text-[10px]" :class="(formEditar.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.email || '').length }}/254</span>
+                </div>
               </div>
 
               <!-- Nueva contraseña (opcional) -->
               <div>
                 <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nueva contraseña <span class="normal-case text-gray-400 font-normal">(opcional)</span></label>
                 <input v-model="formEditar.password" type="password" placeholder="Dejar en blanco para no cambiar"
+                  maxlength="128"
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
                          outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
                   :class="formEditarErrors.password ? 'border-red-400' : 'border-gray-200'" />
-                <p v-if="formEditarErrors.password" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.password }}</p>
+                <p v-if="formEditarErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formEditarErrors.password }}</p>
+                <ul v-if="formEditar.password" class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  <li v-for="req in passwordRequisitosEditar" :key="req.label"
+                    class="flex items-center gap-1 text-[10px] transition-colors"
+                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="8" stroke-width="2"/>
+                    </svg>
+                    {{ req.label }}
+                  </li>
+                </ul>
               </div>
 
-              <!-- Rol -->
-              <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Rol</label>
+              <!-- Repite nueva contraseña (solo si se ha escrito una) -->
+              <div v-if="formEditar.password">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la nueva contraseña</label>
+                <input v-model="formEditar.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
+                  maxlength="128"
+                  class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formEditarErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
+                <p v-if="formEditarErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.password_confirmation }}</p>
+              </div>
+
+              <!-- Switch de confirmación: obliga a un clic deliberado antes de resetear la contraseña de otra cuenta -->
+              <div v-if="formEditar.password" class="rounded-xl bg-red-50 border border-red-200 px-4 py-3.5">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <button type="button" role="switch" :aria-checked="confirmarCambioPassword"
+                    @click="confirmarCambioPassword = !confirmarCambioPassword"
+                    :class="confirmarCambioPassword ? 'bg-red-500' : 'bg-gray-300'"
+                    class="relative w-12 h-6 rounded-full transition-all duration-200 shrink-0">
+                    <span :class="confirmarCambioPassword ? 'translate-x-6' : 'translate-x-1'"
+                      class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 block"></span>
+                  </button>
+                  <div>
+                    <span class="text-xs font-black text-red-600">Confirmo que quiero cambiar la contraseña de esta cuenta</span>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Se cerrará la sesión en todos los dispositivos donde estuviera conectada.</p>
+                  </div>
+                </label>
+                <p v-if="formEditarErrors.confirm_password_change" class="text-[10px] text-red-600 font-bold mt-2">{{ formEditarErrors.confirm_password_change }}</p>
+              </div>
+
+              <!-- Tipo de cuenta (solo visible para superadmin) -->
+              <div v-if="authStore.isSuperAdmin">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex gap-3">
-                  <button type="button" @click="formEditar.role = '2'"
-                    :class="formEditar.role === '2' ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'"
+                  <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
+                  <button type="button"
+                    @click="formEditar.role = ['2','4'].includes(formEditar.role) ? formEditar.role : '2'"
+                    :class="['2','4'].includes(formEditar.role) ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'"
                     class="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-bold transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -979,6 +1410,77 @@ onMounted(async () => {
                     Empresa
                   </button>
                 </div>
+
+                <!-- Sub-opción anidada: ¿es admin del centro? Solo si Docente está seleccionado -->
+                <div v-if="['2','4'].includes(formEditar.role)"
+                  class="mt-2 px-3.5 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox"
+                      :checked="formEditar.role === '4'"
+                      @change="formEditar.role = $event.target.checked ? '4' : '2'"
+                      class="mt-0.5 w-4 h-4 rounded accent-purple-600 shrink-0" />
+                    <div>
+                      <span class="text-xs font-bold text-gray-700">Administrador del centro</span>
+                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Centro educativo (visible para cualquier docente) -->
+              <div v-if="authStore.isSuperAdmin && ['2','4'].includes(formEditar.role)">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                  Centro educativo
+                  <span class="text-red-400 ml-0.5">*</span>
+                </label>
+                <div v-if="cargandoCentros" class="text-xs text-gray-400 py-2">Cargando centros…</div>
+                <select v-else v-model="formEditar.centro_educativo_id"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formEditarErrors.centro_educativo_id ? 'border-red-400' : 'border-gray-200'">
+                  <option :value="null">— Selecciona un centro —</option>
+                  <option v-for="c in centros" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+                </select>
+                <p v-if="formEditarErrors.centro_educativo_id" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.centro_educativo_id }}</p>
+              </div>
+
+              <!-- Empresa (requerida para role empresa) -->
+              <div v-if="authStore.isSuperAdmin && formEditar.role === '3'">
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                  Empresa
+                  <span class="text-red-400 ml-0.5">*</span>
+                </label>
+                <div v-if="cargandoEmpresas" class="text-xs text-gray-400 py-2">Cargando empresas…</div>
+                <select v-else v-model="formEditar.empresa_id"
+                  class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
+                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                  :class="formEditarErrors.empresa_id ? 'border-red-400' : 'border-gray-200'">
+                  <option :value="null">— Selecciona una empresa —</option>
+                  <option v-for="e in empresasList" :key="e.id" :value="e.id">{{ e.nombre_comercial }}</option>
+                </select>
+                <p v-if="formEditarErrors.empresa_id" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.empresa_id }}</p>
+              </div>
+
+              <!-- Switch de activación -->
+              <div>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Activar aquí</label>
+                <div class="flex items-center gap-3">
+                  <button type="button"
+                    @click="!usuarioEditando?.is_active && activarEnModal()"
+                    :class="usuarioEditando?.is_active
+                      ? 'bg-[#00A859] cursor-default'
+                      : 'bg-orange-400 hover:bg-orange-500 cursor-pointer'"
+                    class="relative w-12 h-6 rounded-full transition-all duration-200 shrink-0">
+                    <span
+                      :class="usuarioEditando?.is_active ? 'translate-x-6' : 'translate-x-1'"
+                      class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 block">
+                    </span>
+                  </button>
+                  <span :class="usuarioEditando?.is_active ? 'text-[#00A859]' : 'text-orange-500'"
+                        class="text-xs font-bold">
+                    {{ usuarioEditando?.is_active ? 'Activada' : 'Sin activar' }}
+                  </span>
+                </div>
               </div>
 
               <p v-if="msgEditar" class="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -991,6 +1493,7 @@ onMounted(async () => {
                 {{ editando ? 'Guardando...' : 'Guardar cambios' }}
               </button>
             </form>
+            </div>
           </div>
         </Transition>
       </div>
@@ -1001,7 +1504,7 @@ onMounted(async () => {
       <div v-if="confirm.show"
            class="fixed inset-0 z-[9200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
            @click.self="confirm.show = false">
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-sm p-6 overflow-y-auto max-h-[90vh]">
           <h3 class="font-black text-base mb-2 text-[#121212]">{{ confirm.title }}</h3>
           <p class="text-sm text-gray-500 mb-6">{{ confirm.body }}</p>
           <div class="flex gap-3">
@@ -1022,24 +1525,26 @@ onMounted(async () => {
       </div>
     </Transition>
 
-    <!-- ══ TOAST ══════════════════════════════════════════════════ -->
-    <Transition name="toast">
-      <div v-if="toast.show"
-           class="fixed bottom-6 right-6 z-[9300] flex items-center gap-3 px-4 py-3
-                  rounded-xl border shadow-xl text-xs font-bold"
-           :class="toast.ok
-             ? 'bg-[#00A859]/20 border-[#00A859]/40 text-[#00A859]'
-             : 'bg-red-500/20 border-red-500/40 text-red-300'">
-        <svg v-if="toast.ok" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-        </svg>
-        <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        {{ toast.msg }}
-      </div>
-    </Transition>
+    <!-- ══ TOAST (centrado en pantalla) ══════════════════════════════ -->
+    <div class="fixed inset-0 z-[9300] flex items-center justify-center pointer-events-none px-4">
+      <Transition name="toast">
+        <div v-if="toast.show"
+             class="pointer-events-auto flex items-center gap-3 px-5 py-3.5
+                    rounded-xl border shadow-2xl text-xs font-bold text-white"
+             :class="toast.ok
+               ? 'bg-[#00A859] border-[#00A859]'
+               : 'bg-red-600 border-red-600'">
+          <svg v-if="toast.ok" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ toast.msg }}
+        </div>
+      </Transition>
+    </div>
 
   </div>
 </template>
