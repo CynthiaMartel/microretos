@@ -8,6 +8,8 @@ import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
 import TourPromptModal from '../components/TourPromptModal.vue'
+import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
+import { generarAliasAleatorio } from '../utils/alias.js'
 import { useUIState } from '../composables/useUIState.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -154,7 +156,14 @@ function addAlumnadoEncuentro() {
   const nombre = nuevoAlumnadoNombre.value.trim()
   if (!nombre) return
   if (limiteAlcanzado.value) return
-  form.value.alumnados.push({ nombre, equipo_num: nuevoAlumnadoEquipo.value })
+  // Alias generado ya al añadir el alumno/a (no al guardar): el docente lo ve y puede
+  // regenerarlo antes de crear el encuentro. Viaja en el snapshot `alumnados` y se
+  // aplica al crear los equipo_miembros reales en EncuentroController::crearCodigo().
+  form.value.alumnados.push({
+    nombre,
+    equipo_num: nuevoAlumnadoEquipo.value,
+    alias: generarAliasAleatorio(nombre),
+  })
   nuevoAlumnadoNombre.value = ''
 }
 
@@ -1060,8 +1069,9 @@ function formatFecha(isoDate) {
                   <div class="px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100
                               text-[11px] text-emerald-700 flex items-start gap-1.5">
                     <span class="shrink-0">🔒</span>
-                    <span>Creamos un alias automático para cada alumno/a (protección de datos) —
-                    el nombre real que escribas aquí no se muestra fuera del equipo ni del panel docente.</span>
+                    <span>Creamos un alias automático para cada alumno/a (por protección de datos).
+                    Podrás modificarlo aquí, en Biblioteca de Encuentros, o el alumnado podrá
+                    modificarlo en su workflow.</span>
                   </div>
 
                   <!-- Formulario añadir alumno/a -->
@@ -1112,13 +1122,21 @@ function formatFecha(isoDate) {
                           {{ alumnadosDeEquipo(n).length }}
                         </span>
                       </div>
-                      <div v-if="alumnadosDeEquipo(n).length" class="space-y-1">
-                        <div v-for="a in alumnadosDeEquipo(n)" :key="a._i"
-                             class="flex items-center gap-1 text-xs">
-                          <span class="flex-1 truncate font-medium text-[#1F2937]">{{ a.nombre }}</span>
-                          <button @click="removeAlumnadoEncuentro(a._i)"
-                                  class="text-gray-300 hover:text-red-400 font-black transition-colors
-                                         text-sm leading-none flex-shrink-0">×</button>
+                      <div v-if="alumnadosDeEquipo(n).length" class="space-y-1.5">
+                        <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="text-xs">
+                          <div class="flex items-center gap-1">
+                            <span class="flex-1 truncate font-medium text-[#1F2937]">{{ a.nombre }}</span>
+                            <button @click="removeAlumnadoEncuentro(a._i)"
+                                    class="text-gray-300 hover:text-red-400 font-black transition-colors
+                                           text-sm leading-none flex-shrink-0">×</button>
+                          </div>
+                          <div class="flex items-center gap-1 pl-0.5 mt-0.5">
+                            <span class="flex-1 min-w-0 truncate text-[10px] text-gray-400">
+                              {{ form.alumnados[a._i].alias }}
+                            </span>
+                            <RegenerarAliasButton :nombre="form.alumnados[a._i].nombre"
+                                                   @generado="alias => (form.alumnados[a._i].alias = alias)" />
+                          </div>
                         </div>
                       </div>
                       <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>
@@ -1131,13 +1149,21 @@ function formatFecha(isoDate) {
                     <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">
                       Sin equipo asignado
                     </p>
-                    <div class="space-y-1">
-                      <div v-for="a in alumnadosSinEquipo" :key="a._i"
-                           class="flex items-center gap-1 text-xs">
-                        <span class="flex-1 truncate font-medium text-amber-700">{{ a.nombre }}</span>
-                        <button @click="removeAlumnadoEncuentro(a._i)"
-                                class="text-amber-300 hover:text-red-400 font-black transition-colors
-                                       text-sm leading-none flex-shrink-0">×</button>
+                    <div class="space-y-1.5">
+                      <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">
+                        <div class="flex items-center gap-1">
+                          <span class="flex-1 truncate font-medium text-amber-700">{{ a.nombre }}</span>
+                          <button @click="removeAlumnadoEncuentro(a._i)"
+                                  class="text-amber-300 hover:text-red-400 font-black transition-colors
+                                         text-sm leading-none flex-shrink-0">×</button>
+                        </div>
+                        <div class="flex items-center gap-1 pl-0.5 mt-0.5">
+                          <span class="flex-1 min-w-0 truncate text-[10px] text-amber-400/80">
+                            {{ form.alumnados[a._i].alias }}
+                          </span>
+                          <RegenerarAliasButton :nombre="form.alumnados[a._i].nombre"
+                                                 @generado="alias => (form.alumnados[a._i].alias = alias)" />
+                        </div>
                       </div>
                     </div>
                   </div>

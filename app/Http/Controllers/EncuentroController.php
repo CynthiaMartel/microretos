@@ -7,6 +7,7 @@ use App\Http\Requests\StoreEncuentroRequest;
 use App\Http\Requests\UpdateEncuentroRequest;
 use App\Http\Resources\EncuentroResource;
 use App\Models\Equipo;
+use App\Models\EquipoMiembro;
 use App\Models\Microproyecto;
 use App\Models\Encuentro;
 use App\Support\CodigoLegible;
@@ -158,8 +159,12 @@ class EncuentroController extends Controller
 
             foreach ($alumnados as $a) {
                 if ((int) ($a['equipo_num'] ?? 0) === $n && !empty($a['nombre'])) {
+                    // Si el docente ya eligió/regeneró un alias al crear el encuentro (snapshot
+                    // `alumnados`), se respeta; si no, EquipoMiembro::booted() lo autogenera.
+                    $alias = trim((string) ($a['alias'] ?? ''));
                     $equipo->miembros()->create([
                         'nombre' => $a['nombre'],
+                        'alias'  => $alias !== '' ? mb_substr($alias, 0, 255) : null,
                         'rol'    => $a['rol'] ?? null,
                     ]);
                 }
@@ -174,7 +179,9 @@ class EncuentroController extends Controller
             'nombre'   => $e->nombre,
             'token'    => $e->token,
             'miembros' => $e->miembros->map(fn($m) => [
+                'id'     => $m->id,
                 'nombre' => $m->nombre,
+                'alias'  => $m->alias,
                 'rol'    => $m->rol,
             ]),
         ]);
@@ -285,6 +292,29 @@ class EncuentroController extends Controller
         return response()->json(['equipos' => $equipos]);
     }
 
+    /**
+     * PATCH /api/encuentros/{id}/miembros/{miembroId}/alias
+     * El docente puede fijar/regenerar el alias de un miembro desde "Editar equipo" —
+     * endpoint separado y de escritura inmediata (no va dentro del payload de
+     * reestructurar-equipos) para que nunca pise con un valor obsoleto el alias que el
+     * propio alumnado haya cambiado mientras tanto desde su workspace: sea cual sea el
+     * último en guardar (docente aquí o alumnado en su F0), esa es la única fuente de
+     * verdad, sin copia en ningún otro sitio.
+     */
+    public function actualizarAliasMiembro(\App\Http\Requests\ActualizarAliasMiembroRequest $request, $id, $miembroId)
+    {
+        $encuentro = Encuentro::where('id', $id)->editablesPara($request->user())->firstOrFail();
+
+        $miembro = EquipoMiembro::with('equipo')->findOrFail($miembroId);
+        if (!$miembro->equipo || $miembro->equipo->encuentro_id !== $encuentro->id) {
+            abort(404);
+        }
+
+        $miembro->update(['alias' => $request->validated('alias')]);
+
+        return response()->json(['alias' => $miembro->alias]);
+    }
+
     // Upsert por id cuando el frontend lo manda (permite renombrar sin perder el progreso
     // ya asociado a ese equipo_miembro: fortalezas, puntos de mejora, alias). Si no viene id
     // (alta nueva desde el modal, o llamadas antiguas) cae a upsert por nombre como antes.
@@ -377,6 +407,7 @@ class EncuentroController extends Controller
     {
         $user  = $request->user();
         $query = Encuentro::with([
+            'microproyecto',
             'equipos.microproyecto.familia',
             'equipos.miembros',
             'equipos.fases',
@@ -394,12 +425,36 @@ class EncuentroController extends Controller
                     'fecha'            => $encuentro->fecha,
                     'codigo_clase'     => $encuentro->codigo_clase,
                     'codigo_ia'        => $encuentro->codigo_ia,
+                    'proyecto_titulo'  => $encuentro->microproyecto?->titulo,
                 ],
                 'equipos' => $this->formatEquiposConProgreso($encuentro->equipos),
             ];
         });
 
         return response()->json($grupos->values());
+    }
+
+    /**
+     * GET /api/startup/proyectos/{uuid}/equipos
+     * Seguimiento de equipos para la ficha de un microproyecto (StartupDayDetalle.vue /
+     * ProyectoFichaModal.vue): a diferencia de workspace()/misGrupos() (que agrupan por
+     * encuentro), aquí se agregan equipos de TODOS los encuentros vinculados a este
+     * proyecto (equipos.microproyecto_id), porque la ficha ya está a nivel de proyecto y
+     * queremos ver "cómo lo ha resuelto el alumnado" en conjunto, no encuentro por encuentro.
+     */
+    public function equiposDeProyecto(Request $request, string $uuid)
+    {
+        $proyecto = Microproyecto::where('uuid', $uuid)
+            ->whereHas('encuentros', fn ($q) => $q->visiblesPara($request->user()))
+            ->firstOrFail();
+
+        $equipos = $proyecto->equipos()
+            ->with(['microproyecto.familia', 'miembros', 'fases', 'reflexiones', 'encuentro:id,grupo,curso,fecha'])
+            ->get();
+
+        return response()->json([
+            'equipos' => $this->formatEquiposConProgreso($equipos),
+        ]);
     }
 
     private function formatProyecto(?Microproyecto $proyecto)

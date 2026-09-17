@@ -218,7 +218,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 <!-- Biblioteca Propuestas-Proyecto -->
                 <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
                   <button
-                    @click="irA('/proyectos')"
+                    @click="irA('/proyectos/terminados')"
                     data-tip="Crea y gestiona propuestas y proyectos del Taller de Ideas"
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"

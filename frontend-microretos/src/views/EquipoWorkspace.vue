@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import DesbloquearIaModal from '../components/DesbloquearIaModal.vue'
+import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import {
   MegaphoneIcon,
   ClockIcon,
@@ -30,6 +31,7 @@ const workspace = ref(null)
 const faseVista = ref(0)
 const guardando = ref(false)
 const msgOk     = ref('')
+const msgError  = ref('')
 
 const token = route.params.token
 
@@ -174,6 +176,11 @@ function mostrarOk(msg) {
   setTimeout(() => { msgOk.value = '' }, 3000)
 }
 
+function mostrarError(msg) {
+  msgError.value = msg
+  setTimeout(() => { msgError.value = '' }, 3000)
+}
+
 // ── F0: Formularios de equipo ───────────────────────────────────────────────
 const f0 = ref({ contrato_firmado: false, miembros: [] })
 const nuevoMiembro = ref({ nombre: '', rol: '' })
@@ -275,18 +282,19 @@ function addMiembro() {
 }
 function removeMiembro(i) { f0.value.miembros.splice(i, 1) }
 
-// Estilo Kahoot: "generar otro" elige un animal al azar en el momento, sin ir al
-// backend — el backend solo genera el alias inicial (determinista) al dar de alta.
-const ANIMALES_ALIAS = [
-  'Panda', 'Tigre', 'León', 'Delfín', 'Águila', 'Lobo', 'Zorro', 'Koala',
-  'Halcón', 'Pingüino', 'Jaguar', 'Puma', 'Búho', 'Colibrí', 'Nutria',
-  'Lince', 'Gacela', 'Cóndor', 'Orca', 'Mapache',
-]
-function regenerarAlias(m) {
-  const primerNombre = (m.nombre || 'Alumno').trim().split(' ')[0] || 'Alumno'
-  const animal = ANIMALES_ALIAS[Math.floor(Math.random() * ANIMALES_ALIAS.length)]
-  m.alias = `${primerNombre} ${animal}`
+// Escritura inmediata al backend, fuera del guardado de fase — así el alias queda
+// persistido al instante (dado o edición manual) y no depende de que el equipo llegue
+// a pulsar "Guardar"/"Siguiente" en la F0. Si el docente lo cambia mientras tanto desde
+// "Editar equipo", gana quien guarde último (ver EncuentroController::actualizarAliasMiembro).
+async function guardarAliasMiembro(m) {
+  if (!m.id || !m.alias.trim()) return
+  try {
+    await api.put(`/equipo/${token}/miembros/${m.id}/alias`, { alias: m.alias })
+  } catch (e) {
+    mostrarError(e.response?.data?.error || 'No se pudo actualizar el alias.')
+  }
 }
+
 
 function addFortaleza(m) {
   const v = m.nuevaFortaleza.trim()
@@ -1086,6 +1094,16 @@ watch(workspace, (val) => {
         </div>
       </Transition>
 
+      <!-- Toast error -->
+      <Transition enter-active-class="transition-all duration-300" enter-from-class="opacity-0 -translate-y-2"
+                  leave-active-class="transition-all duration-200" leave-to-class="opacity-0 -translate-y-2">
+        <div v-if="msgError"
+             class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white
+                    px-5 py-2.5 rounded-full shadow-lg text-sm font-bold whitespace-nowrap">
+          ✕ {{ msgError }}
+        </div>
+      </Transition>
+
       <!-- ══ LAYOUT DOS COLUMNAS ══ -->
       <div class="max-w-[1380px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
         <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
@@ -1177,10 +1195,10 @@ watch(workspace, (val) => {
                         <input v-model="m.alias" type="text" maxlength="60" placeholder="Alias visible fuera del equipo"
                                class="flex-1 min-w-0 text-xs border border-emerald-300 rounded-lg px-2 py-1 bg-white
                                       focus:outline-none focus:border-emerald-500"
-                               @keydown.enter.prevent="m.editandoAlias = false" />
-                        <button @click="regenerarAlias(m)" type="button" title="Generar otro al azar"
-                                class="shrink-0 text-sm hover:scale-110 transition-transform">🎲</button>
-                        <button @click="m.editandoAlias = false" type="button"
+                               @keydown.enter.prevent="m.editandoAlias = false; guardarAliasMiembro(m)" />
+                        <RegenerarAliasButton :nombre="m.nombre"
+                                               @generado="alias => { m.alias = alias; guardarAliasMiembro(m) }" />
+                        <button @click="m.editandoAlias = false; guardarAliasMiembro(m)" type="button"
                                 class="text-[10px] font-black text-emerald-600 uppercase">Listo</button>
                       </template>
                       <template v-else>

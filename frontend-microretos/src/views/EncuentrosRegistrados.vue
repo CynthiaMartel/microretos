@@ -216,6 +216,23 @@ function onEquipoReestructurado({ id, num_equipos, alumnados, equipos }) {
   mostrarSnack('Reparto de equipos actualizado.')
 }
 
+// El docente puede regenerar el alias de un miembro sin pasar por "Guardar reparto"
+// (ver ReestructurarEquipoModal) — se refleja aquí al instante para que la ficha del
+// encuentro abierta no se quede con el valor antiguo hasta recargar.
+function onAliasActualizado({ miembroId, alias }) {
+  const conAliasActualizado = (lista) => lista.map(s => ({
+    ...s,
+    equipos: (s.equipos || []).map(e => ({
+      ...e,
+      miembros: (e.miembros || []).map(m => m.id === miembroId ? { ...m, alias } : m),
+    })),
+  }))
+  encuentros.value = conAliasActualizado(encuentros.value)
+  if (encuentroAbierto.value) {
+    encuentroAbierto.value = conAliasActualizado([encuentroAbierto.value])[0]
+  }
+}
+
 // ─── Editar fecha_fin del encuentro ───────────────────────────────────────────
 const editandoFechaFin  = ref(false)
 const fechaFinInput     = ref('')
@@ -1066,6 +1083,7 @@ function formatFecha(isoDate) {
     :visible="!!reestructurando"
     :encuentro="reestructurando"
     @actualizado="onEquipoReestructurado"
+    @alias-actualizado="onAliasActualizado"
     @cerrar="cerrarReestructurar"
   />
 

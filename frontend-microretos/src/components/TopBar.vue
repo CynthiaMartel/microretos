@@ -30,6 +30,7 @@ const sectionLabels = {
   'dashboard-docente':    'Crear encuentro',
   'encuentros-registrados': 'Encuentros',
   'startup-day':          'Propuestas-Proyecto',
+  'proyectos-terminados': 'Proyectos Completados',
   'startup-day-crear':    'Nueva propuesta',
   'startup-day-detalle':  'Proyecto',
   'startup-day-editar':   'Editar proyecto',

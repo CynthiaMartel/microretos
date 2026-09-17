@@ -13,6 +13,9 @@ INFORME_*.pdf
 RESUMEN_*.md
 RESUMEN_*.pdf
 
+# Glosario generado para uso interno — no se versiona
+/Glosario_DuaLab.pdf
+
 # Notas internas de tareas pendientes — no debe ser público
 /TAREAS_PENDIENTES.txt
 
@@ -32,6 +35,7 @@ RESUMEN_*.pdf
 /.phpunit.cache
 /.vscode
 /.zed
+*.code-workspace
 /auth.json
 /node_modules
 /public/build

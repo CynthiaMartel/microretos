@@ -28,9 +28,15 @@ const emit = defineEmits(['centro-creado', 'centro-guardado', 'cerrar', 'crear-e
 
 // ─── Estado ────────────────────────────────────────────────
 const nombre       = ref('')
+const municipio    = ref('')
 const nombreError  = ref('')
 const errorGlobal  = ref('')
 const guardando    = ref(false)
+
+// Resultado de POST /centros/{id}/impacto-cambio cuando nombre/municipio cambian y hay
+// empresas/encuentros/proyectos que copiaron ese dato en su momento — null = sin calcular
+// o sin impacto; objeto = mostrar el aviso y esperar confirmación antes de guardar.
+const impacto = ref(null)
 
 const imgUrl       = ref('')
 const subiendoImg  = ref(false)
@@ -71,6 +77,7 @@ watch(() => props.visible, async (v) => {
   if (props.centro) {
     // Modo edición: pre-cargar datos existentes
     nombre.value      = props.centro.nombre
+    municipio.value    = props.centro.municipio || ''
     imgUrl.value       = props.centro.img || ''
     seleccionados.value = (props.centro.ciclos ?? []).map(c => c.id)
 
@@ -276,7 +283,9 @@ function quitarImagenCentro() {
 }
 
 // ─── Guardar ────────────────────────────────────────────────
-async function guardar() {
+// confirmado=true significa "el usuario ya vio el aviso de impacto y ha pulsado
+// 'Sí, actualizar todo'" — se salta la previsualización y guarda directamente.
+async function guardar(confirmado = false) {
   nombreError.value = ''
   errorGlobal.value = ''
 
@@ -289,11 +298,30 @@ async function guardar() {
     return
   }
 
+  // Solo tiene sentido en modo editar: crear un centro nuevo no afecta a nada existente.
+  if (modoEditar.value && !confirmado) {
+    try {
+      const { data } = await api.post(`/centros/${props.centro.id}/impacto-cambio`, {
+        nombre:    nombre.value.trim(),
+        municipio: municipio.value.trim() || null,
+      })
+      if (data.requiere_confirmacion) {
+        impacto.value = data
+        return // esperamos a que el usuario confirme desde el aviso antes de guardar
+      }
+    } catch (e) {
+      // Si falla solo la previsualización, no bloqueamos el guardado real — el PUT
+      // vuelve a validar igualmente.
+    }
+  }
+
+  impacto.value = null
   guardando.value = true
   try {
     if (modoEditar.value) {
       const { data } = await api.put(`/centros/${props.centro.id}`, {
         nombre:    nombre.value.trim(),
+        municipio: municipio.value.trim() || null,
         ciclosIds: seleccionados.value,
         img:       imgUrl.value || null,
       })
@@ -301,6 +329,7 @@ async function guardar() {
     } else {
       const { data } = await api.post('/centros', {
         nombre:    nombre.value.trim(),
+        municipio: municipio.value.trim() || null,
         ciclosIds: seleccionados.value,
         img:       imgUrl.value || null,
       })
@@ -336,10 +365,16 @@ async function guardar() {
   }
 }
 
+function cancelarConfirmacionImpacto() {
+  impacto.value = null
+}
+
 function resetear() {
   nombre.value        = ''
+  municipio.value      = ''
   nombreError.value   = ''
   errorGlobal.value   = ''
+  impacto.value       = null
   seleccionados.value = []
   familiasExpandidas.value.clear()
 
@@ -402,9 +437,40 @@ function resetear() {
                 class="cce-input"
                 :class="{ 'cce-input-err': nombreError }"
                 placeholder="Ej: IES Nombre del Centro"
-                @keydown.enter.prevent="guardar"
+                @keydown.enter.prevent="guardar()"
               />
               <p v-if="nombreError" class="cce-err">{{ nombreError }}</p>
+            </div>
+
+            <!-- Municipio -->
+            <div class="mt-6">
+              <label class="cce-label">Municipio</label>
+              <input
+                v-model="municipio"
+                class="cce-input"
+                placeholder="Ej: Las Palmas de Gran Canaria"
+                @keydown.enter.prevent="guardar()"
+              />
+            </div>
+
+            <!-- Aviso de impacto en cascada (solo al editar, si nombre/municipio cambian) -->
+            <div v-if="impacto" class="mt-6 p-4 rounded-2xl border-2 border-amber-300 bg-amber-50">
+              <p class="text-sm font-bold text-amber-800">
+                Este cambio va a actualizar también:
+              </p>
+              <ul class="mt-2 text-sm text-amber-700 list-disc list-inside">
+                <li>{{ impacto.afectados.empresas }} empresa(s) asociadas a este centro</li>
+                <li>{{ impacto.afectados.encuentros }} encuentro(s) creados con este centro</li>
+                <li>{{ impacto.afectados.proyectos }} proyecto(s) con este centro asignado</li>
+              </ul>
+              <div class="mt-4 flex gap-3">
+                <button type="button" @click="cancelarConfirmacionImpacto" class="cce-btn-ghost flex-1">
+                  Cancelar
+                </button>
+                <button type="button" @click="guardar(true)" :disabled="guardando" class="cce-btn-green flex-1">
+                  {{ guardando ? 'Actualizando...' : 'Sí, actualizar todo' }}
+                </button>
+              </div>
             </div>
 
             <!-- Imagen del centro -->
@@ -656,10 +722,10 @@ function resetear() {
               </div>
             </Transition>
 
-            <!-- Acciones -->
-            <div class="cce-actions">
+            <!-- Acciones (ocultas mientras se muestra el aviso de impacto de arriba) -->
+            <div v-if="!impacto" class="cce-actions">
               <button type="button" @click="$emit('cerrar')" class="cce-btn-ghost flex-1">Cancelar</button>
-              <button type="button" @click="guardar" :disabled="guardando" class="cce-btn-green flex-[2]">
+              <button type="button" @click="guardar()" :disabled="guardando" class="cce-btn-green flex-[2]">
                 <svg v-if="guardando" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                 </svg>

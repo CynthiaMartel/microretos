@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import api from '../api.js'
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js'
 import { duracionPorFase, FASES_PROYECTO, COLOR_MAP_FASES } from '../config/fasesProyecto.js'
+import MicroretoModal from './MicroretoModal.vue'
+import EquiposSeguimiento from './EquiposSeguimiento.vue'
 
 const props = defineProps({
   proyectoUuid: { type: String, default: null },
@@ -24,6 +26,7 @@ const modalRecurso    = ref(null)
 
 const raCeAbierto  = ref(false)
 const urlCopiada   = ref(false)
+const microretoModalId = ref(null)
 
 watch(() => props.proyectoUuid, async (uuid) => {
   if (!uuid) return
@@ -155,6 +158,18 @@ function irAPaginaCompleta() {
                 </svg>
                 PDF
               </button>
+              <button v-if="proyecto?.microreto_id"
+                      @click="microretoModalId = proyecto.microreto_id"
+                      class="px-3 py-1.5 rounded-xl bg-[#00A859]/10 border-2 border-[#00A859]
+                             text-[10px] font-black uppercase tracking-widest text-[#00A859]
+                             hover:bg-[#00A859] hover:text-white transition-all flex items-center gap-1.5"
+                      title="Ver la ficha del reto original del que deriva este proyecto">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                Ficha reto original
+              </button>
               <button v-if="proyecto" @click="irAPaginaCompleta"
                       class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
@@ -201,9 +216,12 @@ function irAPaginaCompleta() {
                   <div class="notebook-hole" /><div class="notebook-hole" />
                 </div>
 
-                <h1 class="text-xl md:text-2xl font-black tracking-tight text-[#121212] mb-5 leading-tight">
+                <h1 class="text-xl md:text-2xl font-black tracking-tight text-[#121212] mb-2 leading-tight">
                   {{ proyecto.titulo }}
                 </h1>
+                <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-sm md:text-base font-bold text-[#00A859] italic mb-5 leading-snug">
+                  "{{ proyecto.diseno_reto.pregunta_reto }}"
+                </p>
 
                 <!-- Meta-band -->
                 <div v-if="proyecto.empresa_nombre || proyecto.centro_nombre || proyecto.ciclo_nombre" class="meta-band">
@@ -428,38 +446,47 @@ function irAPaginaCompleta() {
                 </div>
 
                 <!-- ═══ El reto ═══ -->
-                <p v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto" class="group-header">El reto</p>
+                <div v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto"
+                     class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="group-header !mb-0">El reto</p>
+                  <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
+                          class="px-3 py-1.5 rounded-xl bg-[#00A859]/10 border-2 border-[#00A859] text-[10px] font-black
+                                 uppercase tracking-wider text-[#00A859] hover:bg-[#00A859] hover:text-white transition-all mb-3">
+                    📎 Ver ficha reto original
+                  </button>
+                </div>
                 <div v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto" class="grid gap-4 sm:grid-cols-2 mb-6">
-                  <div v-if="proyecto.fundamentacion?.contexto || proyecto.fundamentacion?.justificacion || proyecto.fundamentacion?.innovacion"
-                       class="card-section sm:col-span-2">
-                    <p class="section-label">Fundamentación</p>
-                    <div v-if="proyecto.fundamentacion.contexto" class="mb-3">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Contexto de partida</p>
-                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.contexto }}</p>
-                    </div>
-                    <div v-if="proyecto.fundamentacion.justificacion" class="mb-3">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Justificación pedagógica</p>
-                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.justificacion }}</p>
-                    </div>
-                    <div v-if="proyecto.fundamentacion.innovacion">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Elemento innovador</p>
-                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.innovacion }}</p>
-                    </div>
-                  </div>
-
                   <div v-if="proyecto.diseno_reto?.descripcion" class="card-section sm:col-span-2">
-                    <p class="section-label">Diseño del reto</p>
-                    <p v-if="proyecto.diseno_reto.pregunta_reto" class="text-sm font-bold text-[#00A859] mb-2 italic">
+                    <p class="reto-section-title">Diseño del reto</p>
+                    <p v-if="proyecto.diseno_reto.pregunta_reto"
+                       class="text-sm font-bold text-[#00A859] italic mb-3 pl-3 py-2 border-l-4 border-[#00A859]/40 bg-[#00A859]/5 rounded-r-lg">
                       "{{ proyecto.diseno_reto.pregunta_reto }}"
                     </p>
                     <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.diseno_reto.descripcion }}</p>
                     <div v-if="proyecto.diseno_reto.restricciones" class="mt-3 pt-3 border-t border-gray-100">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Restricciones</p>
+                      <p class="reto-subsection-label">Restricciones</p>
                       <p class="text-xs text-gray-500">{{ proyecto.diseno_reto.restricciones }}</p>
                     </div>
                     <div v-if="proyecto.diseno_reto.entregables" class="mt-3 pt-3 border-t border-gray-100">
-                      <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Entregables</p>
+                      <p class="reto-subsection-label">Entregables</p>
                       <p class="text-xs text-gray-500">{{ proyecto.diseno_reto.entregables }}</p>
+                    </div>
+                  </div>
+
+                  <div v-if="proyecto.fundamentacion?.contexto || proyecto.fundamentacion?.justificacion || proyecto.fundamentacion?.innovacion"
+                       class="card-section sm:col-span-2">
+                    <p class="reto-section-title">Fundamentación</p>
+                    <div v-if="proyecto.fundamentacion.contexto" class="mb-3">
+                      <p class="reto-subsection-label">Contexto de partida</p>
+                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.contexto }}</p>
+                    </div>
+                    <div v-if="proyecto.fundamentacion.justificacion" class="mb-3">
+                      <p class="reto-subsection-label">Justificación pedagógica</p>
+                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.justificacion }}</p>
+                    </div>
+                    <div v-if="proyecto.fundamentacion.innovacion">
+                      <p class="reto-subsection-label">Elemento innovador</p>
+                      <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.innovacion }}</p>
                     </div>
                   </div>
                 </div>
@@ -537,8 +564,8 @@ function irAPaginaCompleta() {
                   </div>
                 </div>
 
-                <!-- ═══ Publicar ═══ -->
-                <p v-if="proyecto.resumen?.texto" class="group-header">Publicar</p>
+                <!-- ═══ Resumen y recursos ═══ -->
+                <p v-if="proyecto.resumen?.texto" class="group-header">Resumen y recursos</p>
                 <div class="grid gap-4 sm:grid-cols-2">
                   <div v-if="proyecto.resumen?.texto" class="card-section sm:col-span-2">
                     <p class="section-label">Resumen ejecutivo</p>
@@ -616,8 +643,12 @@ function irAPaginaCompleta() {
                   </div>
                 </div>
 
-                <!-- ══ FEEDBACK DE LA EMPRESA ══ -->
-                <div v-if="proyecto.validacion_empresa?.respuestas" class="mt-6">
+                <!-- ══ FEEDBACK DE LA EMPRESA — diferenciado: contenido de fuente externa
+                     (la empresa validadora), no autoría del proyecto. A diferencia de
+                     "Resolución del alumnado", este bloque no sale de la hoja de cuaderno:
+                     sigue siendo parte del expediente del proyecto, solo que su origen es
+                     externo. ══ -->
+                <div v-if="proyecto.validacion_empresa?.respuestas" class="mt-6 empresa-diferenciada">
                   <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div class="flex items-center gap-3">
                       <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -629,7 +660,7 @@ function irAPaginaCompleta() {
                         </svg>
                       </div>
                       <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Feedback de la empresa</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-amber-600">Fuente externa · Validación de empresa</p>
                         <p class="text-sm font-black text-[#121212]">{{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'Empresa' }}</p>
                       </div>
                     </div>
@@ -696,6 +727,25 @@ function irAPaginaCompleta() {
                 </div>
 
               </div><!-- /notebook-page -->
+
+              <!-- ══ FICHA APARTE — Resolución del alumnado (siempre la última sección, siempre desplegada) ══ -->
+              <div v-if="proyecto.estado === 'completado'" class="ficha-recortable">
+                <div class="ficha-recortable__corte" aria-hidden="true"></div>
+                <div class="ficha-recortable__card">
+                  <div class="flex items-center gap-3 px-5 py-4">
+                    <div class="w-9 h-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
+                      <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.657-2.686-3-6-3s-6 1.343-6 3"/>
+                      </svg>
+                    </div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-violet-500">Resolución del alumnado</p>
+                  </div>
+                  <div class="px-5 pb-5 pt-1 border-t border-violet-100">
+                    <EquiposSeguimiento :proyecto-uuid="proyecto.uuid" />
+                  </div>
+                </div>
+              </div>
             </template>
           </div>
         </div>
@@ -728,6 +778,8 @@ function irAPaginaCompleta() {
       </div>
     </Transition>
   </Teleport>
+
+  <MicroretoModal :microreto-id="microretoModalId" @close="microretoModalId = null" />
 </template>
 
 <style scoped>
@@ -741,6 +793,44 @@ function irAPaginaCompleta() {
 }
 .group-header {
   @apply text-xs font-black uppercase tracking-[0.25em] text-[#00A859] mb-3 pl-3 border-l-4 border-[#00A859]/40;
+}
+.reto-section-title {
+  @apply text-sm font-black uppercase tracking-wider text-[#00A859] mb-3 pb-2 border-b-2 border-[#00A859]/15;
+}
+.reto-subsection-label {
+  @apply text-[10px] font-black uppercase tracking-wider text-[#5a7a00] mb-1;
+}
+
+/* Ficha de resolución del alumnado: se muestra separada de la hoja de cuaderno del
+   proyecto, como si fuera un recorte aparte grapado detrás — línea de corte punteada,
+   para dejar claro que es un documento distinto (datos de equipos/alumnado, no del
+   proyecto en sí). Siempre desplegada (sin acordeón): al ser la última sección de la
+   ficha, no aporta ocultarla tras un toggle adicional. */
+.ficha-recortable {
+  margin-top: 1.75rem;
+}
+.ficha-recortable__corte {
+  border-top: 2px dashed #c7cddb;
+  margin-bottom: 1.25rem;
+}
+.ficha-recortable__card {
+  background: #fff;
+  border: 2px dashed #ddd6fe;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.1), 0 1px 4px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+/* Feedback de la empresa: dato de fuente externa dentro de la propia ficha (no se
+   saca de la hoja de cuaderno, a diferencia de "Resolución del alumnado" — la empresa
+   valida ESTE proyecto, sigue siendo parte de su expediente). Borde punteado ámbar +
+   fondo muy sutil para diferenciarlo de las secciones de autoría propia sin romper el
+   flujo de la hoja. */
+.empresa-diferenciada {
+  border: 2px dashed #fcd9a8;
+  background: rgba(217, 119, 6, 0.03);
+  border-radius: 1.75rem;
+  padding: 1.25rem;
 }
 
 .notebook-page {

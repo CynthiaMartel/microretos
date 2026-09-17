@@ -65,7 +65,7 @@ function cerrar() {
   <Teleport to="body">
     <Transition name="microreto-modal">
       <div v-if="abierto"
-           class="fixed inset-0 z-[60] flex items-start justify-center p-4 overflow-y-auto">
+           class="fixed inset-0 z-[95] flex items-start justify-center p-4 overflow-y-auto">
 
         <!-- Backdrop -->
         <div @click="cerrar"

@@ -46,7 +46,7 @@ class StoreEncuentroLoteRequest extends FormRequest
             'encuentros.*.fecha'            => 'required|date',
             'encuentros.*.centro_educativo' => 'nullable|string|max:255',
             'encuentros.*.ciclo_formativo'  => 'nullable|string|max:255',
-            'encuentros.*.curso'            => 'nullable|string|max:10',
+            'encuentros.*.curso'            => 'nullable|string|max:20',
             'encuentros.*.grupo'            => 'nullable|string|max:10',
             'encuentros.*.num_alumnos'      => 'nullable|integer|min:1|max:999',
             'encuentros.*.notas'            => 'nullable|string|max:5000',

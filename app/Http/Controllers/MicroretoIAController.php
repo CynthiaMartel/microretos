@@ -21,6 +21,11 @@ use App\Services\MicroretoFichaService;
 // pero el modelo, la tabla y este controlador siguen llamándose "Microreto" — no renombrado a propósito.
 class MicroretoIAController extends Controller
 {
+    // "Ambos Cursos" sin módulos forzados: nº de módulos a muestrear POR CURSO (no del
+    // ciclo entero) para mantener el prompt de currículo dentro del límite de tokens/min
+    // de OpenAI — ver comentario en generar().
+    private const MODULOS_MUESTRA_POR_CURSO = 2;
+
     public function index(Request $request)
     {
         // Límite de seguridad: máximo 500 registros por llamada.
@@ -227,9 +232,25 @@ Reglas:
 
         if ($esAmbosCursos) {
             $query->where('idcicloformativo', $request->ciclo_id);
-            $moduloIdForzado
-                ? $query->whereIn('id', $moduloIdForzado)
-                : $query->whereIn('curso', [1, 2]);
+            if ($moduloIdForzado) {
+                $query->whereIn('id', $moduloIdForzado);
+            } else {
+                // Sin módulos forzados, antes se cargaba TODO el currículo del ciclo (los
+                // módulos de 1º y 2º juntos) para que la IA "eligiera" de qué partir — en
+                // ciclos con muchos módulos/RA/CE esto genera un prompt tan grande que
+                // supera el límite de tokens/minuto de la cuenta de OpenAI (confirmado:
+                // "Request too large", ~30-35k tokens solo de currículo, independiente de
+                // cuántos microretos se pidan). Se muestrea un puñado de módulos por curso
+                // en vez del ciclo entero — sigue siendo currículo 100% real tal cual está
+                // en BD (nunca se inventa nada, ver RaCeCatalogoService), solo se reduce
+                // cuánto currículo ve la IA en cada llamada. $minModulos (más abajo) exige
+                // igualmente cubrir varios de los módulos muestreados, no todos.
+                $idsCurso1 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 1)->pluck('id');
+                $idsCurso2 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 2)->pluck('id');
+                $idsMuestra = $idsCurso1->shuffle()->take(self::MODULOS_MUESTRA_POR_CURSO)
+                    ->merge($idsCurso2->shuffle()->take(self::MODULOS_MUESTRA_POR_CURSO));
+                $query->whereIn('id', $idsMuestra);
+            }
         } elseif ($moduloIdForzado) {
             $query->whereIn('id', $moduloIdForzado);
         } else {
@@ -418,6 +439,15 @@ Reglas:
                 ],
                 "response_format" => ["type" => "json_object"],
                 "temperature"     => 0.9,
+                // Sin max_tokens, OpenAI reserva para el cálculo de tokens/minuto (TPM) el
+                // máximo de salida posible del modelo (~16k), no lo que realmente hace falta
+                // para 1-5 microretos en JSON — con "Ambos Cursos" (currículo de 1º+2º a la
+                // vez, prompt de entrada más grande) esa reserva implícita hace que la petición
+                // supere sistemáticamente el límite de la cuenta (confirmado: "Request too
+                // large... Limit 30000, Requested ~31000", igual con cantidad=1 que con 5 — la
+                // reserva no depende de 'cantidad'). 8000 cubre de sobra el JSON de hasta 5
+                // microretos y reduce la reserva lo suficiente para que quepa.
+                "max_tokens"      => 8000,
             ]);
 
         if (!$response->successful()) {

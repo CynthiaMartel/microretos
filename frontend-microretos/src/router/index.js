@@ -9,6 +9,7 @@ import PublicMicroreto from '../views/PublicMicroreto.vue'
 import DashboardDocente from '../views/DashboardDocente.vue'
 import EncuentrosRegistrados from '../views/EncuentrosRegistrados.vue'
 import StartupDayProyectos from '../views/StartupDayProyectos.vue'
+import ProyectosTerminados from '../views/ProyectosTerminados.vue'
 import StartupDayWizard from '../views/StartupDayWizard.vue'
 import StartupDayDetalle from '../views/StartupDayDetalle.vue'
 import StartupDayLanding from '../views/StartupDayLanding.vue'
@@ -145,6 +146,13 @@ const router = createRouter({
       path: '/proyectos',
       name: 'startup-day',
       component: StartupDayProyectos,
+      meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
+    },
+    {
+      // Ruta específica antes de /proyectos/:uuid — si no, "terminados" se capturaría como uuid.
+      path: '/proyectos/terminados',
+      name: 'proyectos-terminados',
+      component: ProyectosTerminados,
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {

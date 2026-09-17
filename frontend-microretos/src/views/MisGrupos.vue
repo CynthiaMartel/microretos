@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router'
 import api from '../api.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
+import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
 
 const router = useRouter()
 
@@ -332,23 +333,13 @@ onMounted(cargar)
                   class="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left">
             <div class="flex-1 min-w-0">
               <p class="font-black text-[#121212]">
-                {{ g.encuentro.grupo || g.equipos[0]?.proyecto?.titulo || 'Sin nombre' }}
+                {{ g.encuentro.proyecto_titulo || g.equipos[0]?.proyecto?.titulo || g.encuentro.grupo || 'Sin nombre' }}
                 <span v-if="g.encuentro.fecha" class="font-bold text-gray-400">· {{ formatoFecha(g.encuentro.fecha) }}</span>
               </p>
               <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ equiposDeGrupo(g).length }} equipo(s)</p>
-              <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span v-if="g.encuentro.codigo_clase" @click.stop="copiarCodigo(g.encuentro.codigo_clase)"
-                      :title="codigoCopiado === g.encuentro.codigo_clase ? '¡Copiado!' : 'Copiar código workspace alumnado'"
-                      class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 cursor-pointer">
-                  <span class="w-1 h-1 rounded-full bg-[#00A859] shrink-0"></span>
-                  <span class="text-[10px] font-black tracking-wider text-[#00A859]">{{ g.encuentro.codigo_clase }}</span>
-                </span>
-                <span v-if="g.encuentro.codigo_ia" @click.stop="copiarCodigo(g.encuentro.codigo_ia)"
-                      :title="codigoCopiado === g.encuentro.codigo_ia ? '¡Copiado!' : 'Copiar código sugerencia IA alumnado'"
-                      class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 border border-orange-200 cursor-pointer">
-                  <span class="text-[9px] shrink-0">✨</span>
-                  <span class="text-[10px] font-black tracking-wider text-orange-600">{{ g.encuentro.codigo_ia }}</span>
-                </span>
+              <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5" @click.stop>
+                <CodigoBadgeMini v-if="g.encuentro.codigo_clase" :code="g.encuentro.codigo_clase" variant="clase" @copiar="copiarCodigo" />
+                <CodigoBadgeMini v-if="g.encuentro.codigo_ia" :code="g.encuentro.codigo_ia" variant="ia" @copiar="copiarCodigo" />
               </div>
             </div>
             <button @click.stop="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
@@ -406,6 +397,15 @@ onMounted(cargar)
               </button>
 
               <div v-if="equiposAbiertos.has(equipo.id)" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+                <!-- Deja claro que esto es solo un resumen de estado, no el contenido de las
+                     fases — para eso hay que entrar en "Ver detalle de equipos". -->
+                <div class="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
+                  <span class="text-sm leading-none shrink-0">ℹ️</span>
+                  <p class="text-[11px] text-blue-700 leading-snug">
+                    <span class="font-black">Resumen.</span> Haz clic en "Ver detalle de equipos" para más información.
+                  </p>
+                </div>
+
                 <!-- Resumen de fases — solo estado, sin contenido: el detalle vive en "Detalle equipos" -->
                 <div class="flex flex-wrap gap-1.5">
                   <div v-for="f in FASES_PROYECTO" :key="f.num" :title="f.label"

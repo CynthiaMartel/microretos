@@ -29,6 +29,7 @@ class StoreEncuentroRequest extends FormRequest
                     'nombre'     => isset($a['nombre'])     ? strip_tags($a['nombre'])     : '',
                     'equipo_num' => isset($a['equipo_num']) ? (int) $a['equipo_num']       : null,
                     'rol'        => isset($a['rol'])        ? strip_tags($a['rol'])        : null,
+                    'alias'      => isset($a['alias'])      ? strip_tags($a['alias'])      : null,
                 ])
                 ->filter(fn($a) => !empty($a['nombre']))
                 ->values()
@@ -65,7 +66,7 @@ class StoreEncuentroRequest extends FormRequest
             'fecha'                  => 'required|date',
             'centro_educativo'       => 'nullable|string|max:255',
             'ciclo_formativo'        => 'nullable|string|max:255',
-            'curso'                  => 'required|string|max:10',
+            'curso'                  => 'required|string|max:20',
             'grupo'                  => 'required|string|max:10',
             'num_alumnos'            => 'nullable|integer|min:1|max:999',
             'notas'                  => 'nullable|string|max:5000',
@@ -78,6 +79,7 @@ class StoreEncuentroRequest extends FormRequest
                 }
             }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
+            'alumnados.*.alias'      => 'nullable|string|max:60',
         ];
     }
 

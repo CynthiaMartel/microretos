@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use App\Http\Requests\ActualizarAliasMiembroPublicoRequest;
 use App\Http\Requests\GuardarFaseEquipoRequest;
 use App\Http\Requests\StoreEquipoTareaRequest;
 use App\Http\Requests\UpdateEquipoTareaRequest;
@@ -24,7 +25,6 @@ use App\Models\EquipoReflexion;
 use App\Models\Encuentro;
 use App\Models\MicroproyectoRecurso;
 use App\Services\MicroretoFichaService;
-use App\Support\AliasGenerator;
 
 class EquipoPublicoController extends Controller
 {
@@ -802,6 +802,24 @@ class EquipoPublicoController extends Controller
         return response()->json(['ok' => true, 'imagen_portada_id' => $recurso->id]);
     }
 
+    /**
+     * PUT /api/equipo/{token}/miembros/{miembroId}/alias
+     * El alumnado puede fijar/regenerar su alias en cualquier momento desde el workspace,
+     * fuera del guardado de fase — escritura inmediata, igual que el docente en
+     * EncuentroController::actualizarAliasMiembro. Sea cual sea el último en guardar
+     * (alumnado aquí o docente desde "Editar equipo"), esa es la única fuente de verdad,
+     * sin copia en ningún otro sitio.
+     */
+    public function actualizarAliasMiembro(ActualizarAliasMiembroPublicoRequest $request, $token, int $miembroId): JsonResponse
+    {
+        $equipo  = Equipo::where('token', $token)->firstOrFail();
+        $miembro = EquipoMiembro::where('id', $miembroId)->where('equipo_id', $equipo->id)->firstOrFail();
+
+        $miembro->update(['alias' => $request->validated('alias')]);
+
+        return response()->json(['alias' => $miembro->alias]);
+    }
+
     // ── Helpers privados ─────────────────────────────────────────────────────
 
     private function formatWorkspace(Equipo $equipo): array
@@ -924,25 +942,25 @@ class EquipoPublicoController extends Controller
     //
     // Nombre bloqueado una vez el equipo pulsa "Confirmar nombres" en su F0 — a partir de
     // ahí ni el propio equipo ni el docente (ver EncuentroController) pueden cambiarlo.
+    //
+    // El alias es de escritura inmediata (ver actualizarAliasMiembro, y el equivalente del
+    // docente EncuentroController::actualizarAliasMiembro): para un miembro EXISTENTE nunca
+    // se toca aquí, para no pisar con el valor cacheado en el navegador desde que se cargó la
+    // página un cambio más reciente hecho por el otro lado. Solo se fija al crear un miembro
+    // nuevo (o se autogenera si viene vacío, vía EquipoMiembro::booted()).
     private function sincronizarMiembros(Equipo $equipo, array $miembros): void
     {
         $nombreBloqueado = $equipo->nombres_confirmados;
         $existentes  = $equipo->miembros()->pluck('id')->all();
         $conservados = [];
 
-        foreach ($miembros as $posicion => $m) {
+        foreach ($miembros as $m) {
             if (empty($m['nombre'])) {
                 continue;
             }
 
-            $alias = trim((string) ($m['alias'] ?? ''));
-            if ($alias === '') {
-                $alias = AliasGenerator::generar($m['nombre'], $posicion);
-            }
-
             $datos = [
                 'nombre'        => $m['nombre'],
-                'alias'         => mb_substr($alias, 0, 255),
                 'rol'           => $m['rol'] ?? null,
                 'fortalezas'    => $m['fortalezas'] ?? [],
                 'puntos_mejora' => $m['puntos_mejora'] ?? [],
@@ -955,6 +973,10 @@ class EquipoPublicoController extends Controller
                 $equipo->miembros()->whereKey($m['id'])->update($datos);
                 $conservados[] = $m['id'];
             } else {
+                $alias = trim((string) ($m['alias'] ?? ''));
+                if ($alias !== '') {
+                    $datos['alias'] = mb_substr($alias, 0, 255);
+                }
                 $conservados[] = $equipo->miembros()->create($datos)->id;
             }
         }

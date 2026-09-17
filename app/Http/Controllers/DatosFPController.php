@@ -10,6 +10,8 @@ use App\Models\ResultadoAprendizaje;
 use App\Models\Empresa;
 use App\Models\Familia;
 use App\Models\CentroEducativo;
+use App\Models\Encuentro;
+use App\Models\Microproyecto;
 use App\Http\Requests\AsociarEmpresasCentroRequest;
 
 class DatosFPController extends Controller
@@ -214,8 +216,51 @@ class DatosFPController extends Controller
     }
 
     /**
+     * POST /centros/{id}/impacto-cambio
+     * Previsualiza, SIN GUARDAR NADA, cuántos registros denormalizados (que copiaron el
+     * nombre/municipio del centro en su momento — ver actualizarCentro()) se actualizarían
+     * si se confirma el cambio propuesto. El frontend llama a esto antes de actualizarCentro()
+     * para poder mostrar el aviso "esto va a afectar a X empresas, Y encuentros, Z proyectos".
+     */
+    public function impactoCambioCentro(Request $request, $id)
+    {
+        $centro = CentroEducativo::find($id);
+
+        if (!$centro) {
+            return response()->json(['error' => 'Centro no encontrado'], 404);
+        }
+
+        $request->validate([
+            'nombre'    => 'required|string|max:255',
+            'municipio' => 'nullable|string|max:255',
+        ]);
+
+        $cambiaNombre    = $request->nombre !== $centro->nombre;
+        $cambiaMunicipio = ($request->municipio ?: null) !== ($centro->municipio ?: null);
+
+        if (!$cambiaNombre && !$cambiaMunicipio) {
+            return response()->json(['requiere_confirmacion' => false]);
+        }
+
+        return response()->json([
+            'requiere_confirmacion' => true,
+            'cambia_nombre'         => $cambiaNombre,
+            'cambia_municipio'      => $cambiaMunicipio,
+            'afectados' => [
+                'empresas'   => Empresa::where('centro_id', $id)->count(),
+                'encuentros' => Encuentro::where('centro_educativo_id', $id)->count(),
+                'proyectos'  => Microproyecto::where('centro_id', $id)->count(),
+            ],
+        ]);
+    }
+
+    /**
      * PUT /centros/{id}
-     * Actualiza el nombre y los ciclos de un centro educativo.
+     * Actualiza el nombre, municipio y los ciclos de un centro educativo, y propaga el
+     * cambio de nombre/municipio a los registros que guardaron una copia en su momento
+     * (Empresa.centro_educativo, Encuentro.centro_educativo, Microproyecto.datos_centro) —
+     * antes de esto solo se propagaba a Empresa/centro_ciclo, dejando Encuentro y
+     * Microproyecto desactualizados si se renombraba un centro.
      * Los ciclos anteriores se reemplazan completamente por los nuevos.
      */
     public function actualizarCentro(Request $request, $id)
@@ -228,23 +273,42 @@ class DatosFPController extends Controller
 
         $request->validate([
             'nombre'      => 'required|string|max:255|unique:centro_educativo,nombre,' . $id,
+            'municipio'   => 'nullable|string|max:255',
             'ciclosIds'   => 'required|array|min:1',
             'ciclosIds.*' => 'integer|exists:ciclos_formativos,id',
             'img'         => 'sometimes|nullable|string|max:2048',
         ]);
 
-        $nombreAnterior = $centro->nombre;
-        $update = ['nombre' => $request->nombre];
+        $nombreAnterior    = $centro->nombre;
+        $municipioAnterior = $centro->municipio;
+        $update = ['nombre' => $request->nombre, 'municipio' => $request->municipio];
         if ($request->has('img')) $update['img'] = $request->img;
         $centro->update($update);
 
-        // Si cambió el nombre, actualizar el campo legacy en empresas y en centro_ciclo
-        if ($nombreAnterior !== $request->nombre) {
-            Empresa::where('centro_educativo', $nombreAnterior)
-                ->update(['centro_educativo' => $request->nombre]);
-            DB::table('centro_ciclo')
-                ->where('centro_id', $id)
-                ->update(['centro_educativo' => $request->nombre]);
+        $cambioNombre    = $nombreAnterior !== $request->nombre;
+        $cambioMunicipio = $municipioAnterior !== $request->municipio;
+
+        if ($cambioNombre) {
+            // Por centro_id (no por el nombre viejo): así se corrigen también las
+            // empresas cuyo string legacy ya estuviera desincronizado del real.
+            Empresa::where('centro_id', $id)->update(['centro_educativo' => $centro->nombre]);
+            DB::table('centro_ciclo')->where('centro_id', $id)->update(['centro_educativo' => $centro->nombre]);
+            Encuentro::where('centro_educativo_id', $id)->update(['centro_educativo' => $centro->nombre]);
+        }
+
+        if ($cambioNombre || $cambioMunicipio) {
+            // datos_centro es JSON (snapshot tomado por el wizard) — no se puede
+            // actualizar con un solo UPDATE, hay que leer y rescribir cada fila
+            // conservando docente_nombre/docente_email tal cual estaban.
+            Microproyecto::where('centro_id', $id)->whereNotNull('datos_centro')
+                ->chunkById(200, function ($proyectos) use ($centro) {
+                    foreach ($proyectos as $proyecto) {
+                        $datos = $proyecto->datos_centro;
+                        $datos['nombre']    = $centro->nombre;
+                        $datos['municipio'] = $centro->municipio;
+                        $proyecto->update(['datos_centro' => $datos]);
+                    }
+                });
         }
 
         // Reemplazar todos los ciclos del centro
@@ -260,7 +324,7 @@ class DatosFPController extends Controller
 
         return response()->json([
             'message' => 'Centro actualizado correctamente',
-            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'img' => $centro->img],
+            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'municipio' => $centro->municipio, 'img' => $centro->img],
         ]);
     }
 
@@ -272,12 +336,13 @@ class DatosFPController extends Controller
     {
         $request->validate([
             'nombre'      => 'required|string|max:255|unique:centro_educativo,nombre',
+            'municipio'   => 'nullable|string|max:255',
             'ciclosIds'   => 'required|array|min:1',
             'ciclosIds.*' => 'integer|exists:ciclos_formativos,id',
             'img'         => 'sometimes|nullable|string|max:2048',
         ]);
 
-        $centro = CentroEducativo::create($request->only(['nombre', 'img']));
+        $centro = CentroEducativo::create($request->only(['nombre', 'municipio', 'img']));
 
         $rows = collect($request->ciclosIds)->map(fn($cicloId) => [
             'centro_id'        => $centro->id,
@@ -289,7 +354,7 @@ class DatosFPController extends Controller
 
         return response()->json([
             'message' => 'Centro educativo creado correctamente',
-            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'img' => $centro->img],
+            'centro'  => ['id' => $centro->id, 'nombre' => $centro->nombre, 'municipio' => $centro->municipio, 'img' => $centro->img],
         ], 201);
     }
 

@@ -1859,257 +1859,267 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     </div>
 
     <!-- ══════════════ MODAL: CONFIRMAR NUEVA EMPRESA ══════════════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmNuevaEmpresa"
-           class="fixed inset-0 z-[10060] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-           @click.self="mostrarConfirmNuevaEmpresa = false">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-11 h-11 rounded-2xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-black text-lg text-[#1F2937]">Nueva empresa</h3>
-              <p class="text-xs text-gray-400">Vas a añadir una empresa a la base de datos</p>
-            </div>
-          </div>
-          <div class="bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl p-4 mb-5">
-            <p class="text-xs text-[#00A859] font-semibold leading-relaxed">
-              Se creará un nuevo registro de empresa. Asegúrate de tener los datos necesarios antes de continuar.
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <button @click="mostrarConfirmNuevaEmpresa = false"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
-              Cancelar
-            </button>
-            <button @click="confirmarNuevaEmpresa"
-              class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
-              Continuar
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- ══════════════ MODAL: CONFIRMAR NUEVO CENTRO ══════════════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmNuevoCentro"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-           @click.self="mostrarConfirmNuevoCentro = false">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-11 h-11 rounded-2xl bg-[#1F2937]/10 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-[#1F2937]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-black text-lg text-[#1F2937]">Nuevo centro educativo</h3>
-              <p class="text-xs text-gray-400">Vas a añadir un centro al catálogo</p>
-            </div>
-          </div>
-          <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
-            <p class="text-xs text-gray-600 font-semibold leading-relaxed">
-              El centro quedará disponible en todo el sistema y podrá vincularse a empresas y ciclos formativos.
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <button @click="mostrarConfirmNuevoCentro = false"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
-              Cancelar
-            </button>
-            <button @click="confirmarNuevoCentro"
-              class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
-              Continuar
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- ══════════════ MODAL: CONFIRMAR EDITAR CENTRO ═════════════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmEditarCentro"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-           @click.self="mostrarConfirmEditarCentro = false">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-black text-lg text-[#1F2937]">Modificar centro</h3>
-              <p class="text-xs text-gray-400">Vas a editar los datos de este centro educativo</p>
-            </div>
-          </div>
-          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
-            <p class="text-sm font-bold text-amber-800 mb-1">"{{ centroEditarTemp?.nombre }}"</p>
-            <p class="text-xs text-amber-600">
-              Los cambios afectarán a todos los ciclos vinculados y a las empresas que pertenezcan a este centro.
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <button @click="mostrarConfirmEditarCentro = false"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
-              Cancelar
-            </button>
-            <button @click="confirmarEditarCentro"
-              class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
-              Abrir editor
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- ════════════════ MODAL: CONFIRMAR EDICIÓN ════════════════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmEdit"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-black text-lg text-[#1F2937]">Modificar empresa</h3>
-              <p class="text-xs text-gray-400">Vas a editar los datos de esta empresa</p>
-            </div>
-          </div>
-          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
-            <p class="text-sm font-bold text-amber-800 mb-1">
-              "{{ empresaEditTemp?.nombre_comercial }}"
-            </p>
-            <p class="text-xs text-amber-600">
-              Los cambios que guardes sobreescribirán los datos actuales en la base de datos.
-              Asegúrate de que la información es correcta antes de guardar.
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <button
-              @click="mostrarConfirmEdit = false"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200
-                     text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              @click="confirmarEdicion"
-              class="flex-1 py-2.5 rounded-xl
-                     bg-[#00A859] text-white text-sm font-black
-                     hover:bg-[#009950] transition-all shadow-sm"
-            >
-              Abrir editor
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- ════════════ MODAL: ACCESO PROTEGIDO CATÁLOGO FP ════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmCatalogo"
-           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-           @click.self="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
-
-          <!-- Cabecera -->
-          <div class="flex items-center gap-3 mb-5">
-            <div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-black text-lg text-[#1F2937]">Acceso restringido</h3>
-              <p class="text-xs text-gray-400">Catálogo de familias y ciclos formativos</p>
-            </div>
-          </div>
-
-          <!-- Aviso de impacto -->
-          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
-            <p class="text-xs text-amber-700 font-semibold leading-relaxed">
-              Esta sección modifica el <span class="font-black">catálogo académico global</span>.
-              Los cambios afectan a centros, empresas, generación de retos y todas las relaciones de la base de datos.
-              Solo procede si eres administrador del sistema.
-            </p>
-          </div>
-
-          <!-- Campo contraseña -->
-          <div class="mb-4">
-            <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              Confirma tu contraseña de administrador
-            </label>
-            <div class="relative">
-              <input
-                v-model="passwordCatalogo"
-                :type="mostrarPasswordCatalogo ? 'text' : 'password'"
-                placeholder="Contraseña"
-                class="w-full px-4 py-3 rounded-xl border text-sm font-medium
-                       focus:outline-none focus:ring-2 transition-all"
-                :class="passwordCatalogoErr
-                  ? 'border-red-300 focus:ring-red-200 bg-red-50'
-                  : 'border-gray-200 focus:ring-[#1F2937]/20 bg-white'"
-                @keyup.enter="verificarPasswordCatalogo"
-                @keyup.escape="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''"
-                autocomplete="current-password"
-              />
-              <button
-                type="button"
-                @click="mostrarPasswordCatalogo = !mostrarPasswordCatalogo"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg v-if="!mostrarPasswordCatalogo" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmNuevaEmpresa"
+             class="fixed inset-0 z-[10060] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+             @click.self="mostrarConfirmNuevaEmpresa = false">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-2xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                 </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-lg text-[#1F2937]">Nueva empresa</h3>
+                <p class="text-xs text-gray-400">Vas a añadir una empresa a la base de datos</p>
+              </div>
+            </div>
+            <div class="bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl p-4 mb-5">
+              <p class="text-xs text-[#00A859] font-semibold leading-relaxed">
+                Se creará un nuevo registro de empresa. Asegúrate de tener los datos necesarios antes de continuar.
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button @click="mostrarConfirmNuevaEmpresa = false"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                Cancelar
+              </button>
+              <button @click="confirmarNuevaEmpresa"
+                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                Continuar
               </button>
             </div>
-            <p v-if="passwordCatalogoErr" class="text-xs text-red-600 font-bold mt-2 ml-1">
-              {{ passwordCatalogoErr }}
-            </p>
           </div>
-
-          <!-- Botones -->
-          <div class="flex gap-3">
-            <button
-              @click="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200
-                     text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              @click="verificarPasswordCatalogo"
-              :disabled="passwordCatalogoLoad || !passwordCatalogo.trim()"
-              class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black
-                     hover:bg-[#009950] transition-all shadow-sm
-                     disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <svg v-if="passwordCatalogoLoad" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-              <span>{{ passwordCatalogoLoad ? 'Verificando...' : 'Acceder' }}</span>
-            </button>
-          </div>
-
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
+
+    <!-- ══════════════ MODAL: CONFIRMAR NUEVO CENTRO ══════════════ -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmNuevoCentro"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+             @click.self="mostrarConfirmNuevoCentro = false">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-2xl bg-[#1F2937]/10 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-[#1F2937]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-lg text-[#1F2937]">Nuevo centro educativo</h3>
+                <p class="text-xs text-gray-400">Vas a añadir un centro al catálogo</p>
+              </div>
+            </div>
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
+              <p class="text-xs text-gray-600 font-semibold leading-relaxed">
+                El centro quedará disponible en todo el sistema y podrá vincularse a empresas y ciclos formativos.
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button @click="mostrarConfirmNuevoCentro = false"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                Cancelar
+              </button>
+              <button @click="confirmarNuevoCentro"
+                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ══════════════ MODAL: CONFIRMAR EDITAR CENTRO ═════════════ -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmEditarCentro"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+             @click.self="mostrarConfirmEditarCentro = false">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-lg text-[#1F2937]">Modificar centro</h3>
+                <p class="text-xs text-gray-400">Vas a editar los datos de este centro educativo</p>
+              </div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+              <p class="text-sm font-bold text-amber-800 mb-1">"{{ centroEditarTemp?.nombre }}"</p>
+              <p class="text-xs text-amber-600">
+                Los cambios afectarán a todos los ciclos vinculados y a las empresas que pertenezcan a este centro.
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button @click="mostrarConfirmEditarCentro = false"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                Cancelar
+              </button>
+              <button @click="confirmarEditarCentro"
+                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                Abrir editor
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ════════════════ MODAL: CONFIRMAR EDICIÓN ════════════════ -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmEdit"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-lg text-[#1F2937]">Modificar empresa</h3>
+                <p class="text-xs text-gray-400">Vas a editar los datos de esta empresa</p>
+              </div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+              <p class="text-sm font-bold text-amber-800 mb-1">
+                "{{ empresaEditTemp?.nombre_comercial }}"
+              </p>
+              <p class="text-xs text-amber-600">
+                Los cambios que guardes sobreescribirán los datos actuales en la base de datos.
+                Asegúrate de que la información es correcta antes de guardar.
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button
+                @click="mostrarConfirmEdit = false"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                       text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="confirmarEdicion"
+                class="flex-1 py-2.5 rounded-xl
+                       bg-[#00A859] text-white text-sm font-black
+                       hover:bg-[#009950] transition-all shadow-sm"
+              >
+                Abrir editor
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ════════════ MODAL: ACCESO PROTEGIDO CATÁLOGO FP ════ -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmCatalogo"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+             @click.self="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
+
+            <!-- Cabecera -->
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-lg text-[#1F2937]">Acceso restringido</h3>
+                <p class="text-xs text-gray-400">Catálogo de familias y ciclos formativos</p>
+              </div>
+            </div>
+
+            <!-- Aviso de impacto -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+              <p class="text-xs text-amber-700 font-semibold leading-relaxed">
+                Esta sección modifica el <span class="font-black">catálogo académico global</span>.
+                Los cambios afectan a centros, empresas, generación de retos y todas las relaciones de la base de datos.
+                Solo procede si eres administrador del sistema.
+              </p>
+            </div>
+
+            <!-- Campo contraseña -->
+            <div class="mb-4">
+              <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                Confirma tu contraseña de administrador
+              </label>
+              <div class="relative">
+                <input
+                  v-model="passwordCatalogo"
+                  :type="mostrarPasswordCatalogo ? 'text' : 'password'"
+                  placeholder="Contraseña"
+                  class="w-full px-4 py-3 rounded-xl border text-sm font-medium
+                         focus:outline-none focus:ring-2 transition-all"
+                  :class="passwordCatalogoErr
+                    ? 'border-red-300 focus:ring-red-200 bg-red-50'
+                    : 'border-gray-200 focus:ring-[#1F2937]/20 bg-white'"
+                  @keyup.enter="verificarPasswordCatalogo"
+                  @keyup.escape="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''"
+                  autocomplete="current-password"
+                />
+                <button
+                  type="button"
+                  @click="mostrarPasswordCatalogo = !mostrarPasswordCatalogo"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg v-if="!mostrarPasswordCatalogo" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                  </svg>
+                </button>
+              </div>
+              <p v-if="passwordCatalogoErr" class="text-xs text-red-600 font-bold mt-2 ml-1">
+                {{ passwordCatalogoErr }}
+              </p>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex gap-3">
+              <button
+                @click="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                       text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="verificarPasswordCatalogo"
+                :disabled="passwordCatalogoLoad || !passwordCatalogo.trim()"
+                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black
+                       hover:bg-[#009950] transition-all shadow-sm
+                       disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg v-if="passwordCatalogoLoad" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+                </svg>
+                <span>{{ passwordCatalogoLoad ? 'Verificando...' : 'Acceder' }}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- ════════════ MODAL: VERIFICACIÓN DE SEGURIDAD BD ════════ -->
     <DbSecurityModal
@@ -2174,47 +2184,49 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     />
 
     <!-- ════════════ MODAL: CONFIRMAR EDICIÓN DE ESTADO ════ -->
-    <Transition name="modal-fade">
-      <div v-if="mostrarConfirmEstado"
-           class="fixed inset-0 z-[9100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-           @click.self="cancelarConfirmEstado">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-7 border border-gray-100">
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarConfirmEstado"
+             class="fixed inset-0 z-[9100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+             @click.self="cancelarConfirmEstado">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-7 border border-gray-100">
 
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-black text-base text-[#1F2937]">Modificar estado de contacto</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Esta acción quedará registrada en la base de datos</p>
+              </div>
             </div>
-            <div>
-              <h3 class="font-black text-base text-[#1F2937]">Modificar estado de contacto</h3>
-              <p class="text-xs text-gray-400 mt-0.5">Esta acción quedará registrada en la base de datos</p>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-5">
+              <p class="text-sm font-semibold text-amber-800 leading-snug">
+                ¿Seguro que quieres modificar el estado de contacto de
+                <span class="font-black">"{{ empresaParaEstado?.nombre_comercial }}"</span>?
+              </p>
             </div>
-          </div>
 
-          <div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-5">
-            <p class="text-sm font-semibold text-amber-800 leading-snug">
-              ¿Seguro que quieres modificar el estado de contacto de
-              <span class="font-black">"{{ empresaParaEstado?.nombre_comercial }}"</span>?
-            </p>
-          </div>
-
-          <div class="flex gap-3">
-            <button @click="cancelarConfirmEstado"
-              class="flex-1 py-2.5 rounded-xl border border-gray-200
-                     text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
-              No, cancelar
-            </button>
-            <button @click="confirmarEditarEstado"
-              class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white
-                     text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
-              Sí, modificar
-            </button>
+            <div class="flex gap-3">
+              <button @click="cancelarConfirmEstado"
+                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                       text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                No, cancelar
+              </button>
+              <button @click="confirmarEditarEstado"
+                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white
+                       text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                Sí, modificar
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
 
     <!-- ════════════════ MODAL: INFO catálogo fp ════════════════════ -->
     <CatalogoBoeIntroModal v-model:show="mostrarIntroBoe" @siguiente="onIntroBoeNext" />

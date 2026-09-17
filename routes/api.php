@@ -58,6 +58,8 @@ Route::middleware('throttle:workspace-lectura')->group(function () {
     Route::delete('/equipo/{token}/tareas/{tarea}',        [EquipoPublicoController::class, 'destroyTarea'])
         ->whereNumber('tarea');
     Route::post('/equipo/{token}/reflexiones',             [EquipoPublicoController::class, 'storeReflexion']);
+    Route::put('/equipo/{token}/miembros/{miembroId}/alias', [EquipoPublicoController::class, 'actualizarAliasMiembro'])
+        ->whereNumber('miembroId');
 });
 
 Route::middleware('throttle:workspace-prototipos')->group(function () {
@@ -147,11 +149,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('superadmin')->group(function () {
 
         // Centros educativos
-        Route::post('/centros',                      [DatosFPController::class, 'guardarCentro']);
-        Route::put('/centros/{id}',                  [DatosFPController::class, 'actualizarCentro']);
-        Route::delete('/centros/{id}',                [DatosFPController::class, 'eliminarCentro']);
-        Route::post('/centros/{id}/empresas/asociar', [DatosFPController::class, 'asociarEmpresas']);
-        Route::post('/centros/imagen',                [UploadController::class, 'imagenCentro']);
+        Route::post('/centros',                        [DatosFPController::class, 'guardarCentro']);
+        Route::post('/centros/{id}/impacto-cambio',     [DatosFPController::class, 'impactoCambioCentro']);
+        Route::put('/centros/{id}',                    [DatosFPController::class, 'actualizarCentro']);
+        Route::delete('/centros/{id}',                  [DatosFPController::class, 'eliminarCentro']);
+        Route::post('/centros/{id}/empresas/asociar',   [DatosFPController::class, 'asociarEmpresas']);
+        Route::post('/centros/imagen',                  [UploadController::class, 'imagenCentro']);
 
         // Familias profesionales
         Route::post('/familias',       [DatosFPController::class, 'storeFamilia']);
@@ -220,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/encuentros/{id}/crear-codigo',       [EncuentroController::class, 'crearCodigo'])->whereNumber('id');
         Route::post('/encuentros/{id}/codigo-ia',          [EncuentroController::class, 'generarCodigoIa'])->whereNumber('id');
         Route::patch('/encuentros/{id}/reestructurar-equipos', [EncuentroController::class, 'reestructurarEquipos'])->whereNumber('id');
+        Route::patch('/encuentros/{id}/miembros/{miembroId}/alias', [EncuentroController::class, 'actualizarAliasMiembro'])->whereNumber('id')->whereNumber('miembroId');
         Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
         // Ruta específica antes de la paramétrica {id} de abajo
         Route::get('/encuentros/{id}/colaboradores/candidatos', [EncuentroColaboradorController::class, 'candidatos'])->whereNumber('id');
@@ -265,6 +269,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // ── Gestión de equipos (docente) ──────────────────────────────────────
         // Nota: la creación de equipos y el listado con progreso viven en
         // EncuentroController (crearCodigo/workspace) — no duplicar aquí.
+        Route::get('/startup/proyectos/{uuid}/equipos',         [EncuentroController::class, 'equiposDeProyecto']);
         Route::get('/startup/proyectos/{uuid}/pantalla-acceso',[EquipoGestionController::class, 'pantallaAcceso']);
         Route::delete('/startup/equipos/{id}',                 [EquipoGestionController::class, 'destroy'])
             ->whereNumber('id');

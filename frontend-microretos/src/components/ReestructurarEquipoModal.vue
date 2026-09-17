@@ -1,12 +1,13 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from '../api.js'
+import RegenerarAliasButton from './RegenerarAliasButton.vue'
 
 const props = defineProps({
   visible:   { type: Boolean, default: false },
   encuentro: { type: Object,  default: null  },
 })
-const emit = defineEmits(['cerrar', 'actualizado'])
+const emit = defineEmits(['cerrar', 'actualizado', 'alias-actualizado'])
 
 const numEquipos      = ref(3)
 const alumnados       = ref([])
@@ -40,6 +41,23 @@ watch(() => props.visible, (v) => {
     guardando.value   = false
   }
 })
+
+// Escritura inmediata al backend, fuera del payload de "Guardar reparto" — así nunca
+// pisa con un valor obsoleto el alias que el alumnado haya cambiado mientras tanto
+// desde su workspace (ver EncuentroController::actualizarAliasMiembro).
+async function guardarAliasMiembro(i, alias) {
+  const item = alumnados.value[i]
+  if (!item?.id) return
+  const anterior = item.alias
+  item.alias = alias
+  try {
+    await api.patch(`/encuentros/${props.encuentro.id}/miembros/${item.id}/alias`, { alias })
+    emit('alias-actualizado', { miembroId: item.id, alias })
+  } catch (e) {
+    item.alias = anterior
+    error.value = e.response?.data?.error || 'No se pudo actualizar el alias.'
+  }
+}
 
 function addAlumno() {
   const nombre = nuevoNombre.value.trim()
@@ -161,20 +179,28 @@ async function guardar() {
                     </p>
                     <span class="text-[9px] text-gray-400 flex-shrink-0">{{ alumnadosDeEquipo(n).length }}</span>
                   </div>
-                  <div v-if="alumnadosDeEquipo(n).length" class="space-y-1">
-                    <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="flex items-center gap-1 text-xs">
-                      <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
-                            class="shrink-0 text-gray-300">🔒</span>
-                      <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
-                             :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
-                             class="flex-1 min-w-0 truncate font-medium text-[#1F2937] bg-transparent
-                                    border border-transparent hover:border-gray-200 focus:border-violet-300
-                                    focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
-                                    disabled:text-gray-400 disabled:hover:border-transparent disabled:cursor-not-allowed" />
-                      <span v-if="a.alias" class="shrink-0 text-[10px] text-gray-400 truncate max-w-[80px]">{{ a.alias }}</span>
-                      <button type="button" @click="removeAlumno(a._i)"
-                              class="text-gray-300 hover:text-red-400 font-black transition-colors
-                                     text-sm leading-none flex-shrink-0">×</button>
+                  <div v-if="alumnadosDeEquipo(n).length" class="space-y-1.5">
+                    <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="text-xs">
+                      <div class="flex items-center gap-1">
+                        <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
+                              class="shrink-0 text-gray-300">🔒</span>
+                        <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
+                               :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
+                               class="flex-1 min-w-0 truncate font-medium text-[#1F2937] bg-transparent
+                                      border border-transparent hover:border-gray-200 focus:border-violet-300
+                                      focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
+                                      disabled:text-gray-400 disabled:hover:border-transparent disabled:cursor-not-allowed" />
+                        <button type="button" @click="removeAlumno(a._i)"
+                                class="text-gray-300 hover:text-red-400 font-black transition-colors
+                                       text-sm leading-none flex-shrink-0">×</button>
+                      </div>
+                      <div class="flex items-center gap-1 pl-0.5 mt-0.5">
+                        <span class="flex-1 min-w-0 truncate text-[10px] text-gray-400">
+                          {{ alumnados[a._i].alias || (alumnados[a._i].id ? '' : 'se genera al guardar') }}
+                        </span>
+                        <RegenerarAliasButton v-if="alumnados[a._i].id" :nombre="alumnados[a._i].nombre"
+                                               @generado="alias => guardarAliasMiembro(a._i, alias)" />
+                      </div>
                     </div>
                   </div>
                   <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>
@@ -186,20 +212,28 @@ async function guardar() {
                 <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">
                   Sin equipo asignado
                 </p>
-                <div class="space-y-1">
-                  <div v-for="a in alumnadosSinEquipo" :key="a._i" class="flex items-center gap-1 text-xs">
-                    <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
-                          class="shrink-0 text-amber-300">🔒</span>
-                    <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
-                           :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
-                           class="flex-1 min-w-0 truncate font-medium text-amber-700 bg-transparent
-                                  border border-transparent hover:border-amber-200 focus:border-amber-400
-                                  focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
-                                  disabled:text-amber-400/60 disabled:hover:border-transparent disabled:cursor-not-allowed" />
-                    <span v-if="a.alias" class="shrink-0 text-[10px] text-amber-400/80 truncate max-w-[80px]">{{ a.alias }}</span>
-                    <button type="button" @click="removeAlumno(a._i)"
-                            class="text-amber-300 hover:text-red-400 font-black transition-colors
-                                   text-sm leading-none flex-shrink-0">×</button>
+                <div class="space-y-1.5">
+                  <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">
+                    <div class="flex items-center gap-1">
+                      <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
+                            class="shrink-0 text-amber-300">🔒</span>
+                      <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
+                             :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
+                             class="flex-1 min-w-0 truncate font-medium text-amber-700 bg-transparent
+                                    border border-transparent hover:border-amber-200 focus:border-amber-400
+                                    focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
+                                    disabled:text-amber-400/60 disabled:hover:border-transparent disabled:cursor-not-allowed" />
+                      <button type="button" @click="removeAlumno(a._i)"
+                              class="text-amber-300 hover:text-red-400 font-black transition-colors
+                                     text-sm leading-none flex-shrink-0">×</button>
+                    </div>
+                    <div class="flex items-center gap-1 pl-0.5 mt-0.5">
+                      <span class="flex-1 min-w-0 truncate text-[10px] text-amber-400/80">
+                        {{ alumnados[a._i].alias || (alumnados[a._i].id ? '' : 'se genera al guardar') }}
+                      </span>
+                      <RegenerarAliasButton v-if="alumnados[a._i].id" :nombre="alumnados[a._i].nombre"
+                                             @generado="alias => guardarAliasMiembro(a._i, alias)" />
+                    </div>
                   </div>
                 </div>
               </div>
