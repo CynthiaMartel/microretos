@@ -6,6 +6,9 @@ import api from '../api.js'
 
 const router = useRouter()
 
+const isLoaded = ref(false)
+onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
+
 const cargando   = ref(true)
 const error      = ref('')
 const encuentros = ref([])
@@ -32,12 +35,48 @@ function abrirPantalla(encuentro) {
   router.push({ name: 'pantalla-acceso', params: { uuid: encuentro.microproyecto_uuid } })
 }
 
+function formatFecha(fecha) {
+  if (!fecha) return ''
+  const d = new Date(fecha + 'T00:00:00')
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+}
+
+function resumenMiembros(encuentro) {
+  const miembros = (encuentro.equipos || []).flatMap(eq => eq.miembros || [])
+  if (!miembros.length) return ''
+  const nombres = miembros.map(m => m.alias || m.nombre).filter(Boolean)
+  const max = 3
+  const resto = nombres.length - max
+  return resto > 0 ? `${nombres.slice(0, max).join(', ')} +${resto} más` : nombres.join(', ')
+}
+
 onMounted(cargar)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC]">
-    <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+  <div class="min-h-screen bg-[#F8FAFC] pt-16">
+
+    <!-- HEADER -->
+    <header class="pt-6 md:pt-8 pb-2 text-center flex flex-col items-center px-4">
+      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Pantalla de <span class="text-centros">Acceso</span>
+      </h1>
+      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Elige el encuentro que quieres proyectar en clase para que el alumnado escanee su QR y código.
+      </p>
+    </header>
+
+    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <button @click="router.back()"
               class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,15 +84,14 @@ onMounted(cargar)
         </svg>
       </button>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-[#00A859]">Pantalla de acceso</p>
-        <p class="text-sm font-bold text-[#121212]">Elige el encuentro que quieres proyectar</p>
+        <p class="text-sm font-bold text-[#121212]">Todos tus encuentros</p>
       </div>
     </div>
 
     <div class="max-w-3xl mx-auto px-4 py-6 space-y-3">
 
       <div v-if="cargando" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 border-2 border-[#00A859] border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-8 h-8 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
       </div>
 
       <div v-else-if="error" class="rounded-3xl bg-red-50 border border-red-200 p-8 text-center text-red-600 text-sm font-semibold">
@@ -64,7 +102,7 @@ onMounted(cargar)
         <div v-if="!encuentrosConEquipos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
           <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene equipos creados todavía.</p>
           <button @click="router.push('/encuentros')"
-                  class="px-4 py-2 rounded-xl bg-[#00A859] text-white text-xs font-black uppercase tracking-wider">
+                  class="px-4 py-2 rounded-xl bg-centros text-white text-xs font-black uppercase tracking-wider">
             Ir a Crear/Ver Encuentros
           </button>
         </div>
@@ -72,10 +110,15 @@ onMounted(cargar)
         <button v-for="e in encuentrosConEquipos" :key="e.id"
                 @click="abrirPantalla(e)"
                 class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4
-                       flex items-center gap-4 hover:border-[#00A859]/40 transition-all text-left">
+                       flex items-center gap-4 hover:border-centros/40 transition-all text-left">
           <div class="flex-1 min-w-0">
-            <p class="font-black text-[#121212]">{{ e.grupo || e.proyecto_titulo || 'Sin nombre' }}</p>
-            <p class="text-xs text-gray-400">{{ e.ciclo_formativo }} · código {{ e.codigo_clase }}</p>
+            <p class="font-black text-[#121212] truncate">{{ e.proyecto_titulo || e.grupo || 'Sin nombre' }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">
+              <span v-if="e.fecha">{{ formatFecha(e.fecha) }} · </span>{{ e.ciclo_formativo }} · código {{ e.codigo_clase }}
+            </p>
+            <p class="text-xs text-gray-500 mt-1 truncate">
+              {{ (e.equipos || []).length }} equipo{{ (e.equipos || []).length === 1 ? '' : 's' }}<span v-if="resumenMiembros(e)"> · {{ resumenMiembros(e) }}</span>
+            </p>
           </div>
           <span class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-wider">
             Proyectar →

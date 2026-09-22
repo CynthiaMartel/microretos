@@ -1,7 +1,7 @@
 // App-level constants and build registry
 export const APP_VERSION = '1.0.0'
 export const APP_NAME    = 'microretos'
-export const BRAND_COLOR = '#00A859'
+export const BRAND_COLOR = '#3072AA'
 export const DARK_BG     = '#1a2332'
 
 // Internal registry — generated at build time, do not edit manually

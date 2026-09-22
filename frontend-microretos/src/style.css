@@ -1,7 +1,54 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------
-   Tema Claro/Luminoso Global (Fondo y Texto Base) 
+   Paleta de marca — extraída de logo_colores.png.
+   Un color por colectivo (usados dinámicamente según el rol de quien ha
+   iniciado sesión, ver useRoleTheme.js) + escala `primary` (azul) como
+   marca genérica para el punto de entrada, vistas compartidas y chrome
+   sin rol conocido todavía.
+--------------------------------------------------- */
+@theme {
+  --color-primary-50:  #f6fafc;
+  --color-primary-100: #dae8f5;
+  --color-primary-200: #bad5ec;
+  --color-primary-300: #93bde0;
+  --color-primary-400: #6ba4d5;
+  --color-primary-500: #438cca;
+  --color-primary-600: #3072aa;
+  --color-primary-700: #275d8a;
+  --color-primary-800: #1e476a;
+  --color-primary-900: #15324b;
+
+  --color-centros: #3072AA;
+  --color-empresas: #509928;
+  --color-administraciones: #19A7A8;
+  --color-alumnos: #FF8920;
+
+  /* Azul aclarado: el resto de colores de marca ya leen bien como texto sobre
+     fondo oscuro (#1F2937, el gris del TopBar/SidePanel) — el azul plano no
+     (contraste ~2.9:1). Se usa solo para texto/iconos sobre fondo oscuro. */
+  --color-centros-light: #6BA4D5;
+
+  /* Naranja oscurecido: el naranja de marca da solo ~2.4:1 sobre blanco — no
+     vale como TEXTO sobre fondo claro (sí vale de sobra como fondo con texto
+     blanco encima, o como icono/acento grande). Usar esta variante para texto
+     de "alumnos" sobre tarjetas claras (PublicMicroreto, UnirseEquipo...). */
+  --color-alumnos-dark: #B85E0A;
+
+  /* Verde oscurecido: el verde de marca da solo ~3.5:1 sobre blanco — límite
+     para texto pequeño en negrita. Usar para texto de "empresas" sobre
+     tarjetas/badges de fondo claro (p. ej. estados de validación). */
+  --color-empresas-dark: #3D7A1E;
+
+  /* Verde aclarado: el verde de marca a opacidad reducida sobre fondo oscuro
+     (SidePanel) pierde contraste y se ve apagado/ilegible. Esta variante, a
+     opacidad plena, da ~5.8:1 sobre #223244 — más legible y con mejor color
+     que difuminar el verde base. */
+  --color-empresas-light: #6EC13F;
+}
+
+/* ---------------------------------------------------
+   Tema Claro/Luminoso Global (Fondo y Texto Base)
 --------------------------------------------------- */
 body {
   background-color: #F8FAFC !important; /* Fondo gris azulado muy claro */
@@ -22,20 +69,20 @@ body {
 --------------------------------------------------- */
 
 input, select, textarea {
-  background-color: #F0FBF4; /* Verde muy claro (menta suave) */
+  background-color: #F2F7FB; /* Azul muy claro (marca genérica) */
   color: #1F2937;            /* Texto oscuro para máxima legibilidad */
-  border: 2px solid #BBE8D0; /* Borde verde tenue */
+  border: 2px solid #C7DCEC; /* Borde azul tenue */
 }
 
 input::placeholder, textarea::placeholder {
-  color: #9CA3AF; /* Gris medio, legible sobre fondo verde claro */
+  color: #9CA3AF; /* Gris medio, legible sobre fondo azul claro */
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #00A859;
-  background-color: #E6F7EE; /* Verde un tono más intenso al enfocar */
+  border-color: #3072AA;
+  background-color: #E5EFF7; /* Azul un tono más intenso al enfocar */
   outline: none;
-  box-shadow: 0 0 0 4px rgba(0, 168, 89, 0.15);
+  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.15);
 }
 
 /* Customización del Scrollbar (Opcional, pero recomendado para mantener limpieza) */
@@ -50,5 +97,5 @@ input:focus, select:focus, textarea:focus {
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #00A859; 
+  background: #3072AA; 
 }

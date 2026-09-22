@@ -13,6 +13,9 @@ import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
 
 const router = useRouter()
 
+const isLoaded = ref(false)
+onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
+
 const cargando = ref(true)
 const error    = ref('')
 const grupos   = ref([])
@@ -75,7 +78,7 @@ function formatoFecha(fecha) {
 // aquí solo es un resumen: el detalle real vive en "Detalle equipos" (MisGruposDetalle.vue).
 function estadoFase(equipo, faseNum) {
   if (equipo.fases[faseNum]?.validado_docente) return { label: 'Validado', cls: 'bg-emerald-500 text-white' }
-  if (equipo.fases[faseNum]?.completada)       return { label: 'Completa', cls: 'bg-[#00A859]/20 text-[#00A859]' }
+  if (equipo.fases[faseNum]?.completada)       return { label: 'Completa', cls: 'bg-centros/20 text-centros' }
   if (equipo.fase_actual === faseNum)          return { label: 'En curso', cls: 'bg-blue-100 text-blue-600 ring-1 ring-blue-300' }
   return { label: 'Pendiente', cls: 'bg-gray-100 text-gray-400' }
 }
@@ -193,10 +196,30 @@ onMounted(cargar)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] pt-12">
-    <!-- top-12 (no top-0): la TopBar global es fixed h-12 con z-50 — con top-0 esta
+  <div class="min-h-screen bg-[#F8FAFC] pt-16">
+
+    <!-- HEADER -->
+    <header class="pt-6 md:pt-8 pb-2 text-center flex flex-col items-center px-4">
+      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Seguimiento de <span class="text-centros">Equipos</span>
+      </h1>
+      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Revisa el avance de todos tus equipos activos, encuentro a encuentro.
+      </p>
+    </header>
+
+    <!-- top-16 (no top-0): la TopBar global es fixed h-16 con z-50 — con top-0 esta
          cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
-    <div class="sticky top-12 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <button @click="router.back()"
               class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,15 +227,14 @@ onMounted(cargar)
         </svg>
       </button>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-[#00A859]">Mis grupos</p>
-        <p class="text-sm font-bold text-[#121212]">Seguimiento de todos tus equipos activos</p>
+        <p class="text-sm font-bold text-[#121212]">Todos tus equipos activos</p>
       </div>
     </div>
 
     <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
       <div v-if="cargando" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 border-2 border-[#00A859] border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-8 h-8 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
       </div>
 
       <div v-else-if="error" class="rounded-3xl bg-red-50 border border-red-200 p-8 text-center text-red-600 text-sm font-semibold">
@@ -233,7 +255,7 @@ onMounted(cargar)
                 <p class="text-[10px] text-gray-400 uppercase tracking-wider">Grupos</p>
               </div>
               <div class="text-center">
-                <p class="text-2xl font-black text-[#00A859]">{{ totalEquipos }}</p>
+                <p class="text-2xl font-black text-centros">{{ totalEquipos }}</p>
                 <p class="text-[10px] text-gray-400 uppercase tracking-wider">Equipos</p>
               </div>
               <div class="text-center">
@@ -257,8 +279,8 @@ onMounted(cargar)
               <input v-model="busqueda" type="text"
                      placeholder="Buscar por grupo, proyecto, ciclo o equipo..."
                      class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium
-                            text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-[#00A859]
-                            focus:ring-2 focus:ring-[#00A859]/10 outline-none transition-all"/>
+                            text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-centros
+                            focus:ring-2 focus:ring-centros/10 outline-none transition-all"/>
               <button v-if="busqueda" @click="busqueda = ''"
                       class="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center
                              rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 transition-colors">
@@ -287,13 +309,13 @@ onMounted(cargar)
               </div>
               <select v-model="filtroCurso" :disabled="!cursosDisponibles.length"
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
-                             focus:bg-white focus:border-[#00A859] outline-none transition-all disabled:opacity-50">
+                             focus:bg-white focus:border-centros outline-none transition-all disabled:opacity-50">
                 <option value="">Todos los cursos</option>
                 <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ formatCurso(c) }} curso</option>
               </select>
               <select v-model="filtroFamilia" :disabled="!familiasDisponibles.length"
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
-                             focus:bg-white focus:border-[#00A859] outline-none transition-all disabled:opacity-50">
+                             focus:bg-white focus:border-centros outline-none transition-all disabled:opacity-50">
                 <option value="">Todas las familias</option>
                 <option v-for="f in familiasDisponibles" :key="f" :value="f">{{ f }}</option>
               </select>
@@ -362,10 +384,10 @@ onMounted(cargar)
                 <div class="shrink-0 w-10 h-10 relative">
                   <svg class="w-10 h-10 -rotate-90" viewBox="0 0 48 48">
                     <circle cx="24" cy="24" r="20" fill="none" stroke="#F3F4F6" stroke-width="4"/>
-                    <circle cx="24" cy="24" r="20" fill="none" stroke="#00A859" stroke-width="4"
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="#3072AA" stroke-width="4"
                             :stroke-dasharray="`${progresoPct(equipo) * 1.257} 125.7`" stroke-linecap="round"/>
                   </svg>
-                  <span class="absolute inset-0 flex items-center justify-center text-[9px] font-black text-[#00A859]">
+                  <span class="absolute inset-0 flex items-center justify-center text-[9px] font-black text-centros">
                     {{ progresoPct(equipo) }}%
                   </span>
                 </div>
@@ -420,9 +442,9 @@ onMounted(cargar)
                   <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Código de acceso del equipo</span>
                   <span @click.stop="copiarCodigo(equipo.codigo_acceso)"
                         :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del equipo'"
-                        class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00A859]/10 border border-[#00A859]/20 cursor-pointer">
-                    <span class="w-1 h-1 rounded-full bg-[#00A859] shrink-0"></span>
-                    <span class="text-[10px] font-black tracking-wider text-[#00A859]">{{ equipo.codigo_acceso }}</span>
+                        class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-centros/10 border border-centros/20 cursor-pointer">
+                    <span class="w-1 h-1 rounded-full bg-centros shrink-0"></span>
+                    <span class="text-[10px] font-black tracking-wider text-centros">{{ equipo.codigo_acceso }}</span>
                   </span>
                 </div>
 

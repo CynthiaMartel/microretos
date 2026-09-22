@@ -54,7 +54,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
                    px-5 py-2 text-[11px] text-white/35 select-none">
       <span>Web app desarrollada íntegramente por alumnado de prácticas de empresa</span>
       <button @click="abrir"
-        class="text-[#00A859]/70 hover:text-[#00A859] transition-colors font-semibold tracking-wide">
+        class="text-primary-700/70 hover:text-primary-700 transition-colors font-semibold tracking-wide">
         Acerca de
       </button>
     </footer>
@@ -71,7 +71,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
           <!-- Cabecera -->
           <div class="bg-[#F0FBF4] border-b border-[#BBE8D0] px-8 py-6 flex items-start justify-between">
             <div>
-              <p class="text-[#00A859] text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
+              <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
               <h2 class="text-2xl font-black tracking-tight text-[#1F2937]">Equipo de desarrollo</h2>
               <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada íntegramente por alumnado de prácticas de empresa</p>
             </div>
@@ -92,7 +92,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
                 :class="a.icono === 'shield'
                   ? 'bg-violet-50 border border-violet-200'
                   : 'bg-[#F0FBF4] border border-[#BBE8D0]'">
-                <svg v-if="a.icono === 'code'" class="w-5 h-5 text-[#00A859]"
+                <svg v-if="a.icono === 'code'" class="w-5 h-5 text-primary-700"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
@@ -110,7 +110,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
               <div class="min-w-0">
                 <p class="font-bold text-sm text-[#1F2937]">{{ a.nombre }}</p>
                 <p class="text-[11px] mt-0.5 leading-relaxed"
-                  :class="a.icono === 'shield' ? 'text-violet-600' : 'text-[#00A859]'">
+                  :class="a.icono === 'shield' ? 'text-violet-600' : 'text-primary-700'">
                   {{ a.rol }}
                 </p>
                 <p class="text-[10px] text-gray-400 mt-1">{{ a.formacion }}</p>

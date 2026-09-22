@@ -49,7 +49,7 @@ const estadoOpciones = {
   en_edicion: { label: 'En edición', dot: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50' },
   archivado:  { label: 'Archivar',   dot: 'bg-gray-400',   text: 'text-gray-500',   bg: 'bg-gray-50' },
   propuesta:  { label: 'Propuesta',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
-  validado:   { label: 'Validado',   dot: 'bg-[#00A859]',  text: 'text-[#00A859]',  bg: 'bg-[#00A859]/10' },
+  validado:   { label: 'Validado',   dot: 'bg-centros',  text: 'text-centros',  bg: 'bg-centros/10' },
   completado: { label: 'Completado', dot: 'bg-sky-500',    text: 'text-sky-700',    bg: 'bg-sky-50' },
 };
 
@@ -1186,20 +1186,39 @@ onUnmounted(() => { tourActivo.value = false; });
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-12 md:pt-12"
+  <div class="min-h-screen font-sans text-[#1F2937] pt-16 md:pt-16"
        :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
        style="transition: opacity 0.4s ease, transform 0.4s ease">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-175 h-100
-                bg-[#99CC33] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                bg-primary-400 opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+
+    <!-- HEADER -->
+    <header class="pt-6 md:pt-8 text-center flex flex-col items-center px-4">
+      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Taller de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Ideas</span>
+      </h1>
+      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium mb-2 transition-all duration-1000 delay-300 ease-out transform"
+         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Convierte una propuesta en un proyecto StartUp Day completo, paso a paso.
+      </p>
+    </header>
 
     <!-- Barra de progreso superior -->
-    <div class="sticky top-12 z-20 bg-[#F8FAFC]/95 backdrop-blur border-b border-gray-100 shadow-sm">
+    <div class="sticky top-16 z-20 bg-[#F8FAFC]/95 backdrop-blur border-b border-gray-100 shadow-sm">
       <div class="max-w-3xl mx-auto px-4 py-3">
         <div class="flex items-center gap-4 mb-2">
           <button @click="router.push({ name: 'startup-day' })"
-                  class="inline-flex items-center gap-1.5 text-gray-500 hover:text-[#00A859]
+                  class="inline-flex items-center gap-1.5 text-gray-500 hover:text-centros
                          transition-colors text-xs font-black uppercase tracking-widest shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1207,7 +1226,7 @@ onUnmounted(() => { tourActivo.value = false; });
             Todos los Proyectos
           </button>
           <div class="flex-1 min-w-0">
-            <p class="text-[9px] font-black uppercase tracking-[0.25em] text-[#00A859]">
+            <p class="text-[9px] font-black uppercase tracking-[0.25em] text-centros">
               StartUp Day · Paso {{ paso }} de {{ totalPasos }}
             </p>
             <p class="text-xs font-bold text-gray-600 truncate">{{ form.titulo || 'Nueva propuesta' }}</p>
@@ -1224,7 +1243,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Barra progreso -->
         <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-          <div class="h-full bg-linear-to-r from-[#00A859] to-[#99CC33] rounded-full transition-all duration-500"
+          <div class="h-full bg-linear-to-r from-centros to-primary-400 rounded-full transition-all duration-500"
                :style="{ width: progreso + '%' }"/>
         </div>
 
@@ -1235,9 +1254,9 @@ onUnmounted(() => { tourActivo.value = false; });
                   :class="[
                     'flex-1 min-w-13 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all',
                     p.num === paso
-                      ? 'bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/30'
+                      ? 'bg-centros/10 text-centros border border-centros/30'
                       : (p.num === 1 || form.microreto_id) && p.num <= pasoMaxAlcanzado
-                        ? 'bg-gray-100 text-gray-500 hover:text-[#00A859] border border-gray-200 cursor-pointer'
+                        ? 'bg-gray-100 text-gray-500 hover:text-centros border border-gray-200 cursor-pointer'
                         : 'bg-transparent text-gray-300 border border-transparent cursor-default'
                   ]">
             {{ p.label }}
@@ -1271,8 +1290,8 @@ onUnmounted(() => { tourActivo.value = false; });
              @click.stop>
           <!-- Cabecera con progreso -->
           <div class="flex items-center gap-3 mb-5">
-            <div class="w-10 h-10 rounded-2xl bg-[#00A859]/20 flex items-center justify-center
-                        text-[#00A859] font-black text-base shrink-0">
+            <div class="w-10 h-10 rounded-2xl bg-centros/20 flex items-center justify-center
+                        text-centros font-black text-base shrink-0">
               {{ paso }}
             </div>
             <div class="flex-1 min-w-0">
@@ -1282,12 +1301,12 @@ onUnmounted(() => { tourActivo.value = false; });
               <div class="flex gap-1">
                 <span v-for="i in totalPasos" :key="i"
                       class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= paso ? 'bg-[#00A859] w-5' : 'bg-white/20 w-3'" />
+                      :class="i <= paso ? 'bg-centros w-5' : 'bg-white/20 w-3'" />
               </div>
             </div>
           </div>
           <!-- Título del paso -->
-          <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-2">
+          <p class="text-[10px] font-black uppercase tracking-widest text-centros mb-2">
             {{ guiaWizard[paso - 1].titulo }}
           </p>
           <!-- Descripción -->
@@ -1297,8 +1316,8 @@ onUnmounted(() => { tourActivo.value = false; });
           <!-- Botones -->
           <div class="flex items-center gap-2">
             <button @click="modoGuia = false"
-                    class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-[10px] font-black
-                           uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
+                    class="flex-1 py-2.5 rounded-xl bg-centros text-white text-[10px] font-black
+                           uppercase tracking-widest hover:bg-centros/90 transition-all">
               Entendido ✓
             </button>
             <button @click="modoGuia = false"
@@ -1328,12 +1347,12 @@ onUnmounted(() => { tourActivo.value = false; });
                   leave-active-class="transition-all duration-300"
                   leave-to-class="opacity-0 -translate-y-2">
         <div v-if="autocompletando"
-             class="mb-4 flex items-center gap-3 bg-[#00A859]/8 border border-[#00A859]/25
+             class="mb-4 flex items-center gap-3 bg-centros/8 border border-centros/25
                     rounded-2xl px-4 py-3">
-          <svg class="w-4 h-4 text-[#00A859] shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-4 h-4 text-centros shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
           </svg>
-          <p class="text-sm font-semibold text-[#00A859]">
+          <p class="text-sm font-semibold text-centros">
             Datos autocompletados desde el reto vinculado. Revisa y ajusta lo que necesites.
           </p>
         </div>
@@ -1341,10 +1360,10 @@ onUnmounted(() => { tourActivo.value = false; });
 
       <!-- Spinner carga inicial -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-        <svg class="animate-spin w-10 h-10 text-[#00A859] mb-3" viewBox="0 0 24 24">
+        <svg class="animate-spin w-10 h-10 text-centros mb-3" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
         </svg>
-        <p class="text-[#00A859] font-black tracking-widest uppercase text-xs animate-pulse">Cargando...</p>
+        <p class="text-centros font-black tracking-widest uppercase text-xs animate-pulse">Cargando...</p>
       </div>
 
       <template v-else>
@@ -1352,8 +1371,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 1: Básicos ═══ -->
         <div v-if="paso === 1">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 1</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 1</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Datos básicos</h2>
             <p class="text-gray-500 text-sm mt-1">
@@ -1368,9 +1387,9 @@ onUnmounted(() => { tourActivo.value = false; });
               <!-- Header -->
               <div class="flex items-start justify-between gap-3 pb-3 border-b border-gray-100">
                 <div class="flex items-start gap-3">
-                  <div class="w-8 h-8 rounded-xl bg-[#00A859]/15 border border-[#00A859]/30
+                  <div class="w-8 h-8 rounded-xl bg-centros/15 border border-centros/30
                               flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a.5.5 0 01-.354.146H9.88a.5.5 0 01-.354-.146l-.345-.346z"/>
                     </svg>
@@ -1383,15 +1402,15 @@ onUnmounted(() => { tourActivo.value = false; });
                 <button v-if="microretoVinculado" @click="limpiarReto"
                         class="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-gray-200
                                text-[10px] font-black uppercase tracking-widest text-gray-400
-                               hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                               hover:border-centros hover:text-centros transition-all">
                   Cambiar
                 </button>
               </div>
 
               <!-- Reto seleccionado -->
               <div v-if="microretoVinculado"
-                   class="rounded-2xl border border-[#00A859]/30 bg-[#00A859]/5 p-4">
-                <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-1">Seleccionado</p>
+                   class="rounded-2xl border border-centros/30 bg-centros/5 p-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-centros mb-1">Seleccionado</p>
                 <p class="text-sm font-black text-[#1F2937] leading-snug mb-2">{{ microretoVinculado.titulo }}</p>
                 <div class="flex flex-wrap gap-1.5">
                   <span v-if="microretoVinculado.empresa?.nombre_comercial"
@@ -1422,14 +1441,14 @@ onUnmounted(() => { tourActivo.value = false; });
                   <select v-model="retoFiltroFamilia"
                           class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
                                  bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
-                                 focus:ring-1 focus:ring-[#00A859]/40">
+                                 focus:ring-1 focus:ring-centros/40">
                     <option value="">Familia</option>
                     <option v-for="f in familiasFiltroRetos" :key="f" :value="f">{{ f }}</option>
                   </select>
                   <select v-model="retoFiltroCiclo"
                           class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
                                  bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
-                                 focus:ring-1 focus:ring-[#00A859]/40">
+                                 focus:ring-1 focus:ring-centros/40">
                     <option value="">Ciclo</option>
                     <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
                   </select>
@@ -1439,7 +1458,7 @@ onUnmounted(() => { tourActivo.value = false; });
                             :title="op === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''"
                             :class="['px-3 py-1.5 transition-colors',
                                      retoFiltroCurso === op
-                                       ? 'bg-[#00A859] text-white'
+                                       ? 'bg-centros text-white'
                                        : 'bg-white text-gray-400 hover:bg-gray-50']">
                       {{ op === '' ? 'Todos' : op === 'ambos_cursos' ? 'Ambos Cursos' : op }}
                     </button>
@@ -1468,18 +1487,18 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-else class="grid sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   <div v-for="mr in retosFiltrados" :key="mr.id"
                        class="relative rounded-2xl border border-gray-100 bg-gray-50
-                              hover:border-[#00A859]/40 hover:bg-[#00A859]/5 hover:shadow-sm
+                              hover:border-centros/40 hover:bg-centros/5 hover:shadow-sm
                               transition-all group">
                     <button @click="seleccionarReto(mr)"
                             class="text-left w-full px-4 pt-3.5 pb-10">
                       <div class="flex items-start justify-between gap-2 mb-1.5">
                         <p class="text-sm font-black text-[#1F2937] leading-snug line-clamp-2
-                                  group-hover:text-[#005c2e] transition-colors">
+                                  group-hover:text-centros transition-colors">
                           {{ mr.titulo }}
                         </p>
                         <span v-if="mr.curso"
                               class="shrink-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full
-                                     bg-[#99CC33]/20 text-[#4a6600] border border-[#99CC33]/30">
+                                     bg-primary-400/20 text-primary-700 border border-primary-400/30">
                           {{ cursoLabel(mr.curso) }}
                         </span>
                       </div>
@@ -1497,7 +1516,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     <button @click.stop="microretoModalId = mr.id"
                             class="absolute bottom-2.5 right-3 flex items-center gap-1
                                    text-[10px] font-black uppercase tracking-widest
-                                   text-gray-400 hover:text-[#00A859] transition-colors">
+                                   text-gray-400 hover:text-centros transition-colors">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -1528,7 +1547,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     Empresa colaboradora
                     <span v-if="microretoVinculado"
                           class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                                 rounded-full bg-centros/10 text-centros border border-centros/20">
                       Del reto
                     </span>
                   </label>
@@ -1553,7 +1572,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     Centro educativo
                     <span v-if="centroBloqueado"
                           class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                                 rounded-full bg-centros/10 text-centros border border-centros/20">
                       Tu centro
                     </span>
                   </label>
@@ -1578,7 +1597,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     Familia profesional
                     <span v-if="microretoVinculado"
                           class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                                 rounded-full bg-centros/10 text-centros border border-centros/20">
                       Del reto
                     </span>
                   </label>
@@ -1603,7 +1622,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     Ciclo formativo
                     <span v-if="microretoVinculado"
                           class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                                 rounded-full bg-centros/10 text-centros border border-centros/20">
                       Del reto
                     </span>
                   </label>
@@ -1628,7 +1647,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     Curso
                     <span v-if="microretoVinculado"
                           class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-[#00A859]/10 text-[#00A859] border border-[#00A859]/20">
+                                 rounded-full bg-centros/10 text-centros border border-centros/20">
                       Del reto
                     </span>
                   </label>
@@ -1690,8 +1709,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 2: Empresa ═══ -->
         <div v-if="paso === 2">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 2</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 2</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Datos de la empresa</h2>
             <p class="text-gray-500 text-sm mt-1">
@@ -1703,8 +1722,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
             <!-- Cabecera "Del reto" cuando es read-only -->
             <div v-if="empresaDesdeReto"
-                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#00A859]/8
-                        border border-[#00A859]/20 text-[11px] font-bold text-[#00A859]">
+                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-centros/8
+                        border border-centros/20 text-[11px] font-bold text-centros">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -1777,8 +1796,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 3: Módulos y RA/CE ═══ -->
         <div v-if="paso === 3">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 3</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 3</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Módulos y currículum</h2>
             <p class="text-gray-500 text-sm mt-1">Selecciona los módulos del ciclo que se trabajan en esta propuesta.</p>
@@ -1792,21 +1811,21 @@ onUnmounted(() => { tourActivo.value = false; });
                         leave-active-class="transition-all duration-200"
                         leave-to-class="opacity-0 -translate-y-2">
               <div v-if="modulosAutocompletados"
-                   class="flex items-start gap-3 bg-[#00A859]/8 border border-[#00A859]/25
+                   class="flex items-start gap-3 bg-centros/8 border border-centros/25
                           rounded-2xl px-4 py-3">
-                <svg class="w-4 h-4 text-[#00A859] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-centros shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-black text-[#00A859] mb-0.5">Módulos seleccionados automáticamente</p>
-                  <p class="text-xs text-[#00A859]/70 leading-relaxed">
+                  <p class="text-sm font-black text-centros mb-0.5">Módulos seleccionados automáticamente</p>
+                  <p class="text-xs text-centros/70 leading-relaxed">
                     Esto se basa en el reto vinculado. Si crees que se trabajan otros módulos,
                     revisa el reto para que esté acorde, o ajusta la selección manualmente.
                   </p>
                 </div>
                 <button @click="modulosAutocompletados = false"
-                        class="shrink-0 text-[#00A859]/40 hover:text-[#00A859] transition-colors mt-0.5">
+                        class="shrink-0 text-centros/40 hover:text-centros transition-colors mt-0.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
@@ -1824,8 +1843,8 @@ onUnmounted(() => { tourActivo.value = false; });
                         :class="[
                           'text-left px-4 py-3 rounded-2xl border text-sm font-semibold transition-all',
                           moduloSeleccionado(m.id)
-                            ? 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#00A859]/40 hover:text-[#1F2937]'
+                            ? 'bg-centros/10 border-centros/30 text-centros'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-centros/40 hover:text-[#1F2937]'
                         ]">
                   <span class="text-[10px] text-gray-400 block mb-0.5 font-normal">{{ m.codigoBOE }}</span>
                   {{ m.nombre }}
@@ -1885,7 +1904,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   :class="[
                     'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all',
                     modoRaCe === modo.key
-                      ? 'bg-white shadow text-[#00A859]'
+                      ? 'bg-white shadow text-centros'
                       : 'text-gray-500 hover:text-gray-700'
                   ]">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2033,7 +2052,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
                     <!-- Cargando -->
                     <div v-if="cargandoCatalogo" class="flex flex-col items-center justify-center py-12 gap-3">
-                      <div class="w-8 h-8 rounded-full border-4 border-[#00A859]/20 border-t-[#00A859] animate-spin" />
+                      <div class="w-8 h-8 rounded-full border-4 border-centros/20 border-t-centros animate-spin" />
                       <p class="text-sm text-gray-400">Cargando catálogo…</p>
                     </div>
 
@@ -2049,12 +2068,12 @@ onUnmounted(() => { tourActivo.value = false; });
 
                     <div v-else>
                       <!-- Aviso: los ya marcados coinciden con el reto -->
-                      <div class="flex items-start gap-2.5 bg-[#00A859]/8 border border-[#00A859]/20 rounded-2xl px-4 py-3 mb-4">
-                        <svg class="w-4 h-4 text-[#00A859] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="flex items-start gap-2.5 bg-centros/8 border border-centros/20 rounded-2xl px-4 py-3 mb-4">
+                        <svg class="w-4 h-4 text-centros shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <p class="text-xs text-[#00A859]/80 leading-relaxed">
+                        <p class="text-xs text-centros/80 leading-relaxed">
                           Los CE ya marcados coinciden con los del reto asociado. Añade otros marcando los que falten.
                         </p>
                       </div>
@@ -2069,7 +2088,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <input v-model="busquedaRaCe" type="text"
                                placeholder="Buscar resultado de aprendizaje o criterio de evaluación…"
                                class="w-full pl-9 pr-8 py-2.5 text-sm bg-gray-50 border border-gray-200
-                                      rounded-2xl focus:outline-none focus:border-[#00A859]/50 focus:bg-white
+                                      rounded-2xl focus:outline-none focus:border-centros/50 focus:bg-white
                                       transition-colors placeholder-gray-400" />
                         <button v-if="busquedaRaCe" @click="busquedaRaCe = ''"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -2083,9 +2102,9 @@ onUnmounted(() => { tourActivo.value = false; });
                       <div class="flex flex-wrap items-center gap-3 px-4 py-2 mb-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl">
                         <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mr-1">Selección:</span>
                         <div class="flex items-center gap-1.5">
-                          <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] shrink-0" />
-                          <span class="text-[11px] font-black text-[#00A859]">{{ totalRaSeleccionados }}</span>
-                          <span class="text-[11px] text-[#00A859]/70">RA</span>
+                          <span class="w-1.5 h-1.5 rounded-full bg-centros shrink-0" />
+                          <span class="text-[11px] font-black text-centros">{{ totalRaSeleccionados }}</span>
+                          <span class="text-[11px] text-centros/70">RA</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                           <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
@@ -2117,7 +2136,7 @@ onUnmounted(() => { tourActivo.value = false; });
                           <div class="divide-y divide-gray-50">
                             <div v-for="ra in mod.ras" :key="ra.id"
                                  class="overflow-hidden"
-                                 :class="raEstado(ra) !== 'none' ? 'bg-[#00A859]/4' : ''">
+                                 :class="raEstado(ra) !== 'none' ? 'bg-centros/4' : ''">
 
                               <!-- Fila RA -->
                               <div class="flex items-start gap-2.5 px-4 py-3">
@@ -2125,10 +2144,10 @@ onUnmounted(() => { tourActivo.value = false; });
                                 <button @click="toggleRa(ra)"
                                         class="mt-0.5 shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
                                         :class="raEstado(ra) === 'all'
-                                          ? 'bg-[#00A859] border-[#00A859]'
+                                          ? 'bg-centros border-centros'
                                           : raEstado(ra) === 'some'
-                                            ? 'bg-[#00A859]/30 border-[#00A859]'
-                                            : 'bg-white border-gray-300 hover:border-[#00A859]/50'">
+                                            ? 'bg-centros/30 border-centros'
+                                            : 'bg-white border-gray-300 hover:border-centros/50'">
                                   <svg v-if="raEstado(ra) !== 'none'" class="w-2.5 h-2.5 text-white"
                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path v-if="raEstado(ra) === 'all'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -2137,8 +2156,8 @@ onUnmounted(() => { tourActivo.value = false; });
                                 </button>
                                 <!-- Badge RA + texto (igual que CatalogoBoeModal) -->
                                 <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
-                                  <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]
-                                               bg-[#00A859]/10 px-2 py-0.5 rounded-full">RA{{ ra.orden }}</span>
+                                  <span class="text-[9px] font-black uppercase tracking-widest text-centros
+                                               bg-centros/10 px-2 py-0.5 rounded-full">RA{{ ra.orden }}</span>
                                   <span class="text-[9px] text-gray-300">#{{ ra.id }}</span>
                                 </div>
                                 <p class="flex-1 text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
@@ -2155,7 +2174,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
                               <!-- Criterios de Evaluación (igual que CatalogoBoeModal) -->
                               <div v-if="raExpandido[ra.id]"
-                                   class="border-t border-[#00A859]/15 px-4 pb-3 pt-2.5 bg-white/60">
+                                   class="border-t border-centros/15 px-4 pb-3 pt-2.5 bg-white/60">
                                 <div class="flex items-center gap-1.5 mb-2">
                                   <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                                   <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">
@@ -2198,8 +2217,8 @@ onUnmounted(() => { tourActivo.value = false; });
                         </p>
                         <button @click="aplicarSeleccionManual"
                                 :disabled="totalCeSeleccionados === 0"
-                                class="px-5 py-3 bg-[#00A859] text-white rounded-2xl text-sm font-black tracking-wide
-                                       hover:bg-[#00A859]/90 disabled:opacity-40 transition-colors shrink-0">
+                                class="px-5 py-3 bg-centros text-white rounded-2xl text-sm font-black tracking-wide
+                                       hover:bg-centros/90 disabled:opacity-40 transition-colors shrink-0">
                           Aplicar selección →
                         </button>
                       </div>
@@ -2224,10 +2243,10 @@ onUnmounted(() => { tourActivo.value = false; });
                       </select>
                     </div>
 
-                    <div class="p-4 space-y-3 bg-[#00A859]/4">
+                    <div class="p-4 space-y-3 bg-centros/4">
                       <div class="flex items-start gap-2.5">
-                        <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]
-                                     bg-[#00A859]/10 px-2 py-0.5 rounded-full shrink-0 mt-2.5">RA</span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-centros
+                                     bg-centros/10 px-2 py-0.5 rounded-full shrink-0 mt-2.5">RA</span>
                         <input v-model="nuevoRaManual.ra" type="text"
                                placeholder="Describe el resultado de aprendizaje…"
                                class="field-input flex-1" />
@@ -2257,8 +2276,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
                     <div class="px-4 py-3 border-t border-gray-100 flex justify-end">
                       <button @click="anadirRaManualAlProyecto" :disabled="!raManualValido"
-                              class="px-5 py-2.5 bg-[#00A859] text-white rounded-2xl text-sm font-black tracking-wide
-                                     hover:bg-[#00A859]/90 disabled:opacity-40 transition-colors">
+                              class="px-5 py-2.5 bg-centros text-white rounded-2xl text-sm font-black tracking-wide
+                                     hover:bg-centros/90 disabled:opacity-40 transition-colors">
                         Añadir a esta propuesta →
                       </button>
                     </div>
@@ -2277,8 +2296,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 4: El Reto ═══ -->
         <div v-if="paso === 4">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 4</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 4</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">El reto</h2>
             <p class="text-gray-500 text-sm mt-1">Define el contexto, la fundamentación y el reto central de la propuesta.</p>
@@ -2339,8 +2358,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 5: Diseño de la propuesta ═══ -->
         <div v-if="paso === 5">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 5</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 5</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Diseño de la propuesta</h2>
             <p class="text-gray-500 text-sm mt-1">Define las fases, metodología y cronograma del trabajo.</p>
@@ -2388,14 +2407,14 @@ onUnmounted(() => { tourActivo.value = false; });
                         <span class="text-xs font-bold flex-1" :class="c.fases.includes(f.num) ? 'text-[#1F2937]' : 'text-gray-400'">
                           F{{ f.num }} - {{ f.label }}
                         </span>
-                        <span v-if="c.fases.includes(f.num)" class="text-[#00A859] font-black text-sm shrink-0">✓</span>
+                        <span v-if="c.fases.includes(f.num)" class="text-centros font-black text-sm shrink-0">✓</span>
                       </button>
                     </div>
                   </div>
                 </div>
                 <button @click="addSesion" type="button"
-                        class="mt-3 px-4 py-2 rounded-xl border border-dashed border-[#00A859]/40 text-[#00A859]
-                               text-xs font-black uppercase tracking-widest hover:bg-[#00A859]/5 transition-all">
+                        class="mt-3 px-4 py-2 rounded-xl border border-dashed border-centros/40 text-centros
+                               text-xs font-black uppercase tracking-widest hover:bg-centros/5 transition-all">
                   + Añadir sesión
                 </button>
                 <p class="text-xs font-bold text-[#1F2937] mt-3">Total: {{ form.diseno_microproyecto.clases.length }} sesión(es)</p>
@@ -2469,8 +2488,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 6: Objetivos y KPIs ═══ -->
         <div v-if="paso === 6">
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 6</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 6</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Objetivos y KPIs</h2>
             <p class="text-gray-500 text-sm mt-1">Define los objetivos de la propuesta y los indicadores de éxito.</p>
@@ -2498,13 +2517,13 @@ onUnmounted(() => { tourActivo.value = false; });
                 <input v-model="nuevoObjetivo" type="text" placeholder="Añadir objetivo…"
                        class="field-input flex-1" @keyup.enter="addObjetivo" />
                 <button @click="addObjetivo"
-                        class="shrink-0 px-4 py-2.5 bg-[#00A859] text-white rounded-2xl
-                               text-sm font-black hover:bg-[#00A859]/90 transition-all active:scale-95">+</button>
+                        class="shrink-0 px-4 py-2.5 bg-centros text-white rounded-2xl
+                               text-sm font-black hover:bg-centros/90 transition-all active:scale-95">+</button>
               </div>
               <ul v-if="form.objetivos.lista.length" class="space-y-2">
                 <li v-for="(obj, i) in form.objetivos.lista" :key="i"
                     class="flex items-center gap-2 text-sm text-[#1F2937]">
-                  <span class="text-[#00A859] font-black shrink-0">›</span>
+                  <span class="text-centros font-black shrink-0">›</span>
                   <span class="flex-1">{{ obj }}</span>
                   <button @click="removeObjetivo(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
                 </li>
@@ -2533,13 +2552,13 @@ onUnmounted(() => { tourActivo.value = false; });
                 <input v-model="nuevoKpi" type="text" placeholder="Añadir KPI o indicador…"
                        class="field-input flex-1" @keyup.enter="addKpi" />
                 <button @click="addKpi"
-                        class="shrink-0 px-4 py-2.5 bg-[#00A859] text-white rounded-2xl
-                               text-sm font-black hover:bg-[#00A859]/90 transition-all active:scale-95">+</button>
+                        class="shrink-0 px-4 py-2.5 bg-centros text-white rounded-2xl
+                               text-sm font-black hover:bg-centros/90 transition-all active:scale-95">+</button>
               </div>
               <ul v-if="form.kpis.lista.length" class="space-y-2">
                 <li v-for="(kpi, i) in form.kpis.lista" :key="i"
                     class="flex items-center gap-2 text-sm text-[#1F2937]">
-                  <span class="text-[#99CC33] font-black shrink-0">✓</span>
+                  <span class="text-primary-400 font-black shrink-0">✓</span>
                   <span class="flex-1">{{ kpi }}</span>
                   <button @click="removeKpi(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
                 </li>
@@ -2559,8 +2578,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <!-- ── Estado de éxito tras publicar ── -->
           <div v-if="publicadoExito" class="flex flex-col items-center text-center py-8 gap-6">
-            <div class="w-20 h-20 rounded-full bg-[#00A859]/10 border-2 border-[#00A859]/20 flex items-center justify-center">
-              <svg class="w-10 h-10 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-20 h-20 rounded-full bg-centros/10 border-2 border-centros/20 flex items-center justify-center">
+              <svg class="w-10 h-10 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
@@ -2592,8 +2611,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <template v-else>
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Paso 7</span>
+            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 7</span>
             </div>
             <h2 class="text-2xl font-black text-[#121212]">Publicar propuesta</h2>
             <p class="text-gray-500 text-sm mt-1">
@@ -2649,15 +2668,15 @@ onUnmounted(() => { tourActivo.value = false; });
           <!-- Recursos: vídeos y documentos para la empresa (almacenados en Cloudinary) -->
           <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 mb-4">
             <div class="flex items-center gap-3 mb-1">
-              <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 border border-[#00A859]/20
+              <div class="w-8 h-8 rounded-xl bg-centros/10 border border-centros/20
                           flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
               </div>
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#00A859]">Recursos para la empresa</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-centros">Recursos para la empresa</p>
                 <p class="text-xs text-gray-400 mt-0.5">
                   Los archivos se suben a <strong>Cloudinary</strong>. La empresa los verá al abrir el enlace de validación.
                 </p>
@@ -2705,10 +2724,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div class="flex gap-2 items-center">
                   <input v-model="labelVideo" type="text" placeholder="Nombre del vídeo (opcional)"
                          class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#00A859] transition-colors"/>
+                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-centros transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-gray-200 bg-gray-50
-                                cursor-pointer hover:border-[#00A859]/40 hover:bg-[#00A859]/5 transition-all"
+                                cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
                          :class="subiendoVideo ? 'opacity-50 pointer-events-none' : ''">
                     <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2735,16 +2754,16 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-if="imagenesLocales.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
                   <div v-for="(img, i) in imagenesLocales" :key="img.id"
                        class="relative group/img rounded-xl overflow-hidden border-2"
-                       :class="img.id === imagenPortadaId ? 'border-[#00A859]' : 'border-gray-100'">
+                       :class="img.id === imagenPortadaId ? 'border-centros' : 'border-gray-100'">
                     <img :src="img.url" :alt="img.label || img.filename" class="w-full h-20 object-cover" />
                     <span v-if="img.id === imagenPortadaId"
-                          class="absolute top-1 left-1 bg-[#00A859] text-white text-[8px] font-black
+                          class="absolute top-1 left-1 bg-centros text-white text-[8px] font-black
                                  uppercase tracking-wider px-1.5 py-0.5 rounded-full">Portada</span>
                     <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100
                                 transition-opacity flex items-center justify-center gap-1.5">
                       <button v-if="img.id !== imagenPortadaId" @click="marcarPortada(img)" type="button"
                               title="Marcar como portada"
-                              class="w-6 h-6 rounded-lg bg-white/90 flex items-center justify-center text-[#00A859] hover:bg-white">
+                              class="w-6 h-6 rounded-lg bg-white/90 flex items-center justify-center text-centros hover:bg-white">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
@@ -2763,7 +2782,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Uploader -->
                 <label class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                               border-2 border-dashed border-gray-200 bg-gray-50
-                              cursor-pointer hover:border-[#00A859]/40 hover:bg-[#00A859]/5 transition-all"
+                              cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
                        :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
                   <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2786,17 +2805,17 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-if="documentosLocales.length" class="space-y-2 mb-3">
                   <div v-for="(d, i) in documentosLocales" :key="i"
                        class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
-                              hover:border-[#00A859]/30 hover:bg-[#00A859]/5 transition-colors group/doc">
+                              hover:border-centros/30 hover:bg-centros/5 transition-colors group/doc">
                     <button @click="abrirRecurso(d)"
-                            class="w-7 h-7 rounded-lg bg-[#00A859]/10 shrink-0 flex items-center justify-center
-                                   group-hover/doc:bg-[#00A859]/20 transition-colors">
-                      <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-7 h-7 rounded-lg bg-centros/10 shrink-0 flex items-center justify-center
+                                   group-hover/doc:bg-centros/20 transition-colors">
+                      <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                       </svg>
                     </button>
                     <button @click="abrirRecurso(d)" class="flex-1 min-w-0 text-left">
-                      <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-[#00A859] transition-colors">{{ d.label || d.filename }}</p>
+                      <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-centros transition-colors">{{ d.label || d.filename }}</p>
                       <p class="text-[9px] text-blue-400/80 truncate">Cloudinary · {{ d.filename }}</p>
                     </button>
                     <button @click.stop="removeDocumento(i)"
@@ -2812,10 +2831,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div class="flex gap-2 items-center">
                   <input v-model="labelDocumento" type="text" placeholder="Nombre del documento (opcional)"
                          class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#00A859] transition-colors"/>
+                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-centros transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-gray-200 bg-gray-50
-                                cursor-pointer hover:border-[#00A859]/40 hover:bg-[#00A859]/5 transition-all"
+                                cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
                          :class="subiendoDoc ? 'opacity-50 pointer-events-none' : ''">
                     <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2862,10 +2881,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 >
                   <!-- Dot + label del estado actual -->
                   <span :class="['w-2 h-2 rounded-full shrink-0 transition-colors',
-                    form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-[#00A859]'
+                    form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-centros'
                     : estadoOpciones[form.estado]?.dot || 'bg-amber-400']" />
                   <span :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail
-                    ? 'text-[#00A859]' : (estadoOpciones[form.estado]?.text || 'text-amber-700')">
+                    ? 'text-centros' : (estadoOpciones[form.estado]?.text || 'text-amber-700')">
                     {{ labelEstadoBtn }}
                   </span>
                   <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2921,10 +2940,10 @@ onUnmounted(() => { tourActivo.value = false; });
                                          : 'text-violet-700 hover:bg-violet-50']">
                         <span class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full shrink-0"
-                                :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-[#00A859]' : 'bg-violet-400'" />
+                                :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-centros' : 'bg-violet-400'" />
                           Propuesta
                           <svg v-if="form.estado === 'propuesta'" class="w-3.5 h-3.5 ml-auto"
-                               :class="form.enviado_a_empresa_mail ? 'text-[#00A859]' : 'text-violet-400'"
+                               :class="form.enviado_a_empresa_mail ? 'text-centros' : 'text-violet-400'"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                           </svg>
@@ -2932,7 +2951,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <!-- Sub-estado visible solo cuando está en propuesta -->
                         <span v-if="form.estado === 'propuesta'"
                               class="text-[9px] font-black uppercase tracking-wider pl-4"
-                              :class="form.enviado_a_empresa_mail ? 'text-[#00A859]' : 'text-violet-500'">
+                              :class="form.enviado_a_empresa_mail ? 'text-centros' : 'text-violet-500'">
                           {{ form.enviado_a_empresa_mail ? '✅ SÍ enviada por mail' : '✉ NO enviada por mail' }}
                         </span>
                       </button>
@@ -2947,7 +2966,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <div class="absolute hidden group-hover/info:block bottom-full right-0 mb-2
                                     bg-[#1a2332] text-white text-[11px] rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
-                          Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-[#00A859]">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
+                          Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-centros">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
                           <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-[#1a2332] rotate-45" />
                         </div>
                       </div>
@@ -2998,7 +3017,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Header -->
         <div class="flex items-start justify-between gap-2">
-          <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]">Reto del proyecto</span>
+          <span class="text-[9px] font-black uppercase tracking-widest text-centros">Reto del proyecto</span>
           <button v-if="!uuid" @click="limpiarReto"
                   class="text-[9px] font-black uppercase tracking-widest text-gray-400
                          hover:text-red-400 transition-colors shrink-0">
@@ -3029,7 +3048,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <button @click="microretoModalId = microretoVinculado.id"
                 class="flex items-center justify-center gap-1.5 w-full py-2 rounded-2xl
                        border border-gray-200 text-[10px] font-black uppercase tracking-widest
-                       text-gray-500 hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                       text-gray-500 hover:border-centros hover:text-centros transition-all">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -3129,9 +3148,9 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 overflow-y-auto max-h-[90vh]">
 
         <!-- Icono -->
-        <div class="w-14 h-14 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
+        <div class="w-14 h-14 rounded-2xl bg-centros/10 border border-centros/20
                     flex items-center justify-center mb-5 mx-auto">
-          <svg class="w-7 h-7 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-7 h-7 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
@@ -3167,8 +3186,8 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="copiarUrlModal"
                     :class="['shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
                              urlCopiadaModal
-                               ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20'
-                               : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]']">
+                               ? 'bg-centros/10 text-centros border-centros/20'
+                               : 'bg-white text-gray-500 border-gray-200 hover:border-centros hover:text-centros']">
               {{ urlCopiadaModal ? '¡Copiado!' : 'Copiar' }}
             </button>
           </div>
@@ -3178,7 +3197,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="infoEmpresaAbierta = !infoEmpresaAbierta"
                     class="w-full flex items-center justify-between px-3 py-2 rounded-xl
                            bg-white border border-blue-200 text-xs font-bold text-blue-700
-                           hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
+                           hover:border-centros/40 hover:text-centros transition-all">
               <span class="flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3230,7 +3249,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button v-if="form.empresa_id"
                     @click="abrirConfirmEnvio"
                     :class="form.enviado_a_empresa_mail
-                      ? 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859] hover:bg-[#00A859]/20'
+                      ? 'bg-centros/10 border-centros/30 text-centros hover:bg-centros/20'
                       : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'"
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5
                            border rounded-xl text-xs font-bold transition-all">
@@ -3243,7 +3262,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="router.push({ name: 'empresas' }); modalPropuestaAviso = false"
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5
                            bg-white border border-blue-200 text-blue-600 rounded-xl
-                           text-xs font-bold hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
+                           text-xs font-bold hover:border-centros/40 hover:text-centros transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -3295,9 +3314,9 @@ onUnmounted(() => { tourActivo.value = false; });
           <button
             @click="cerrarModalPropuestaAviso()"
             class="flex-1 inline-flex items-center justify-center gap-2
-                   px-5 py-3 bg-[#00A859] text-white rounded-full
+                   px-5 py-3 bg-centros text-white rounded-full
                    text-xs font-black uppercase tracking-widest shadow-sm
-                   hover:bg-[#00A859]/90 transition-all active:scale-95"
+                   hover:bg-centros/90 transition-all active:scale-95"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -3345,8 +3364,8 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- Tarjeta empresa -->
         <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 rounded-xl bg-centros/10 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
               </svg>
@@ -3386,7 +3405,7 @@ onUnmounted(() => { tourActivo.value = false; });
             :class="confirmEnvioTexto && !confirmEnvioValido
               ? 'border-red-300 bg-red-50 text-red-700 focus:ring-2 focus:ring-red-200'
               : confirmEnvioTexto && confirmEnvioValido
-                ? 'border-[#00A859]/50 bg-[#00A859]/5 text-[#00A859] focus:ring-2 focus:ring-[#00A859]/20'
+                ? 'border-centros/50 bg-centros/5 text-centros focus:ring-2 focus:ring-centros/20'
                 : 'border-gray-200 bg-white focus:border-gray-400 focus:ring-2 focus:ring-gray-100'"
           />
           <p v-if="confirmEnvioTexto && !confirmEnvioValido"
@@ -3394,7 +3413,7 @@ onUnmounted(() => { tourActivo.value = false; });
             Escribe exactamente: enviar
           </p>
           <p v-if="confirmEnvioTexto && confirmEnvioValido"
-             class="mt-1.5 text-[10px] text-[#00A859] font-semibold">
+             class="mt-1.5 text-[10px] text-centros font-semibold">
             Confirmado. Ya puedes continuar.
           </p>
         </div>
@@ -3433,7 +3452,7 @@ onUnmounted(() => { tourActivo.value = false; });
           @click="router.push({ name: 'empresas' }); modalConfirmEnvio = false; modalPropuestaAviso = false"
           class="w-full inline-flex items-center justify-center gap-2
                  px-4 py-2.5 bg-white border border-gray-200 text-gray-500 rounded-full
-                 text-xs font-bold hover:border-[#00A859]/40 hover:text-[#00A859] transition-all"
+                 text-xs font-bold hover:border-centros/40 hover:text-centros transition-all"
         >
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3506,9 +3525,9 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
             <p class="text-gray-400 text-sm">Este tipo de archivo no se puede previsualizar</p>
             <a :href="modalRecurso.url" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00A859] text-white
+               class="inline-flex items-center gap-2 px-5 py-2.5 bg-centros text-white
                       rounded-full text-xs font-black uppercase tracking-widest
-                      hover:bg-[#00A859]/90 transition-all">
+                      hover:bg-centros/90 transition-all">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -3565,9 +3584,9 @@ onUnmounted(() => { tourActivo.value = false; });
         <button
           @click="confirmarGuardarBorrador"
           class="mt-7 w-full inline-flex items-center justify-center
-                 px-6 py-3 bg-[#00A859] text-white rounded-full
+                 px-6 py-3 bg-centros text-white rounded-full
                  text-xs font-black uppercase tracking-widest shadow-sm
-                 hover:bg-[#00A859]/90 transition-all active:scale-95"
+                 hover:bg-centros/90 transition-all active:scale-95"
         >
           Entendido
         </button>
@@ -3596,19 +3615,19 @@ onUnmounted(() => { tourActivo.value = false; });
 }
 .field-input {
   @apply w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-sm
-         text-[#1F2937] placeholder-gray-400 focus:outline-none focus:border-[#00A859]
+         text-[#1F2937] placeholder-gray-400 focus:outline-none focus:border-centros
          transition-colors shadow-sm;
 }
 .btn-primary {
-  @apply inline-flex items-center gap-2 px-6 py-2.5 bg-[#00A859] text-white
+  @apply inline-flex items-center gap-2 px-6 py-2.5 bg-centros text-white
          rounded-full text-xs font-black uppercase tracking-widest shadow-sm
-         hover:bg-[#00A859]/90 hover:shadow-[0_0_0_3px_rgba(0,168,89,0.15)]
+         hover:bg-centros/90 hover:shadow-[0_0_0_3px_rgba(48,114,170,0.15)]
          transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
 }
 .btn-secondary {
   @apply inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200
          rounded-full text-xs font-black uppercase tracking-widest text-[#1F2937]
-         shadow-sm hover:border-[#00A859] hover:text-[#00A859]
+         shadow-sm hover:border-centros hover:text-centros
          transition-all active:scale-95;
 }
 .tag {
@@ -3618,6 +3637,6 @@ onUnmounted(() => { tourActivo.value = false; });
   text-transform: uppercase; letter-spacing: 0.1em;
 }
 .tag-gray  { background: #F3F4F6; color: #6B7280; }
-.tag-green { background: rgba(0,168,89,0.1); color: #00A859; }
-.tag-lime  { background: rgba(153,204,51,0.12); color: #5a7a00; }
+.tag-green { background: rgba(48,114,170,0.1); color: #3072AA; }
+.tag-lime  { background: rgba(107,164,213,0.12); color: #275d8a; }
 </style>

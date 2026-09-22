@@ -94,7 +94,7 @@ async function confirmarEliminacion() {
               <div v-if="empresa?.familias_nombres?.length" class="flex flex-wrap gap-1 mt-2">
                 <span
                   v-for="f in empresa.familias_nombres" :key="f"
-                  class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full"
+                  class="text-[10px] font-bold bg-centros/10 text-centros px-2 py-0.5 rounded-full"
                 >{{ f }}</span>
               </div>
             </div>

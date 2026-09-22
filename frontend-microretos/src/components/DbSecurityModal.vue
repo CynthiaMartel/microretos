@@ -77,7 +77,7 @@ function cancelar() {
             <!-- Cabecera -->
             <div class="dsm-header">
               <div class="dsm-icon-box">
-                <svg class="w-7 h-7 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-7 h-7 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
@@ -182,7 +182,7 @@ function cancelar() {
   position: relative; background: #fff;
   border: 1px solid #e5e7eb; border-radius: 2rem; padding: 2.5rem;
   width: 100%; max-width: 480px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.22), 0 0 80px rgba(153,204,51,.06);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.22), 0 0 80px rgba(25,167,168,.06);
 }
 
 .dsm-header   { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
@@ -215,12 +215,12 @@ function cancelar() {
 .dsm-btn-dark {
   display: flex; align-items: center; justify-content: center; gap: .5rem;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #00A859, #3db87a); color: #fff;
+  background: linear-gradient(135deg, #19A7A8, rgba(25,167,168,.7)); color: #fff;
   border: none; border-radius: 1rem;
   font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
-  cursor: pointer; box-shadow: 0 6px 20px rgba(0,168,89,.25); transition: all .2s;
+  cursor: pointer; box-shadow: 0 6px 20px rgba(25,167,168,.25); transition: all .2s;
 }
-.dsm-btn-dark:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,168,89,.35); }
+.dsm-btn-dark:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(25,167,168,.35); }
 .dsm-btn-dark:active:not(:disabled) { transform: scale(.97); }
 .dsm-btn-dark:disabled              { opacity: .45; cursor: not-allowed; }
 

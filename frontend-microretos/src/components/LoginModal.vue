@@ -206,9 +206,9 @@ async function handleLogin() {
   width: 100%;
   max-width: 420px;
   box-shadow:
-    0 0 0 1px rgba(0, 168, 89, 0.04),
+    0 0 0 1px rgba(48, 114, 170, 0.04),
     0 40px 80px rgba(0, 0, 0, 0.12),
-    0 0 60px rgba(0, 168, 89, 0.06);
+    0 0 60px rgba(48, 114, 170, 0.06);
 }
 
 .modal-header {
@@ -222,10 +222,10 @@ async function handleLogin() {
   justify-content: center;
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, #00A859, #99CC33);
+  background: linear-gradient(135deg, #3072AA, #6BA4D5);
   border-radius: 14px;
   margin-bottom: 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 168, 89, 0.3);
+  box-shadow: 0 8px 24px rgba(48, 114, 170, 0.3);
 }
 
 .modal-title {
@@ -281,8 +281,8 @@ async function handleLogin() {
 
 .field-input {
   width: 100%;
-  background: #F0FBF4;
-  border: 2px solid #BBE8D0;
+  background: #F2F7FB;
+  border: 2px solid #C7DCEC;
   border-radius: 12px;
   padding: 0.85rem 2.8rem 0.85rem 2.8rem;
   color: #1F2937;
@@ -295,9 +295,9 @@ async function handleLogin() {
 .field-input::placeholder { color: #9CA3AF; }
 
 .field-input:focus {
-  border-color: #00A859;
-  background: #E6F7EE;
-  box-shadow: 0 0 0 4px rgba(0, 168, 89, 0.12);
+  border-color: #3072AA;
+  background: #E5EFF7;
+  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.12);
 }
 
 .has-error .field-input {
@@ -344,7 +344,7 @@ async function handleLogin() {
   margin-top: 0.5rem;
   width: 100%;
   padding: 0.95rem;
-  background: linear-gradient(135deg, #00A859, #3db87a);
+  background: linear-gradient(135deg, #3072AA, #6BA4D5);
   border: none;
   border-radius: 12px;
   color: white;
@@ -354,7 +354,7 @@ async function handleLogin() {
   text-transform: uppercase;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-  box-shadow: 0 4px 20px rgba(0, 168, 89, 0.3);
+  box-shadow: 0 4px 20px rgba(48, 114, 170, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -363,7 +363,7 @@ async function handleLogin() {
 
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 28px rgba(0, 168, 89, 0.4);
+  box-shadow: 0 8px 28px rgba(48, 114, 170, 0.4);
 }
 
 .btn-submit:active:not(:disabled) { transform: translateY(0); }

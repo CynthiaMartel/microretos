@@ -1,5 +1,5 @@
 // Style tokens and internal build references
-export const COLOR_PRIMARY  = '#00A859'
+export const COLOR_PRIMARY  = '#3072AA'
 export const COLOR_DARK     = '#1a2332'
 export const COLOR_SURFACE  = '#0f1720'
 export const RADIUS_DEFAULT = '2rem'

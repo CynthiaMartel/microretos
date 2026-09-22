@@ -347,7 +347,7 @@ const totalFiltradas = computed(() => empresasFiltradas.value.length)
 // ─── Colores de estado de contacto ──────────────────────
 const ESTADO_BADGE = {
   'Pendiente de llamar':            { bg: 'bg-amber-100',       text: 'text-amber-700',   border: 'border-amber-300',   dot: 'bg-amber-400',   pulse: true  },
-  'Llamado - Información obtenida': { bg: 'bg-[#00A859]/10',    text: 'text-[#00A859]',   border: 'border-[#00A859]/30',dot: 'bg-[#00A859]',   pulse: false },
+  'Llamado - Información obtenida': { bg: 'bg-administraciones/10',    text: 'text-administraciones',   border: 'border-administraciones/30',dot: 'bg-administraciones',   pulse: false },
   'Llamado - Negativa':             { bg: 'bg-red-50',          text: 'text-red-600',     border: 'border-red-200',     dot: 'bg-red-400',     pulse: false },
   'Llamado - Llamar más tarde':     { bg: 'bg-blue-50',         text: 'text-blue-600',    border: 'border-blue-200',    dot: 'bg-blue-400',    pulse: false },
   'En colaboración activa':         { bg: 'bg-[#1F2937]/8',     text: 'text-[#1F2937]',   border: 'border-gray-300',    dot: 'bg-[#1F2937]',   pulse: false },
@@ -358,8 +358,8 @@ const ESTADO_BADGE = {
   'Email enviado sin respuesta':    { bg: 'bg-red-50',          text: 'text-red-500',     border: 'border-red-200',     dot: 'bg-red-300',     pulse: false },
   'Email enviado pendiente respuesta': { bg: 'bg-blue-50',      text: 'text-blue-500',    border: 'border-blue-200',    dot: 'bg-blue-300',    pulse: false },
   'Email enviado pendiente de respuesta': { bg: 'bg-blue-50',   text: 'text-blue-500',    border: 'border-blue-200',    dot: 'bg-blue-300',    pulse: false },
-  'Contactado':                     { bg: 'bg-[#00A859]/10',    text: 'text-[#00A859]',   border: 'border-[#00A859]/30',dot: 'bg-[#00A859]',   pulse: false },
-  'Contactado ':                    { bg: 'bg-[#00A859]/10',    text: 'text-[#00A859]',   border: 'border-[#00A859]/30',dot: 'bg-[#00A859]',   pulse: false },
+  'Contactado':                     { bg: 'bg-administraciones/10',    text: 'text-administraciones',   border: 'border-administraciones/30',dot: 'bg-administraciones',   pulse: false },
+  'Contactado ':                    { bg: 'bg-administraciones/10',    text: 'text-administraciones',   border: 'border-administraciones/30',dot: 'bg-administraciones',   pulse: false },
   'Volver a llamar':                { bg: 'bg-blue-50',         text: 'text-blue-600',    border: 'border-blue-200',    dot: 'bg-blue-400',    pulse: false },
   'Email enviado pendiente respuesta ': { bg: 'bg-blue-50',     text: 'text-blue-500',    border: 'border-blue-200',    dot: 'bg-blue-300',    pulse: false },
 }
@@ -672,7 +672,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] overflow-x-hidden pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] overflow-x-hidden pt-16 md:pt-16">
 
     <!-- ══════════ TOUR BOCADILLO ════════════════════════════ -->
     <Transition name="modal-fade">
@@ -696,7 +696,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <div class="flex gap-1 items-center">
                 <span v-for="i in TOTAL_PASOS_GUIA" :key="i"
                       class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= pasoGuia ? 'bg-[#00A859] w-5' : 'bg-white/20 w-3'" />
+                      :class="i <= pasoGuia ? 'bg-administraciones w-5' : 'bg-white/20 w-3'" />
               </div>
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }}/{{ TOTAL_PASOS_GUIA }}</span>
             </div>
@@ -705,9 +705,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <div class="flex items-center gap-2">
               <button @click="avanzarPaso"
-                      class="flex-1 py-1.5 rounded-xl bg-[#00A859] text-white
+                      class="flex-1 py-1.5 rounded-xl bg-administraciones text-white
                              text-[9px] font-black uppercase tracking-widest
-                             hover:bg-[#00A859]/90 transition-all">
+                             hover:bg-administraciones/90 transition-all">
                 {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
@@ -736,12 +736,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full
-                        bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Base de datos</span>
+                        bg-administraciones/10 border border-administraciones/20">
+              <span class="w-2 h-2 rounded-full bg-administraciones" />
+              <span class="text-[10px] font-black uppercase tracking-widest text-administraciones">Base de datos</span>
             </div>
             <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-              Empresas <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">DuaLab</span>
+              Empresas <span class="text-transparent bg-clip-text bg-gradient-to-r from-administraciones to-administraciones/60">DuaLab</span>
             </h1>
             <p class="text-gray-500 text-sm mt-1">Consulta, edita y gestiona todas las empresas registradas.</p>
           </div>
@@ -792,10 +792,10 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                           <span class="text-[10px] font-black text-indigo-600">{{ totalFamiliasResumen }}</span>
                           <span class="text-[10px] text-indigo-400">familias</span>
                         </div>
-                        <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00A859]/8 border border-[#00A859]/20">
-                          <span class="w-1 h-1 rounded-full bg-[#00A859] shrink-0" />
-                          <span class="text-[10px] font-black text-[#00A859]">{{ totalCiclosResumen }}</span>
-                          <span class="text-[10px] text-[#00A859]/70">ciclos</span>
+                        <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-administraciones/8 border border-administraciones/20">
+                          <span class="w-1 h-1 rounded-full bg-administraciones shrink-0" />
+                          <span class="text-[10px] font-black text-administraciones">{{ totalCiclosResumen }}</span>
+                          <span class="text-[10px] text-administraciones/70">ciclos</span>
                         </div>
                       </template>
                     </div>
@@ -836,10 +836,10 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
                      bg-white text-[#1F2937] border border-gray-200
-                     hover:border-[#99CC33] hover:text-[#00A859] transition-all duration-200 shadow-sm
+                     hover:border-administraciones hover:text-administraciones transition-all duration-200 shadow-sm
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/>
               </svg>
@@ -852,8 +852,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               @click="pedirNuevaEmpresa"
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
-                     bg-[#00A859] text-white
-                     hover:bg-[#009950] transition-all duration-200 shadow-sm
+                     bg-administraciones text-white
+                     hover:bg-administraciones/90 transition-all duration-200 shadow-sm
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -893,7 +893,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       bg-white/70 rounded-[1.4rem] border border-gray-100 shadow-sm
                       px-2 py-1.5">
             <div class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/>
               </svg>
@@ -901,7 +901,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">empresas</span>
             </div>
             <div class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
               </svg>
@@ -994,8 +994,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             type="text"
             placeholder="Buscar por nombre, CIF, municipio o contacto..."
             class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200
-                   text-sm focus:outline-none focus:ring-2 focus:ring-[#00A859]/30
-                   focus:border-[#00A859] transition-all"
+                   text-sm focus:outline-none focus:ring-2 focus:ring-administraciones/30
+                   focus:border-administraciones transition-all"
           />
           <button v-if="busqueda" @click="busqueda = ''"
                   class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -1009,7 +1009,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <select
           v-model="filtroCentro"
           class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#00A859]/30 focus:border-[#00A859]
+                 focus:outline-none focus:ring-2 focus:ring-administraciones/30 focus:border-administraciones
                  bg-white text-gray-700 w-full md:w-auto md:min-w-[160px]"
         >
           <option value="">Todos los centros</option>
@@ -1020,7 +1020,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <select
           v-model="filtroFamilia"
           class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#00A859]/30 focus:border-[#00A859]
+                 focus:outline-none focus:ring-2 focus:ring-administraciones/30 focus:border-administraciones
                  bg-white text-gray-700 w-full md:w-auto md:min-w-[160px]"
         >
           <option value="">Todas las familias</option>
@@ -1043,7 +1043,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
       <!-- ══════════════ ESTADO CARGANDO ══════════════ -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-24 gap-4">
-        <div class="w-12 h-12 rounded-full border-4 border-[#00A859]/20 border-t-[#00A859] animate-spin" />
+        <div class="w-12 h-12 rounded-full border-4 border-administraciones/20 border-t-administraciones animate-spin" />
         <p class="text-gray-500 font-medium">Cargando base de datos...</p>
       </div>
 
@@ -1081,7 +1081,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           :key="centro"
           class="bg-white rounded-[1.75rem] border shadow-sm overflow-hidden transition-all duration-500"
           :class="centrosResaltados.has(centro)
-            ? 'border-[#00A859]/40 centro-resaltado'
+            ? 'border-administraciones/40 centro-resaltado'
             : 'border-gray-100'"
         >
           <!-- Cabecera del centro -->
@@ -1092,7 +1092,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                      hover:bg-gray-50/80 transition-colors duration-150 text-left min-w-0"
             >
               <div class="w-10 h-10 rounded-2xl bg-[#1F2937] flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/>
                 </svg>
@@ -1126,8 +1126,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 <button
                   @click.stop="pedirEditarCentro(centro)"
                   class="w-9 h-9 rounded-xl flex items-center justify-center
-                         text-gray-300 hover:text-[#00A859] hover:bg-[#00A859]/10
-                         border border-transparent hover:border-[#00A859]/30
+                         text-gray-300 hover:text-administraciones hover:bg-administraciones/10
+                         border border-transparent hover:border-administraciones/30
                          transition-all duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1176,10 +1176,10 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 class="w-full flex items-center gap-3 pl-4 sm:pl-8 pr-4 sm:pr-6 py-3.5
                        transition-colors duration-150 text-left"
                 :class="familiasResaltadas.has(familiaKey(centro, familia))
-                  ? 'bg-[#00A859]/5 hover:bg-[#00A859]/10 familia-resaltada'
+                  ? 'bg-administraciones/5 hover:bg-administraciones/10 familia-resaltada'
                   : 'hover:bg-gray-50/60'"
               >
-                <div class="w-2 h-2 rounded-full bg-[#00A859] shrink-0" />
+                <div class="w-2 h-2 rounded-full bg-administraciones shrink-0" />
                 <span class="flex-1 font-bold text-sm text-gray-700 truncate">{{ familia }}</span>
                 <!-- Badge ciclos -->
                 <span v-if="familiaData.ciclos.length"
@@ -1190,7 +1190,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 <!-- Badge empresas -->
                 <span v-if="familiaData.empresas.length"
                   class="text-[10px] font-black uppercase tracking-widest
-                         bg-[#00A859]/10 text-[#00A859] px-2.5 py-1 rounded-full shrink-0">
+                         bg-administraciones/10 text-administraciones px-2.5 py-1 rounded-full shrink-0">
                   {{ familiaData.empresas.length }}
                 </span>
                 <svg
@@ -1239,8 +1239,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       @click="toggleEmpresa(empresa.id)"
                       class="flex-1 flex items-center gap-4 min-w-0 text-left"
                     >
-                      <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
-                        <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-8 h-8 rounded-xl bg-administraciones/10 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z"/>
                         </svg>
@@ -1301,7 +1301,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                            text-[11px] font-black uppercase tracking-widest text-[#1F2937]
                                            hover:bg-gray-50 transition-colors"
                                   >
-                                    <svg class="w-3.5 h-3.5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-3.5 h-3.5 text-administraciones shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
@@ -1358,8 +1358,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                         @click="pedirEdicion(empresa)"
                         title="Modificar empresa"
                         class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl
-                               bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859]
-                               hover:bg-[#00A859]/20 hover:border-[#00A859]/40
+                               bg-administraciones/10 border border-administraciones/20 text-administraciones
+                               hover:bg-administraciones/20 hover:border-administraciones/40
                                font-bold text-xs transition-all duration-150"
                       >
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1425,14 +1425,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                             </div>
                             <div v-if="empresa.web" class="flex gap-2">
                               <dt class="text-gray-400 shrink-0 w-24">Web</dt>
-                              <dd class="font-medium text-[#00A859] break-all min-w-0">{{ empresa.web }}</dd>
+                              <dd class="font-medium text-administraciones break-all min-w-0">{{ empresa.web }}</dd>
                             </div>
                             <div v-if="empresa.familias_nombres?.length" class="flex gap-2">
                               <dt class="text-gray-400 shrink-0 w-24">Familias</dt>
                               <dd class="flex flex-wrap gap-1 min-w-0">
                                 <span
                                   v-for="f in empresa.familias_nombres" :key="f"
-                                  class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full"
+                                  class="text-[10px] font-bold bg-administraciones/10 text-administraciones px-2 py-0.5 rounded-full"
                                 >{{ f }}</span>
                               </dd>
                             </div>
@@ -1465,11 +1465,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                             </div>
                             <div v-if="empresa.email_general" class="flex gap-2">
                               <dt class="text-gray-400 shrink-0 w-24">Email</dt>
-                              <dd class="font-medium text-[#00A859] break-all min-w-0">{{ empresa.email_general }}</dd>
+                              <dd class="font-medium text-administraciones break-all min-w-0">{{ empresa.email_general }}</dd>
                             </div>
                             <div v-if="empresa.email_contacto" class="flex gap-2">
                               <dt class="text-gray-400 shrink-0 w-24">Email ctc.</dt>
-                              <dd class="font-medium text-[#00A859] break-all min-w-0">{{ empresa.email_contacto }}</dd>
+                              <dd class="font-medium text-administraciones break-all min-w-0">{{ empresa.email_contacto }}</dd>
                             </div>
                             <div v-if="empresa.horario_atencion" class="flex gap-2">
                               <dt class="text-gray-400 shrink-0 w-24">Horario</dt>
@@ -1519,7 +1519,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                                  text-[11px] font-black uppercase tracking-widest text-[#1F2937]
                                                  hover:bg-gray-50 transition-colors"
                                         >
-                                          <svg class="w-3.5 h-3.5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <svg class="w-3.5 h-3.5 text-administraciones shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                           </svg>
@@ -1604,9 +1604,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                         <!-- Datos B2B (si existen) -->
                         <div
                           v-if="empresa.dia_a_normal || empresa.friccion_area || empresa.friccion_problema || empresa.consecuencias || empresa.restricciones || empresa.lo_que_no_quieren"
-                          class="bg-white rounded-2xl border border-[#00A859]/20 p-4 shadow-sm sm:col-span-2 xl:col-span-3"
+                          class="bg-white rounded-2xl border border-administraciones/20 p-4 shadow-sm sm:col-span-2 xl:col-span-3"
                         >
-                          <h4 class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-3 flex items-center gap-1.5">
+                          <h4 class="text-[10px] font-black uppercase tracking-widest text-administraciones mb-3 flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
@@ -1814,14 +1814,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                         </div>
                         <div v-if="empresa.web" class="flex gap-2">
                           <dt class="text-gray-400 shrink-0 w-24">Web</dt>
-                          <dd class="font-medium text-[#00A859] break-all min-w-0">{{ empresa.web }}</dd>
+                          <dd class="font-medium text-administraciones break-all min-w-0">{{ empresa.web }}</dd>
                         </div>
                         <div v-if="empresa.familias_nombres?.length" class="flex gap-2">
                           <dt class="text-gray-400 shrink-0 w-24">Familias</dt>
                           <dd class="flex flex-wrap gap-1 min-w-0">
                             <span
                               v-for="f in empresa.familias_nombres" :key="f"
-                              class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full"
+                              class="text-[10px] font-bold bg-administraciones/10 text-administraciones px-2 py-0.5 rounded-full"
                             >{{ f }}</span>
                           </dd>
                         </div>
@@ -1842,7 +1842,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                         </div>
                         <div v-if="empresa.email_general" class="flex gap-2">
                           <dt class="text-gray-400 shrink-0 w-24">Email</dt>
-                          <dd class="font-medium text-[#00A859] break-all min-w-0">{{ empresa.email_general }}</dd>
+                          <dd class="font-medium text-administraciones break-all min-w-0">{{ empresa.email_general }}</dd>
                         </div>
                         <p v-if="!empresa.persona_contacto && !empresa.telefono && !empresa.email_general"
                            class="text-gray-300 text-xs italic">Sin datos de contacto registrados</p>
@@ -1866,8 +1866,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
              @click.self="mostrarConfirmNuevaEmpresa = false">
           <div class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-7 border border-gray-100">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-11 h-11 rounded-2xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-11 h-11 rounded-2xl bg-administraciones/10 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                 </svg>
               </div>
@@ -1876,8 +1876,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 <p class="text-xs text-gray-400">Vas a añadir una empresa a la base de datos</p>
               </div>
             </div>
-            <div class="bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl p-4 mb-5">
-              <p class="text-xs text-[#00A859] font-semibold leading-relaxed">
+            <div class="bg-administraciones/5 border border-administraciones/20 rounded-2xl p-4 mb-5">
+              <p class="text-xs text-administraciones font-semibold leading-relaxed">
                 Se creará un nuevo registro de empresa. Asegúrate de tener los datos necesarios antes de continuar.
               </p>
             </div>
@@ -1887,7 +1887,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 Cancelar
               </button>
               <button @click="confirmarNuevaEmpresa"
-                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Continuar
               </button>
             </div>
@@ -1926,7 +1926,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 Cancelar
               </button>
               <button @click="confirmarNuevoCentro"
-                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Continuar
               </button>
             </div>
@@ -1966,7 +1966,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 Cancelar
               </button>
               <button @click="confirmarEditarCentro"
-                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Abrir editor
               </button>
             </div>
@@ -2013,8 +2013,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <button
                 @click="confirmarEdicion"
                 class="flex-1 py-2.5 rounded-xl
-                       bg-[#00A859] text-white text-sm font-black
-                       hover:bg-[#009950] transition-all shadow-sm"
+                       bg-administraciones text-white text-sm font-black
+                       hover:bg-administraciones/90 transition-all shadow-sm"
               >
                 Abrir editor
               </button>
@@ -2105,8 +2105,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <button
                 @click="verificarPasswordCatalogo"
                 :disabled="passwordCatalogoLoad || !passwordCatalogo.trim()"
-                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-sm font-black
-                       hover:bg-[#009950] transition-all shadow-sm
+                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black
+                       hover:bg-administraciones/90 transition-all shadow-sm
                        disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <svg v-if="passwordCatalogoLoad" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
@@ -2218,8 +2218,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 No, cancelar
               </button>
               <button @click="confirmarEditarEstado"
-                class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white
-                       text-sm font-black hover:bg-[#009950] transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white
+                       text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Sí, modificar
               </button>
             </div>
@@ -2243,7 +2243,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           ? 'bg-white text-[#1F2937] border border-gray-200 shadow-lg'
           : 'bg-red-50 text-red-700 border border-red-200'"
       >
-        <svg v-if="snackbar.tipo === 'ok' && !snackbar.accion" class="w-4 h-4 text-[#00A859] shrink-0"
+        <svg v-if="snackbar.tipo === 'ok' && !snackbar.accion" class="w-4 h-4 text-administraciones shrink-0"
              fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
         </svg>
@@ -2316,21 +2316,21 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
 /* Tour — elemento activo resaltado */
 .tour-active {
-  outline: 2px solid #00A859;
+  outline: 2px solid #19A7A8;
   outline-offset: 4px;
   border-radius: 1rem;
 }
 
 /* Highlight de búsqueda de empresa */
 @keyframes centro-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,89,0); }
-  40%       { box-shadow: 0 0 0 5px rgba(0,168,89,0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(25,167,168,0); }
+  40%       { box-shadow: 0 0 0 5px rgba(25,167,168,0.18); }
 }
 .centro-resaltado  { animation: centro-pulse 1.4s ease-in-out 3; }
 
 @keyframes familia-pulse {
   0%, 100% { border-left-color: transparent; }
-  40%       { border-left-color: #00A859; }
+  40%       { border-left-color: #19A7A8; }
 }
-.familia-resaltada { border-left: 2px solid #00A859; animation: familia-pulse 1.4s ease-in-out 3; }
+.familia-resaltada { border-left: 2px solid #19A7A8; animation: familia-pulse 1.4s ease-in-out 3; }
 </style>

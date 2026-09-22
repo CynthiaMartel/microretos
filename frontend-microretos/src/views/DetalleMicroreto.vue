@@ -7,11 +7,20 @@ import api from '../api.js';
 import { usePdfExport } from '../composables/usePdfExport.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useUiHighlightStore } from '../stores/uiHighlight.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 import LoginModal from '../components/LoginModal.vue';
 
 const route   = useRoute();
 const router  = useRouter();
 const uiHighlight = useUiHighlightStore();
+const { theme } = useRoleTheme();
+
+const paletteExtra = {
+  centros:          { hoverBorderText: 'hover:border-centros hover:text-centros', hoverText: 'hover:text-centros' },
+  empresas:         { hoverBorderText: 'hover:border-empresas hover:text-empresas', hoverText: 'hover:text-empresas' },
+  administraciones: { hoverBorderText: 'hover:border-administraciones hover:text-administraciones', hoverText: 'hover:text-administraciones' },
+  primary:          { hoverBorderText: 'hover:border-primary-600 hover:text-primary-700', hoverText: 'hover:text-primary-700' },
+}
 const reto    = ref(null);
 const cargando = ref(true);
 const error   = ref(false);
@@ -192,11 +201,11 @@ async function copiarUrl() {
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen font-sans text-[#1F2937] pt-16 md:pt-16">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
-                bg-[#99CC33] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                opacity-5 blur-[120px] rounded-full pointer-events-none z-0" :class="theme.bg" />
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
@@ -207,8 +216,8 @@ async function copiarUrl() {
                 class="inline-flex items-center gap-2 px-5 py-2.5
                        bg-white border border-gray-200 rounded-full
                        text-xs font-black uppercase tracking-widest text-[#1F2937]
-                       shadow-sm hover:border-[#00A859] hover:text-[#00A859]
-                       transition-all active:scale-95">
+                       shadow-sm
+                       transition-all active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -220,8 +229,8 @@ async function copiarUrl() {
                 class="inline-flex items-center gap-2 px-5 py-2.5
                        bg-white border border-gray-200 rounded-full
                        text-xs font-black uppercase tracking-widest text-[#1F2937]
-                       shadow-sm hover:border-[#00A859] hover:text-[#00A859]
-                       transition-all active:scale-95">
+                       shadow-sm
+                       transition-all active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -234,8 +243,8 @@ async function copiarUrl() {
                 class="inline-flex items-center gap-2 px-5 py-2.5
                        bg-white border border-gray-200 rounded-full
                        text-xs font-black uppercase tracking-widest text-[#1F2937]
-                       shadow-sm hover:border-[#00A859] hover:text-[#00A859]
-                       transition-all active:scale-95">
+                       shadow-sm
+                       transition-all active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5
@@ -247,11 +256,11 @@ async function copiarUrl() {
         </button>
 
         <button v-if="reto && authStore.isAuthenticated && !authStore.isEmpresa" @click="trabajarMicroreto"
-                class="inline-flex items-center gap-2 px-5 py-2.5
-                       bg-[#00A859] border border-[#00A859] rounded-full
+                class="btn-trabajar-reto inline-flex items-center gap-2 px-5 py-2.5
+                       rounded-full
                        text-xs font-black uppercase tracking-widest text-white
-                       shadow-sm hover:bg-[#00A859]/90 hover:shadow-[0_0_0_3px_rgba(0,168,89,0.2)]
-                       transition-all active:scale-95">
+                       shadow-sm
+                       transition-all active:scale-95" :class="[theme.bg, theme.border, theme.bgHover]">
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
@@ -265,10 +274,10 @@ async function copiarUrl() {
 
       <!-- ── CARGANDO ── -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-        <svg class="animate-spin w-12 h-12 text-[#00A859] mb-4" viewBox="0 0 24 24">
+        <svg class="animate-spin w-12 h-12 mb-4" :class="theme.text" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
         </svg>
-        <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">
+        <p class="font-black tracking-widest uppercase text-sm animate-pulse" :class="theme.text">
           Cargando ficha técnica...
         </p>
       </div>
@@ -288,9 +297,9 @@ async function copiarUrl() {
         <p class="text-gray-500 text-sm mb-6">Comprueba tu conexión o vuelve a intentarlo.</p>
         <button @click="volver"
                 class="px-6 py-2.5 bg-white border border-gray-200
-                       hover:border-[#00A859] hover:text-[#00A859]
                        text-[#1F2937] rounded-full text-xs font-black
-                       uppercase tracking-widest transition-all shadow-sm">
+                       uppercase tracking-widest transition-all shadow-sm"
+                :class="paletteExtra[theme.key].hoverBorderText">
           Volver a la Biblioteca
         </button>
       </div>
@@ -322,8 +331,8 @@ async function copiarUrl() {
 
             <div class="relative z-10 px-6 py-8 md:px-14 md:pt-12 md:pb-10 max-w-4xl">
 
-              <p class="text-[#00A859] font-bold text-[10px] tracking-[0.2em] uppercase mb-4
-                        flex items-center gap-2">
+              <p class="font-bold text-[10px] tracking-[0.2em] uppercase mb-4
+                        flex items-center gap-2" :class="theme.text">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
@@ -525,7 +534,7 @@ async function copiarUrl() {
             <div class="space-y-10 md:space-y-14">
               <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
                          tracking-widest border-b-2 border-gray-200 pb-2">
-                <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
                            a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -536,7 +545,7 @@ async function copiarUrl() {
             <!-- Quién es / Día a día -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
               <div v-if="reto.quien_es">
-                <h3 class="section-title text-[#00A859]">
+                <h3 class="section-title" :class="theme.text">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0
@@ -549,7 +558,7 @@ async function copiarUrl() {
                 <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
               </div>
               <div v-if="reto.dia_a_dia">
-                <h3 class="section-title text-[#00A859]">
+                <h3 class="section-title" :class="theme.text">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -580,9 +589,10 @@ async function copiarUrl() {
             </div>
 
             <!-- Pregunta del reto -->
-            <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
-                        p-6 md:p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-              <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
+            <div class="bg-gradient-to-r from-gray-50 to-white border-l-4
+                        p-6 md:p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100"
+                 :class="theme.border">
+              <h3 class="font-black uppercase text-[10px] tracking-[0.2em] mb-3" :class="theme.text">
                 Este reto consiste en responder a:
               </h3>
               <p class="text-lg md:text-2xl font-bold text-[#1F2937] leading-snug">
@@ -593,7 +603,7 @@ async function copiarUrl() {
             <!-- Qué necesitan / Limitaciones -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
               <div v-if="reto.que_necesitan?.length">
-                <h3 class="section-title text-[#00A859]">
+                <h3 class="section-title" :class="theme.text">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
@@ -604,7 +614,7 @@ async function copiarUrl() {
                 <ul class="space-y-2 pl-1">
                   <li v-for="(item, i) in reto.que_necesitan" :key="i"
                       class="flex items-start gap-3 text-sm text-gray-700">
-                    <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                    <span class="font-black mt-0.5 shrink-0" :class="theme.text">•</span>
                     <span>{{ item }}</span>
                   </li>
                 </ul>
@@ -632,7 +642,7 @@ async function copiarUrl() {
             <!-- Prototipos / ODS -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
               <div v-if="reto.prototipos?.length">
-                <h3 class="section-title text-[#00A859]">
+                <h3 class="section-title" :class="theme.text">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -642,7 +652,7 @@ async function copiarUrl() {
                 <ul class="space-y-2 pl-1">
                   <li v-for="(item, i) in reto.prototipos" :key="i"
                       class="flex items-start gap-3 text-sm text-gray-700">
-                    <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                    <span class="font-black mt-0.5 shrink-0" :class="theme.text">•</span>
                     <span>{{ item }}</span>
                   </li>
                 </ul>
@@ -688,7 +698,7 @@ async function copiarUrl() {
             <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
               <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
                          tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
-                <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 14l9-5-9-5-9 5 9 5z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -729,7 +739,7 @@ async function copiarUrl() {
                     </span>
                   </div>
                   <div class="mb-4">
-                    <p class="text-[10px] uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
+                    <p class="text-[10px] uppercase font-bold mb-1 flex items-center gap-1" :class="theme.text">
                       <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/>
                       </svg>
@@ -744,7 +754,7 @@ async function copiarUrl() {
                     <ul class="space-y-1.5">
                       <li v-for="(ce, i) in evalObj.ce" :key="i"
                           class="text-sm text-gray-600 flex items-start gap-2">
-                        <span class="text-[#00A859] font-bold mt-0.5 shrink-0">✓</span>
+                        <span class="font-bold mt-0.5 shrink-0" :class="theme.text">✓</span>
                         <span>{{ ce }}</span>
                       </li>
                     </ul>
@@ -761,7 +771,7 @@ async function copiarUrl() {
 
             <!-- Variantes -->
             <div v-if="reto.variantes?.length" class="pt-2">
-              <h3 class="section-title text-[#00A859]">
+              <h3 class="section-title" :class="theme.text">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
@@ -813,8 +823,8 @@ async function copiarUrl() {
                  class="bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm">
               <div class="text-sm text-gray-700 leading-relaxed">
                 <template v-if="tip.includes(':')">
-                  <strong class="text-[#00A859] flex items-center gap-1.5 mb-2
-                                 uppercase tracking-wider text-[10px]">
+                  <strong class="flex items-center gap-1.5 mb-2
+                                 uppercase tracking-wider text-[10px]" :class="theme.text">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path v-if="i===0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
@@ -843,8 +853,8 @@ async function copiarUrl() {
           <button @click="volver"
                   class="inline-flex items-center gap-2 px-8 py-4 bg-white border-2 border-gray-200
                          rounded-full text-xs font-black uppercase tracking-widest text-[#1F2937]
-                         shadow-sm hover:border-[#00A859] hover:text-[#00A859] transition-all
-                         hover:-translate-y-0.5 active:scale-95">
+                         shadow-sm transition-all
+                         hover:-translate-y-0.5 active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                     d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -853,10 +863,10 @@ async function copiarUrl() {
           </button>
 
           <button @click="descargarPDF(reto)"
-                  class="inline-flex items-center gap-2 px-8 py-4 bg-[#00A859] border-2 border-[#00A859]
+                  class="inline-flex items-center gap-2 px-8 py-4 border-2
                          rounded-full text-xs font-black uppercase tracking-widest text-white
-                         shadow-sm hover:bg-[#008f4a] hover:border-[#008f4a] transition-all
-                         hover:-translate-y-0.5 active:scale-95">
+                         shadow-sm transition-all
+                         hover:-translate-y-0.5 active:scale-95" :class="[theme.bg, theme.border, theme.bgHover]">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -891,7 +901,7 @@ async function copiarUrl() {
           <!-- Cabecera -->
           <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
             <div>
-              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00A859] mb-0.5">
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5" :class="theme.text">
                 Acceso Alumnado
               </p>
               <h3 class="text-lg font-black text-[#1F2937]">QR del Reto</h3>
@@ -911,7 +921,7 @@ async function copiarUrl() {
 
             <!-- Estado 1: Consultando si existe token -->
             <div v-if="qrCargando" class="py-10">
-              <svg class="animate-spin w-10 h-10 text-[#00A859]" viewBox="0 0 24 24">
+              <svg class="animate-spin w-10 h-10" :class="theme.text" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
               </svg>
             </div>
@@ -940,9 +950,10 @@ async function copiarUrl() {
                 <button @click="crearQR"
                         :disabled="qrCreando"
                         class="mt-2 flex items-center gap-2 px-6 py-3
-                               bg-[#00A859] text-white rounded-full
+                               text-white rounded-full
                                text-xs font-black uppercase tracking-widest
-                               hover:bg-[#008f4a] transition-all active:scale-95 disabled:opacity-50">
+                               transition-all active:scale-95 disabled:opacity-50"
+                        :class="[theme.bg, theme.bgHover]">
                   <svg v-if="!qrCreando" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                   </svg>
@@ -976,7 +987,7 @@ async function copiarUrl() {
                           gap-2 px-4 py-2.5 text-xs text-gray-500 font-mono">
                 <span class="flex-1 truncate">{{ qrUrl }}</span>
                 <button @click="copiarUrl"
-                        :class="urlCopiada ? 'text-[#00A859]' : 'text-gray-400 hover:text-[#00A859]'"
+                        :class="urlCopiada ? theme.text : ['text-gray-400', paletteExtra[theme.key].hoverText]"
                         class="shrink-0 transition-colors"
                         :title="urlCopiada ? 'Copiado' : 'Copiar URL'">
                   <svg v-if="!urlCopiada" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1027,6 +1038,10 @@ async function copiarUrl() {
 </template>
 
 <style scoped>
+.btn-trabajar-reto:hover {
+  box-shadow: 0 0 0 3px v-bind('theme.hexSoft');
+}
+
 .section-title {
   display: flex;
   align-items: center;

@@ -23,10 +23,10 @@ defineEmits(['remove-ce'])
 
       <!-- Resultados de Aprendizaje -->
       <div class="divide-y divide-gray-50">
-        <div v-for="(ra, raIdx) in mod.ras" :key="raIdx" class="px-4 py-3 bg-[#00A859]/4">
+        <div v-for="(ra, raIdx) in mod.ras" :key="raIdx" class="px-4 py-3 bg-centros/4">
           <div class="flex items-start gap-2.5">
-            <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]
-                         bg-[#00A859]/10 px-2 py-0.5 rounded-full shrink-0 mt-0.5">RA</span>
+            <span class="text-[9px] font-black uppercase tracking-widest text-centros
+                         bg-centros/10 px-2 py-0.5 rounded-full shrink-0 mt-0.5">RA</span>
             <p class="flex-1 text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
           </div>
 

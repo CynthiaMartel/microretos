@@ -1084,7 +1084,7 @@ const ESTADOS_OPCIONES_GEN = [
 ]
 const ESTADO_BADGE_GEN = {
   'Pendiente de llamar':            { bg: 'bg-amber-100',    text: 'text-amber-700',  border: 'border-amber-300',    dot: 'bg-amber-400', pulse: true  },
-  'Llamado - Información obtenida': { bg: 'bg-[#00A859]/10', text: 'text-[#00A859]',  border: 'border-[#00A859]/30', dot: 'bg-[#00A859]', pulse: false },
+  'Llamado - Información obtenida': { bg: 'bg-centros/10', text: 'text-centros',  border: 'border-centros/30', dot: 'bg-centros', pulse: false },
   'Llamado - Negativa':             { bg: 'bg-red-50',       text: 'text-red-600',    border: 'border-red-200',      dot: 'bg-red-400',   pulse: false },
   'Llamado - Llamar más tarde':     { bg: 'bg-blue-50',      text: 'text-blue-600',   border: 'border-blue-200',     dot: 'bg-blue-400',  pulse: false },
   'En colaboración activa':         { bg: 'bg-gray-100',     text: 'text-gray-700',   border: 'border-gray-300',     dot: 'bg-gray-600',  pulse: false },
@@ -1115,7 +1115,7 @@ async function guardarEstadoGen(nuevoEstado) {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-12 transition-colors duration-500 font-sans text-[#1F2937] overflow-x-hidden pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-12 transition-colors duration-500 font-sans text-[#1F2937] overflow-x-hidden pt-16 md:pt-16">
     
     <!-- ══════════ TOUR OVERLAY ════════════════════════════════════════════ -->
   <Transition name="sp-fade">
@@ -1123,12 +1123,12 @@ async function guardarEstadoGen(nuevoEstado) {
 
       <!-- ── PASO 2: modal explicativo centrado ── -->
       <template v-if="pasoActual === 2">
-        <div class="absolute inset-x-0 top-12 bottom-0 bg-black/50 pointer-events-auto" />
+        <div class="absolute inset-x-0 top-16 bottom-0 bg-black/50 pointer-events-auto" />
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="z-index:9992">
           <div class="pointer-events-auto w-[380px] max-w-[calc(100vw-2rem)] bg-[#1a2332] border border-white/15 rounded-3xl shadow-2xl p-7 text-white" @click.stop>
             <!-- Cabecera -->
             <div class="flex items-center gap-3 mb-5">
-              <div class="w-9 h-9 rounded-2xl bg-[#00A859]/20 flex items-center justify-center text-[#00A859] font-black text-sm shrink-0">
+              <div class="w-9 h-9 rounded-2xl bg-centros/20 flex items-center justify-center text-centros font-black text-sm shrink-0">
                 {{ pasoGuia }}
               </div>
               <div class="flex-1">
@@ -1136,7 +1136,7 @@ async function guardarEstadoGen(nuevoEstado) {
                 <div class="flex gap-1">
                   <span v-for="i in guiaPasosActual.length" :key="i"
                         class="h-[3px] rounded-full transition-all duration-300"
-                        :class="i <= pasoGuia ? 'bg-[#00A859] w-5' : 'bg-white/20 w-3'" />
+                        :class="i <= pasoGuia ? 'bg-centros w-5' : 'bg-white/20 w-3'" />
                 </div>
               </div>
             </div>
@@ -1145,7 +1145,7 @@ async function guardarEstadoGen(nuevoEstado) {
             <!-- Botones -->
             <div class="flex items-center gap-2">
               <button @click="avanzarGuia"
-                      class="flex-1 py-2.5 rounded-xl bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
+                      class="flex-1 py-2.5 rounded-xl bg-centros text-white text-[10px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
                 {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
@@ -1160,8 +1160,8 @@ async function guardarEstadoGen(nuevoEstado) {
       <!-- ── PASO 1 & 3: bocadillo spotlight ── -->
       <template v-else>
         <!-- Backdrop bloqueante transparente — bloquea interacción sin oscurecer el elemento activo -->
-        <!-- top-12 para no tapar el TopBar (h-12) y que el logo siga siendo clickable -->
-        <div class="absolute inset-x-0 top-12 bottom-0 pointer-events-auto" />
+        <!-- top-16 para no tapar el TopBar (h-16) y que el logo siga siendo clickable -->
+        <div class="absolute inset-x-0 top-16 bottom-0 pointer-events-auto" />
 
         <div class="absolute pointer-events-auto"
              :style="{ top: bocadilloPos.top + 'px', left: bocadilloPos.left + 'px', width: '272px', zIndex: 9992 }">
@@ -1181,14 +1181,14 @@ async function guardarEstadoGen(nuevoEstado) {
               <div class="flex gap-1 items-center">
                 <span v-for="i in guiaPasosActual.length" :key="i"
                       class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= pasoGuia ? 'bg-[#00A859] w-5' : 'bg-white/20 w-3'" />
+                      :class="i <= pasoGuia ? 'bg-centros w-5' : 'bg-white/20 w-3'" />
               </div>
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }}/{{ guiaPasosActual.length }}</span>
             </div>
             <p class="text-[11px] text-white/85 leading-relaxed mb-3">{{ guiaPasosActual[pasoGuia - 1].texto }}</p>
             <div class="flex items-center gap-2">
               <button @click="avanzarGuia"
-                      class="flex-1 py-1.5 rounded-xl bg-[#00A859] text-white text-[9px] font-black uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
+                      class="flex-1 py-1.5 rounded-xl bg-centros text-white text-[9px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
                 {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
@@ -1216,17 +1216,17 @@ async function guardarEstadoGen(nuevoEstado) {
   <div class="max-w-6xl mx-auto">
 
       <header class="mb-6 md:mb-8 text-center flex flex-col items-center">
-        <div class="inline-flex items-center mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+        <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
              :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain -mr-2 sm:-mr-3 md:-mr-4 relative z-10" />
+          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
           <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-[#00A859]">Lab</span><span class="text-[#99CC33] not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
+            Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
           </span>
         </div>
 
         <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Factoría de <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Retos</span>
+          Factoría de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Retos</span>
         </h1>
 
         <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
@@ -1246,17 +1246,17 @@ async function guardarEstadoGen(nuevoEstado) {
             class="flex flex-col items-center bg-transparent border-0"
             :class="step < pasoActual || (step === pasoActual + 1 && pasoActualValido) ? 'cursor-pointer' : 'cursor-default'">
             <div class="w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center font-black transition-all duration-500 shadow-sm"
-              :class="pasoActual >= step ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white scale-110 shadow-lg' : 'bg-white border-2 border-gray-200 text-gray-400'">
+              :class="pasoActual >= step ? 'bg-gradient-to-r from-centros to-primary-400 text-white scale-110 shadow-lg' : 'bg-white border-2 border-gray-200 text-gray-400'">
               <span v-if="pasoActual > step"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>
               <span v-else>{{ step }}</span>
             </div>
-            <span class="text-[9px] md:text-[10px] font-black uppercase mt-1.5 md:mt-2 tracking-widest text-center" :class="pasoActual >= step ? 'text-[#00A859]' : 'text-gray-400'">
+            <span class="text-[9px] md:text-[10px] font-black uppercase mt-1.5 md:mt-2 tracking-widest text-center" :class="pasoActual >= step ? 'text-centros' : 'text-gray-400'">
               {{ step === 1 ? '1. Datos Empresa' : step === 2 ? '2. Diagnóstico de Empresa' : '3. Match Académico' }}
             </span>
           </button>
         </div>
         <div class="absolute top-[18px] md:top-[22px] left-0 w-full h-1 bg-gray-200 -z-0 rounded-full"></div>
-        <div class="absolute top-[18px] md:top-[22px] left-0 h-1 bg-gradient-to-r from-[#00A859] to-[#99CC33] transition-all duration-700 -z-0 rounded-full" :style="{ width: ((pasoActual - 1) / (totalPasos - 1)) * 100 + '%' }"></div>
+        <div class="absolute top-[18px] md:top-[22px] left-0 h-1 bg-gradient-to-r from-centros to-primary-400 transition-all duration-700 -z-0 rounded-full" :style="{ width: ((pasoActual - 1) / (totalPasos - 1)) * 100 + '%' }"></div>
       </div>
 
       <main class="min-h-[400px]">
@@ -1266,7 +1266,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <transition name="fade">
                 <div v-if="seleccion.empresaNombre" class="absolute -top-4 left-8">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#1F2937] text-xs font-bold tracking-wide border border-gray-100 border-b-0 shadow-[0_-4px_8px_rgb(0,0,0,0.04)]">
-                    <svg class="w-3.5 h-3.5 shrink-0 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
                     Empresa: {{ seleccion.empresaNombre }}
@@ -1275,7 +1275,7 @@ async function guardarEstadoGen(nuevoEstado) {
               </transition>
 
               <div class="flex flex-wrap items-center gap-4 mb-6">
-                <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 flex items-center justify-center text-[#00A859]">
+                <div class="w-12 h-12 rounded-2xl bg-centros/10 flex items-center justify-center text-centros">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
                 <h2 class="text-2xl font-black uppercase tracking-tight text-[#1F2937]">Buscar en la base de datos de DuaLab</h2>
@@ -1295,11 +1295,11 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
 
               <div v-if="esModoDemo"
-                class="mb-6 flex items-center gap-3 bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl px-5 py-3">
-                <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="mb-6 flex items-center gap-3 bg-centros/5 border border-centros/20 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p class="text-xs font-bold text-[#00A859] uppercase tracking-widest">
+                <p class="text-xs font-bold text-centros uppercase tracking-widest">
                   Modo Demo activo — los campos están bloqueados. Pulsa "Vaciar" para editarlos.
                 </p>
               </div>
@@ -1324,7 +1324,7 @@ async function guardarEstadoGen(nuevoEstado) {
                        tourTargetActivo === 'refCentroEducativo' ? 'tour-active' : '',
                        modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda' ? 'tour-seccion-blur' : ''
                      ]">
-                  <label class="label-style" :class="!centroFiltro && !esModoDemo ? '!text-[#00A859]' : ''">
+                  <label class="label-style" :class="!centroFiltro && !esModoDemo ? '!text-centros' : ''">
                     {{ !centroFiltro && !esModoDemo ? '① Centro Educativo *' : 'Centro Educativo *' }}
                   </label>
                   <input v-if="esModoDemo" type="text" value="IES DEMO" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
@@ -1349,10 +1349,10 @@ async function guardarEstadoGen(nuevoEstado) {
                     <button
                       @click="mostrarSelectorDemo = !mostrarSelectorDemo"
                       :disabled="estaPasoBloqueado(1)"
-                      :class="estaPasoBloqueado(1) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esModoDemo ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/30 hover:bg-[#00A859]/15' : 'bg-white text-[#00A859] hover:bg-gray-50 border-gray-200 hover:border-[#00A859] shadow-sm'"
+                      :class="estaPasoBloqueado(1) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esModoDemo ? 'bg-centros/10 text-centros border-centros/30 hover:bg-centros/15' : 'bg-white text-centros hover:bg-gray-50 border-gray-200 hover:border-centros shadow-sm'"
                       class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                       <template v-if="esModoDemo">
-                        <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                         <span>DEMO ACTIVA</span>
                         <svg class="w-3 h-3 transition-transform duration-200" :class="mostrarSelectorDemo ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
@@ -1372,8 +1372,8 @@ async function guardarEstadoGen(nuevoEstado) {
                           v-for="demo in demosDisponibles"
                           :key="demo.id"
                           @click="cargarDemo(demo.familia_profesional)"
-                          class="w-full text-left px-5 py-3 text-sm font-semibold text-[#1F2937] hover:bg-[#00A859]/5 hover:text-[#00A859] transition-colors border-b border-gray-100 last:border-0 flex items-center gap-3">
-                          <svg class="w-4 h-4 shrink-0 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          class="w-full text-left px-5 py-3 text-sm font-semibold text-[#1F2937] hover:bg-centros/5 hover:text-centros transition-colors border-b border-gray-100 last:border-0 flex items-center gap-3">
+                          <svg class="w-4 h-4 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="demosIconos[demo.familia_profesional] || iconoFallback"/>
                           </svg>
                           {{ demo.familia_profesional }}
@@ -1392,7 +1392,7 @@ async function guardarEstadoGen(nuevoEstado) {
                     ]"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <svg v-if="cargandoSimulacion" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                     <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span v-if="cargandoSimulacion">Generando...</span>
                     <span v-else>Información Simulada</span>
@@ -1415,7 +1415,7 @@ async function guardarEstadoGen(nuevoEstado) {
                    ]">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <label class="label-style !mb-0"
-                      :class="centroFiltro && !seleccion.empresaId && !esModoDemo ? '!text-[#00A859]' : (!centroFiltro && !esModoDemo ? 'opacity-40' : '')">
+                      :class="centroFiltro && !seleccion.empresaId && !esModoDemo ? '!text-centros' : (!centroFiltro && !esModoDemo ? 'opacity-40' : '')">
                       <template v-if="centroFiltro && !seleccion.empresaId && !esModoDemo">② Elige empresa</template>
                       <template v-else-if="!centroFiltro && !esModoDemo">Empresa (elige primero un centro)</template>
                       <template v-else>Buscar empresa</template>
@@ -1446,7 +1446,7 @@ async function guardarEstadoGen(nuevoEstado) {
                           estaPasoBloqueado(1)
                             ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200'
                             : seleccion.empresaId
-                              ? 'bg-[#00A859] text-white border-[#00A859] hover:bg-[#007a42] shadow-md'
+                              ? 'bg-centros text-white border-centros hover:bg-centros/90 shadow-md'
                               : 'bg-white text-[#1F2937] hover:bg-gray-50 border-gray-200 shadow-sm',
                           tourTargetActivo === 'refInsertarEmpresa' ? 'tour-active' : ''
                         ]"
@@ -1467,7 +1467,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       :key="val"
                       @click="filtroTipoEmpresa = val; mostrarDropdownEmpresas = true"
                       :class="filtroTipoEmpresa === val
-                        ? (val === 'simulada' ? 'bg-[#1F2937] text-white border-[#1F2937]' : val === 'real' ? 'bg-[#00A859] text-white border-[#00A859]' : 'bg-gray-200 text-gray-700 border-gray-300')
+                        ? (val === 'simulada' ? 'bg-[#1F2937] text-white border-[#1F2937]' : val === 'real' ? 'bg-centros text-white border-centros' : 'bg-gray-200 text-gray-700 border-gray-300')
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'"
                       class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all"
                     >{{ label }}</button>
@@ -1517,7 +1517,7 @@ async function guardarEstadoGen(nuevoEstado) {
                             v-for="emp in empresasPaginadas"
                             :key="emp.id"
                             @click="seleccionarEmpresa(emp)"
-                            class="text-left px-5 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-[#00A859] hover:shadow-md transition-all"
+                            class="text-left px-5 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-centros hover:shadow-md transition-all"
                           >
                             <span class="font-bold text-[#1F2937] block truncate">{{ emp.nombre_comercial }}</span>
                             <span class="text-xs text-gray-400 uppercase tracking-widest block truncate mt-0.5">
@@ -1562,7 +1562,7 @@ async function guardarEstadoGen(nuevoEstado) {
             <!-- Cabecera empresa -->
             <div class="mb-8">
               <div class="flex items-center gap-3 mb-4">
-                <div class="w-2 h-6 bg-[#00A859] rounded-full shrink-0"></div>
+                <div class="w-2 h-6 bg-centros rounded-full shrink-0"></div>
                 <h3 class="font-black text-[#1F2937] uppercase tracking-widest text-sm">Ficha de Empresa</h3>
               </div>
 
@@ -1574,7 +1574,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <!-- Chips: sector, tamaño, CIF -->
               <div class="flex flex-wrap gap-2 ml-5 mt-3">
                 <span v-if="empresaDetalle.sector"
-                  class="text-[10px] font-black uppercase tracking-widest bg-[#00A859]/10 text-[#00A859] px-2.5 py-1 rounded-full">
+                  class="text-[10px] font-black uppercase tracking-widest bg-centros/10 text-centros px-2.5 py-1 rounded-full">
                   {{ empresaDetalle.sector }}
                 </span>
                 <span v-if="empresaDetalle.tamano"
@@ -1657,10 +1657,10 @@ async function guardarEstadoGen(nuevoEstado) {
                   <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Contacto Directo</p>
                   <p v-if="empresaDetalle.persona_contacto" class="font-semibold text-[#1F2937] text-sm">{{ empresaDetalle.persona_contacto }}</p>
                   <p v-if="empresaDetalle.telefono" class="text-gray-600 text-sm flex items-center gap-2 mt-1">
-                    <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> {{ empresaDetalle.telefono }}
+                    <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> {{ empresaDetalle.telefono }}
                   </p>
                   <p v-if="empresaDetalle.email_general" class="text-gray-600 text-sm flex items-center gap-2 mt-1 truncate">
-                    <svg class="w-4 h-4 shrink-0 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> {{ empresaDetalle.email_general }}
+                    <svg class="w-4 h-4 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> {{ empresaDetalle.email_general }}
                   </p>
                 </div>
 
@@ -1679,7 +1679,7 @@ async function guardarEstadoGen(nuevoEstado) {
                      :href="safeUrl(empresaDetalle.web)"
                      target="_blank"
                      rel="noopener noreferrer"
-                     class="text-[#00A859] hover:underline font-bold text-sm truncate flex items-center gap-1 mt-1">
+                     class="text-centros hover:underline font-bold text-sm truncate flex items-center gap-1 mt-1">
                     {{ empresaDetalle.web.replace(/^https?:\/\//, '') }}
                   </a>
                 </div>
@@ -1691,12 +1691,12 @@ async function guardarEstadoGen(nuevoEstado) {
                 <div v-if="!tieneContextoEmpresa" class="absolute inset-0 bg-white/70 z-10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                   <div class="bg-[#1F2937] text-white px-5 py-4 rounded-2xl shadow-xl flex flex-col sm:flex-row items-center gap-3 mx-4">
                     <div class="flex items-center gap-2">
-                      <span class="bg-[#00A859] text-white rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-black shrink-0">1</span>
+                      <span class="bg-centros text-white rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-black shrink-0">1</span>
                       <span class="text-[10px] font-black uppercase tracking-widest">Elige tu centro</span>
                     </div>
                     <span class="text-gray-500 text-xs hidden sm:block">·</span>
                     <div class="flex items-center gap-2">
-                      <span class="bg-[#00A859] text-white rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-black shrink-0">2</span>
+                      <span class="bg-centros text-white rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-black shrink-0">2</span>
                       <span class="text-[10px] font-black uppercase tracking-widest">Elige empresa</span>
                     </div>
                     <span class="text-gray-500 text-xs hidden sm:block">·</span>
@@ -1756,7 +1756,7 @@ async function guardarEstadoGen(nuevoEstado) {
                           :class="sector === seleccion.empresaSector ? 'bg-[#374151]' : ''"
                         >
                           <span class="font-semibold text-white text-sm">{{ sector }}</span>
-                          <svg v-if="sector === seleccion.empresaSector" class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg v-if="sector === seleccion.empresaSector" class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                           </svg>
                         </button>
@@ -1765,10 +1765,10 @@ async function guardarEstadoGen(nuevoEstado) {
                           @mousedown.prevent="activarSectorLibre"
                           class="w-full text-left px-6 py-3 hover:bg-[#374151] transition-colors flex items-center gap-2 border-t border-[#374151]"
                         >
-                          <svg class="w-4 h-4 text-[#99CC33] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-4 h-4 text-primary-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                           </svg>
-                          <span class="text-[#99CC33] text-sm font-bold uppercase tracking-widest">Escribir</span>
+                          <span class="text-primary-400 text-sm font-bold uppercase tracking-widest">Escribir</span>
                         </button>
                       </div>
                     </Transition>
@@ -1812,7 +1812,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <transition name="fade">
                 <div v-if="seleccion.empresaNombre" class="absolute -top-4 left-8">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#1F2937] text-xs font-bold tracking-wide border border-gray-100 border-b-0 shadow-[0_-4px_8px_rgb(0,0,0,0.04)]">
-                    <svg class="w-3.5 h-3.5 shrink-0 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
                     Empresa: {{ seleccion.empresaNombre }}
@@ -1826,7 +1826,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <div ref="refEncabezadoProblema" class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 mt-4 xl:mt-0"
                    :class="{ 'tour-active': tourTargetActivo === 'refEncabezadoProblema' }">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-2xl bg-[#99CC33]/15 flex items-center justify-center text-[#00A859]">
+                  <div class="w-12 h-12 rounded-2xl bg-primary-400/15 flex items-center justify-center text-centros">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
                   </div>
                   <h2 class="text-2xl font-black uppercase tracking-tight text-[#1F2937]">Realidad de la Empresa</h2>
@@ -1838,20 +1838,20 @@ async function guardarEstadoGen(nuevoEstado) {
                     :class="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <svg v-if="cargandoSimulacion" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                     <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span v-if="cargandoSimulacion">Generando...</span>
                     <span v-else>Información Simulada</span>
                   </button>
 
                   <span v-if="esModoDemo"
-                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase flex items-center gap-2 border bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20 cursor-default">
+                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase flex items-center gap-2 border bg-centros/10 text-centros border-centros/20 cursor-default">
                     ✓ DEMO ACTIVA
                   </span>
 
                   <!--
                   <button @click="cargarDemo" :disabled="esModoDemo" 
-                    :class="esModoDemo ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20 cursor-default' : 'bg-white text-[#00A859] hover:bg-gray-50 border-gray-200 hover:border-[#00A859] shadow-sm'"
+                    :class="esModoDemo ? 'bg-centros/10 text-centros border-centros/20 cursor-default' : 'bg-white text-centros hover:bg-gray-50 border-gray-200 hover:border-centros shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <span v-if="esModoDemo">✓ DEMO ACTIVA</span>
                     <span v-else> Cargar Demo</span>
@@ -1865,11 +1865,11 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
 
               <div v-if="esModoDemo" 
-                class="mb-6 flex items-center gap-3 bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl px-5 py-3">
-                <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="mb-6 flex items-center gap-3 bg-centros/5 border border-centros/20 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p class="text-xs font-bold text-[#00A859] uppercase tracking-widest">
+                <p class="text-xs font-bold text-centros uppercase tracking-widest">
                   Modo Demo activo — los campos están bloqueados. Pulsa "Vaciar" para editarlos.
                 </p>
               </div>
@@ -1884,12 +1884,12 @@ async function guardarEstadoGen(nuevoEstado) {
                 </p>
               </div>
 
-              <div v-if="diagnosticoRecuperado" class="mb-10 p-5 md:p-6 bg-[#00A859]/5 border border-[#00A859]/20 rounded-3xl flex gap-4 md:gap-5 items-start">
-                <div class="bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white p-2.5 rounded-2xl shrink-0 mt-1 shadow-md">
+              <div v-if="diagnosticoRecuperado" class="mb-10 p-5 md:p-6 bg-centros/5 border border-centros/20 rounded-3xl flex gap-4 md:gap-5 items-start">
+                <div class="bg-gradient-to-r from-centros to-primary-400 text-white p-2.5 rounded-2xl shrink-0 mt-1 shadow-md">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div>
-                  <h4 class="font-black text-[#00A859] uppercase tracking-widest text-xs mb-1">Información Previa Detectada</h4>
+                  <h4 class="font-black text-centros uppercase tracking-widest text-xs mb-1">Información Previa Detectada</h4>
                   <p class="text-sm text-gray-600 leading-relaxed font-medium">
                     Hemos recuperado las respuestas de una sesión anterior. Puedes mantenerlas para generar nuevas variantes del reto o editarlas si la situación ha cambiado.
                   </p>
@@ -1903,8 +1903,8 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">1</span>
                       ¿Qué ofrece su empresa y qué hace en su día a día?
                     </label>
-                    <button @click="abrirPopup('info', 1)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                    <button @click="abrirPopup('ejemplo', 1)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+                    <button @click="abrirPopup('info', 1)" class="text-gray-400 hover:text-centros transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    <button @click="abrirPopup('ejemplo', 1)" class="text-gray-400 hover:text-primary-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
                   <textarea v-model="seleccion.diaANormal" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.diaANormal.max" class="input-style h-24" placeholder="Ej: Somos una empresa de servicios informáticos..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -1921,8 +1921,8 @@ async function guardarEstadoGen(nuevoEstado) {
                         <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">2</span>
                         ¿Qué tarea da más trabajo del que debería?
                       </label>
-                      <button @click="abrirPopup('info', 2)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                      <button @click="abrirPopup('ejemplo', 2)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+                      <button @click="abrirPopup('info', 2)" class="text-gray-400 hover:text-centros transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                      <button @click="abrirPopup('ejemplo', 2)" class="text-gray-400 hover:text-primary-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                     </div>
                     <textarea v-model="seleccion.friccionArea" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.friccionArea.max" class="input-style h-16" placeholder="Ej: Registro manual de albaranes..."></textarea>
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -1949,15 +1949,15 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">3</span>
                       ¿Han probado solucionarlo? ¿Qué limitaciones tienen?
                     </label>
-                    <button @click="abrirPopup('info', 3)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                    <button @click="abrirPopup('ejemplo', 3)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+                    <button @click="abrirPopup('info', 3)" class="text-gray-400 hover:text-centros transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    <button @click="abrirPopup('ejemplo', 3)" class="text-gray-400 hover:text-primary-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
                   
                   <div class="flex flex-wrap gap-2 mb-4">
                     <button v-for="opt in limitacionesOpciones" :key="opt"
                       @click="!esModoDemo && !estaPasoBloqueado(2) && (seleccion.restricciones.includes(opt) ? seleccion.restricciones = seleccion.restricciones.filter(c => c !== opt) : seleccion.restricciones.push(opt))"
                       :disabled="esModoDemo || estaPasoBloqueado(2)"
-                      :class="seleccion.restricciones.includes(opt) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                      :class="seleccion.restricciones.includes(opt) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                       class="px-5 py-2.5 rounded-2xl border-2 text-[10px] font-black uppercase transition-all shadow-sm">
                       {{ opt }}
                     </button>
@@ -1987,15 +1987,15 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">4</span>
                       Si pudieran mejorar algo YA mismo...
                     </label>
-                    <button @click="abrirPopup('info', 4)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                    <button @click="abrirPopup('ejemplo', 4)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+                    <button @click="abrirPopup('info', 4)" class="text-gray-400 hover:text-centros transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    <button @click="abrirPopup('ejemplo', 4)" class="text-gray-400 hover:text-primary-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
                   
                   <div class="flex flex-wrap gap-2 mb-4">
                     <button v-for="opt in consecuenciasOpciones" :key="opt"
                       @click="!esModoDemo && !estaPasoBloqueado(2) && (seleccion.consecuencias.includes(opt) ? seleccion.consecuencias = seleccion.consecuencias.filter(c => c !== opt) : seleccion.consecuencias.push(opt))"
                       :disabled="esModoDemo || estaPasoBloqueado(2)"
-                      :class="seleccion.consecuencias.includes(opt) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#99CC33]/50'"
+                      :class="seleccion.consecuencias.includes(opt) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-primary-400/50'"
                       class="px-5 py-2.5 rounded-2xl border-2 text-[10px] font-black uppercase transition-all shadow-sm">
                       {{ opt }}
                     </button>
@@ -2014,8 +2014,8 @@ async function guardarEstadoGen(nuevoEstado) {
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">5</span>
                       Si tuvieras a un alumno aquí, ¿qué esperas que realice? *
                     </label>
-                    <button @click="abrirPopup('info', 5)" class="text-gray-400 hover:text-[#00A859] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                    <button @click="abrirPopup('ejemplo', 5)" class="text-gray-400 hover:text-[#99CC33] transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+                    <button @click="abrirPopup('info', 5)" class="text-gray-400 hover:text-centros transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    <button @click="abrirPopup('ejemplo', 5)" class="text-gray-400 hover:text-primary-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
                   </div>
                   <textarea v-model="seleccion.expectativasAlumno" :disabled="esModoDemo || estaPasoBloqueado(2)" :maxlength="CHAR_LIMITS.expectativasAlumno.max" class="input-style h-24" placeholder="Ej: Que investigue herramientas gratuitas y proponga un prototipo sencillo..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -2035,7 +2035,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <transition name="fade">
                 <div v-if="seleccion.empresaNombre" class="absolute -top-4 left-8">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#1F2937] text-xs font-bold tracking-wide border border-gray-100 border-b-0 shadow-[0_-4px_8px_rgb(0,0,0,0.04)]">
-                    <svg class="w-3.5 h-3.5 shrink-0 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
                     Empresa: {{ seleccion.empresaNombre }}
@@ -2044,7 +2044,7 @@ async function guardarEstadoGen(nuevoEstado) {
               </transition>
               <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 mt-4 xl:mt-0">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 flex items-center justify-center text-[#00A859]">
+                  <div class="w-12 h-12 rounded-2xl bg-centros/10 flex items-center justify-center text-centros">
                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
                   </div>
                   <h2 class="text-2xl font-black uppercase tracking-tight text-[#1F2937]">Match Académico</h2>
@@ -2056,20 +2056,20 @@ async function guardarEstadoGen(nuevoEstado) {
                     :class="esModoDemo || cargandoSimulacion || estaPasoBloqueado(2) ? 'opacity-40 cursor-not-allowed bg-white text-gray-400 border-gray-200' : esInfoSimulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50 border-gray-200 shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <svg v-if="cargandoSimulacion" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    <svg v-else-if="esInfoSimulada" class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                     <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span v-if="cargandoSimulacion">Generando...</span>
                     <span v-else>Información Simulada</span>
                   </button>
 
                   <span v-if="esModoDemo"
-                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase flex items-center gap-2 border bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20 cursor-default">
+                    class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase flex items-center gap-2 border bg-centros/10 text-centros border-centros/20 cursor-default">
                     ✓ DEMO ACTIVA
                   </span>
 
                   <!--
                   <button @click="cargarDemo" :disabled="esModoDemo" 
-                    :class="esModoDemo ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20 cursor-default' : 'bg-white text-[#00A859] hover:bg-gray-50 border-gray-200 hover:border-[#00A859] shadow-sm'"
+                    :class="esModoDemo ? 'bg-centros/10 text-centros border-centros/20 cursor-default' : 'bg-white text-centros hover:bg-gray-50 border-gray-200 hover:border-centros shadow-sm'"
                     class="px-5 py-2.5 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border">
                     <span v-if="esModoDemo">✓ DEMO ACTIVA</span>
                     <span v-else> Cargar Demo</span>
@@ -2083,11 +2083,11 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
               
               <div v-if="esModoDemo" 
-                class="mb-6 flex items-center gap-3 bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl px-5 py-3">
-                <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="mb-6 flex items-center gap-3 bg-centros/5 border border-centros/20 rounded-2xl px-5 py-3">
+                <svg class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p class="text-xs font-bold text-[#00A859] uppercase tracking-widest">
+                <p class="text-xs font-bold text-centros uppercase tracking-widest">
                   Modo Demo activo — los campos están bloqueados. Pulsa "Vaciar" para editarlos.
                 </p>
               </div>
@@ -2122,8 +2122,8 @@ async function guardarEstadoGen(nuevoEstado) {
                         @click="!esModoDemo && (seleccion.cicloId = c.id)"
                         :disabled="esModoDemo"
                         :class="seleccion.cicloId === c.id
-                            ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] border-transparent text-white'
-                            : 'bg-[#1F2937] border-transparent text-gray-300 hover:border-[#00A859]/40'"
+                            ? 'bg-gradient-to-r from-centros to-primary-400 border-transparent text-white'
+                            : 'bg-[#1F2937] border-transparent text-gray-300 hover:border-centros/40'"
                         class="text-left px-5 py-4 rounded-2xl border-2 transition-all duration-200 flex items-center gap-3 relative overflow-hidden group shadow-sm">
                         <div class="shrink-0 transition-transform" :class="seleccion.cicloId === c.id ? 'scale-100' : 'scale-0 opacity-0 hidden'">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -2135,7 +2135,7 @@ async function guardarEstadoGen(nuevoEstado) {
                   </div>
                   <!-- Tarjeta virtual cuando la familia no está en BD pero hay demo activa -->
                   <div v-else-if="esModoDemo && demoCicloNombre" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div class="text-left px-5 py-4 rounded-2xl border-2 border-transparent bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white flex items-center gap-3 shadow-sm">
+                    <div class="text-left px-5 py-4 rounded-2xl border-2 border-transparent bg-gradient-to-r from-centros to-primary-400 text-white flex items-center gap-3 shadow-sm">
                       <div class="shrink-0">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                       </div>
@@ -2197,7 +2197,7 @@ async function guardarEstadoGen(nuevoEstado) {
                           <button v-for="m in modulosCurso1DelCiclo" :key="m.id" type="button"
                             @click="!esModoDemo && toggleEnArray(modulosSeleccionadosCurso1, m.id)"
                             :disabled="esModoDemo"
-                            :class="modulosSeleccionadosCurso1.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                            :class="modulosSeleccionadosCurso1.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                             class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
                             {{ m.nombre }}
                           </button>
@@ -2210,7 +2210,7 @@ async function guardarEstadoGen(nuevoEstado) {
                           <button v-for="m in modulosCurso2DelCiclo" :key="m.id" type="button"
                             @click="!esModoDemo && toggleEnArray(modulosSeleccionadosCurso2, m.id)"
                             :disabled="esModoDemo"
-                            :class="modulosSeleccionadosCurso2.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                            :class="modulosSeleccionadosCurso2.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                             class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
                             {{ m.nombre }}
                           </button>
@@ -2234,8 +2234,8 @@ async function guardarEstadoGen(nuevoEstado) {
 
                     <!-- Módulo virtual cuando la demo no tiene ciclo en BD -->
                     <div v-if="esModoDemo && modulosDelCurso.length === 0 && demoModuloNombre"
-                      class="input-style min-h-[60px] flex items-center gap-2 bg-[#00A859]/5 border-[#00A859]/20 text-[#1F2937] cursor-default">
-                      <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                      class="input-style min-h-[60px] flex items-center gap-2 bg-centros/5 border-centros/20 text-[#1F2937] cursor-default">
+                      <svg class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                       <span class="text-sm font-semibold">{{ demoModuloNombre }}</span>
                       <span class="ml-auto text-[10px] text-gray-400 uppercase tracking-wide">Módulo de demo</span>
                     </div>
@@ -2243,7 +2243,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       <button v-for="m in modulosDelCurso" :key="m.id" type="button"
                         @click="!esModoDemo && toggleEnArray(modulosSeleccionados, m.id)"
                         :disabled="esModoDemo"
-                        :class="modulosSeleccionados.includes(m.id) ? 'bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-[#00A859]/50'"
+                        :class="modulosSeleccionados.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                         class="px-5 py-2.5 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
                         {{ m.nombre }}
                       </button>
@@ -2256,7 +2256,7 @@ async function guardarEstadoGen(nuevoEstado) {
                      :class="{ 'tour-active': tourTargetActivo === 'refCantidadVariantes' }">
                   <div class="w-full md:w-1/3">
                     <label class="label-style !mb-3 text-[#1F2937]">Cantidad de Variantes a Generar *</label>
-                    <select v-model="seleccion.cantidadMicroretos" :disabled="esModoDemo" class="input-style focus:!border-[#00A859]">
+                    <select v-model="seleccion.cantidadMicroretos" :disabled="esModoDemo" class="input-style focus:!border-centros">
                       <option v-for="n in [1, 2, 3, 4, 5]" :key="n" :value="n">
                         Generar {{ n }} Variante{{ n > 1 ? 's' : '' }}
                       </option>
@@ -2292,20 +2292,20 @@ async function guardarEstadoGen(nuevoEstado) {
           
           <button v-if="pasoActual < totalPasos" @click="avanzarPaso"
             :disabled="!pasoActualValido"
-            class="flex-[2] min-w-[200px] px-10 py-6 bg-gradient-to-r from-[#00A859] to-[#99CC33] text-white rounded-full font-black text-xs tracking-widest shadow-md hover:shadow-lg disabled:opacity-30 transition-all hover:scale-105 active:scale-95">
+            class="flex-[2] min-w-[200px] px-10 py-6 bg-gradient-to-r from-centros to-primary-400 text-white rounded-full font-black text-xs tracking-widest shadow-md hover:shadow-lg disabled:opacity-30 transition-all hover:scale-105 active:scale-95">
             SIGUIENTE PASO
           </button>
 
           <!-- Guardar/Actualizar empresa — solo admin -->
           <button ref="refGuardarEmpresa" v-if="pasoActual === totalPasos && !esDocente" @click="guardarInfoEmpresa" :disabled="actualizandoCRM || crmActualizado"
-            class="flex-1 min-w-[200px] px-6 py-6 border-2 text-[#1F2937] bg-white border-gray-200 hover:border-[#00A859] hover:text-[#00A859] rounded-full font-black text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-            :class="[crmActualizado ? '!border-[#00A859] !bg-[#00A859]/5 !text-[#00A859]' : '', tourTargetActivo === 'refGuardarEmpresa' ? 'tour-active' : '']">
+            class="flex-1 min-w-[200px] px-6 py-6 border-2 text-[#1F2937] bg-white border-gray-200 hover:border-centros hover:text-centros rounded-full font-black text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+            :class="[crmActualizado ? '!border-centros !bg-centros/5 !text-centros' : '', tourTargetActivo === 'refGuardarEmpresa' ? 'tour-active' : '']">
             <template v-if="actualizandoCRM">
               <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
               GUARDANDO...
             </template>
             <template v-else-if="crmActualizado">
-              <span class="text-[#00A859] flex items-center gap-2">
+              <span class="text-centros flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                 INFO GUARDADA
               </span>
@@ -2317,7 +2317,7 @@ async function guardarEstadoGen(nuevoEstado) {
           </button>
 
           <button ref="refBtnGenerar" v-if="pasoActual === totalPasos" @click="esModoDemo ? generarRetoDemo() : generarReto()" :disabled="!paso3Valido || cargando"
-            :class="[esModoDemo ? 'from-[#1F2937] to-[#374151] shadow-[0_10px_30px_rgba(31,41,55,0.3)] hover:shadow-[0_15px_40px_rgba(31,41,55,0.4)]' : 'from-[#00A859] to-[#99CC33] shadow-[0_10px_30px_rgba(0,168,89,0.3)] hover:shadow-[0_15px_40px_rgba(153,204,51,0.4)]', tourTargetActivo === 'refBtnGenerar' ? 'tour-active' : '']"
+            :class="[esModoDemo ? 'from-[#1F2937] to-[#374151] shadow-[0_10px_30px_rgba(31,41,55,0.3)] hover:shadow-[0_15px_40px_rgba(31,41,55,0.4)]' : 'from-centros to-primary-400 shadow-[0_10px_30px_rgba(48,114,170,0.3)] hover:shadow-[0_15px_40px_rgba(107,164,213,0.4)]', tourTargetActivo === 'refBtnGenerar' ? 'tour-active' : '']"
             class="flex-[2] min-w-[250px] px-8 py-6 bg-gradient-to-r text-white rounded-full font-black text-lg transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-40 flex items-center justify-center gap-3">
             <template v-if="!cargando">
               <svg v-if="esModoDemo" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -2338,13 +2338,13 @@ async function guardarEstadoGen(nuevoEstado) {
       <div v-if="microretosGenerados.length > 0" class="mt-24 pb-20 space-y-32 font-sans relative">
         
         <div v-if="microretosGenerados.length > 1" class="flex justify-center md:justify-end mb-8 sticky top-16 z-50">
-            <button @click="guardarTodos" :disabled="todosGuardados || guardandoTodos" class="px-8 py-4 bg-white border-2 border-gray-200 text-[#1F2937] hover:border-[#00A859] hover:text-[#00A859] rounded-full font-black text-xs md:text-sm uppercase tracking-widest shadow-lg transition-all hover:-translate-y-1 active:scale-95 disabled:hover:translate-y-0 disabled:opacity-80 flex items-center gap-2">
+            <button @click="guardarTodos" :disabled="todosGuardados || guardandoTodos" class="px-8 py-4 bg-white border-2 border-gray-200 text-[#1F2937] hover:border-centros hover:text-centros rounded-full font-black text-xs md:text-sm uppercase tracking-widest shadow-lg transition-all hover:-translate-y-1 active:scale-95 disabled:hover:translate-y-0 disabled:opacity-80 flex items-center gap-2">
                 <template v-if="guardandoTodos">
                   <svg class="animate-spin w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg> 
                   GUARDANDO TODOS...
                 </template>
                 <template v-else-if="todosGuardados">
-                  <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                   ✓ TODOS GUARDADOS
                 </template>
                 <template v-else>
@@ -2368,7 +2368,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <h3 class="text-lg font-black text-[#1F2937]">Previsualización de la Ficha Técnica</h3>
               <p class="text-sm text-gray-500">Formato oficial de archivo.</p>
             </div>
-            <button @click="guardar(index)" :disabled="reto._ui_guardado || reto._ui_guardando" class="btn-save w-full md:w-auto" :class="reto._ui_guardado ? 'border-[#00A859] bg-[#00A859]/5 text-[#00A859]' : ''">
+            <button @click="guardar(index)" :disabled="reto._ui_guardado || reto._ui_guardando" class="btn-save w-full md:w-auto" :class="reto._ui_guardado ? 'border-centros bg-centros/5 text-centros' : ''">
               <span v-if="reto._ui_guardando" class="flex items-center gap-2"><svg class="animate-spin w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg> GUARDANDO...</span>
               <span v-else-if="reto._ui_guardado">✓ PUBLICADO EN BD</span>
               <span v-else>GUARDAR ESTA VERSIÓN</span>
@@ -2377,7 +2377,7 @@ async function guardarEstadoGen(nuevoEstado) {
           
           <div class="bg-white rounded-[2rem] shadow-[0_20px_50px_rgb(0,0,0,0.06)] mx-auto max-w-5xl overflow-hidden border border-gray-100 relative z-20">
             <div class="bg-gray-50 border-b border-gray-100 p-10 md:px-16 pt-12">
-              <p class="text-[#00A859] font-bold text-[10px] tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
+              <p class="text-centros font-bold text-[10px] tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 DuaLab · Ficha de Reto
               </p>
@@ -2433,14 +2433,14 @@ async function guardarEstadoGen(nuevoEstado) {
             <div class="p-10 md:p-16 space-y-12">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div>
-                  <h3 class="flex items-center gap-2 text-[#00A859] font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
+                  <h3 class="flex items-center gap-2 text-centros font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
                     ¿Quién es {{ reto.empresa_nombre }}?
                   </h3>
                   <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
                 </div>
                 <div>
-                  <h3 class="flex items-center gap-2 text-[#00A859] font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
+                  <h3 class="flex items-center gap-2 text-centros font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Su día a día
                   </h3>
@@ -2460,20 +2460,20 @@ async function guardarEstadoGen(nuevoEstado) {
                 </ul>
               </div>
 
-              <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859] p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-                <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-2 flex items-center gap-2">Este reto consiste en responder a:</h3>
+              <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-centros p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
+                <h3 class="text-centros font-black uppercase text-[10px] tracking-[0.2em] mb-2 flex items-center gap-2">Este reto consiste en responder a:</h3>
                 <p class="text-xl md:text-2xl font-bold text-[#1F2937] leading-snug">{{ reto.pregunta_reto }}</p>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div>
-                  <h3 class="flex items-center gap-2 text-[#00A859] font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
+                  <h3 class="flex items-center gap-2 text-centros font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     Qué necesitan
                   </h3>
                   <ul class="space-y-2 pl-2">
                     <li v-for="(item, i) in reto.que_necesitan" :key="i" class="flex items-start gap-3 text-sm text-gray-700">
-                      <span class="text-[#00A859] font-black mt-0.5">•</span><span>{{ item }}</span>
+                      <span class="text-centros font-black mt-0.5">•</span><span>{{ item }}</span>
                     </li>
                   </ul>
                 </div>
@@ -2492,13 +2492,13 @@ async function guardarEstadoGen(nuevoEstado) {
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div>
-                  <h3 class="flex items-center gap-2 text-[#00A859] font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
+                  <h3 class="flex items-center gap-2 text-centros font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     Ejemplos de Prototipos
                   </h3>
                   <ul class="space-y-2 pl-2">
                     <li v-for="(item, i) in reto.prototipos" :key="i" class="flex items-start gap-3 text-sm text-gray-700">
-                      <span class="text-[#00A859] font-black mt-0.5">•</span><span>{{ item }}</span>
+                      <span class="text-centros font-black mt-0.5">•</span><span>{{ item }}</span>
                     </li>
                   </ul>
                 </div>
@@ -2515,7 +2515,7 @@ async function guardarEstadoGen(nuevoEstado) {
 
               <div class="pt-6">
                 <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
-                  <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                  <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
                   Módulos + RA/CE seleccionados
                 </h3>
 
@@ -2571,7 +2571,7 @@ async function guardarEstadoGen(nuevoEstado) {
                         </span>
                       </div>
                       <div class="mb-4">
-                        <p class="text-xs uppercase font-bold text-[#00A859] mb-1 flex items-center gap-1">
+                        <p class="text-xs uppercase font-bold text-centros mb-1 flex items-center gap-1">
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg> Resultado de Aprendizaje
                         </p>
                         <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">{{ evalObj.ra }}</p>
@@ -2580,7 +2580,7 @@ async function guardarEstadoGen(nuevoEstado) {
                         <p class="text-xs uppercase font-bold text-gray-500 mb-2">Criterios de Evaluación:</p>
                         <ul class="space-y-2">
                           <li v-for="(ce, i) in evalObj.ce" :key="i" class="text-sm text-gray-600 flex items-start gap-2">
-                            <span class="text-[#00A859] font-bold mt-0.5">✓</span> {{ ce }}
+                            <span class="text-centros font-bold mt-0.5">✓</span> {{ ce }}
                           </li>
                         </ul>
                       </div>
@@ -2593,7 +2593,7 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
 
               <div v-if="reto.variantes && reto.variantes.length > 0" class="pt-6">
-                <h3 class="flex items-center gap-2 text-[#00A859] font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
+                <h3 class="flex items-center gap-2 text-centros font-bold uppercase text-xs tracking-widest border-b border-gray-100 pb-2 mb-4">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                   Variantes
                 </h3>
@@ -2618,7 +2618,7 @@ async function guardarEstadoGen(nuevoEstado) {
             <div class="grid grid-cols-1 gap-6">
               <div v-for="(tip, i) in reto.tips_profesorado" :key="i" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div class="text-sm text-gray-700 leading-relaxed">
-                  <strong v-if="tip.includes(':')" class="text-[#00A859] block mb-2 uppercase tracking-wider text-xs">
+                  <strong v-if="tip.includes(':')" class="text-centros block mb-2 uppercase tracking-wider text-xs">
                     <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path v-if="i===0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                       <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -2638,7 +2638,7 @@ async function guardarEstadoGen(nuevoEstado) {
           <div class="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-gray-100 relative">
             <button @click="cerrarPopup" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             <div class="flex items-center gap-3 mb-6">
-              <div :class="popupActivo.tipo === 'info' ? 'bg-[#00A859]/10 text-[#00A859]' : 'bg-[#99CC33]/20 text-[#00A859]'" class="p-3 rounded-2xl">
+              <div :class="popupActivo.tipo === 'info' ? 'bg-centros/10 text-centros' : 'bg-primary-400/20 text-centros'" class="p-3 rounded-2xl">
                 <svg v-if="popupActivo.tipo === 'info'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
               </div>
@@ -2657,7 +2657,7 @@ async function guardarEstadoGen(nuevoEstado) {
     <button
       v-if="pasoActual === 3"
       @click="scrollToTop"
-      class="fixed bottom-8 right-8 z-50 w-14 h-14 bg-[#1F2937] text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-[#00A859] transition-all duration-300 hover:-translate-y-1 active:scale-95 border-2 border-white/10"
+      class="fixed bottom-8 right-8 z-50 w-14 h-14 bg-[#1F2937] text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-centros transition-all duration-300 hover:-translate-y-1 active:scale-95 border-2 border-white/10"
       title="Volver arriba"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2697,9 +2697,9 @@ async function guardarEstadoGen(nuevoEstado) {
 /* Estilos adaptados: Inputs OSCUROS sobre fondo claro para alto contraste */
 .input-style {
   @apply w-full border-2 rounded-2xl p-4 text-sm font-semibold outline-none transition-all shadow-inner disabled:opacity-50;
-  background-color: #F0FBF4;
+  background-color: #f6fafc;
   color: #1F2937;
-  border-color: #BBE8D0;
+  border-color: #bad5ec;
 }
 
 .input-style::placeholder {
@@ -2707,9 +2707,9 @@ async function guardarEstadoGen(nuevoEstado) {
 }
 
 .input-style:focus {
-  background-color: #E6F7EE;
-  border-color: #00A859;
-  box-shadow: 0 0 0 4px rgba(0, 168, 89, 0.15);
+  background-color: #dae8f5;
+  border-color: #3072AA;
+  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.15);
 }
 
 .label-style {
@@ -2717,7 +2717,7 @@ async function guardarEstadoGen(nuevoEstado) {
 }
 
 .btn-save {
-  @apply px-8 py-4 bg-white border-2 border-gray-200 text-[#1F2937] rounded-full font-black text-xs uppercase tracking-widest shadow-sm transition-all hover:-translate-y-1 hover:border-[#00A859] hover:text-[#00A859] active:scale-95 disabled:hover:translate-y-0 disabled:opacity-50;
+  @apply px-8 py-4 bg-white border-2 border-gray-200 text-[#1F2937] rounded-full font-black text-xs uppercase tracking-widest shadow-sm transition-all hover:-translate-y-1 hover:border-centros hover:text-centros active:scale-95 disabled:hover:translate-y-0 disabled:opacity-50;
 }
 
 /* Animaciones más suaves acordes a una interfaz clara */
@@ -2743,17 +2743,17 @@ async function guardarEstadoGen(nuevoEstado) {
   animation: glow-lime 2s ease-in-out infinite;
 }
 @keyframes glow-green {
-  0%, 100% { box-shadow: 0 0 0 2px #00A859, 0 0 14px rgba(0, 168, 89, 0.25); }
-  50%       { box-shadow: 0 0 0 3px #00A859, 0 0 24px rgba(0, 168, 89, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 2px #3072AA, 0 0 14px rgba(48, 114, 170, 0.25); }
+  50%       { box-shadow: 0 0 0 3px #3072AA, 0 0 24px rgba(48, 114, 170, 0.45); }
 }
 @keyframes glow-lime {
-  0%, 100% { box-shadow: 0 0 0 2px #99CC33, 0 0 14px rgba(153, 204, 51, 0.25); }
-  50%       { box-shadow: 0 0 0 3px #99CC33, 0 0 24px rgba(153, 204, 51, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 2px #6BA4D5, 0 0 14px rgba(107, 164, 213, 0.25); }
+  50%       { box-shadow: 0 0 0 3px #6BA4D5, 0 0 24px rgba(107, 164, 213, 0.45); }
 }
 
 /* ─── Tour guiado ────────────────────────────────────────────────────────── */
 .tour-active {
-  box-shadow: 0 0 0 3px #00A859, 0 0 0 8px rgba(0, 168, 89, 0.2), 0 4px 20px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 0 0 3px #3072AA, 0 0 0 8px rgba(48, 114, 170, 0.2), 0 4px 20px rgba(0,0,0,0.1) !important;
   border-radius: 1rem;
   transition: box-shadow 0.25s ease;
   position: relative;

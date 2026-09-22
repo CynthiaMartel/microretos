@@ -196,10 +196,10 @@ onMounted(cargar)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] pt-12">
-    <!-- Topbar. top-12 (no top-0): la TopBar global es fixed h-12 con z-50 — con top-0
+  <div class="min-h-screen bg-[#F8FAFC] pt-16">
+    <!-- Topbar. top-16 (no top-0): la TopBar global es fixed h-16 con z-50 — con top-0
          esta cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
-    <div class="sticky top-12 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <button @click="router.back()"
               class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +207,7 @@ onMounted(cargar)
         </svg>
       </button>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-[#00A859]">Detalle de equipos</p>
+        <p class="text-xs font-black uppercase tracking-widest text-centros">Detalle de equipos</p>
         <p class="text-sm font-bold text-[#121212] truncate">
           {{ proyecto?.titulo || encuentro?.grupo || encuentro?.ciclo_formativo || 'Cargando…' }}
         </p>
@@ -231,7 +231,7 @@ onMounted(cargar)
 
       <!-- Estado de carga / error -->
       <div v-if="cargando" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 border-2 border-[#00A859] border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-8 h-8 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
       </div>
 
       <div v-else-if="error"
@@ -316,7 +316,7 @@ onMounted(cargar)
               </span>
               <p class="text-xs font-bold text-[#1F2937]">F{{ f.num }} · {{ f.label }}</p>
               <p class="text-[10px] text-gray-400">{{ f.desc }}</p>
-              <p v-if="f.num === 4" class="text-[10px] font-bold text-[#00A859]">Aquí se asigna la nota final</p>
+              <p v-if="f.num === 4" class="text-[10px] font-bold text-centros">Aquí se asigna la nota final</p>
             </div>
           </div>
         </section>

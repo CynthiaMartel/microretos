@@ -17,6 +17,8 @@ import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase } from '.
 
 const { tourActivo } = useUIState()
 const authStore = useAuthStore()
+const isLoaded = ref(false)
+onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
 
 const router = useRouter()
 const route  = useRoute()
@@ -129,10 +131,10 @@ function estadoProyectoBadge(proyectoOEstado) {
   if (estado === 'archivado')
     return { label: 'Archivado',   cls: 'bg-red-50 text-red-400' }
   if (estado === 'validado') {
-    if (empresaValidado && docenteValidado) return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 text-[#00A859]' }
-    if (empresaValidado)  return { label: 'Validado · Empresa',  cls: 'bg-[#00A859]/10 text-[#00A859]' }
+    if (empresaValidado && docenteValidado) return { label: 'Validado · Completo', cls: 'bg-centros/10 text-centros' }
+    if (empresaValidado)  return { label: 'Validado · Empresa',  cls: 'bg-centros/10 text-centros' }
     if (docenteValidado)  return { label: 'Validado · Docente',  cls: 'bg-emerald-50 text-emerald-700' }
-    return { label: 'Validado', cls: 'bg-[#00A859]/10 text-[#00A859]' }
+    return { label: 'Validado', cls: 'bg-centros/10 text-centros' }
   }
   if (estado === 'propuesta')
     return { label: 'Propuesta',   cls: 'bg-violet-50 text-violet-600' }
@@ -566,7 +568,7 @@ function formatFecha(isoDate) {
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-12">
+  <div class="min-h-screen font-sans text-[#1F2937] pt-16">
 
     <!-- ══════════ TOUR BOCADILLO - OVERLAY + TOOLTIP ════════════════════════ -->
     <Transition name="sp-fade">
@@ -596,7 +598,7 @@ function formatFecha(isoDate) {
               <div class="flex gap-1 items-center">
                 <span v-for="i in TOTAL_PASOS_GUIA" :key="i"
                       class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= pasoGuia ? 'bg-[#00A859] w-5' : 'bg-white/20 w-3'" />
+                      :class="i <= pasoGuia ? 'bg-centros w-5' : 'bg-white/20 w-3'" />
               </div>
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }}/{{ TOTAL_PASOS_GUIA }}</span>
             </div>
@@ -605,9 +607,9 @@ function formatFecha(isoDate) {
 
             <div class="flex items-center gap-2">
               <button @click="avanzarGuia"
-                      class="flex-1 py-1.5 rounded-xl bg-[#00A859] text-white
+                      class="flex-1 py-1.5 rounded-xl bg-centros text-white
                              text-[9px] font-black uppercase tracking-widest
-                             hover:bg-[#00A859]/90 transition-all">
+                             hover:bg-centros/90 transition-all">
                 {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
@@ -635,29 +637,45 @@ function formatFecha(isoDate) {
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
-                bg-[#00A859] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                bg-centros opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- ─── Cabecera ─────────────────────────────────────────────────────── -->
-      <header class="mb-8">
+      <!-- HEADER -->
+      <header class="mb-6 md:mb-8 text-center flex flex-col items-center">
+        <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+             :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+          <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+            Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
+          </span>
+        </div>
+
+        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+          Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">DuaLab</span>
+        </h1>
+        <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+          Registra y consulta tus encuentros de trabajo con retos.
+        </p>
+      </header>
+
+      <!-- Acciones -->
+      <div class="mb-8">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
           <div>
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full
-                        bg-[#00A859]/10 border border-[#00A859]/20">
-              <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Dashboard docente</span>
+                        bg-centros/10 border border-centros/20">
+              <span class="w-2 h-2 rounded-full bg-centros" />
+              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Dashboard docente</span>
             </div>
-            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-              Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">DuaLab</span>
-            </h1>
-            <p class="text-gray-500 text-sm mt-1">Registra y consulta tus encuentros de trabajo con retos.</p>
           </div>
 
           <!-- Stats chips -->
           <div class="flex flex-wrap gap-3 items-center">
             <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
                          M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
@@ -680,7 +698,7 @@ function formatFecha(isoDate) {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -690,13 +708,13 @@ function formatFecha(isoDate) {
 
           <!-- Header sección izquierda — banner de creación -->
           <Transition name="creation-hero" appear>
-            <div class="relative overflow-hidden border-b border-[#00A859]/20
-                        bg-gradient-to-br from-[#00A859]/10 via-[#00A859]/5 to-[#99CC33]/8 px-6 py-5">
+            <div class="relative overflow-hidden border-b border-centros/20
+                        bg-gradient-to-br from-centros/10 via-centros/5 to-primary-400/8 px-6 py-5">
               <!-- Fondo decorativo -->
               <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full
-                          bg-[#00A859]/10 blur-2xl pointer-events-none" />
+                          bg-centros/10 blur-2xl pointer-events-none" />
               <div class="relative flex items-center gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-[#00A859] flex items-center justify-center shadow-sm flex-shrink-0">
+                <div class="w-12 h-12 rounded-2xl bg-centros flex items-center justify-center shadow-sm flex-shrink-0">
                   <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
@@ -705,8 +723,8 @@ function formatFecha(isoDate) {
                 </div>
                 <div>
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-                    <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Nuevo encuentro</span>
+                    <span class="w-2 h-2 rounded-full bg-centros" />
+                    <span class="text-[10px] font-black uppercase tracking-widest text-centros">Nuevo encuentro</span>
                   </div>
                   <h2 class="text-xl font-black text-[#1F2937] tracking-tight leading-tight">Creación de encuentro</h2>
                   <p class="text-xs text-gray-500 mt-0.5 font-medium">Selecciona un reto y registra los datos del grupo</p>
@@ -724,9 +742,9 @@ function formatFecha(isoDate) {
               <button v-if="!mostrarBuscadorProy && !proyectoSeleccionado"
                       @click="abrirBuscadorProy"
                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl
-                             bg-[#99CC33]/10 border border-[#99CC33]/20 text-[#5a7a00]
+                             bg-primary-400/10 border border-primary-400/20 text-primary-700
                              text-[10px] font-black uppercase tracking-widest
-                             hover:bg-[#99CC33]/20 transition-all">
+                             hover:bg-primary-400/20 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
@@ -741,8 +759,8 @@ function formatFecha(isoDate) {
                    class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="w-2 h-2 rounded-full bg-[#99CC33] flex-shrink-0" />
-                    <p class="text-xs font-black uppercase tracking-widest text-[#5a7a00]">
+                    <span class="w-2 h-2 rounded-full bg-primary-400 flex-shrink-0" />
+                    <p class="text-xs font-black uppercase tracking-widest text-primary-700">
                       Seleccionado
                     </p>
                   </div>
@@ -768,15 +786,15 @@ function formatFecha(isoDate) {
                 </div>
                 <div class="flex flex-col gap-1.5 flex-shrink-0">
                   <button @click="abrirProyectoModal(proyectoSeleccionado.uuid)"
-                          class="px-3 py-1.5 rounded-xl bg-[#99CC33]/10 border border-[#99CC33]/20
-                                 text-[10px] font-black uppercase tracking-widest text-[#5a7a00]
-                                 hover:bg-[#99CC33]/20 transition-all">
+                          class="px-3 py-1.5 rounded-xl bg-primary-400/10 border border-primary-400/20
+                                 text-[10px] font-black uppercase tracking-widest text-primary-700
+                                 hover:bg-primary-400/20 transition-all">
                     Ver →
                   </button>
                   <button @click="limpiarProyecto"
                           class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
                                  text-[10px] font-black uppercase tracking-widest text-gray-400
-                                 hover:border-[#99CC33] hover:text-[#5a7a00] transition-all">
+                                 hover:border-primary-400 hover:text-primary-700 transition-all">
                     Cambiar
                   </button>
                 </div>
@@ -824,8 +842,8 @@ function formatFecha(isoDate) {
                               class="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest
                                      border transition-all"
                               :class="filtroProyCurso === op.val
-                                ? 'bg-[#99CC33] border-[#99CC33] text-white'
-                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-[#99CC33]/40 hover:text-[#5a7a00]'">
+                                ? 'bg-primary-400 border-primary-400 text-white'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-primary-400/40 hover:text-primary-700'">
                         {{ op.label }}
                       </button>
                     </div>
@@ -858,7 +876,7 @@ function formatFecha(isoDate) {
 
                 <!-- Spinner -->
                 <div v-if="cargandoProyectos" class="flex justify-center py-8">
-                  <svg class="animate-spin w-6 h-6 text-[#99CC33]" viewBox="0 0 24 24">
+                  <svg class="animate-spin w-6 h-6 text-primary-400" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                   </svg>
                 </div>
@@ -868,12 +886,12 @@ function formatFecha(isoDate) {
                      class="space-y-1.5 max-h-72 overflow-y-auto pr-1 -mr-1">
                   <div v-for="p in proyectosFiltrados" :key="p.uuid"
                        class="flex items-stretch rounded-xl border border-gray-100 bg-gray-50
-                              hover:border-[#99CC33]/30 hover:bg-[#99CC33]/5 transition-all group">
+                              hover:border-primary-400/30 hover:bg-primary-400/5 transition-all group">
                     <!-- Zona seleccionar (clic principal) -->
                     <button @click="seleccionarProyecto(p)"
                             class="flex-1 text-left px-4 py-3 min-w-0">
                       <p class="text-sm font-black text-[#1F2937] leading-snug
-                                group-hover:text-[#5a7a00] transition-colors line-clamp-2">
+                                group-hover:text-primary-700 transition-colors line-clamp-2">
                         {{ p.titulo }}
                       </p>
                       <div class="flex flex-wrap gap-1.5 mt-1.5">
@@ -890,7 +908,7 @@ function formatFecha(isoDate) {
                     <button @click.stop="abrirProyectoModal(p.uuid)"
                             title="Ver detalle"
                             class="shrink-0 flex items-center justify-center px-3 border-l border-gray-100
-                                   text-gray-300 hover:text-[#5a7a00] hover:bg-[#99CC33]/10
+                                   text-gray-300 hover:text-primary-700 hover:bg-primary-400/10
                                    transition-all rounded-r-xl">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -924,16 +942,16 @@ function formatFecha(isoDate) {
                     Asocia un proyecto existente a este encuentro para tenerlo
                     vinculado desde el registro. Los proyectos se crean en
                     <button @click="router.push({ name: 'startup-day-crear' })"
-                            class="underline font-black hover:text-[#5a7a00] transition-colors">
+                            class="underline font-black hover:text-primary-700 transition-colors">
                       Generar Proyecto
                     </button>.
                   </p>
                 </div>
                 <button @click="abrirBuscadorProy"
                         class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-                               border border-[#99CC33]/30 bg-[#99CC33]/5 text-[#5a7a00]
+                               border border-primary-400/30 bg-primary-400/5 text-primary-700
                                text-[10px] font-black uppercase tracking-widest
-                               hover:bg-[#99CC33]/10 transition-all">
+                               hover:bg-primary-400/10 transition-all">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
@@ -1004,8 +1022,8 @@ function formatFecha(isoDate) {
                               class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest
                                      border transition-all"
                               :class="form.curso === c
-                                ? 'bg-[#00A859] border-[#00A859] text-white shadow-sm'
-                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-[#00A859]/40 hover:text-[#00A859]'">
+                                ? 'bg-centros border-centros text-white shadow-sm'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-centros/40 hover:text-centros'">
                         {{ c }}
                       </button>
                     </div>
@@ -1018,8 +1036,8 @@ function formatFecha(isoDate) {
                               class="flex-1 min-w-[2rem] py-2 rounded-xl text-xs font-black uppercase
                                      border transition-all"
                               :class="form.grupo === g
-                                ? 'bg-[#99CC33] border-[#99CC33] text-white shadow-sm'
-                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-[#99CC33]/40 hover:text-[#99CC33]'">
+                                ? 'bg-primary-400 border-primary-400 text-white shadow-sm'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-primary-400/40 hover:text-primary-400'">
                         {{ g }}
                       </button>
                     </div>
@@ -1089,8 +1107,8 @@ function formatFecha(isoDate) {
                     </select>
                     <button @click="addAlumnadoEncuentro"
                             :disabled="limiteAlcanzado || !fechaEstablecida"
-                            class="shrink-0 px-3 py-2 bg-[#00A859] text-white rounded-xl
-                                   text-xs font-black hover:bg-[#00A859]/90 transition-all
+                            class="shrink-0 px-3 py-2 bg-centros text-white rounded-xl
+                                   text-xs font-black hover:bg-centros/90 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">
                       + Añadir
                     </button>
@@ -1101,21 +1119,21 @@ function formatFecha(isoDate) {
                     <div v-for="n in (form.num_equipos || 3)" :key="n"
                          class="rounded-xl border p-3 transition-all"
                          :class="Number(nuevoAlumnadoEquipo) === n
-                           ? 'border-[#00A859] bg-[#00A859]/5 ring-2 ring-[#00A859]/30'
+                           ? 'border-centros bg-centros/5 ring-2 ring-centros/30'
                            : 'border-gray-100 bg-gray-50/50'">
                       <div class="flex items-center gap-1.5 mb-2">
                         <span class="w-5 h-5 rounded-full flex items-center justify-center
                                      text-[9px] font-black flex-shrink-0 transition-colors"
                               :class="Number(nuevoAlumnadoEquipo) === n
-                                ? 'bg-[#00A859] text-white'
-                                : 'bg-[#00A859]/10 text-[#00A859]'">{{ n }}</span>
+                                ? 'bg-centros text-white'
+                                : 'bg-centros/10 text-centros'">{{ n }}</span>
                         <p class="text-[10px] font-black uppercase tracking-widest flex-1 truncate"
-                           :class="Number(nuevoAlumnadoEquipo) === n ? 'text-[#00A859]' : 'text-gray-500'">
+                           :class="Number(nuevoAlumnadoEquipo) === n ? 'text-centros' : 'text-gray-500'">
                           Equipo {{ n }}
                         </p>
                         <span v-if="Number(nuevoAlumnadoEquipo) === n"
-                              class="text-[8px] font-black uppercase tracking-widest text-[#00A859]
-                                     bg-[#00A859]/10 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                              class="text-[8px] font-black uppercase tracking-widest text-centros
+                                     bg-centros/10 rounded-full px-1.5 py-0.5 flex-shrink-0">
                           Aquí
                         </span>
                         <span class="text-[9px] text-gray-400 flex-shrink-0">
@@ -1181,21 +1199,21 @@ function formatFecha(isoDate) {
 
               <!-- Campo cuenta docente — asignado automáticamente al guardar -->
               <div class="flex items-center gap-3 px-4 py-3 rounded-xl
-                          bg-[#00A859]/5 border border-[#00A859]/15">
-                <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          bg-centros/5 border border-centros/15">
+                <div class="w-8 h-8 rounded-xl bg-centros/10 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-0.5">
+                  <p class="text-[9px] font-black uppercase tracking-widest text-centros mb-0.5">
                     Cuenta docente asociada
                   </p>
                   <p class="text-sm font-bold text-[#1F2937] truncate">{{ authStore.userName }}</p>
                 </div>
                 <span class="flex-shrink-0 text-[9px] font-black uppercase tracking-widest
-                             px-2 py-0.5 rounded-full bg-[#00A859]/10 text-[#00A859]">
+                             px-2 py-0.5 rounded-full bg-centros/10 text-centros">
                   Auto
                 </span>
               </div>
@@ -1227,8 +1245,8 @@ function formatFecha(isoDate) {
                              text-xs font-black uppercase tracking-widest
                              transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       :class="guardadoOk
-                        ? 'bg-[#99CC33] text-white'
-                        : 'bg-[#00A859] hover:bg-[#00A859]/90 text-white shadow-sm'">
+                        ? 'bg-primary-400 text-white'
+                        : 'bg-centros hover:bg-centros/90 text-white shadow-sm'">
                 <svg v-if="guardadoOk" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -1291,9 +1309,9 @@ function formatFecha(isoDate) {
               <!-- Botón Ver encuentros — prominente -->
               <button @click="router.push('/encuentros')"
                       class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-                             bg-[#00A859] text-white
+                             bg-centros text-white
                              text-[10px] font-black uppercase tracking-widest
-                             hover:bg-[#00A859]/90 transition-all shadow-sm mb-2">
+                             hover:bg-centros/90 transition-all shadow-sm mb-2">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
@@ -1314,9 +1332,9 @@ function formatFecha(isoDate) {
               </button>
               <button @click="router.push({ name: 'startup-day-crear' })"
                       class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
-                             bg-[#99CC33]/10 border border-[#99CC33]/20 text-[#5a7a00]
+                             bg-primary-400/10 border border-primary-400/20 text-primary-700
                              text-[9px] font-black uppercase tracking-widest
-                             hover:bg-[#99CC33]/20 transition-all">
+                             hover:bg-primary-400/20 transition-all">
                 <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -1335,13 +1353,13 @@ function formatFecha(isoDate) {
                 <input v-model="filtroSes.titulo" type="text" placeholder="Buscar encuentro..."
                        class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-7 pr-3 py-1.5
                               text-xs font-medium text-gray-700 placeholder-gray-300
-                              focus:outline-none focus:border-[#00A859]/50 focus:ring-1 focus:ring-[#00A859]/20" />
+                              focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
               </div>
               <!-- Fecha -->
               <input v-model="filtroSes.fecha" type="date"
                      class="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5
                             text-xs font-medium text-gray-600
-                            focus:outline-none focus:border-[#00A859]/50 focus:ring-1 focus:ring-[#00A859]/20" />
+                            focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
               <!-- Curso + Grupo -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
@@ -1351,8 +1369,8 @@ function formatFecha(isoDate) {
                             @click="filtroSes.curso = c"
                             class="flex-1 py-1 rounded-lg text-[8px] font-black uppercase border transition-all"
                             :class="filtroSes.curso === c
-                              ? 'bg-[#00A859] border-[#00A859] text-white'
-                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-[#00A859]/40'">
+                              ? 'bg-centros border-centros text-white'
+                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-centros/40'">
                       {{ c === '' ? '·' : c }}
                     </button>
                   </div>
@@ -1364,8 +1382,8 @@ function formatFecha(isoDate) {
                             @click="filtroSes.grupo = g"
                             class="flex-1 py-1 rounded-md text-[7px] font-black uppercase border transition-all"
                             :class="filtroSes.grupo === g
-                              ? 'bg-[#99CC33] border-[#99CC33] text-white'
-                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-[#99CC33]/40'">
+                              ? 'bg-primary-400 border-primary-400 text-white'
+                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-primary-400/40'">
                       {{ g === '' ? '·' : g }}
                     </button>
                   </div>
@@ -1383,7 +1401,7 @@ function formatFecha(isoDate) {
 
             <!-- Cargando encuentros -->
             <div v-if="cargandoEncuentros" class="px-5 py-10 flex justify-center">
-              <svg class="animate-spin w-5 h-5 text-[#00A859]" viewBox="0 0 24 24">
+              <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
               </svg>
             </div>
@@ -1415,10 +1433,10 @@ function formatFecha(isoDate) {
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black text-[#1F2937] leading-snug truncate
-                              group-hover:text-[#00A859] transition-colors">
+                              group-hover:text-centros transition-colors">
                       {{ s.proyecto_titulo || '(sin título)' }}
                     </p>
-                    <p class="text-[10px] text-[#00A859] font-bold mt-0.5">
+                    <p class="text-[10px] text-centros font-bold mt-0.5">
                       {{ formatFecha(s.fecha) }}
                     </p>
                     <div class="flex flex-wrap gap-1 mt-1">
@@ -1430,7 +1448,7 @@ function formatFecha(isoDate) {
                     <div v-if="s.num_equipos" class="space-y-0.5 mt-1">
                       <p v-for="n in s.num_equipos" :key="n"
                          class="text-[9px] text-gray-400 truncate">
-                        <span class="font-black text-[#00A859]">Eq.{{ n }}</span>
+                        <span class="font-black text-centros">Eq.{{ n }}</span>
                         {{ alumnadosDeEquipoEn(s, n).join(', ') || 'Sin alumnos' }}
                       </p>
                     </div>
@@ -1455,7 +1473,7 @@ function formatFecha(isoDate) {
               <button @click="paginaEncuentros--"
                       :disabled="paginaEncuentros === 1"
                       class="p-1.5 rounded-lg border border-gray-200 text-gray-400
-                             hover:border-[#00A859] hover:text-[#00A859]
+                             hover:border-centros hover:text-centros
                              disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -1467,7 +1485,7 @@ function formatFecha(isoDate) {
               <button @click="paginaEncuentros++"
                       :disabled="paginaEncuentros === totalPaginasSes"
                       class="p-1.5 rounded-lg border border-gray-200 text-gray-400
-                             hover:border-[#00A859] hover:text-[#00A859]
+                             hover:border-centros hover:text-centros
                              disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -1503,8 +1521,8 @@ function formatFecha(isoDate) {
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="w-2 h-2 rounded-full bg-[#00A859] flex-shrink-0" />
-                  <p class="text-[10px] font-black uppercase tracking-[0.18em] text-[#00A859]">
+                  <span class="w-2 h-2 rounded-full bg-centros flex-shrink-0" />
+                  <p class="text-[10px] font-black uppercase tracking-[0.18em] text-centros">
                     Encuentro · {{ formatFecha(encuentroAbierto.fecha) }}
                   </p>
                 </div>
@@ -1577,7 +1595,7 @@ function formatFecha(isoDate) {
                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
-                             hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                             hover:border-centros hover:text-centros transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
@@ -1589,7 +1607,7 @@ function formatFecha(isoDate) {
                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
-                             hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                             hover:border-centros hover:text-centros transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m-4 6h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6z"/>
@@ -1600,7 +1618,7 @@ function formatFecha(isoDate) {
                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
-                             hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                             hover:border-centros hover:text-centros transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -1608,8 +1626,8 @@ function formatFecha(isoDate) {
                 Ver más detalle de este encuentro
               </button>
               <button @click="router.push('/encuentros'); cerrarEncuentroModal()"
-                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00A859] text-white
-                             text-xs font-black uppercase tracking-widest hover:bg-[#00A859]/90
+                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-centros text-white
+                             text-xs font-black uppercase tracking-widest hover:bg-centros/90
                              transition-all shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1723,8 +1741,8 @@ function formatFecha(isoDate) {
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .field-input:focus {
-  border-color: #00A859;
-  box-shadow: 0 0 0 3px rgba(0, 168, 89, 0.12);
+  border-color: #3072AA;
+  box-shadow: 0 0 0 3px rgba(48, 114, 170, 0.12);
   background: #fff;
 }
 .field-input::placeholder { color: #D1D5DB; font-weight: 400; }
@@ -1741,13 +1759,13 @@ select.field-input { cursor: pointer; }
   letter-spacing: 0.1em;
 }
 .tag-gray  { background: #F3F4F6; color: #6B7280; }
-.tag-green { background: rgba(0,168,89,0.1); color: #00A859; }
-.tag-lime  { background: rgba(153,204,51,0.12); color: #5a7a00; }
+.tag-green { background: rgba(48,114,170,0.1); color: #3072AA; }
+.tag-lime  { background: rgba(107,164,213,0.12); color: #275d8a; }
 .tag-amber { background: rgba(251,191,36,0.12); color: #92400e; }
 
 /* Tour: sección activa */
 .tour-active {
-  box-shadow: 0 0 0 3px #00A859, 0 0 0 8px rgba(0, 168, 89, 0.2), 0 4px 20px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 0 0 3px #3072AA, 0 0 0 8px rgba(48, 114, 170, 0.2), 0 4px 20px rgba(0,0,0,0.1) !important;
   border-radius: 0.75rem;
   transition: box-shadow 0.25s ease;
 }

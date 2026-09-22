@@ -102,34 +102,34 @@ function continuarConEquipoGuardado() {
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
-                bg-[#00A859] opacity-[0.07] blur-[120px] rounded-full pointer-events-none" />
+                bg-alumnos opacity-[0.07] blur-[120px] rounded-full pointer-events-none" />
 
     <div class="relative z-10 w-full max-w-sm">
 
       <!-- Logo + título -->
       <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl
-                    bg-[#00A859]/15 border border-[#00A859]/30 mb-4">
-          <svg class="w-8 h-8 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    bg-alumnos/15 border border-alumnos/30 mb-4">
+          <svg class="w-8 h-8 text-alumnos" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 2L2 7l10 5 10-5-10-5zm0 10l-10-5m10 5l10-5m-10 5v10"/>
           </svg>
         </div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-[#00A859] mb-1">DuaLab</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-alumnos mb-1">DuaLab</p>
         <h1 class="text-2xl font-black text-white leading-tight">Únete a tu proyecto</h1>
         <p class="text-sm text-white/50 mt-2">Introduce el código que te ha dado el docente</p>
       </div>
 
       <!-- Acceso rápido si ya tiene equipo guardado -->
       <div v-if="equipoGuardado && !resultado"
-           class="mb-5 bg-[#00A859]/10 border border-[#00A859]/25 rounded-3xl p-4">
-        <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-2">Sesión guardada</p>
+           class="mb-5 bg-alumnos/10 border border-alumnos/25 rounded-3xl p-4">
+        <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-2">Sesión guardada</p>
         <p class="text-sm font-bold text-white leading-snug mb-0.5">{{ equipoGuardado.nombre }}</p>
         <p class="text-xs text-white/40 mb-3 truncate">{{ equipoGuardado.titulo }}</p>
         <div class="flex gap-2">
           <button @click="continuarConEquipoGuardado"
-                  class="flex-1 py-2.5 rounded-2xl bg-[#00A859] text-white text-[11px] font-black
-                         uppercase tracking-widest hover:bg-[#00A859]/90 transition-all">
+                  class="flex-1 py-2.5 rounded-2xl bg-alumnos text-white text-[11px] font-black
+                         uppercase tracking-widest hover:bg-alumnos/90 transition-all">
             Continuar →
           </button>
           <button @click="limpiarGuardado"
@@ -166,14 +166,14 @@ function continuarConEquipoGuardado() {
               error
                 ? 'border-red-500/60 focus:border-red-500'
                 : codigoValido
-                  ? 'border-[#00A859]/60 focus:border-[#00A859]'
+                  ? 'border-alumnos/60 focus:border-alumnos'
                   : 'border-white/10 focus:border-white/30',
             ]"
             @keydown.enter="codigoValido && !cargando && unirse()"
           />
           <!-- Indicador de validez -->
           <div v-if="codigoValido"
-               class="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#00A859] animate-pulse"/>
+               class="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-alumnos animate-pulse"/>
         </div>
 
         <!-- Error -->
@@ -192,7 +192,7 @@ function continuarConEquipoGuardado() {
           :class="[
             'w-full py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-200',
             codigoValido && !cargando
-              ? 'bg-[#00A859] text-white hover:bg-[#00A859]/90 shadow-lg shadow-[#00A859]/20'
+              ? 'bg-alumnos text-white hover:bg-alumnos/90 shadow-lg shadow-alumnos/20'
               : 'bg-white/5 text-white/20 cursor-not-allowed',
           ]">
           <span v-if="cargando" class="flex items-center justify-center gap-2">
@@ -213,7 +213,7 @@ function continuarConEquipoGuardado() {
         <div v-if="resultado?.tipo === 'clase'" class="space-y-3">
 
           <div class="text-center mb-2">
-            <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-1">¡Proyecto encontrado!</p>
+            <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-1">¡Proyecto encontrado!</p>
             <p class="text-lg font-black text-white leading-snug">{{ resultado.proyecto_titulo }}</p>
             <p v-if="resultado.curso" class="text-xs text-white/40 mt-0.5">{{ resultado.curso }}</p>
           </div>
@@ -232,11 +232,11 @@ function continuarConEquipoGuardado() {
               v-for="equipo in resultado.equipos" :key="equipo.id"
               @click="seleccionarEquipo(equipo)"
               class="w-full text-left bg-white/[0.05] border border-white/10 rounded-2xl px-4 py-3.5
-                     hover:border-[#00A859]/40 hover:bg-[#00A859]/8 transition-all group"
+                     hover:border-alumnos/40 hover:bg-alumnos/8 transition-all group"
             >
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <p class="text-sm font-black text-white group-hover:text-[#00A859] transition-colors">
+                  <p class="text-sm font-black text-white group-hover:text-alumnos transition-colors">
                     {{ equipo.nombre }}
                   </p>
                   <p v-if="equipo.miembros?.length" class="text-[11px] text-white/40 mt-0.5">
@@ -244,7 +244,7 @@ function continuarConEquipoGuardado() {
                   </p>
                   <p v-else class="text-[11px] text-white/25 mt-0.5 italic">Sin miembros asignados</p>
                 </div>
-                <svg class="w-4 h-4 text-white/20 group-hover:text-[#00A859] shrink-0 transition-colors"
+                <svg class="w-4 h-4 text-white/20 group-hover:text-alumnos shrink-0 transition-colors"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -267,20 +267,20 @@ function continuarConEquipoGuardado() {
                   leave-active-class="transition-all duration-200 ease-in"
                   leave-to-class="opacity-0 scale-95">
         <div v-if="resultado?.tipo === 'equipo'"
-             class="bg-white/[0.05] border border-[#00A859]/30 rounded-3xl p-6 text-center">
-          <div class="w-16 h-16 rounded-3xl bg-[#00A859]/15 border border-[#00A859]/30
+             class="bg-white/[0.05] border border-alumnos/30 rounded-3xl p-6 text-center">
+          <div class="w-16 h-16 rounded-3xl bg-alumnos/15 border border-alumnos/30
                       flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-8 h-8 text-alumnos" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <p class="text-[9px] font-black uppercase tracking-widest text-[#00A859] mb-2">¡Equipo encontrado!</p>
+          <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-2">¡Equipo encontrado!</p>
           <p class="text-xl font-black text-white mb-1">{{ resultado.nombre_equipo }}</p>
           <p class="text-sm text-white/50 mb-6 leading-snug">{{ resultado.proyecto_titulo }}</p>
           <button @click="accederAlWorkspace"
-                  class="w-full py-4 rounded-2xl bg-[#00A859] text-white text-sm font-black
-                         uppercase tracking-widest hover:bg-[#00A859]/90 transition-all
-                         shadow-lg shadow-[#00A859]/20">
+                  class="w-full py-4 rounded-2xl bg-alumnos text-white text-sm font-black
+                         uppercase tracking-widest hover:bg-alumnos/90 transition-all
+                         shadow-lg shadow-alumnos/20">
             Acceder al workspace →
           </button>
           <button @click="resultado = null; codigo = ''"

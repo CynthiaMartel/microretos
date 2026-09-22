@@ -82,7 +82,7 @@ async function confirmarEliminacion() {
                   {{ encuentro.fecha }}
                 </span>
                 <span v-if="encuentro?.centro_educativo"
-                  class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full">
+                  class="text-[10px] font-bold bg-centros/10 text-centros px-2 py-0.5 rounded-full">
                   {{ encuentro.centro_educativo }}
                 </span>
                 <span v-if="encuentro?.ciclo_formativo"

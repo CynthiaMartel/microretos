@@ -8,10 +8,39 @@ import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
 import MicroretoModal from '../components/MicroretoModal.vue';
 import EquiposSeguimiento from '../components/EquiposSeguimiento.vue';
 import { duracionPorFase, FASES_PROYECTO, COLOR_MAP_FASES } from '../config/fasesProyecto.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 
 const route     = useRoute();
 const router    = useRouter();
 const authStore = useAuthStore();
+const { theme } = useRoleTheme();
+
+const paletteExtra = {
+  centros: {
+    hoverBorderText: 'hover:border-centros hover:text-centros', groupHoverText: 'group-hover:text-centros',
+    hoverBorder20: 'hover:border-centros/20', hoverBorderBg5: 'hover:border-centros/20 hover:bg-centros/5',
+    groupHoverBg20: 'group-hover/doc:bg-centros/20', groupHoverDocText: 'group-hover/doc:text-centros',
+    hoverBorder40Text: 'hover:border-centros/40 hover:text-centros',
+  },
+  empresas: {
+    hoverBorderText: 'hover:border-empresas hover:text-empresas', groupHoverText: 'group-hover:text-empresas',
+    hoverBorder20: 'hover:border-empresas/20', hoverBorderBg5: 'hover:border-empresas/20 hover:bg-empresas/5',
+    groupHoverBg20: 'group-hover/doc:bg-empresas/20', groupHoverDocText: 'group-hover/doc:text-empresas',
+    hoverBorder40Text: 'hover:border-empresas/40 hover:text-empresas',
+  },
+  administraciones: {
+    hoverBorderText: 'hover:border-administraciones hover:text-administraciones', groupHoverText: 'group-hover:text-administraciones',
+    hoverBorder20: 'hover:border-administraciones/20', hoverBorderBg5: 'hover:border-administraciones/20 hover:bg-administraciones/5',
+    groupHoverBg20: 'group-hover/doc:bg-administraciones/20', groupHoverDocText: 'group-hover/doc:text-administraciones',
+    hoverBorder40Text: 'hover:border-administraciones/40 hover:text-administraciones',
+  },
+  primary: {
+    hoverBorderText: 'hover:border-primary-600 hover:text-primary-700', groupHoverText: 'group-hover:text-primary-700',
+    hoverBorder20: 'hover:border-primary-600/20', hoverBorderBg5: 'hover:border-primary-600/20 hover:bg-primary-600/5',
+    groupHoverBg20: 'group-hover/doc:bg-primary-600/20', groupHoverDocText: 'group-hover/doc:text-primary-700',
+    hoverBorder40Text: 'hover:border-primary-600/40 hover:text-primary-700',
+  },
+}
 const proyecto = ref(null);
 const cargando = ref(true);
 const error    = ref(false);
@@ -119,12 +148,12 @@ function getEstadoBadge(p) {
     return { label: 'Completado', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
   if (p.estado === 'validado') {
     if (p.empresa_validado && p.docente_validado)
-      return { label: 'Validado · Completo', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
+      return { label: 'Validado · Completo', cls: 'bg-administraciones/15 border-administraciones/30 text-administraciones', dot: 'bg-administraciones' };
     if (p.empresa_validado)
-      return { label: 'Validado · Empresa', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
+      return { label: 'Validado · Empresa', cls: 'bg-empresas/10 border-empresas/30 text-empresas-dark', dot: 'bg-empresas' };
     if (p.docente_validado)
-      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' };
-    return { label: 'Validado', cls: 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]', dot: 'bg-[#00A859]' };
+      return { label: 'Validado · Docente', cls: 'bg-centros/10 border-centros/30 text-centros', dot: 'bg-centros' };
+    return { label: 'Validado', cls: `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`, dot: theme.value.bg };
   }
   // propuesta: distinguir sub-estados
   if (p.empresa_no_valida_aun)
@@ -183,11 +212,32 @@ async function completar() {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-16 md:pt-16">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px]
-                bg-[#99CC33] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                opacity-5 blur-[120px] rounded-full pointer-events-none z-0"
+         :class="theme.bg" />
+
+    <!-- HEADER -->
+    <header class="relative z-10 mb-6 md:mb-8 text-center flex flex-col items-center">
+      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
+          Dua<span class="text-centros-light">Lab</span>
+          <span class="not-italic text-[10px] sm:text-sm md:text-base ml-1 text-centros-light">Proyecto</span>
+        </span>
+      </div>
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Ficha de <span :class="theme.text">Proyecto</span>
+      </h1>
+      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+        Consulta el detalle completo, el estado de validación y el progreso del equipo.
+      </p>
+    </header>
 
     <div class="relative z-10 max-w-4xl mx-auto"
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
@@ -195,17 +245,17 @@ async function completar() {
 
       <!-- Cargando -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-        <svg class="animate-spin w-12 h-12 text-[#00A859] mb-4" viewBox="0 0 24 24">
+        <svg class="animate-spin w-12 h-12 mb-4" :class="theme.text" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
         </svg>
-        <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">Cargando...</p>
+        <p class="font-black tracking-widest uppercase text-sm animate-pulse" :class="theme.text">Cargando...</p>
       </div>
 
       <!-- Error -->
       <div v-else-if="error" class="text-center py-32">
         <p class="text-gray-400 text-sm mb-4">No se pudo cargar el proyecto.</p>
         <button @click="router.push({ name: 'startup-day' })"
-                class="text-[#00A859] text-sm font-bold hover:underline">← Volver a la lista</button>
+                class="text-sm font-bold hover:underline" :class="theme.text">← Volver a la lista</button>
       </div>
 
       <template v-else-if="proyecto">
@@ -218,15 +268,16 @@ async function completar() {
                  siempre la lista rompía el "atrás" cuando se llegaba desde otro lado. -->
             <button @click="router.back()"
                     class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
-                           text-gray-400 hover:text-[#00A859] hover:border-[#00A859]/30 transition-all shrink-0">
+                           text-gray-400 transition-all shrink-0"
+                    :class="paletteExtra[theme.key].hoverBorderText">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
               </svg>
             </button>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
-                        bg-[#00A859]/10 border border-[#00A859]/20 shrink-0">
-              <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-              <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">StartUp Day</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
+                 :class="[theme.bg5, theme.border20]">
+              <span class="w-2 h-2 rounded-full" :class="theme.bg" />
+              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">StartUp Day</span>
             </div>
             <!-- Badge estado principal -->
             <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
@@ -247,9 +298,10 @@ async function completar() {
           <div class="flex gap-2 shrink-0">
             <button
               @click="descargarPDF(proyecto)"
-              class="px-4 py-2 bg-[#00A859] rounded-full text-xs font-black
+              class="px-4 py-2 rounded-full text-xs font-black
                      uppercase tracking-widest text-white shadow-sm
-                     hover:bg-[#009048] transition-all flex items-center gap-1.5"
+                     transition-all flex items-center gap-1.5"
+              :class="[theme.bg, theme.bgHover]"
               title="Descargar ficha PDF"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,9 +313,10 @@ async function completar() {
             <button
               v-if="proyecto.microreto_id"
               @click="microretoModalId = proyecto.microreto_id"
-              class="px-4 py-2 bg-[#00A859]/10 border-2 border-[#00A859] rounded-full text-xs font-black
-                     uppercase tracking-widest text-[#00A859] shadow-sm
-                     hover:bg-[#00A859] hover:text-white transition-all flex items-center gap-1.5"
+              class="px-4 py-2 border-2 rounded-full text-xs font-black
+                     uppercase tracking-widest shadow-sm
+                     hover:text-white transition-all flex items-center gap-1.5"
+              :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
               title="Ver la ficha del reto original del que deriva este proyecto"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,9 +328,9 @@ async function completar() {
             <button
               v-if="!authStore.isEmpresa && ['propuesta','validado'].includes(proyecto.estado) && !proyecto.docente_validado"
               @click="modalValidarDocente = true"
-              class="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-black
-                     uppercase tracking-widest text-emerald-700 shadow-sm
-                     hover:bg-emerald-100 transition-all flex items-center gap-1.5"
+              class="px-4 py-2 bg-centros/10 border border-centros/25 rounded-full text-xs font-black
+                     uppercase tracking-widest text-centros shadow-sm
+                     hover:bg-centros/20 transition-all flex items-center gap-1.5"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -303,7 +356,8 @@ async function completar() {
               @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
               class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-gray-500 shadow-sm
-                     hover:border-[#00A859] hover:text-[#00A859] transition-all"
+                     transition-all"
+              :class="paletteExtra[theme.key].hoverBorderText"
             >
               Editar
             </button>
@@ -348,7 +402,7 @@ async function completar() {
           <h1 class="text-2xl md:text-3xl font-black tracking-tight text-[#121212] mb-2 leading-tight">
             {{ proyecto.titulo }}
           </h1>
-          <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-base md:text-lg font-bold text-[#00A859] italic mb-5 leading-snug">
+          <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-base md:text-lg font-bold italic mb-5 leading-snug" :class="theme.text">
             "{{ proyecto.diseno_reto.pregunta_reto }}"
           </p>
 
@@ -357,9 +411,9 @@ async function completar() {
                class="meta-band">
 
             <div v-if="proyecto.empresa_nombre" class="meta-cell">
-              <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200
+              <div class="w-9 h-9 rounded-xl bg-empresas/10 border border-empresas/25
                           flex items-center justify-center shrink-0">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-amber-600"
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-empresas-dark"
                      style="width:1.1rem;height:1.1rem">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -389,7 +443,7 @@ async function completar() {
             <div v-if="proyecto.ciclo_nombre" class="meta-cell">
               <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200
                           flex items-center justify-center shrink-0">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-[#00A859]"
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="theme.text"
                      style="width:1.1rem;height:1.1rem">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
@@ -413,10 +467,10 @@ async function completar() {
               <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-gray-50 border border-gray-100
                          rounded-xl px-3 py-2 min-w-0">{{ landingUrl }}</p>
               <button @click="copiarUrl"
-                      :class="['shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
-                                urlCopiada
-                                  ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20'
-                                  : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]']">
+                      class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
+                      :class="urlCopiada
+                                  ? [theme.bg5, theme.text, theme.border20]
+                                  : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
                 {{ urlCopiada ? '¡Copiado!' : 'Copiar' }}
               </button>
             </div>
@@ -424,17 +478,17 @@ async function completar() {
 
           <!-- Estado: Validado por empresa ✅ -->
           <div v-if="proyecto.empresa_validado"
-               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
-                      bg-[#00A859]/8 border border-[#00A859]/25 shadow-sm">
-            <div class="w-9 h-9 rounded-xl bg-[#00A859]/15 border border-[#00A859]/25
-                        flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-sm
+                      bg-empresas/10 border-empresas/30">
+            <div class="w-9 h-9 rounded-xl border flex items-center justify-center shrink-0
+                        bg-empresas/15 border-empresas/25">
+              <svg class="w-5 h-5 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
             <div>
-              <p class="text-sm font-black text-[#00A859]">La empresa ha validado el proyecto</p>
-              <p class="text-[10px] text-[#00A859]/70 mt-0.5">
+              <p class="text-sm font-black text-empresas-dark">La empresa ha validado el proyecto</p>
+              <p class="text-[10px] mt-0.5 text-empresas-dark/70">
                 {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }}
                 respondió con validación positiva.
               </p>
@@ -515,16 +569,16 @@ async function completar() {
           <!-- Validación docente ✅ -->
           <div v-if="proyecto.docente_validado"
                class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
-                      bg-emerald-50 border border-emerald-200 shadow-sm">
-            <div class="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-200
+                      bg-centros/10 border border-centros/30 shadow-sm">
+            <div class="w-9 h-9 rounded-xl bg-centros/15 border border-centros/25
                         flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-black text-emerald-700">Validado por docente</p>
-              <p class="text-[10px] text-emerald-600/70 mt-0.5">Validación pedagógica aprobada por el docente responsable.</p>
+              <p class="text-sm font-black text-centros">Validado por docente</p>
+              <p class="text-[10px] text-centros/70 mt-0.5">Validación pedagógica aprobada por el docente responsable.</p>
             </div>
           </div>
           <!-- Sin validación docente aún -->
@@ -543,7 +597,7 @@ async function completar() {
             </div>
             <button @click="modalValidarDocente = true"
                     class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
-                           bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-all">
+                           bg-centros/10 text-centros border-centros/30 hover:bg-centros/20 transition-all">
               Validar
             </button>
           </div>
@@ -553,7 +607,7 @@ async function completar() {
         <!-- Secciones del proyecto — agrupadas igual que los pasos del wizard -->
 
         <!-- ═══ Empresa ═══ -->
-        <p class="group-header">Empresa</p>
+        <p class="group-header-empresa">Empresa</p>
         <div class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Empresa -->
           <div v-if="proyecto.datos_empresa?.nombre" class="card-section">
@@ -573,15 +627,16 @@ async function completar() {
           <div v-if="proyecto.datos_centro?.docente_nombre" class="card-section">
             <p class="section-label">Docente responsable</p>
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-[#00A859]/10 border border-[#00A859]/20
-                          flex items-center justify-center shrink-0 text-[#00A859] font-black text-sm">
+              <div class="w-8 h-8 rounded-full border font-black text-sm
+                          flex items-center justify-center shrink-0
+                          bg-centros/10 border-centros/25 text-centros">
                 {{ proyecto.datos_centro.docente_nombre.charAt(0).toUpperCase() }}
               </div>
               <div>
                 <p class="text-sm font-bold text-[#1F2937]">{{ proyecto.datos_centro.docente_nombre }}</p>
                 <a v-if="proyecto.datos_centro.docente_email"
                    :href="`mailto:${proyecto.datos_centro.docente_email}`"
-                   class="text-xs text-[#00A859] hover:underline">
+                   class="text-xs hover:underline text-centros">
                   {{ proyecto.datos_centro.docente_email }}
                 </a>
               </div>
@@ -613,7 +668,8 @@ async function completar() {
             <p class="section-label">Módulos ({{ proyecto.modulos_seleccionados.length }})</p>
             <div class="flex flex-wrap gap-1.5">
               <span v-for="m in proyecto.modulos_seleccionados" :key="m.id"
-                    class="text-xs bg-[#00A859]/8 border border-[#00A859]/15 text-[#00A859] px-2.5 py-1 rounded-full">
+                    class="text-xs border px-2.5 py-1 rounded-full"
+                    :class="[theme.bg5, theme.border15, theme.text]">
                 {{ m.nombre }}
               </span>
             </div>
@@ -633,7 +689,7 @@ async function completar() {
               <div v-if="raCeAbierto" class="pt-3">
                 <div v-if="raCeBlocks.length" class="space-y-4">
                   <div v-for="(block, i) in raCeBlocks" :key="i" class="border border-gray-100 rounded-xl p-3.5">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-1">{{ block.modulo }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-widest mb-1" :class="theme.text">{{ block.modulo }}</p>
                     <p class="text-sm font-semibold text-[#1F2937] mb-2">{{ block.ra }}</p>
                     <ul v-if="block.ces.length" class="space-y-1 pl-1">
                       <li v-for="(ce, j) in block.ces" :key="j"
@@ -654,8 +710,9 @@ async function completar() {
              class="flex flex-wrap items-center justify-between gap-2">
           <p class="group-header !mb-0">El reto</p>
           <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
-                  class="px-3 py-1.5 rounded-xl bg-[#00A859]/10 border-2 border-[#00A859] text-[10px] font-black
-                         uppercase tracking-wider text-[#00A859] hover:bg-[#00A859] hover:text-white transition-all mb-3">
+                  class="px-3 py-1.5 rounded-xl border-2 text-[10px] font-black
+                         uppercase tracking-wider hover:text-white transition-all mb-3"
+                  :class="[theme.bg5, theme.border, theme.text, theme.bgHover]">
             📎 Ver ficha reto original
           </button>
         </div>
@@ -665,7 +722,8 @@ async function completar() {
           <div v-if="proyecto.diseno_reto?.descripcion" class="card-section sm:col-span-2">
             <p class="reto-section-title">Diseño del reto</p>
             <p v-if="proyecto.diseno_reto.pregunta_reto"
-               class="text-sm font-bold text-[#00A859] italic mb-3 pl-3 py-2 border-l-4 border-[#00A859]/40 bg-[#00A859]/5 rounded-r-lg">
+               class="text-sm font-bold italic mb-3 pl-3 py-2 border-l-4 rounded-r-lg"
+               :class="[theme.text, theme.border20, theme.bg5]">
               "{{ proyecto.diseno_reto.pregunta_reto }}"
             </p>
             <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.diseno_reto.descripcion }}</p>
@@ -709,8 +767,9 @@ async function completar() {
             <ol class="space-y-2.5">
               <li v-for="(f, i) in proyecto.diseno_microproyecto.fases" :key="i"
                   class="flex items-start gap-2.5 text-sm">
-                <span class="w-5 h-5 rounded-full bg-[#00A859]/10 text-[#00A859] font-black text-[10px]
-                             flex items-center justify-center shrink-0 mt-0.5">{{ i + 1 }}</span>
+                <span class="w-5 h-5 rounded-full font-black text-[10px]
+                             flex items-center justify-center shrink-0 mt-0.5"
+                      :class="[theme.bg5, theme.text]">{{ i + 1 }}</span>
                 <div>
                   <p class="font-bold text-[#1F2937]">{{ f.nombre }}
                     <span v-if="duracionPorFase(proyecto.diseno_microproyecto.clases, i)" class="text-gray-400 font-normal text-xs">
@@ -768,7 +827,7 @@ async function completar() {
             <ul class="space-y-1.5">
               <li v-for="obj in proyecto.objetivos.lista" :key="obj"
                   class="flex items-start gap-2 text-sm text-gray-600">
-                <span class="text-[#00A859] shrink-0 mt-0.5 font-bold">›</span> {{ obj }}
+                <span class="shrink-0 mt-0.5 font-bold" :class="theme.text">›</span> {{ obj }}
               </li>
             </ul>
           </div>
@@ -779,7 +838,7 @@ async function completar() {
             <ul class="space-y-1.5 pt-1">
               <li v-for="kpi in proyecto.kpis.lista" :key="kpi"
                   class="flex items-start gap-2 text-sm text-gray-600">
-                <span class="text-[#00A859] shrink-0 mt-0.5">✓</span> {{ kpi }}
+                <span class="shrink-0 mt-0.5" :class="theme.text">✓</span> {{ kpi }}
               </li>
             </ul>
           </div>
@@ -802,12 +861,13 @@ async function completar() {
               @click="recursosAbierto = !recursosAbierto"
               class="w-full flex items-center justify-between px-5 py-4
                      bg-white border border-gray-100 rounded-[1.5rem] shadow-sm
-                     hover:border-[#00A859]/30 transition-all"
+                     transition-all"
+              :class="paletteExtra[theme.key].hoverBorder20"
             >
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 border border-[#00A859]/20
-                            flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-8 h-8 rounded-xl border flex items-center justify-center shrink-0"
+                     :class="[theme.bg5, theme.border20]">
+                  <svg class="w-4 h-4" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                   </svg>
@@ -868,17 +928,19 @@ async function completar() {
                   <div class="space-y-2">
                     <div v-for="(d, i) in documentos" :key="i"
                          class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
-                                hover:border-[#00A859]/30 hover:bg-[#00A859]/5 transition-colors group/doc">
+                                transition-colors group/doc"
+                         :class="paletteExtra[theme.key].hoverBorderBg5">
                       <button @click="abrirRecurso(d)"
-                              class="w-7 h-7 rounded-lg bg-[#00A859]/10 shrink-0 flex items-center justify-center
-                                     group-hover/doc:bg-[#00A859]/20 transition-colors">
-                        <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-colors"
+                              :class="[theme.bg5, paletteExtra[theme.key].groupHoverBg20]">
+                        <svg class="w-3.5 h-3.5" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         </svg>
                       </button>
                       <button @click="abrirRecurso(d)" class="flex-1 min-w-0 text-left">
-                        <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-[#00A859] transition-colors">
+                        <p class="text-xs font-bold text-gray-700 truncate transition-colors"
+                           :class="paletteExtra[theme.key].groupHoverDocText">
                           {{ d.label || d.filename }}
                         </p>
                         <p class="text-[9px] text-blue-400/80 truncate">Cloudinary · {{ d.filename }}</p>
@@ -903,12 +965,12 @@ async function completar() {
           <!-- Cabecera del bloque -->
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              <div class="w-9 h-9 rounded-xl border flex items-center justify-center shrink-0"
                    :class="proyecto.empresa_validado
-                     ? 'bg-[#00A859]/10 border border-[#00A859]/20'
-                     : 'bg-red-50 border border-red-200'">
+                     ? 'bg-empresas/10 border-empresas/30'
+                     : 'bg-red-50 border-red-200'">
                 <svg class="w-5 h-5"
-                     :class="proyecto.empresa_validado ? 'text-[#00A859]' : 'text-red-500'"
+                     :class="proyecto.empresa_validado ? 'text-empresas-dark' : 'text-red-500'"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path v-if="proyecto.empresa_validado"
                         stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -919,7 +981,7 @@ async function completar() {
                 </svg>
               </div>
               <div>
-                <p class="text-[10px] font-black uppercase tracking-widest text-amber-600">Fuente externa · Validación de empresa</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-empresas-dark">Fuente externa · Validación de empresa</p>
                 <p class="text-sm font-black text-[#121212]">
                   {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'Empresa' }}
                 </p>
@@ -929,7 +991,7 @@ async function completar() {
             <span v-if="proyecto.empresa_validado"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border
                          text-[10px] font-black uppercase tracking-widest
-                         bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]">
+                         bg-empresas/10 border-empresas/30 text-empresas-dark">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
@@ -950,7 +1012,7 @@ async function completar() {
           <!-- Preguntas y respuestas -->
           <div class="bg-white border rounded-[1.5rem] shadow-sm overflow-hidden"
                :class="proyecto.empresa_validado
-                 ? 'border-[#00A859]/20'
+                 ? 'border-empresas/30'
                  : proyecto.empresa_no_valida_aun
                    ? 'border-red-200'
                    : 'border-gray-100'">
@@ -959,14 +1021,14 @@ async function completar() {
               <div v-for="(val, key) in proyecto.validacion_empresa.respuestas" :key="key"
                    class="px-5 py-4 flex items-start gap-4">
                 <!-- Icono respuesta -->
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                <div class="w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5"
                      :class="val === 'Sí'
-                       ? 'bg-[#00A859]/10 border border-[#00A859]/20'
+                       ? 'bg-empresas/10 border-empresas/30'
                        : val === 'No'
-                         ? 'bg-red-50 border border-red-200'
-                         : 'bg-amber-50 border border-amber-200'">
+                         ? 'bg-red-50 border-red-200'
+                         : 'bg-amber-50 border-amber-200'">
                   <svg class="w-4 h-4"
-                       :class="val === 'Sí' ? 'text-[#00A859]' : val === 'No' ? 'text-red-500' : 'text-amber-500'"
+                       :class="val === 'Sí' ? 'text-empresas-dark' : val === 'No' ? 'text-red-500' : 'text-amber-500'"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path v-if="val === 'Sí'"
                           stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -986,7 +1048,7 @@ async function completar() {
                      : key.replace(/_/g, ' ') }}
                   </p>
                   <p class="text-base font-black"
-                     :class="val === 'Sí' ? 'text-[#00A859]' : val === 'No' ? 'text-red-500' : 'text-amber-600'">
+                     :class="val === 'Sí' ? 'text-empresas-dark' : val === 'No' ? 'text-red-500' : 'text-amber-600'">
                     {{ val }}
                   </p>
                 </div>
@@ -1019,15 +1081,15 @@ async function completar() {
           <div class="ficha-recortable__corte" aria-hidden="true"></div>
           <div class="ficha-recortable__card">
             <div class="flex items-center gap-3 px-5 py-4">
-              <div class="w-9 h-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-9 h-9 rounded-xl bg-alumnos/15 border border-alumnos/25 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-alumnos-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.657-2.686-3-6-3s-6 1.343-6 3"/>
                 </svg>
               </div>
-              <p class="text-[10px] font-black uppercase tracking-[0.25em] text-violet-500">Resolución del alumnado</p>
+              <p class="text-[10px] font-black uppercase tracking-[0.25em] text-alumnos-dark">Resolución del alumnado</p>
             </div>
-            <div class="px-5 pb-5 pt-1 border-t border-violet-100">
+            <div class="px-5 pb-5 pt-1 border-t border-alumnos/20">
               <EquiposSeguimiento :proyecto-uuid="proyecto.uuid" />
             </div>
           </div>
@@ -1089,9 +1151,10 @@ async function completar() {
             </div>
             <p class="text-gray-400 text-sm">Este tipo de archivo no se puede previsualizar</p>
             <a :href="modalRecurso.url" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00A859] text-white
+               class="inline-flex items-center gap-2 px-5 py-2.5 text-white
                       rounded-full text-xs font-black uppercase tracking-widest
-                      hover:bg-[#00A859]/90 transition-all">
+                      transition-all"
+               :class="[theme.bg, theme.bgHover]">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -1121,9 +1184,9 @@ async function completar() {
       <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 overflow-y-auto max-h-[90vh]">
 
         <!-- Icono -->
-        <div class="w-14 h-14 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
-                    flex items-center justify-center mb-5 mx-auto">
-          <svg class="w-7 h-7 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-14 h-14 rounded-2xl border flex items-center justify-center mb-5 mx-auto"
+             :class="[theme.bg5, theme.border20]">
+          <svg class="w-7 h-7" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
@@ -1131,10 +1194,10 @@ async function completar() {
 
         <!-- Badge estado -->
         <div class="flex justify-center mb-4">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-                       bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859]
-                       text-[10px] font-black uppercase tracking-widest">
-            <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] animate-pulse" />
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border
+                       text-[10px] font-black uppercase tracking-widest"
+                :class="[theme.bg5, theme.border20, theme.text]">
+            <span class="w-1.5 h-1.5 rounded-full animate-pulse" :class="theme.bg" />
             Propuesta · Pendiente de validar
           </span>
         </div>
@@ -1157,10 +1220,10 @@ async function completar() {
               {{ landingUrl || '—' }}
             </p>
             <button @click="copiarUrlModal"
-                    :class="['shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
-                             urlCopiadaModal
-                               ? 'bg-[#00A859]/10 text-[#00A859] border-[#00A859]/20'
-                               : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]']">
+                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
+                    :class="urlCopiadaModal
+                               ? [theme.bg5, theme.text, theme.border20]
+                               : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
               {{ urlCopiadaModal ? '¡Copiado!' : 'Copiar' }}
             </button>
           </div>
@@ -1170,7 +1233,8 @@ async function completar() {
             <button @click="infoEmpresaAbierta = !infoEmpresaAbierta"
                     class="w-full flex items-center justify-between px-3 py-2 rounded-xl
                            bg-white border border-gray-200 text-xs font-bold text-gray-600
-                           hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
+                           transition-all"
+                    :class="paletteExtra[theme.key].hoverBorder40Text">
               <span class="flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1222,8 +1286,8 @@ async function completar() {
             <button v-if="proyecto && proyecto.empresa_id"
                     @click="abrirConfirmEnvio"
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                           bg-amber-50 border border-amber-200 text-amber-700 rounded-xl
-                           text-xs font-bold hover:bg-amber-100 transition-all">
+                           bg-empresas/10 border border-empresas/25 text-empresas-dark rounded-xl
+                           text-xs font-bold hover:bg-empresas/20 transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -1233,7 +1297,8 @@ async function completar() {
             <button @click="router.push({ name: 'empresas' }); modalPropuestaAviso = false"
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5
                            bg-white border border-gray-200 text-gray-500 rounded-xl
-                           text-xs font-bold hover:border-[#00A859]/40 hover:text-[#00A859] transition-all">
+                           text-xs font-bold transition-all"
+                    :class="paletteExtra[theme.key].hoverBorder40Text">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -1244,30 +1309,30 @@ async function completar() {
         </div>
 
         <!-- Vía B: Validación docente -->
-        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
-          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">
+        <div class="bg-centros/10 border border-centros/20 rounded-2xl p-4 mb-6">
+          <p class="text-[10px] font-black uppercase tracking-widest text-centros mb-3">
             Vía B · Validación docente
           </p>
           <p class="text-xs text-gray-600 leading-relaxed mb-3">
             Puedes validar el proyecto directamente sin esperar a la empresa.
-            <span class="text-amber-600 font-bold">Esto no sustituye la validación empresa</span>
+            <span class="text-empresas-dark font-bold">Esto no sustituye la validación empresa</span>
             — ambas son independientes y complementarias.
           </p>
           <button v-if="!proyecto?.docente_validado"
                   @click="modalValidarDocente = true; modalPropuestaAviso = false"
                   class="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                         bg-emerald-600 text-white rounded-xl
-                         text-xs font-bold hover:bg-emerald-700 transition-all">
+                         bg-centros text-white rounded-xl
+                         text-xs font-bold hover:bg-centros/90 transition-all">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
             Validar como docente
           </button>
-          <div v-else class="flex items-center gap-2 px-3 py-2 bg-emerald-100 rounded-xl">
-            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-centros/15 rounded-xl">
+            <svg class="w-4 h-4 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
-            <p class="text-xs font-bold text-emerald-700">Ya has validado este proyecto como docente</p>
+            <p class="text-xs font-bold text-centros">Ya has validado este proyecto como docente</p>
           </div>
         </div>
 
@@ -1286,9 +1351,10 @@ async function completar() {
             v-if="!authStore.isEmpresa"
             @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
             class="flex-1 inline-flex items-center justify-center gap-2
-                   px-5 py-3 bg-[#00A859] text-white rounded-full
+                   px-5 py-3 text-white rounded-full
                    text-xs font-black uppercase tracking-widest shadow-sm
-                   hover:bg-[#00A859]/90 transition-all active:scale-95"
+                   transition-all active:scale-95"
+            :class="[theme.bg, theme.bgHover]"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -1318,9 +1384,9 @@ async function completar() {
       <div class="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 overflow-y-auto max-h-[90vh]">
 
         <!-- Icono -->
-        <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200
+        <div class="w-14 h-14 rounded-2xl bg-empresas/10 border border-empresas/25
                     flex items-center justify-center mb-5 mx-auto">
-          <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-7 h-7 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
@@ -1336,8 +1402,8 @@ async function completar() {
         <!-- Tarjeta empresa -->
         <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-8 h-8 rounded-xl bg-[#00A859]/10 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-empresas/10">
+              <svg class="w-4 h-4 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
               </svg>
@@ -1377,7 +1443,7 @@ async function completar() {
             :class="confirmEnvioTexto && !confirmEnvioValido
               ? 'border-red-300 bg-red-50 text-red-700 focus:ring-2 focus:ring-red-200'
               : confirmEnvioTexto && confirmEnvioValido
-                ? 'border-[#00A859]/50 bg-[#00A859]/5 text-[#00A859] focus:ring-2 focus:ring-[#00A859]/20'
+                ? 'border-empresas bg-empresas/10 text-empresas-dark focus:ring-2 focus:ring-empresas/20'
                 : 'border-gray-200 bg-white focus:border-gray-400 focus:ring-2 focus:ring-gray-100'"
           />
           <p v-if="confirmEnvioTexto && !confirmEnvioValido"
@@ -1385,7 +1451,7 @@ async function completar() {
             Escribe exactamente: enviar
           </p>
           <p v-if="confirmEnvioTexto && confirmEnvioValido"
-             class="mt-1.5 text-[10px] text-[#00A859] font-semibold">
+             class="mt-1.5 text-[10px] font-semibold text-empresas-dark">
             Confirmado. Ya puedes continuar.
           </p>
         </div>
@@ -1408,7 +1474,7 @@ async function completar() {
                    px-4 py-2.5 rounded-full text-xs font-black uppercase tracking-widest
                    transition-all active:scale-95"
             :class="confirmEnvioValido
-              ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
+              ? 'bg-empresas hover:bg-empresas/90 text-white shadow-sm'
               : 'bg-gray-100 text-gray-300 cursor-not-allowed'"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1424,7 +1490,8 @@ async function completar() {
           @click="router.push({ name: 'empresas' }); modalConfirmEnvio = false; modalPropuestaAviso = false"
           class="w-full inline-flex items-center justify-center gap-2
                  px-4 py-2.5 bg-white border border-gray-200 text-gray-500 rounded-full
-                 text-xs font-bold hover:border-[#00A859]/40 hover:text-[#00A859] transition-all"
+                 text-xs font-bold transition-all"
+          :class="paletteExtra[theme.key].hoverBorder40Text"
         >
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1495,9 +1562,10 @@ async function completar() {
             v-if="!authStore.isEmpresa"
             @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
             class="flex-1 inline-flex items-center justify-center gap-2
-                   px-5 py-3 bg-[#00A859] text-white rounded-full
+                   px-5 py-3 text-white rounded-full
                    text-xs font-black uppercase tracking-widest shadow-sm
-                   hover:bg-[#00A859]/90 transition-all active:scale-95"
+                   transition-all active:scale-95"
+            :class="[theme.bg, theme.bgHover]"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -1524,13 +1592,18 @@ async function completar() {
   @apply text-[10px] font-black uppercase tracking-[0.2em] text-gray-400;
 }
 .group-header {
-  @apply text-xs font-black uppercase tracking-[0.25em] text-[#00A859] mb-3 pl-3 border-l-4 border-[#00A859]/40;
+  @apply text-xs font-black uppercase tracking-[0.25em] text-centros mb-3 pl-3 border-l-4 border-centros/40;
+}
+/* Variante para el grupo "Empresa": todo lo que sea análisis/datos de la empresa
+   va en su color de marca (verde), no en el azul genérico de docente. */
+.group-header-empresa {
+  @apply text-xs font-black uppercase tracking-[0.25em] text-empresas-dark mb-3 pl-3 border-l-4 border-empresas/40;
 }
 .reto-section-title {
-  @apply text-sm font-black uppercase tracking-wider text-[#00A859] mb-3 pb-2 border-b-2 border-[#00A859]/15;
+  @apply text-sm font-black uppercase tracking-wider text-centros mb-3 pb-2 border-b-2 border-centros/15;
 }
 .reto-subsection-label {
-  @apply text-[10px] font-black uppercase tracking-wider text-[#5a7a00] mb-1;
+  @apply text-[10px] font-black uppercase tracking-wider text-centros mb-1;
 }
 
 /* Ficha de resolución del alumnado: se muestra separada de la hoja de cuaderno del
@@ -1547,20 +1620,20 @@ async function completar() {
 }
 .ficha-recortable__card {
   background: #fff;
-  border: 2px dashed #ddd6fe;
+  border: 2px dashed #FFD2A6;
   border-radius: 1.5rem;
-  box-shadow: 0 4px 20px -4px rgba(139, 92, 246, 0.1), 0 1px 4px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 20px -4px rgba(255, 137, 32, 0.15), 0 1px 4px rgba(0, 0, 0, 0.03);
   overflow: hidden;
 }
 
 /* Feedback de la empresa: dato de fuente externa dentro de la propia ficha (no se
    saca de la hoja de cuaderno, a diferencia de "Resolución del alumnado" — la empresa
-   valida ESTE proyecto, sigue siendo parte de su expediente). Borde punteado ámbar +
-   fondo muy sutil para diferenciarlo de las secciones de autoría propia sin romper el
-   flujo de la hoja. */
+   valida ESTE proyecto, sigue siendo parte de su expediente). Borde punteado verde
+   (color de marca de empresa) + fondo muy sutil para diferenciarlo de las secciones
+   de autoría propia sin romper el flujo de la hoja. */
 .empresa-diferenciada {
-  border: 2px dashed #fcd9a8;
-  background: rgba(217, 119, 6, 0.03);
+  border: 2px dashed #C5E1A5;
+  background: rgba(80, 153, 40, 0.04);
   border-radius: 1.75rem;
   padding: 1.25rem;
 }

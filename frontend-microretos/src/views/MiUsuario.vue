@@ -3,9 +3,18 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import api from '../api.js'
+import { useRoleTheme } from '../composables/useRoleTheme.js'
 
 const router    = useRouter()
 const authStore = useAuthStore()
+const { theme } = useRoleTheme()
+
+const paletteExtra = {
+  centros:          { focusInput: 'focus:border-centros/50 focus:ring-2 focus:ring-centros/10' },
+  empresas:         { focusInput: 'focus:border-empresas/50 focus:ring-2 focus:ring-empresas/10' },
+  administraciones: { focusInput: 'focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10' },
+  primary:          { focusInput: 'focus:border-primary-600/50 focus:ring-2 focus:ring-primary-600/10' },
+}
 
 const email    = ref('')
 const cargando = ref(true)
@@ -80,7 +89,7 @@ async function guardar() {
 </script>
 
 <template>
-  <div class="min-h-screen pt-12">
+  <div class="min-h-screen pt-16">
     <div class="max-w-lg mx-auto px-4 py-10">
 
       <!-- Cabecera -->
@@ -130,9 +139,8 @@ async function guardar() {
           </label>
           <input v-model="form.name" type="text" maxlength="255" placeholder="Tu nombre completo"
             class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                   placeholder-gray-300 outline-none transition-all
-                   focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
-            :class="errors.name ? 'border-red-400' : 'border-gray-200'" />
+                   placeholder-gray-300 outline-none transition-all"
+            :class="[errors.name ? 'border-red-400' : 'border-gray-200', paletteExtra[theme.key].focusInput]" />
           <p v-if="errors.name" class="text-[10px] text-red-500 mt-1">{{ errors.name }}</p>
         </div>
 
@@ -154,9 +162,8 @@ async function guardar() {
           <input v-model="form.password" type="password" maxlength="128"
             placeholder="Dejar en blanco para no cambiar"
             class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                   placeholder-gray-300 outline-none transition-all
-                   focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
-            :class="errors.password ? 'border-red-400' : 'border-gray-200'" />
+                   placeholder-gray-300 outline-none transition-all"
+            :class="[errors.password ? 'border-red-400' : 'border-gray-200', paletteExtra[theme.key].focusInput]" />
           <p v-if="errors.password" class="text-[10px] text-red-500 mt-1">{{ errors.password }}</p>
           <p v-else-if="passwordRelleno" class="text-[10px] text-gray-400 mt-1">
             Mín. 8 caracteres · mayúscula + minúscula + número
@@ -171,9 +178,8 @@ async function guardar() {
           <input v-model="form.password_confirmation" type="password" maxlength="128"
             placeholder="Escribe de nuevo la contraseña"
             class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                   placeholder-gray-300 outline-none transition-all
-                   focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
-            :class="errors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
+                   placeholder-gray-300 outline-none transition-all"
+            :class="[errors.password_confirmation ? 'border-red-400' : 'border-gray-200', paletteExtra[theme.key].focusInput]" />
           <p v-if="errors.password_confirmation" class="text-[10px] text-red-500 mt-1">
             {{ errors.password_confirmation }}
           </p>
@@ -195,16 +201,17 @@ async function guardar() {
         <!-- Feedback -->
         <p v-if="msg" class="text-xs px-3 py-2 rounded-lg border"
            :class="msgOk
-             ? 'text-[#00A859] bg-[#00A859]/5 border-[#00A859]/20'
+             ? [theme.text, theme.bg5, theme.border20]
              : 'text-red-500 bg-red-50 border-red-200'">
           {{ msg }}
         </p>
 
         <!-- Guardar -->
         <button @click="guardar" :disabled="guardando"
-          class="w-full py-3 rounded-xl bg-[#00A859] hover:bg-[#009950] text-white font-black
+          class="w-full py-3 rounded-xl text-white font-black
                  text-xs uppercase tracking-widest transition-all
-                 disabled:opacity-50 disabled:cursor-not-allowed">
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="[theme.bg, theme.bgHover]">
           {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
         </button>
 

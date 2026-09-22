@@ -88,15 +88,15 @@ function labelFase(numero) {
           <div class="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 shrink-0 gap-3">
             <div class="flex items-center gap-2.5 min-w-0">
               <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
-                          bg-[#00A859]/10 border border-[#00A859]/20 shrink-0">
-                <span class="w-2 h-2 rounded-full bg-[#00A859]" />
-                <span class="text-[10px] font-black uppercase tracking-widest text-[#00A859]">Diagnóstico final</span>
+                          bg-administraciones/10 border border-administraciones/20 shrink-0">
+                <span class="w-2 h-2 rounded-full bg-administraciones" />
+                <span class="text-[10px] font-black uppercase tracking-widest text-administraciones">Diagnóstico final</span>
               </div>
               <p class="font-black text-[#1F2937] text-sm truncate">{{ equipo?.nombre }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button @click="descargar"
-                      class="px-3 py-1.5 rounded-xl bg-[#00A859] text-[10px] font-black uppercase tracking-widest
+                      class="px-3 py-1.5 rounded-xl bg-administraciones text-[10px] font-black uppercase tracking-widest
                              text-white shadow-sm hover:bg-[#009048] transition-all flex items-center gap-1.5">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -121,7 +121,7 @@ function labelFase(numero) {
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-2">
               <p class="text-base font-black text-[#121212]">{{ equipo.proyecto?.titulo || 'Sin proyecto asociado' }}</p>
               <div class="flex flex-wrap gap-1.5">
-                <span v-if="encuentro?.curso" class="px-2.5 py-1 rounded-full bg-[#00A859]/10 text-[#00A859] text-[10px] font-black">
+                <span v-if="encuentro?.curso" class="px-2.5 py-1 rounded-full bg-administraciones/10 text-administraciones text-[10px] font-black">
                   {{ formatCurso(encuentro.curso) }} curso
                 </span>
                 <span v-if="encuentro?.grupo" class="px-2.5 py-1 rounded-full bg-gray-900 text-white text-[10px] font-black">
@@ -149,13 +149,13 @@ function labelFase(numero) {
                 <button v-if="equipo.proyecto?.microreto_id"
                         @click="microretoModalId = equipo.proyecto.microreto_id"
                         class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-[10px] font-black
-                               uppercase tracking-wider text-gray-500 hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                               uppercase tracking-wider text-gray-500 hover:border-administraciones hover:text-administraciones transition-all">
                   📎 Ficha del reto
                 </button>
                 <button v-if="equipo.proyecto?.uuid"
                         @click="proyectoModalUuid = equipo.proyecto.uuid"
                         class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-[10px] font-black
-                               uppercase tracking-wider text-gray-500 hover:border-[#00A859] hover:text-[#00A859] transition-all">
+                               uppercase tracking-wider text-gray-500 hover:border-administraciones hover:text-administraciones transition-all">
                   📎 Ficha del proyecto
                 </button>
               </div>
@@ -231,7 +231,7 @@ function labelFase(numero) {
               </div>
               <div v-if="notaFinal !== null" class="flex items-center justify-between pt-2 border-t border-gray-100">
                 <span class="text-sm font-black text-[#1F2937]">Nota final</span>
-                <span class="text-lg font-black text-[#00A859]">{{ notaFinal }} / 10</span>
+                <span class="text-lg font-black text-administraciones">{{ notaFinal }} / 10</span>
               </div>
             </div>
 

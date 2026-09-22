@@ -3,9 +3,18 @@ import { ref, reactive, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js'
+import { useRoleTheme } from '../composables/useRoleTheme.js'
 
 const router    = useRouter()
 const authStore = useAuthStore()
+const { theme } = useRoleTheme()
+
+const paletteExtra = {
+  centros:          { hoverText: 'hover:text-centros', hoverBgSoft: 'hover:bg-centros/20', hoverIconBtn: 'hover:text-centros hover:bg-centros/10 hover:border-centros/30' },
+  empresas:         { hoverText: 'hover:text-empresas', hoverBgSoft: 'hover:bg-empresas/20', hoverIconBtn: 'hover:text-empresas hover:bg-empresas/10 hover:border-empresas/30' },
+  administraciones: { hoverText: 'hover:text-administraciones', hoverBgSoft: 'hover:bg-administraciones/20', hoverIconBtn: 'hover:text-administraciones hover:bg-administraciones/10 hover:border-administraciones/30' },
+  primary:          { hoverText: 'hover:text-primary-700', hoverBgSoft: 'hover:bg-primary-600/20', hoverIconBtn: 'hover:text-primary-700 hover:bg-primary-600/10 hover:border-primary-600/30' },
+}
 
 function handle401(e) {
   if (e.response?.status === 401) {
@@ -361,10 +370,10 @@ async function guardarNuevoCiclo(familiaId) {
 
             <!-- ══ Contadores ══ -->
             <div v-if="!cargando && totalFamilias > 0" class="flex items-center gap-2 mb-5 -mt-2">
-              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#00A859]/8 border border-[#00A859]/20">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] shrink-0" />
-                <span class="text-[11px] font-black text-[#00A859]">{{ totalFamilias }}</span>
-                <span class="text-[11px] text-[#00A859]/70">familias</span>
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border" :class="[theme.bg5, theme.border20]">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="theme.bg" />
+                <span class="text-[11px] font-black" :class="theme.text">{{ totalFamilias }}</span>
+                <span class="text-[11px]" :class="theme.text50">familias</span>
               </div>
               <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200">
                 <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
@@ -375,7 +384,7 @@ async function guardarNuevoCiclo(familiaId) {
 
             <!-- ══ Cargando ══ -->
             <div v-if="cargando" class="flex items-center justify-center py-16 gap-3 text-gray-400">
-              <div class="w-6 h-6 rounded-full border-2 border-gray-200 border-t-[#00A859] animate-spin"/>
+              <div class="w-6 h-6 rounded-full border-2 border-gray-200 border-t-current animate-spin" :class="theme.text"/>
               <span class="text-sm font-medium">Cargando catálogo...</span>
             </div>
 
@@ -394,9 +403,10 @@ async function guardarNuevoCiclo(familiaId) {
                   v-if="!mostrarNuevaFamilia"
                   @click="mostrarNuevaFamilia = true; editFamiliaId = null"
                   class="flex items-center gap-1.5 px-4 py-2 rounded-xl
-                         bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859]
-                         hover:bg-[#00A859]/20 font-black text-xs uppercase tracking-widest
+                         border
+                         font-black text-xs uppercase tracking-widest
                          transition-all duration-150"
+                  :class="[theme.bg5, theme.border20, theme.text, paletteExtra[theme.key].hoverBgSoft]"
                 >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -408,8 +418,8 @@ async function guardarNuevoCiclo(familiaId) {
               <!-- Form nueva familia -->
               <Transition name="gfcm-fade">
                 <div v-if="mostrarNuevaFamilia"
-                  class="bg-[#00A859]/5 border border-[#00A859]/20 rounded-2xl p-4 mb-2 space-y-3">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-1">Nueva familia profesional</p>
+                  class="border rounded-2xl p-4 mb-2 space-y-3" :class="[theme.bg5, theme.border20]">
+                  <p class="text-[10px] font-black uppercase tracking-widest mb-1" :class="theme.text">Nueva familia profesional</p>
                   <div class="flex gap-3">
                     <div class="flex-1">
                       <input
@@ -453,7 +463,7 @@ async function guardarNuevoCiclo(familiaId) {
                     @click="toggleFamilia(familia.id)"
                     class="flex-1 flex items-center gap-3 text-left min-w-0"
                   >
-                    <div class="w-2 h-2 rounded-full bg-[#00A859] shrink-0"/>
+                    <div class="w-2 h-2 rounded-full shrink-0" :class="theme.bg"/>
                     <span class="font-bold text-sm text-[#1F2937] truncate">{{ familia.nombre }}</span>
                     <span v-if="familia.ciclosLoaded"
                       class="text-[10px] font-black uppercase tracking-widest
@@ -474,7 +484,7 @@ async function guardarNuevoCiclo(familiaId) {
                   <div class="flex items-center gap-1 shrink-0">
                     <button
                       @click.stop="abrirEditarFamilia(familia)"
-                      :class="editFamiliaId === familia.id ? 'text-[#00A859] bg-[#00A859]/10 border-[#00A859]/30' : 'text-gray-300 hover:text-[#00A859] hover:bg-[#00A859]/10 hover:border-[#00A859]/30'"
+                      :class="editFamiliaId === familia.id ? [theme.text, theme.bg5, theme.border20] : ['text-gray-300', paletteExtra[theme.key].hoverIconBtn]"
                       class="w-8 h-8 rounded-xl flex items-center justify-center border border-transparent transition-all duration-150"
                       title="Editar familia"
                     >
@@ -531,7 +541,7 @@ async function guardarNuevoCiclo(familiaId) {
 
                     <!-- Cargando ciclos -->
                     <div v-if="!familia.ciclosLoaded" class="flex items-center gap-2 px-5 py-4 text-gray-400 text-xs">
-                      <div class="w-4 h-4 rounded-full border-2 border-gray-200 border-t-[#00A859] animate-spin"/>
+                      <div class="w-4 h-4 rounded-full border-2 border-gray-200 border-t-current animate-spin" :class="theme.text"/>
                       Cargando ciclos...
                     </div>
 
@@ -561,8 +571,9 @@ async function guardarNuevoCiclo(familiaId) {
                           <button
                             @click="abrirEditarCiclo(ciclo, familia.id)"
                             class="w-7 h-7 rounded-lg flex items-center justify-center border border-transparent
-                                   text-gray-300 hover:text-[#00A859] hover:bg-[#00A859]/10 hover:border-[#00A859]/30
+                                   text-gray-300
                                    transition-all duration-150 shrink-0"
+                            :class="paletteExtra[theme.key].hoverIconBtn"
                             title="Editar ciclo"
                           >
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -619,8 +630,8 @@ async function guardarNuevoCiclo(familiaId) {
                       <!-- Form nuevo ciclo -->
                       <Transition name="gfcm-fade">
                         <div v-if="nuevoCicloPorFamiliaId === familia.id"
-                          class="pl-8 pr-3 py-3 bg-[#00A859]/4 border-t border-[#00A859]/10">
-                          <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-2">Nuevo ciclo</p>
+                          class="pl-8 pr-3 py-3 border-t" :class="[theme.bg5, theme.border15]">
+                          <p class="text-[10px] font-black uppercase tracking-widest mb-2" :class="theme.text">Nuevo ciclo</p>
                           <div class="space-y-2">
                             <input
                               v-model="nuevoCicloForm.nombre"
@@ -656,7 +667,8 @@ async function guardarNuevoCiclo(familiaId) {
                         <button
                           @click="abrirNuevoCiclo(familia.id)"
                           class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest
-                                 text-gray-400 hover:text-[#00A859] transition-colors duration-150"
+                                 text-gray-400 transition-colors duration-150"
+                          :class="paletteExtra[theme.key].hoverText"
                         >
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -836,15 +848,15 @@ async function guardarNuevoCiclo(familiaId) {
   outline: none; transition: all .15s; appearance: none;
 }
 .gfcm-input::placeholder { color: #9CA3AF; }
-.gfcm-input:focus { border-color: #00A859; box-shadow: 0 0 0 3px rgba(0,168,89,.1); }
+.gfcm-input:focus { border-color: v-bind('theme.hex'); box-shadow: 0 0 0 3px v-bind('theme.hexSoft'); }
 
 .gfcm-btn-green {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
-  padding: .55rem 1.1rem; background: #00A859; color: #fff;
+  padding: .55rem 1.1rem; background: v-bind('theme.hex'); color: #fff;
   border: none; border-radius: .75rem; font-weight: 900; font-size: .7rem;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .15s;
 }
-.gfcm-btn-green:hover:not(:disabled) { background: #009950; }
+.gfcm-btn-green:hover:not(:disabled) { filter: brightness(0.92); }
 .gfcm-btn-green:disabled { opacity: .5; cursor: not-allowed; }
 
 .gfcm-btn-dark {

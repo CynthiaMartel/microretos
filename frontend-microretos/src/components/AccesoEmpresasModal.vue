@@ -44,10 +44,10 @@ async function verificarAcceso() {
       <div class="flex justify-center mb-6">
         <div class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500"
              :class="exitoso
-               ? 'bg-[#00A859]/20 border border-[#00A859]/40'
+               ? 'bg-centros/20 border border-centros/40'
                : 'bg-blue-500/10 border border-blue-500/20'">
           <Transition name="icon-swap" mode="out-in">
-            <svg v-if="exitoso" key="check" class="w-8 h-8 text-[#00A859]"
+            <svg v-if="exitoso" key="check" class="w-8 h-8 text-centros-light"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
@@ -67,7 +67,7 @@ async function verificarAcceso() {
       <!-- Estado éxito -->
       <Transition name="fade">
         <div v-if="exitoso" class="text-center mt-6 space-y-1">
-          <p class="text-[#00A859] font-black text-sm uppercase tracking-widest">Acceso concedido</p>
+          <p class="text-centros-light font-black text-sm uppercase tracking-widest">Acceso concedido</p>
           <p class="text-white/40 text-xs">Cargando directorio de empresas...</p>
         </div>
       </Transition>
@@ -115,9 +115,9 @@ async function verificarAcceso() {
             <button
               type="submit"
               :disabled="verificando || !passwordInput"
-              class="w-full py-3 rounded-full bg-[#00A859] text-white font-black text-xs
+              class="w-full py-3 rounded-full bg-centros text-white font-black text-xs
                      uppercase tracking-widest transition-all
-                     hover:bg-[#009950] disabled:opacity-40 disabled:cursor-not-allowed
+                     hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed
                      flex items-center justify-center gap-2"
             >
               <svg v-if="verificando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -143,7 +143,7 @@ async function verificarAcceso() {
       </Transition>
 
       <p class="text-center mt-6 text-white/20 text-[10px]">
-        Dua<span class="text-[#00A859]">Lab</span> · Módulo protegido
+        Dua<span class="text-centros-light">Lab</span> · Módulo protegido
       </p>
     </div>
   </div>

@@ -8,6 +8,7 @@ import LoginModal from '../components/LoginModal.vue';
 import EliminarMicrorretoModal from '../components/EliminarMicrorretoModal.vue';
 import { usePdfExport } from '../composables/usePdfExport.js';
 import { iconoFamilia, colorFamilia } from '../utils/familiaIconos.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -21,7 +22,79 @@ const accionPendiente = ref(null);
 const familiaSeleccionada = ref(null);
 
 const authStore = useAuthStore();
+const { theme } = useRoleTheme();
 const { descargarPDF, descargarPDFGrupo } = usePdfExport();
+
+const paletteExtra = {
+  centros:          {
+    hoverBorderText: 'hover:border-centros hover:text-centros',
+    hoverText: 'hover:text-centros',
+    groupHoverText: 'group-hover:text-centros',
+    hoverBorderBg5Text: 'hover:border-centros hover:bg-centros/5 hover:text-centros',
+    hoverBorder: 'hover:border-centros',
+    hoverBorder40: 'hover:border-centros/40',
+    hoverBorder50: 'hover:border-centros/50',
+    groupHoverBorder40: 'group-hover:border-centros/40',
+    hoverBg15: 'hover:bg-centros/15',
+    focusInput: 'focus:border-centros focus:ring-2 focus:ring-centros/10',
+    groupHoverBorder30: 'group-hover:border-centros/30',
+    groupHoverBorder: 'group-hover:border-centros',
+    groupHoverBorder20: 'group-hover:border-centros/20',
+    groupHoverBg10: 'group-hover:bg-centros/10',
+    groupHoverBg: 'group-hover:bg-centros',
+  },
+  empresas:         {
+    hoverBorderText: 'hover:border-empresas hover:text-empresas',
+    hoverText: 'hover:text-empresas',
+    groupHoverText: 'group-hover:text-empresas',
+    hoverBorderBg5Text: 'hover:border-empresas hover:bg-empresas/5 hover:text-empresas',
+    hoverBorder: 'hover:border-empresas',
+    hoverBorder40: 'hover:border-empresas/40',
+    hoverBorder50: 'hover:border-empresas/50',
+    groupHoverBorder40: 'group-hover:border-empresas/40',
+    hoverBg15: 'hover:bg-empresas/15',
+    focusInput: 'focus:border-empresas focus:ring-2 focus:ring-empresas/10',
+    groupHoverBorder30: 'group-hover:border-empresas/30',
+    groupHoverBorder: 'group-hover:border-empresas',
+    groupHoverBorder20: 'group-hover:border-empresas/20',
+    groupHoverBg10: 'group-hover:bg-empresas/10',
+    groupHoverBg: 'group-hover:bg-empresas',
+  },
+  administraciones: {
+    hoverBorderText: 'hover:border-administraciones hover:text-administraciones',
+    hoverText: 'hover:text-administraciones',
+    groupHoverText: 'group-hover:text-administraciones',
+    hoverBorderBg5Text: 'hover:border-administraciones hover:bg-administraciones/5 hover:text-administraciones',
+    hoverBorder: 'hover:border-administraciones',
+    hoverBorder40: 'hover:border-administraciones/40',
+    hoverBorder50: 'hover:border-administraciones/50',
+    groupHoverBorder40: 'group-hover:border-administraciones/40',
+    hoverBg15: 'hover:bg-administraciones/15',
+    focusInput: 'focus:border-administraciones focus:ring-2 focus:ring-administraciones/10',
+    groupHoverBorder30: 'group-hover:border-administraciones/30',
+    groupHoverBorder: 'group-hover:border-administraciones',
+    groupHoverBorder20: 'group-hover:border-administraciones/20',
+    groupHoverBg10: 'group-hover:bg-administraciones/10',
+    groupHoverBg: 'group-hover:bg-administraciones',
+  },
+  primary:          {
+    hoverBorderText: 'hover:border-primary-600 hover:text-primary-700',
+    hoverText: 'hover:text-primary-700',
+    groupHoverText: 'group-hover:text-primary-700',
+    hoverBorderBg5Text: 'hover:border-primary-600 hover:bg-primary-600/5 hover:text-primary-700',
+    hoverBorder: 'hover:border-primary-600',
+    hoverBorder40: 'hover:border-primary-600/40',
+    hoverBorder50: 'hover:border-primary-600/50',
+    groupHoverBorder40: 'group-hover:border-primary-600/40',
+    hoverBg15: 'hover:bg-primary-600/15',
+    focusInput: 'focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10',
+    groupHoverBorder30: 'group-hover:border-primary-600/30',
+    groupHoverBorder: 'group-hover:border-primary-600',
+    groupHoverBorder20: 'group-hover:border-primary-600/20',
+    groupHoverBg10: 'group-hover:bg-primary-600/10',
+    groupHoverBg: 'group-hover:bg-primary-600',
+  },
+}
 
 // Estado de generación de PDF de grupo (evita dobles clics y muestra feedback)
 const generandoPDFGrupo = ref(false);
@@ -167,7 +240,7 @@ const familiasVisibles = computed(() => {
 const familiasOcultas = computed(() => familiasResto.value.slice(FAMILIAS_VISIBLES_EXTRA));
 
 const nivelClase = (nivel) => ({
-  Bajo:  'bg-[#00A859]/10 border-[#00A859]/20 text-[#00A859]',
+  Bajo:  `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`,
   Medio: 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#F59E0B]',
   Alto:  'bg-[#D64545]/10 border-[#D64545]/20 text-[#D64545]',
 }[nivel] || 'bg-gray-100 border-gray-200 text-gray-500');
@@ -372,11 +445,11 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-12 font-sans text-[#1F2937] relative overflow-hidden pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-12 font-sans text-[#1F2937] relative overflow-hidden pt-16 md:pt-16">
 
     <div
-      class="absolute top-[-10%] left-1/2 transform -translate-x-1/2 w-[800px] h-[500px] bg-[#99CC33] blur-[120px] rounded-full pointer-events-none transition-opacity duration-1000"
-      :class="isLoaded ? 'opacity-10' : 'opacity-0'">
+      class="absolute top-[-10%] left-1/2 transform -translate-x-1/2 w-[800px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-opacity duration-1000"
+      :class="[theme.bg, isLoaded ? 'opacity-10' : 'opacity-0']">
     </div>
 
     <div class="max-w-7xl mx-auto relative z-10">
@@ -386,18 +459,18 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
         <div
           class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain -mr-3 sm:-mr-4 md:-mr-8 relative z-10" />
+          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
+            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
           <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-[#00A859]">Lab</span>
-            <span class="text-[#99CC33] not-italic text-sm sm:text-lg md:text-xl ml-1">Library</span>
+            Dua<span class="text-centros-light">Lab</span>
+            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Retos</span>
           </span>
         </div>
         <h1
           class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Explorador de
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Retos</span>
+          <span :class="theme.text">Retos</span>
         </h1>
         <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
@@ -407,10 +480,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
       <!-- CARGANDO -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-20">
-        <svg class="animate-spin w-12 h-12 text-[#00A859] mb-4" viewBox="0 0 24 24">
+        <svg class="animate-spin w-12 h-12 mb-4" :class="theme.text" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z" />
         </svg>
-        <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">Cargando Biblioteca...</p>
+        <p class="font-black tracking-widest uppercase text-sm animate-pulse" :class="theme.text">Cargando Biblioteca...</p>
       </div>
 
       <template v-else>
@@ -424,7 +497,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           <div class="bg-white/90 backdrop-blur-md rounded-[2rem] p-5 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.04)]">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4">
               <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2 whitespace-nowrap">
-                <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
@@ -443,14 +516,15 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     @click="seleccionarCentro(centro)"
                     class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-200 border"
                     :class="filtroCentro === centro
-                      ? 'bg-[#00A859] text-white border-[#00A859] shadow-md'
-                      : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]'">
+                      ? [theme.bg, theme.border, 'text-white shadow-md']
+                      : ['bg-gray-50 text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
                     {{ centro }}
                   </button>
                 </template>
                 <!-- Docente / Admin docente: solo badge de su propio centro -->
                 <span v-else
-                  class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-[#00A859] text-white border border-[#00A859] shadow-md">
+                  class="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest text-white border shadow-md"
+                  :class="[theme.bg, theme.border]">
                   {{ authStore.userCentroNombre || filtroCentro }}
                 </span>
 
@@ -462,7 +536,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all duration-200"
                   :class="generandoPDFGrupo
                     ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-wait'
-                    : 'border-[#00A859]/40 text-[#00A859] hover:bg-[#00A859] hover:text-white hover:border-[#00A859]'"
+                    : [theme.border20, theme.text, theme.bgHover, 'hover:text-white', paletteExtra[theme.key].hoverBorder]"
                   :title="`Descargar todos los retos de ${filtroCentro}`">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -510,7 +584,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 @keydown.space.prevent="seleccionarFamilia(familia.nombre)"
                 role="button"
                 tabindex="0"
-                class="group relative rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 cursor-pointer">
+                class="group relative rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white text-left focus:outline-none focus:ring-2 cursor-pointer"
+                :class="theme.ring">
 
                 <div :class="['relative h-44 overflow-hidden bg-gradient-to-br flex items-center justify-center', colorFamilia(familia.nombre).bg]">
                   <svg :class="['w-16 h-16 group-hover:scale-110 transition-transform duration-300', colorFamilia(familia.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,17 +594,19 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </svg>
                   <div
                     v-if="conteoPorFamilia[familia.nombre]"
-                    class="absolute top-3 right-3 bg-[#00A859] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow">
+                    class="absolute top-3 right-3 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow"
+                    :class="theme.bg">
                     {{ conteoPorFamilia[familia.nombre] }} reto{{ conteoPorFamilia[familia.nombre] !== 1 ? 's' : '' }}
                   </div>
                 </div>
 
                 <div class="p-5 flex items-end justify-between gap-2">
                   <div class="min-w-0">
-                    <h3 class="font-black text-[#1F2937] text-base leading-tight mb-3 group-hover:text-[#00A859] transition-colors line-clamp-2">
+                    <h3 class="font-black text-[#1F2937] text-base leading-tight mb-3 transition-colors line-clamp-2"
+                      :class="paletteExtra[theme.key].groupHoverText">
                       {{ familia.nombre }}
                     </h3>
-                    <div class="flex items-center gap-2 text-[#00A859] text-xs font-black uppercase tracking-widest">
+                    <div class="flex items-center gap-2 text-xs font-black uppercase tracking-widest" :class="theme.text">
                       <span>Explorar</span>
                       <svg class="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -545,7 +622,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200"
                     :class="generandoPDFGrupo
                       ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-wait'
-                      : 'border-gray-200 text-gray-400 bg-white hover:border-[#00A859] hover:bg-[#00A859]/5 hover:text-[#00A859]'"
+                      : ['border-gray-200 text-gray-400 bg-white', paletteExtra[theme.key].hoverBorderBg5Text]"
                     :title="`Descargar PDF de ${familia.nombre} (${conteoPorFamilia[familia.nombre] || 0} retos)`">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -559,9 +636,11 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               <button
                 v-if="familiasOcultas.length > 0"
                 @click="verMasFamilias"
-                class="group relative rounded-[1.5rem] overflow-hidden border-2 border-dashed border-gray-200 hover:border-[#00A859]/40 transition-all duration-300 bg-gray-50 hover:bg-white text-left focus:outline-none focus:ring-2 focus:ring-[#00A859]/40 flex flex-col items-center justify-center gap-3 min-h-[15.5rem] p-6 text-center">
-                <div class="w-14 h-14 rounded-full bg-white border border-gray-200 group-hover:border-[#00A859]/40 flex items-center justify-center shadow-sm">
-                  <svg class="w-6 h-6 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="group relative rounded-[1.5rem] overflow-hidden border-2 border-dashed border-gray-200 transition-all duration-300 bg-gray-50 hover:bg-white text-left focus:outline-none focus:ring-2 flex flex-col items-center justify-center gap-3 min-h-[15.5rem] p-6 text-center"
+                :class="[paletteExtra[theme.key].hoverBorder40, theme.ring]">
+                <div class="w-14 h-14 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm"
+                  :class="paletteExtra[theme.key].groupHoverBorder40">
+                  <svg class="w-6 h-6" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
@@ -576,7 +655,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
             <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
               <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-gray-100 shadow-inner">
-                <svg class="w-10 h-10 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -598,7 +677,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div class="flex items-center gap-4">
                 <button @click="volverAFamilias"
-                  class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-[#00A859] transition-colors group">
+                  class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 transition-colors group"
+                  :class="paletteExtra[theme.key].hoverText">
                   <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -621,7 +701,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   class="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all duration-200"
                   :class="generandoPDFGrupo
                     ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-wait'
-                    : 'border-[#00A859]/30 text-[#00A859] hover:bg-[#00A859] hover:text-white hover:border-[#00A859]'"
+                    : [theme.border20, theme.text, theme.bgHover, 'hover:text-white', paletteExtra[theme.key].hoverBorder]"
                   :title="hayFiltrosActivos ? 'Descargar retos con los filtros actuales' : 'Descargar todos los retos de esta familia'">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -672,21 +752,21 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               <!-- BAJO -->
               <button
                 @click="filtroNivel = filtroNivel === 'Bajo' ? '' : 'Bajo'"
-                class="relative p-4 rounded-2xl border-2 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#00A859]/30"
+                class="relative p-4 rounded-2xl border-2 text-left transition-all duration-200 focus:outline-none focus:ring-2"
                 :class="filtroNivel === 'Bajo'
-                  ? 'bg-[#00A859] border-[#00A859] shadow-lg scale-[1.02]'
-                  : 'bg-white border-gray-100 hover:border-[#00A859]/50 hover:shadow-md'">
+                  ? [theme.bg, theme.border, 'shadow-lg scale-[1.02]', theme.ring]
+                  : ['bg-white border-gray-100 hover:shadow-md', paletteExtra[theme.key].hoverBorder50, theme.ring]">
                 <div class="flex items-end justify-between mb-3">
                   <div class="flex items-end gap-0.5">
                     <span class="w-1.5 rounded-sm inline-block transition-colors" style="height:8px"
-                      :class="filtroNivel === 'Bajo' ? 'bg-white' : 'bg-[#00A859]'"></span>
+                      :class="filtroNivel === 'Bajo' ? 'bg-white' : theme.bg"></span>
                     <span class="w-1.5 rounded-sm inline-block transition-colors" style="height:12px"
                       :class="filtroNivel === 'Bajo' ? 'bg-white/30' : 'bg-gray-200'"></span>
                     <span class="w-1.5 rounded-sm inline-block transition-colors" style="height:16px"
                       :class="filtroNivel === 'Bajo' ? 'bg-white/30' : 'bg-gray-200'"></span>
                   </div>
                   <span class="text-2xl font-black leading-none"
-                    :class="filtroNivel === 'Bajo' ? 'text-white' : 'text-[#00A859]'">
+                    :class="filtroNivel === 'Bajo' ? 'text-white' : theme.text">
                     {{ conteoNiveles.Bajo }}
                   </span>
                 </div>
@@ -756,23 +836,24 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
 
               <!-- GRUPO: EMPRESA -->
-              <div class="bg-[#00A859]/10 rounded-2xl border border-[#00A859]/30">
+              <div class="rounded-2xl border" :class="[theme.bg5, theme.border20]">
                 <button @click="empresaFiltroAbierto = !empresaFiltroAbierto"
-                  class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#00A859]/15 transition-colors">
+                  class="w-full flex items-center justify-between px-3 py-2.5 transition-colors"
+                  :class="paletteExtra[theme.key].hoverBg15">
                   <div class="flex items-center gap-2">
-                    <p class="text-[9px] font-black uppercase tracking-[0.2em] text-[#00A859]">Empresa</p>
+                    <p class="text-[9px] font-black uppercase tracking-[0.2em]" :class="theme.text">Empresa</p>
                     <span class="tooltip-wrap" @click.stop>
-                      <svg class="w-3 h-3 text-[#00A859]/60 cursor-help flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                      <svg class="w-3 h-3 cursor-help flex-shrink-0" :class="theme.text50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                       <span class="tooltip-text">Empresa real (existente) o ficticia (inventada para la práctica docente).</span>
                     </span>
                     <span v-if="!empresaFiltroAbierto && filtroEmpresaTipo"
                       class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-                      :class="filtroEmpresaTipo === 'ficticia' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-[#00A859]/10 text-[#00A859]'">
+                      :class="filtroEmpresaTipo === 'ficticia' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : [theme.bg5, theme.text]">
                       {{ filtroEmpresaTipo === 'ficticia' ? 'Ficticia' : 'Real' }}
                     </span>
                   </div>
-                  <svg class="w-3.5 h-3.5 text-[#00A859]/70 transition-transform duration-200"
-                    :class="empresaFiltroAbierto ? 'rotate-180' : ''"
+                  <svg class="w-3.5 h-3.5 transition-transform duration-200"
+                    :class="[theme.text50, empresaFiltroAbierto ? 'rotate-180' : '']"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                   </svg>
@@ -800,13 +881,13 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     @click="filtroEmpresaTipo = filtroEmpresaTipo === 'real' ? '' : 'real'"
                     class="relative p-3 rounded-xl border-2 text-left transition-all duration-200 focus:outline-none"
                     :class="filtroEmpresaTipo === 'real'
-                      ? 'bg-[#00A859] border-[#00A859] shadow-md scale-[1.02]'
-                      : 'bg-white border-gray-100 hover:border-[#00A859]/50 hover:shadow-sm'">
+                      ? [theme.bg, theme.border, 'shadow-md scale-[1.02]']
+                      : ['bg-white border-gray-100 hover:shadow-sm', paletteExtra[theme.key].hoverBorder50]">
                     <div class="flex items-end justify-between mb-1.5">
-                      <svg class="w-4 h-4" :class="filtroEmpresaTipo === 'real' ? 'text-white' : 'text-[#00A859]'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4" :class="filtroEmpresaTipo === 'real' ? 'text-white' : theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z"/>
                       </svg>
-                      <span class="text-xl font-black leading-none" :class="filtroEmpresaTipo === 'real' ? 'text-white' : 'text-[#00A859]'">{{ conteoEmpresaTipo.real }}</span>
+                      <span class="text-xl font-black leading-none" :class="filtroEmpresaTipo === 'real' ? 'text-white' : theme.text">{{ conteoEmpresaTipo.real }}</span>
                     </div>
                     <p class="text-[9px] font-black uppercase tracking-[0.15em] leading-none" :class="filtroEmpresaTipo === 'real' ? 'text-white' : 'text-gray-600'">Real</p>
                     <p class="text-[8px] mt-0.5 leading-none" :class="filtroEmpresaTipo === 'real' ? 'text-white/60' : 'text-gray-400'">empresa real</p>
@@ -845,7 +926,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     </span>
                     <span v-if="!infoFiltroAbierto && filtroInfoSimulada"
                       class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-                      :class="filtroInfoSimulada === 'simulada' ? 'bg-[#6366F1]/10 text-[#6366F1]' : 'bg-[#00A859]/10 text-[#00A859]'">
+                      :class="filtroInfoSimulada === 'simulada' ? 'bg-[#6366F1]/10 text-[#6366F1]' : [theme.bg5, theme.text]">
                       {{ filtroInfoSimulada === 'simulada' ? 'Simulada' : 'Real' }}
                     </span>
                   </div>
@@ -878,13 +959,13 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     @click="filtroInfoSimulada = filtroInfoSimulada === 'real' ? '' : 'real'"
                     class="relative p-3 rounded-xl border-2 text-left transition-all duration-200 focus:outline-none"
                     :class="filtroInfoSimulada === 'real'
-                      ? 'bg-[#00A859] border-[#00A859] shadow-md scale-[1.02]'
-                      : 'bg-white border-gray-100 hover:border-[#00A859]/50 hover:shadow-sm'">
+                      ? [theme.bg, theme.border, 'shadow-md scale-[1.02]']
+                      : ['bg-white border-gray-100 hover:shadow-sm', paletteExtra[theme.key].hoverBorder50]">
                     <div class="flex items-end justify-between mb-1.5">
-                      <svg class="w-4 h-4" :class="filtroInfoSimulada === 'real' ? 'text-white' : 'text-[#00A859]'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4" :class="filtroInfoSimulada === 'real' ? 'text-white' : theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                       </svg>
-                      <span class="text-xl font-black leading-none" :class="filtroInfoSimulada === 'real' ? 'text-white' : 'text-[#00A859]'">{{ conteoInfoSimulada.real }}</span>
+                      <span class="text-xl font-black leading-none" :class="filtroInfoSimulada === 'real' ? 'text-white' : theme.text">{{ conteoInfoSimulada.real }}</span>
                     </div>
                     <p class="text-[9px] font-black uppercase tracking-[0.15em] leading-none" :class="filtroInfoSimulada === 'real' ? 'text-white' : 'text-gray-600'">Real</p>
                     <p class="text-[8px] mt-0.5 leading-none" :class="filtroInfoSimulada === 'real' ? 'text-white/60' : 'text-gray-400'">datos reales</p>
@@ -934,7 +1015,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     v-model="busqueda"
                     type="text"
                     placeholder="Título, empresa, ciclo, pregunta del reto..."
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3.5 text-sm font-medium text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-[#00A859] focus:ring-2 focus:ring-[#00A859]/10 outline-none transition-all"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3.5 text-sm font-medium text-[#1F2937] placeholder-gray-400 focus:bg-white outline-none transition-all"
+                    :class="paletteExtra[theme.key].focusInput"
                   />
                   <Transition name="fade">
                     <button v-if="busqueda" @click="busqueda = ''"
@@ -959,7 +1041,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     </span>
                   </label>
                   <select v-model="filtroCiclo"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-bold text-[#1F2937] focus:bg-white focus:border-[#00A859] focus:ring-2 focus:ring-[#00A859]/10 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-bold text-[#1F2937] focus:bg-white outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="paletteExtra[theme.key].focusInput"
                     :disabled="ciclosDisponibles.length === 0">
                     <option value="">Todos los ciclos...</option>
                     <option v-for="ciclo in ciclosDisponibles" :key="ciclo" :value="ciclo">{{ ciclo }}</option>
@@ -1015,7 +1098,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
                   <span v-if="filtroEmpresaTipo"
                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
-                    :class="filtroEmpresaTipo === 'ficticia' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-[#00A859]/10 text-[#00A859]'">
+                    :class="filtroEmpresaTipo === 'ficticia' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : [theme.bg5, theme.text]">
                     {{ filtroEmpresaTipo === 'ficticia' ? 'Empresa Ficticia' : 'Empresa Real' }}
                     <button @click="filtroEmpresaTipo = ''" class="ml-0.5 hover:opacity-70 transition-opacity">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1026,7 +1109,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
                   <span v-if="filtroInfoSimulada"
                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
-                    :class="filtroInfoSimulada === 'simulada' ? 'bg-[#6366F1]/10 text-[#6366F1]' : 'bg-[#00A859]/10 text-[#00A859]'">
+                    :class="filtroInfoSimulada === 'simulada' ? 'bg-[#6366F1]/10 text-[#6366F1]' : [theme.bg5, theme.text]">
                     {{ filtroInfoSimulada === 'simulada' ? 'Info Simulada' : 'Info Real' }}
                     <button @click="filtroInfoSimulada = ''" class="ml-0.5 hover:opacity-70 transition-opacity">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1093,7 +1176,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <!-- ── GRID DE MICRORETOS ───────────────────────────── -->
             <div v-if="microretosFiltrados.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div v-for="reto in microretosFiltrados" :key="reto.id"
-                class="bg-white rounded-[1.5rem] border border-gray-100 hover:border-[#00A859]/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] shadow-sm transition-all duration-300 flex flex-col group overflow-hidden transform hover:-translate-y-1">
+                class="bg-white rounded-[1.5rem] border border-gray-100 hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] shadow-sm transition-all duration-300 flex flex-col group overflow-hidden transform hover:-translate-y-1"
+                :class="paletteExtra[theme.key].hoverBorder40">
 
                 <div class="p-5 pb-0 flex items-start justify-between gap-2">
                   <!-- Papelera -->
@@ -1117,7 +1201,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                       class="px-2.5 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-full whitespace-nowrap border"
                       :class="reto.empresa_es_simulada
                         ? 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#F59E0B]'
-                        : 'bg-[#00A859]/10 border-[#00A859]/20 text-[#00A859]'">
+                        : [theme.bg5, theme.border20, theme.text]">
                       {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
                     </span>
                     <span v-if="reto.es_simulado"
@@ -1128,12 +1212,14 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 </div>
 
                 <div class="px-7 pb-7 pt-4 flex-1 flex flex-col">
-                  <h3 class="text-[#1F2937] font-black text-xl leading-tight mb-4 group-hover:text-[#00A859] transition-colors line-clamp-2" :title="reto.titulo">
+                  <h3 class="text-[#1F2937] font-black text-xl leading-tight mb-4 transition-colors line-clamp-2"
+                    :class="paletteExtra[theme.key].groupHoverText" :title="reto.titulo">
                     {{ reto.titulo }}
                   </h3>
-                  <div class="flex flex-col gap-2 mb-5 border-l-2 border-gray-100 group-hover:border-[#00A859]/30 pl-3 transition-colors">
+                  <div class="flex flex-col gap-2 mb-5 border-l-2 border-gray-100 pl-3 transition-colors"
+                    :class="paletteExtra[theme.key].groupHoverBorder30">
                     <p class="text-[#1F2937] text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                      <svg class="w-4 h-4 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -1162,9 +1248,11 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </div>
                 </div>
 
-                <div class="flex border-t border-gray-100 group-hover:border-[#00A859] transition-colors duration-300">
+                <div class="flex border-t border-gray-100 transition-colors duration-300"
+                  :class="paletteExtra[theme.key].groupHoverBorder">
                   <button @click.stop="descargarPDF(reto)"
-                    class="flex items-center justify-center gap-1.5 px-4 py-4 bg-gray-50 group-hover:bg-[#00A859]/10 text-gray-400 group-hover:text-[#00A859] font-black text-[10px] uppercase tracking-widest transition-all duration-300 border-r border-gray-100 group-hover:border-[#00A859]/20 shrink-0"
+                    class="flex items-center justify-center gap-1.5 px-4 py-4 bg-gray-50 text-gray-400 font-black text-[10px] uppercase tracking-widest transition-all duration-300 border-r border-gray-100 shrink-0"
+                    :class="[paletteExtra[theme.key].groupHoverBg10, paletteExtra[theme.key].groupHoverText, paletteExtra[theme.key].groupHoverBorder20]"
                     title="Descargar PDF">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1173,7 +1261,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     PDF
                   </button>
                   <button @click="irADetalle(reto)"
-                    class="flex-1 bg-gray-50 group-hover:bg-[#00A859] text-gray-500 group-hover:text-white font-black text-xs uppercase tracking-widest py-4 transition-all duration-300 flex items-center justify-center gap-2">
+                    class="flex-1 bg-gray-50 text-gray-500 group-hover:text-white font-black text-xs uppercase tracking-widest py-4 transition-all duration-300 flex items-center justify-center gap-2"
+                    :class="paletteExtra[theme.key].groupHoverBg">
                     Ver Ficha Técnica
                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -1186,7 +1275,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <!-- Empty state -->
             <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
               <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-gray-100 shadow-inner">
-                <svg class="w-10 h-10 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1194,7 +1283,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               <h3 class="text-[#1F2937] font-black text-2xl mb-2">No hay resultados</h3>
               <p class="text-gray-500 text-sm max-w-md mx-auto">Prueba a limpiar los filtros o genera nuevos retos en el Estudio interactivo.</p>
               <button @click="limpiarFiltros"
-                class="mt-6 px-6 py-2 bg-white border border-gray-200 hover:border-[#00A859] hover:text-[#00A859] text-[#1F2937] rounded-full text-xs font-bold uppercase tracking-widest transition-colors shadow-sm">
+                class="mt-6 px-6 py-2 bg-white border border-gray-200 text-[#1F2937] rounded-full text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
+                :class="paletteExtra[theme.key].hoverBorderText">
                 Restablecer Búsqueda
               </button>
             </div>
@@ -1247,7 +1337,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #F8FAFC; }
 ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #00A859; }
+::-webkit-scrollbar-thumb:hover { background: v-bind('theme.hex'); }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }

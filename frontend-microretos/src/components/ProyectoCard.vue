@@ -1,14 +1,24 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 
 const props = defineProps({
-  proyecto: { type: Object, required: true }
+  proyecto: { type: Object, required: true },
+  resaltarEditar: { type: Boolean, default: false }
 });
 const emit = defineEmits(['eliminar']);
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { theme } = useRoleTheme();
+
+const paletteExtra = {
+  centros:          { groupHoverText: 'group-hover:text-centros', hoverBorderTextBg5: 'hover:border-centros hover:text-centros hover:bg-centros/5' },
+  empresas:         { groupHoverText: 'group-hover:text-empresas', hoverBorderTextBg5: 'hover:border-empresas hover:text-empresas hover:bg-empresas/5' },
+  administraciones: { groupHoverText: 'group-hover:text-administraciones', hoverBorderTextBg5: 'hover:border-administraciones hover:text-administraciones hover:bg-administraciones/5' },
+  primary:          { groupHoverText: 'group-hover:text-primary-700', hoverBorderTextBg5: 'hover:border-primary-600 hover:text-primary-700 hover:bg-primary-600/5' },
+}
 
 function getEtiqueta(p) {
   if (p.estado === 'en_edicion') return 'En edición';
@@ -30,7 +40,7 @@ function getColor(p) {
   if (p.estado === 'completado') return 'bg-sky-50 border-sky-300 text-sky-700';
   if (p.estado === 'validado') {
     if (p.docente_validado && !p.empresa_validado) return 'bg-emerald-50 border-emerald-300 text-emerald-700';
-    return 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859]';
+    return `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`;
   }
   if (p.empresa_no_valida_aun)   return 'bg-red-50 border-red-300 text-red-700';
   if (p.enviado_a_empresa_mail)  return 'bg-blue-50 border-blue-200 text-blue-700';
@@ -57,8 +67,8 @@ function getColor(p) {
       </div>
 
       <!-- Título -->
-      <h3 class="font-black text-[#1F2937] text-sm leading-snug line-clamp-2
-                 group-hover:text-[#00A859] transition-colors">
+      <h3 class="font-black text-[#1F2937] text-sm leading-snug line-clamp-2 transition-colors"
+          :class="paletteExtra[theme.key].groupHoverText">
         {{ proyecto.titulo }}
       </h3>
 
@@ -79,8 +89,8 @@ function getColor(p) {
           {{ proyecto.centro_nombre }}
         </div>
         <div v-if="proyecto.empresa_validado"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl
-                    bg-[#00A859]/10 border border-[#00A859]/30 text-[#00A859]">
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border"
+             :class="[theme.bg5, theme.border20, theme.text]">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
           </svg>
@@ -141,10 +151,11 @@ function getColor(p) {
     <div v-if="!authStore.isEmpresa" class="px-5 pb-4 flex gap-2 border-t border-gray-50 pt-3" @click.stop>
       <button
         @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
-        class="flex-1 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-black
-               uppercase tracking-widest text-gray-500
-               hover:border-[#00A859] hover:text-[#00A859] hover:bg-[#00A859]/5
-               transition-all"
+        class="flex-1 py-2 rounded-xl border text-xs font-black
+               uppercase tracking-widest transition-all"
+        :class="resaltarEditar
+          ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-[0_0_0_3px_rgba(251,191,36,0.3)] animate-pulse'
+          : ['bg-gray-50 border-gray-200 text-gray-500', paletteExtra[theme.key].hoverBorderTextBg5]"
       >
         Editar
       </button>

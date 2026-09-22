@@ -59,7 +59,7 @@ const donutSegmentos = computed(() => {
 
   const total = all.length
   const grupos = [
-    { label: 'Validados',                      valor: all.filter(p => p.estado === 'validado').length,                                                                      color: '#00A859' },
+    { label: 'Validados',                      valor: all.filter(p => p.estado === 'validado').length,                                                                      color: '#509928' },
     { label: 'Esperando respuesta de empresa', valor: all.filter(p => p.enviado_a_empresa_mail && p.estado === 'propuesta' && !p.empresa_no_valida_aun).length,            color: '#3B82F6' },
     { label: 'Pendiente de enviar a empresa',  valor: all.filter(p => p.estado === 'propuesta' && !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun).length,           color: '#6366F1' },
     { label: 'Respuesta de empresa a revisar', valor: all.filter(p => p.empresa_no_valida_aun && p.estado === 'propuesta').length,                                         color: '#F59E0B' },
@@ -166,8 +166,8 @@ function nextMonth() {
 const eventos       = ref([])
 const selectedDate  = ref(null)
 const newEventText  = ref('')
-const newEventColor = ref('#00A859')
-const eventColors   = ['#00A859', '#99CC33', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
+const newEventColor = ref('#509928')
+const eventColors   = ['#509928', '#FF8920', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
 
 function selectCalDay(day) {
   if (!day) return
@@ -372,7 +372,7 @@ function removeNota(id) {
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-12">
+  <div class="min-h-screen font-sans text-[#1F2937] pt-16">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
       <!-- ══ Cabecera bienvenida ══════════════════════════════════════════════════ -->
@@ -380,32 +380,36 @@ function removeNota(id) {
                   transition-all duration-700"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
 
-        <div class="absolute top-0 right-0 w-48 h-48 bg-[#00A859]/10 rounded-full
+        <div class="absolute top-0 right-0 w-48 h-48 bg-centros/10 rounded-full
                     translate-x-1/3 -translate-y-1/3 blur-[60px] pointer-events-none"></div>
 
         <div class="relative z-10 flex items-center justify-between gap-3">
-          <div>
-            <div class="inline-flex items-center gap-1.5 bg-[#00A859]/15 border border-[#00A859]/25
-                        rounded-full px-2.5 py-0.5 mb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#99CC33] animate-pulse shrink-0"></span>
-              <span class="text-[#99CC33] text-[9px] font-black uppercase tracking-widest">Perfil docente</span>
+          <div class="flex items-center gap-3">
+            <img src="../assets/logo_colores.png" alt="Logo DuaLab"
+                 class="hidden sm:block h-24 w-24 object-contain shrink-0" />
+            <div>
+              <div class="inline-flex items-center gap-1.5 bg-centros/15 border border-centros/25
+                          rounded-full px-2.5 py-0.5 mb-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse shrink-0"></span>
+                <span class="text-primary-400 text-[9px] font-black uppercase tracking-widest">Perfil docente</span>
+              </div>
+              <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">
+                Bienvenido/a, <span class="text-primary-400">{{ primerNombre }}</span>
+              </h1>
+              <div v-if="userCentroNombre" class="flex items-center gap-1.5 mt-1">
+                <svg class="w-3.5 h-3.5 text-white/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span class="text-white/55 text-xs font-semibold">{{ userCentroNombre }}</span>
+              </div>
+              <p class="text-white/35 text-xs mt-0.5 font-medium">Panel de control · DuaLab</p>
             </div>
-            <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">
-              Bienvenido/a, <span class="text-[#99CC33]">{{ primerNombre }}</span>
-            </h1>
-            <div v-if="userCentroNombre" class="flex items-center gap-1.5 mt-1">
-              <svg class="w-3.5 h-3.5 text-white/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-              </svg>
-              <span class="text-white/55 text-xs font-semibold">{{ userCentroNombre }}</span>
-            </div>
-            <p class="text-white/35 text-xs mt-0.5 font-medium">Panel de control · DuaLab</p>
           </div>
 
-          <div class="hidden sm:flex w-11 h-11 rounded-xl bg-[#00A859]/15 border border-[#00A859]/25
+          <div class="hidden sm:flex w-11 h-11 rounded-xl bg-centros/15 border border-centros/25
                       items-center justify-center shrink-0">
-            <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 14l9-5-9-5-9 5 9 5z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -422,14 +426,14 @@ function removeNota(id) {
         <!-- Proyectos validados -->
         <button @click="irAStartupFiltrado('proyecto')"
                 class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
-                       hover:border-[#00A859]/30 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoProyectos" class="text-2xl font-black text-[#00A859] tabular-nums leading-none mb-1">
+                       hover:border-centros/30 hover:shadow-sm transition-all duration-200">
+          <div v-if="!cargandoProyectos" class="text-2xl font-black text-centros tabular-nums leading-none mb-1">
             {{ proyectosValidados.length }}
           </div>
           <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Validados</p>
-          <p class="text-[9px] font-black text-[#00A859]/60 uppercase tracking-widest mt-1
-                    group-hover:text-[#00A859] transition-colors">Ver todos →</p>
+          <p class="text-[9px] font-black text-centros/60 uppercase tracking-widest mt-1
+                    group-hover:text-centros transition-colors">Ver todos →</p>
         </button>
 
         <!-- Pendientes de validar -->
@@ -496,7 +500,7 @@ function removeNota(id) {
           </div>
 
           <div v-if="cargandoEncuentros" class="p-6 flex justify-center">
-            <svg class="animate-spin w-5 h-5 text-[#00A859]" viewBox="0 0 24 24">
+            <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
             </svg>
           </div>
@@ -512,8 +516,8 @@ function removeNota(id) {
             </div>
             <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay encuentros registrados.</p>
             <button @click="irA('/encuentros/crear')"
-                    class="text-[10px] font-black uppercase tracking-widest text-[#00A859]
-                           hover:text-[#00A859]/70 transition-colors">
+                    class="text-[10px] font-black uppercase tracking-widest text-centros
+                           hover:text-centros/70 transition-colors">
               Registrar primer encuentro →
             </button>
           </div>
@@ -529,22 +533,22 @@ function removeNota(id) {
                 <div class="flex items-start gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-black leading-snug truncate transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-700' : 'text-[#1F2937] group-hover:text-[#00A859]'">
+                       :class="isSessionHovered(s) ? 'text-blue-700' : 'text-[#1F2937] group-hover:text-centros'">
                       {{ s.microreto_titulo || '(sin título)' }}
                     </p>
                     <p class="text-[10px] font-bold mt-0.5 transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-500' : 'text-[#00A859]'">
+                       :class="isSessionHovered(s) ? 'text-blue-500' : 'text-centros'">
                       {{ formatFecha(s.fecha) }}
                     </p>
                     <div class="flex flex-wrap gap-1 mt-1">
                       <span v-if="s.curso"
                             class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                   bg-[#00A859]/10 text-[#00A859]">
+                                   bg-centros/10 text-centros">
                         {{ s.curso }}
                       </span>
                       <span v-if="s.grupo"
                             class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                   bg-[#99CC33]/12 text-[#5a7a00]">
+                                   bg-primary-400/12 text-primary-700">
                         Gr. {{ s.grupo }}
                       </span>
                       <span v-if="s.num_alumnos"
@@ -555,7 +559,7 @@ function removeNota(id) {
                     </div>
                   </div>
                   <svg class="w-3.5 h-3.5 shrink-0 mt-0.5 transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-400' : 'text-gray-300 group-hover:text-[#00A859]'"
+                       :class="isSessionHovered(s) ? 'text-blue-400' : 'text-gray-300 group-hover:text-centros'"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                   </svg>
@@ -695,9 +699,9 @@ function removeNota(id) {
         <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
           <div class="bg-[#374151] px-5 py-4 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-[#00A859]/20 border border-[#00A859]/25
+              <div class="w-8 h-8 rounded-xl bg-centros/20 border border-centros/25
                           flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
@@ -740,8 +744,8 @@ function removeNota(id) {
                 <div v-if="day" class="px-1 pt-1">
                   <span :class="[
                     'w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold',
-                    isToday(day) ? 'bg-[#00A859] text-white' : '',
-                    isDaySelected(day) ? 'ring-2 ring-[#00A859] ring-offset-1' : '',
+                    isToday(day) ? 'bg-centros text-white' : '',
+                    isDaySelected(day) ? 'ring-2 ring-centros ring-offset-1' : '',
                     !isToday(day) ? 'text-gray-600' : ''
                   ]">{{ day }}</span>
                 </div>
@@ -767,7 +771,7 @@ function removeNota(id) {
             <input v-model="newEventText" type="text" placeholder="Nombre del evento…"
                    @keyup.enter="addEvento"
                    class="w-full text-xs font-medium text-[#1F2937] bg-white border border-gray-200
-                          rounded-lg px-3 py-2 mb-2 outline-none focus:border-[#00A859] transition-colors"/>
+                          rounded-lg px-3 py-2 mb-2 outline-none focus:border-centros transition-colors"/>
             <div class="flex items-center gap-2 mb-2">
               <button v-for="c in eventColors" :key="c" @click="newEventColor = c"
                       class="w-5 h-5 rounded-full border-2 transition-all"
@@ -778,7 +782,7 @@ function removeNota(id) {
             <div class="flex gap-2">
               <button @click="addEvento"
                       class="flex-1 text-[10px] font-black uppercase tracking-widest text-white
-                             bg-[#00A859] hover:bg-[#007a40] rounded-lg py-1.5 transition-colors">
+                             bg-centros hover:bg-centros/90 rounded-lg py-1.5 transition-colors">
                 Añadir
               </button>
               <button @click="selectedDate = null"
@@ -934,7 +938,7 @@ function removeNota(id) {
             <!-- Cargando -->
             <div v-if="cargandoProyectos"
                  class="bg-white border border-gray-100 rounded-2xl p-6 flex justify-center">
-              <svg class="animate-spin w-5 h-5 text-[#00A859]" viewBox="0 0 24 24">
+              <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
               </svg>
             </div>
@@ -964,9 +968,9 @@ function removeNota(id) {
               <!-- Proyectos validados -->
               <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                 <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-                  <div class="w-7 h-7 rounded-lg bg-[#00A859]/20 border border-[#00A859]/25
+                  <div class="w-7 h-7 rounded-lg bg-centros/20 border border-centros/25
                               flex items-center justify-center shrink-0">
-                    <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -984,8 +988,8 @@ function removeNota(id) {
                   </div>
                   <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay proyectos validados.</p>
                   <button @click="irA('/proyectos')"
-                          class="text-[10px] font-black uppercase tracking-widest text-[#00A859]
-                                 hover:text-[#00A859]/70 transition-colors">
+                          class="text-[10px] font-black uppercase tracking-widest text-centros
+                                 hover:text-centros/70 transition-colors">
                     Ver proyectos →
                   </button>
                 </div>
@@ -1002,16 +1006,16 @@ function removeNota(id) {
                         </div>
                         <div class="flex-1 min-w-0">
                           <p class="text-xs font-black text-[#1F2937] leading-snug truncate
-                                    group-hover:text-[#00A859] transition-colors">
+                                    group-hover:text-centros transition-colors">
                             {{ p.titulo || '(sin título)' }}
                           </p>
-                          <p v-if="p.empresa_nombre" class="text-[10px] text-[#00A859] font-bold mt-0.5 truncate">
+                          <p v-if="p.empresa_nombre" class="text-[10px] text-centros font-bold mt-0.5 truncate">
                             {{ p.empresa_nombre }}
                           </p>
                           <div class="flex flex-wrap gap-1 mt-1">
                             <span v-if="p.ciclo_nombre"
                                   class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                         bg-[#00A859]/10 text-[#00A859]">
+                                         bg-centros/10 text-centros">
                               {{ p.ciclo_nombre }}
                             </span>
                             <span v-if="p.curso"
@@ -1021,17 +1025,17 @@ function removeNota(id) {
                             </span>
                           </div>
                         </div>
-                        <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-[#00A859] shrink-0 mt-0.5 transition-colors"
+                        <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-centros shrink-0 mt-0.5 transition-colors"
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
                       </div>
                     </li>
                   </ul>
-                  <div class="px-4 py-3 border-t border-gray-50 bg-[#00A859]/5">
+                  <div class="px-4 py-3 border-t border-gray-50 bg-centros/5">
                     <button @click="irAStartupFiltrado('proyecto')"
                             class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
-                                   uppercase tracking-widest text-[#00A859] hover:text-[#007a40]
+                                   uppercase tracking-widest text-centros hover:text-primary-700
                                    transition-colors py-0.5">
                       Ver todos los proyectos validados
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1100,10 +1104,10 @@ function removeNota(id) {
 
               <!-- Ver todos -->
               <div class="bg-white border border-gray-100 rounded-xl px-4 py-3
-                          bg-gradient-to-r from-[#00A859]/8 via-[#00A859]/4 to-transparent">
+                          bg-gradient-to-r from-centros/8 via-centros/4 to-transparent">
                 <button @click="irAStartupFiltrado('todos')"
                         class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
-                               uppercase tracking-widest text-[#00A859] hover:text-[#007a40]
+                               uppercase tracking-widest text-centros hover:text-primary-700
                                transition-colors py-0.5">
                   Ver todos los proyectos
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1125,9 +1129,9 @@ function removeNota(id) {
             <!-- Grid acciones rápidas -->
             <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
               <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-                <div class="w-7 h-7 rounded-lg bg-[#00A859]/20 border border-[#00A859]/25
+                <div class="w-7 h-7 rounded-lg bg-centros/20 border border-centros/25
                             flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                   </svg>
                 </div>
@@ -1136,15 +1140,15 @@ function removeNota(id) {
               <div class="p-3 grid grid-cols-2 gap-2">
                 <button @click="irA('/retos/crear')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-[#00A859]/5 border border-[#00A859]/15
-                         hover:bg-[#00A859]/12 hover:border-[#00A859]/35 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-[#00A859]/15 border border-[#00A859]/20
-                              flex items-center justify-center shrink-0 group-hover:bg-[#00A859]/25 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         bg-centros/5 border border-centros/15
+                         hover:bg-centros/12 hover:border-centros/35 hover:shadow-sm transition-all duration-200">
+                  <div class="w-7 h-7 rounded-lg bg-centros/15 border border-centros/20
+                              flex items-center justify-center shrink-0 group-hover:bg-centros/25 transition-colors">
+                    <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                   </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-[#00A859] transition-colors leading-tight">Nuevo reto</span>
+                  <span class="text-xs font-black text-[#1F2937] group-hover:text-centros transition-colors leading-tight">Nuevo reto</span>
                 </button>
                 <button @click="irA('/proyectos/crear')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
@@ -1160,16 +1164,16 @@ function removeNota(id) {
                 </button>
                 <button @click="irA('/retos')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-[#99CC33]/5 border border-[#99CC33]/20
-                         hover:bg-[#99CC33]/12 hover:border-[#99CC33]/40 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-[#99CC33]/15 border border-[#99CC33]/25
-                              flex items-center justify-center shrink-0 group-hover:bg-[#99CC33]/25 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-[#6EA820]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         bg-primary-400/5 border border-primary-400/20
+                         hover:bg-primary-400/12 hover:border-primary-400/40 hover:shadow-sm transition-all duration-200">
+                  <div class="w-7 h-7 rounded-lg bg-primary-400/15 border border-primary-400/25
+                              flex items-center justify-center shrink-0 group-hover:bg-primary-400/25 transition-colors">
+                    <svg class="w-3.5 h-3.5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
                     </svg>
                   </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-[#6EA820] transition-colors leading-tight">Biblioteca</span>
+                  <span class="text-xs font-black text-[#1F2937] group-hover:text-primary-700 transition-colors leading-tight">Biblioteca</span>
                 </button>
                 <button @click="irA('/mi-usuario')"
                   class="group flex items-center gap-2 p-3 rounded-xl text-left
@@ -1227,20 +1231,20 @@ function removeNota(id) {
 
                 <button @click="irA('/retos')"
                   class="group flex items-center gap-3 p-3 rounded-xl text-left
-                         bg-[#99CC33]/5 border border-[#99CC33]/20
-                         hover:bg-[#99CC33]/12 hover:border-[#99CC33]/40 hover:shadow-sm transition-all duration-200">
-                  <div class="w-9 h-9 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/25
-                              flex items-center justify-center shrink-0 group-hover:bg-[#99CC33]/25 transition-colors">
-                    <svg class="w-4 h-4 text-[#6EA820]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         bg-primary-400/5 border border-primary-400/20
+                         hover:bg-primary-400/12 hover:border-primary-400/40 hover:shadow-sm transition-all duration-200">
+                  <div class="w-9 h-9 rounded-xl bg-primary-400/15 border border-primary-400/25
+                              flex items-center justify-center shrink-0 group-hover:bg-primary-400/25 transition-colors">
+                    <svg class="w-4 h-4 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-[#1F2937] group-hover:text-[#6EA820] transition-colors leading-tight">Recursos</p>
+                    <p class="text-xs font-black text-[#1F2937] group-hover:text-primary-700 transition-colors leading-tight">Recursos</p>
                     <p class="text-[10px] text-gray-400 font-medium mt-0.5">Biblioteca de retos y materiales</p>
                   </div>
-                  <svg class="w-3.5 h-3.5 text-[#99CC33]/50 group-hover:text-[#6EA820] shrink-0 transition-colors"
+                  <svg class="w-3.5 h-3.5 text-primary-400/50 group-hover:text-primary-700 shrink-0 transition-colors"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                   </svg>
@@ -1294,9 +1298,9 @@ function removeNota(id) {
           <!-- Retos -->
           <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
             <div class="bg-[#374151] px-5 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-[#00A859]/20 border border-[#00A859]/25
+              <div class="w-8 h-8 rounded-xl bg-centros/20 border border-centros/25
                           flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
@@ -1306,13 +1310,13 @@ function removeNota(id) {
             <div class="p-3 space-y-2">
               <button @click="irA('/retos/crear')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-[#00A859]/5 border border-[#00A859]/15
-                       hover:bg-[#00A859]/12 hover:border-[#00A859]/35 hover:shadow-sm
+                       bg-centros/5 border border-centros/15
+                       hover:bg-centros/12 hover:border-centros/35 hover:shadow-sm
                        transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-[#00A859]/15 border border-[#00A859]/20
+                <div class="w-10 h-10 rounded-xl bg-centros/15 border border-centros/20
                             flex items-center justify-center shrink-0
-                            group-hover:bg-[#00A859]/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            group-hover:bg-centros/25 transition-colors duration-200">
+                  <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M13 10V3L4 14h7v7l9-11h-7z"/>
                   </svg>
@@ -1321,7 +1325,7 @@ function removeNota(id) {
                   <p class="text-[#1F2937] font-black text-sm leading-tight">Generador de retos</p>
                   <p class="text-gray-400 text-xs mt-0.5 font-medium">Crea retos con IA para tu alumnado</p>
                 </div>
-                <svg class="w-4 h-4 text-[#00A859]/30 shrink-0 group-hover:text-[#00A859]/70
+                <svg class="w-4 h-4 text-centros/30 shrink-0 group-hover:text-centros/70
                             group-hover:translate-x-0.5 transition-all duration-200"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
@@ -1330,13 +1334,13 @@ function removeNota(id) {
 
               <button @click="irA('/retos')"
                 class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-[#99CC33]/5 border border-[#99CC33]/15
-                       hover:bg-[#99CC33]/12 hover:border-[#99CC33]/35 hover:shadow-sm
+                       bg-primary-400/5 border border-primary-400/15
+                       hover:bg-primary-400/12 hover:border-primary-400/35 hover:shadow-sm
                        transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-[#99CC33]/15 border border-[#99CC33]/20
+                <div class="w-10 h-10 rounded-xl bg-primary-400/15 border border-primary-400/20
                             flex items-center justify-center shrink-0
-                            group-hover:bg-[#99CC33]/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-[#6EA820]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            group-hover:bg-primary-400/25 transition-colors duration-200">
+                  <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
                   </svg>
@@ -1345,7 +1349,7 @@ function removeNota(id) {
                   <p class="text-[#1F2937] font-black text-sm leading-tight">Biblioteca de retos</p>
                   <p class="text-gray-400 text-xs mt-0.5 font-medium">Consulta y comparte retos con QR</p>
                 </div>
-                <svg class="w-4 h-4 text-[#99CC33]/40 shrink-0 group-hover:text-[#6EA820]/70
+                <svg class="w-4 h-4 text-primary-400/40 shrink-0 group-hover:text-primary-700/70
                             group-hover:translate-x-0.5 transition-all duration-200"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
@@ -1434,13 +1438,13 @@ function removeNota(id) {
              @keydown.enter="abrirNoticias('plataforma')"
              @keydown.space.prevent="abrirNoticias('plataforma')">
           <div class="flex items-center gap-3 mb-3 w-full text-left">
-            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#00A859] to-[#99CC33] shrink-0"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-centros to-primary-400 shrink-0"></span>
             <span class="text-[10px] font-black uppercase tracking-widest shrink-0
-                         text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">
+                         text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">
               Novedades plataforma DuaLab
             </span>
-            <div class="flex-1 h-px bg-[#00A859]/20 group-hover:bg-[#00A859]/40 transition-colors duration-200"></div>
-            <svg class="w-3.5 h-3.5 text-[#00A859]/40 shrink-0 group-hover:text-[#00A859]
+            <div class="flex-1 h-px bg-centros/20 group-hover:bg-centros/40 transition-colors duration-200"></div>
+            <svg class="w-3.5 h-3.5 text-centros/40 shrink-0 group-hover:text-centros
                         group-hover:translate-x-0.5 transition-all duration-200"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
@@ -1474,13 +1478,13 @@ function removeNota(id) {
              @keydown.enter="abrirNoticias('dualab')"
              @keydown.space.prevent="abrirNoticias('dualab')">
           <div class="flex items-center gap-3 mb-3 w-full text-left">
-            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#00A859] to-[#99CC33] shrink-0"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-centros to-primary-400 shrink-0"></span>
             <span class="text-[10px] font-black uppercase tracking-widest shrink-0
-                         text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">
+                         text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">
               Noticias DuaLab
             </span>
-            <div class="flex-1 h-px bg-[#00A859]/20 group-hover:bg-[#00A859]/40 transition-colors duration-200"></div>
-            <svg class="w-3.5 h-3.5 text-[#00A859]/40 shrink-0 group-hover:text-[#00A859]
+            <div class="flex-1 h-px bg-centros/20 group-hover:bg-centros/40 transition-colors duration-200"></div>
+            <svg class="w-3.5 h-3.5 text-centros/40 shrink-0 group-hover:text-centros
                         group-hover:translate-x-0.5 transition-all duration-200"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>

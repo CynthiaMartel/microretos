@@ -27,7 +27,7 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-16 md:pt-16">
 
     <div class="relative z-10 max-w-6xl mx-auto"
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
@@ -44,7 +44,7 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
           Panel docente
         </button>
         <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">{{ config.titulo }}</span>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">{{ config.titulo }}</span>
         </h1>
         <p class="text-gray-500 text-sm mt-1">{{ config.descripcion }}</p>
       </header>

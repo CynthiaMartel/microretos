@@ -10,7 +10,7 @@ const props = defineProps({
 })
 defineEmits(['generar'])
 
-const hoverClass = computed(() => props.variant === 'ia' ? 'hover:text-orange-600' : 'hover:text-[#00A859]')
+const hoverClass = computed(() => props.variant === 'ia' ? 'hover:text-orange-600' : 'hover:text-centros')
 </script>
 
 <template>

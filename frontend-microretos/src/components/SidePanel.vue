@@ -7,8 +7,10 @@ import { useUIState } from '../composables/useUIState.js'
 import { useCredits } from '../composables/useCredits.js'
 import { useComoFunciona } from '../composables/useComoFunciona.js'
 import { useSidePanel } from '../composables/useSidePanel.js'
+import { useRoleTheme } from '../composables/useRoleTheme.js'
 
 const authStore = useAuthStore()
+const { theme } = useRoleTheme()
 const uiHighlight = useUiHighlightStore()
 const { tourActivo, showWelcome, welcomeRole, welcomeName } = useUIState()
 const { abrirCreditos } = useCredits()
@@ -69,8 +71,8 @@ watch(() => route.fullPath, closeMobilePanel)
   <!-- Panel lateral (también oculto durante el tour) — cajón deslizante en móvil/tablet, fijo en lg+ -->
   <aside
       v-if="!tourActivo"
-      class="fixed top-12 left-0 h-[calc(100vh-5rem)] w-72 max-w-[85vw] z-40 flex flex-col
-             bg-[#1F2937] border-r border-[#333333]
+      class="fixed top-16 left-0 h-[calc(100vh-6rem)] w-72 max-w-[85vw] z-40 flex flex-col
+             bg-[#223244] border-r border-[#37495D]
              shadow-[6px_0_32px_rgba(0,0,0,0.25)]
              transition-transform duration-300 ease-in-out
              lg:translate-x-0"
@@ -83,13 +85,13 @@ watch(() => route.fullPath, closeMobilePanel)
         <template v-if="authStore.isDocente || authStore.canAccess('microretos') || authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
 
           <div v-if="!authStore.isEmpresa" class="px-3 mb-1.5 flex items-center gap-1.5
-                      text-[9px] font-black uppercase tracking-[0.2em] text-white/40 select-none">
+                      text-[9px] font-black uppercase tracking-[0.2em] text-centros-light select-none">
             <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                         bg-white/10 text-white/50 text-[8px] font-black shrink-0">D</span>
+                         bg-centros/20 text-centros-light text-[8px] font-black shrink-0">D</span>
             Docente
           </div>
 
-          <div class="rounded-2xl border border-[#00A859]/20 bg-[#00A859]/5 px-2 pt-2 pb-2 space-y-1">
+          <div class="rounded-2xl border px-2 pt-2 pb-2 space-y-1" :class="[theme.border20, theme.bg5]">
 
             <!-- Panel docente -->
             <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="group/tip relative">
@@ -99,7 +101,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 class="nav-item w-full text-left"
                 @mouseenter="showTooltip"
                 @mouseleave="hideTooltip"
-                :class="isActive('/panel-docente') ? 'nav-item--active' : 'nav-item--idle'"
+                :class="isActive('/panel-docente') ? 'nav-item--active-docente' : 'nav-item--idle'"
               >
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -115,17 +117,17 @@ watch(() => route.fullPath, closeMobilePanel)
             <!-- Separador Panel / Retos -->
             <div
               v-if="(authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin) && (authStore.canAccess('microretos') || authStore.canAccess('biblioteca'))"
-              class="border-t border-[#00A859]/15 mx-1 my-1"
+              class="border-t mx-1 my-1" :class="theme.border15"
             />
 
-            <!-- RETOS -->
+            <!-- RETOS — color fijo de docente (azul), no del rol de quien mira -->
             <div v-if="authStore.canAccess('microretos') || authStore.canAccess('biblioteca')">
-              <div class="w-full flex items-center gap-2 px-3 mb-1
+              <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                           text-[9px] font-black uppercase tracking-[0.2em]
-                          text-lime-400/80 select-none">
+                          text-centros-light bg-centros/15 select-none">
                 <span class="flex-1 text-left flex items-center gap-1.5">
                   <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                               bg-lime-400/20 text-lime-400 text-[8px] font-black shrink-0">1</span>
+                               bg-centros/25 text-centros-light text-[8px] font-black shrink-0">1</span>
                   Retos
                 </span>
               </div>
@@ -140,7 +142,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/retos/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/retos/crear') ? 'nav-item--active-docente' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -158,7 +160,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/retos') && !isActive('/retos/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/retos') && !isActive('/retos/crear') ? 'nav-item--active-docente' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -177,17 +179,17 @@ watch(() => route.fullPath, closeMobilePanel)
             <!-- Separador Retos / Taller de Ideas -->
             <div
               v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && authStore.canAccess('startup-day')"
-              class="border-t border-[#00A859]/15 mx-1 my-1"
+              class="border-t mx-1 my-1" :class="theme.border15"
             />
 
-            <!-- TALLER DE IDEAS -->
+            <!-- TALLER DE IDEAS — color fijo de docente (azul) -->
             <div v-if="authStore.canAccess('startup-day')">
-              <div class="w-full flex items-center gap-2 px-3 mb-1
+              <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                           text-[9px] font-black uppercase tracking-[0.2em]
-                          text-amber-400/80 select-none">
+                          text-centros-light bg-centros/15 select-none">
                 <span class="flex-1 text-left flex items-center gap-1.5">
                   <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                               bg-amber-400/20 text-amber-400 text-[8px] font-black shrink-0">2</span>
+                               bg-centros/25 text-centros-light text-[8px] font-black shrink-0">2</span>
                   Taller de Ideas
                 </span>
               </div>
@@ -202,7 +204,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="[isActive('/proyectos/crear') ? 'nav-item--active' : 'nav-item--idle',
+                    :class="[isActive('/proyectos/crear') ? 'nav-item--active-docente' : 'nav-item--idle',
                              { 'nav-item--highlighted': uiHighlight.highlightedNavItem === 'generar-proyecto' }]"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -223,7 +225,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="$route.path.startsWith('/proyectos') && !isActive('/proyectos/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="$route.path.startsWith('/proyectos') && !isActive('/proyectos/crear') ? 'nav-item--active-docente' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -239,16 +241,16 @@ watch(() => route.fullPath, closeMobilePanel)
             </div>
 
             <!-- Separador Taller de Ideas / Encuentro con alumnado -->
-            <div v-if="!authStore.isEmpresa" class="border-t border-[#00A859]/15 mx-1 my-1" />
+            <div v-if="!authStore.isEmpresa" class="border-t mx-1 my-1" :class="theme.border15" />
 
             <!-- ENCUENTRO CON ALUMNADO — no aplica a empresa (solo lectura de retos/proyectos) -->
             <div v-if="!authStore.isEmpresa">
-              <div class="w-full flex items-center gap-2 px-3 mb-1
+              <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                           text-[9px] font-black uppercase tracking-[0.2em]
-                          text-blue-400/80 select-none">
+                          text-alumnos/75 bg-alumnos/10 select-none">
                 <span class="flex-1 text-left flex items-center gap-1.5">
                   <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                               bg-blue-400/20 text-blue-400 text-[8px] font-black shrink-0">3</span>
+                               bg-alumnos/20 text-alumnos/80 text-[8px] font-black shrink-0">3</span>
                   Encuentro con alumnado
                 </span>
               </div>
@@ -263,7 +265,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/encuentros/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/encuentros/crear') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -283,7 +285,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/encuentros') && !isActive('/encuentros/crear') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/encuentros') && !isActive('/encuentros/crear') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -304,7 +306,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/pantalla-acceso') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/pantalla-acceso') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -317,13 +319,13 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Separador docente / alumnado -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t border-[#00A859]/15 mx-1 my-1" />
+                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t mx-1 my-1" :class="theme.border15" />
 
                 <!-- Título distintivo: separa los dos accesos "Alumnado: ..." (unirse / retomar),
                      ambos puntos de entrada al workspace del equipo, del resto de la sección.
                      Más pequeño y sin badge (a diferencia de "3 · Encuentro con alumnado") para
                      que se lea como subnivel dentro de esa sección, no como un título hermano. -->
-                <div class="pl-7 pr-3 mb-1 text-[8px] font-bold uppercase tracking-[0.15em] text-[#00A859]/50 select-none">
+                <div class="mx-3 mb-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.08em] text-alumnos bg-alumnos/15 select-none">
                   Workspace alumnado
                 </div>
 
@@ -335,7 +337,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/unirse') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/unirse') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -355,7 +357,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/workspace-proyecto') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/workspace-proyecto') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -366,7 +368,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Separador alumnado / docente -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t border-[#00A859]/15 mx-1 my-1" />
+                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t mx-1 my-1" :class="theme.border15" />
 
                 <!-- Mis grupos — seguimiento del avance del alumnado (docentes, admin y superadmin).
                      Ruta /mis-equipos (antes /mis-grupos): "grupo" ya significa la clase/curso del
@@ -381,7 +383,7 @@ watch(() => route.fullPath, closeMobilePanel)
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
                     @mouseleave="hideTooltip"
-                    :class="isActive('/mis-equipos') ? 'nav-item--active' : 'nav-item--idle'"
+                    :class="isActive('/mis-equipos') ? 'nav-item--active-alumnos' : 'nav-item--idle'"
                   >
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -406,15 +408,15 @@ watch(() => route.fullPath, closeMobilePanel)
           <div class="my-2 border-t border-white/10" />
 
           <div class="group/tip relative">
-            <div class="w-full flex items-center gap-2 px-3 mb-1
+            <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                      text-[9px] font-black uppercase tracking-[0.2em]
-                     text-white/40 select-none">
+                     text-empresas-light bg-empresas/15 select-none">
               <span class="flex-1 text-left flex items-center gap-1.5">
                 <span class="inline-flex items-center justify-center w-4 h-4 rounded-full
-                             bg-blue-400/20 text-blue-400 text-[8px] font-black shrink-0">E</span>
+                             bg-empresas/25 text-empresas-light text-[8px] font-black shrink-0">E</span>
                 Empresas
                 <!-- Candado: indica que requiere contraseña especial -->
-                <svg class="w-3 h-3 text-white/30 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3 h-3 text-empresas-light/70 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
@@ -431,7 +433,7 @@ watch(() => route.fullPath, closeMobilePanel)
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
                   @mouseleave="hideTooltip"
-                  :class="isActive('/empresas') ? 'nav-item--active' : 'nav-item--idle'"
+                  :class="isActive('/empresas') ? 'nav-item--active-empresas' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -450,9 +452,9 @@ watch(() => route.fullPath, closeMobilePanel)
           <div class="my-2 border-t border-white/10" />
 
           <div class="group/tip relative">
-            <div class="w-full flex items-center gap-2 px-3 mb-1
+            <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                      text-[9px] font-black uppercase tracking-[0.2em]
-                     text-white/40 select-none">
+                     text-administraciones bg-administraciones/15 select-none">
               <span class="flex-1 text-left">Administración</span>
             </div>
             <div class="sp-tooltip">Gestión de datos de la plataforma<div class="sp-tooltip-arrow"/></div>
@@ -468,7 +470,7 @@ watch(() => route.fullPath, closeMobilePanel)
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
                   @mouseleave="hideTooltip"
-                  :class="isActive('/usuarios') ? 'nav-item--active' : 'nav-item--idle'"
+                  :class="isActive('/usuarios') ? 'nav-item--active-admin' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -489,7 +491,7 @@ watch(() => route.fullPath, closeMobilePanel)
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
                   @mouseleave="hideTooltip"
-                  :class="isActive('/base-datos') ? 'nav-item--active' : 'nav-item--idle'"
+                  :class="isActive('/base-datos') ? 'nav-item--active-admin' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -510,7 +512,7 @@ watch(() => route.fullPath, closeMobilePanel)
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
                   @mouseleave="hideTooltip"
-                  :class="isActive('/papelera') ? 'nav-item--active' : 'nav-item--idle'"
+                  :class="isActive('/papelera') ? 'nav-item--active-admin' : 'nav-item--idle'"
                 >
                   <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -565,10 +567,10 @@ watch(() => route.fullPath, closeMobilePanel)
         </button>
 
         <!-- Indicador sistema activo -->
-        <div class="flex items-center gap-2 px-3 py-2 rounded-2xl
-                    bg-[#99CC33]/10 border border-[#99CC33]/20">
-          <span class="w-1.5 h-1.5 rounded-full bg-[#99CC33] animate-pulse flex-shrink-0" />
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#99CC33]">
+        <div class="flex items-center gap-2 px-3 py-2 rounded-2xl border"
+             :class="[theme.bgSoft, theme.border20]">
+          <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" :class="theme.bg" />
+          <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.textDark">
             Sistema activo
           </span>
         </div>
@@ -602,10 +604,10 @@ watch(() => route.fullPath, closeMobilePanel)
                  bg-white border border-gray-100 shadow-xl"
         >
           <!-- Icono -->
-          <div class="mx-auto mb-6 w-16 h-16 rounded-2xl
-                      bg-[#F0FBF4] border border-[#BBE8D0]
-                      flex items-center justify-center">
-            <svg class="w-8 h-8 text-[#00A859]" fill="none" stroke="currentColor"
+          <div class="mx-auto mb-6 w-16 h-16 rounded-2xl border
+                      flex items-center justify-center"
+               :class="[theme.bgSoft, theme.border]">
+            <svg class="w-8 h-8" :class="theme.text" fill="none" stroke="currentColor"
                  viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
               <polyline points="22 4 12 14.01 9 11.01"/>
@@ -613,7 +615,7 @@ watch(() => route.fullPath, closeMobilePanel)
           </div>
 
           <!-- Etiqueta -->
-          <p class="text-[#00A859] text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] mb-4" :class="theme.text">
             Sesión iniciada
           </p>
 
@@ -621,7 +623,7 @@ watch(() => route.fullPath, closeMobilePanel)
           <h2 class="text-[#121212] text-xl font-bold leading-snug">
             ¡Te damos la bienvenida<br>a DuaLab para
           </h2>
-          <p class="text-[#00A859] text-4xl font-black tracking-tight mt-2 mb-1">
+          <p class="text-4xl font-black tracking-tight mt-2 mb-1" :class="theme.text">
             {{ welcomeRole === ROLE_DOCENTE ? 'docentes' : welcomeRole === ROLE_EMPRESA ? 'empresas' : 'admin' }}
           </p>
           <p class="text-[#121212] text-xl font-bold">!</p>
@@ -637,9 +639,10 @@ watch(() => route.fullPath, closeMobilePanel)
           <!-- Botón cerrar -->
           <button
             @click="showWelcome = false"
-            class="mt-6 w-full py-3 rounded-xl bg-[#00A859] text-white
+            class="mt-6 w-full py-3 rounded-xl text-white
                    font-black text-xs uppercase tracking-widest
-                   hover:bg-[#009950] transition-colors duration-200"
+                   transition-colors duration-200"
+            :class="[theme.bg, theme.bgHover]"
           >
             Continuar
           </button>
@@ -672,7 +675,7 @@ watch(() => route.fullPath, closeMobilePanel)
   gap: 10px;
   padding: 10px 12px;
   border-radius: 1rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   text-decoration: none;
   transition: background-color 150ms ease, color 150ms ease;
@@ -681,23 +684,41 @@ watch(() => route.fullPath, closeMobilePanel)
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.nav-item--idle   { color: rgba(255,255,255,0.5); }
+.nav-item--idle   { color: rgba(255,255,255,0.68); }
 .nav-item--idle:hover {
   background-color: rgba(255,255,255,0.07);
   color: rgba(255,255,255,0.9);
 }
-.nav-item--active {
-  background: linear-gradient(135deg, rgba(0,168,89,0.18) 0%, rgba(153,204,51,0.12) 100%);
-  color: #00A859;
-  box-shadow: inset 3px 0 0 #00A859;
+/* Activo: color fijo por sección (no por el rol de quien mira), con tonos
+   aclarados respecto a la marca para leerse con buen contraste sobre el
+   fondo del panel (#223244). */
+.nav-item--active-docente {
+  background: rgba(107,164,213,0.18);
+  color: #6BA4D5;
+  box-shadow: inset 3px 0 0 #6BA4D5;
+}
+.nav-item--active-alumnos {
+  background: rgba(255,137,32,0.16);
+  color: #FF8920;
+  box-shadow: inset 3px 0 0 #FF8920;
+}
+.nav-item--active-empresas {
+  background: rgba(110,193,63,0.18);
+  color: #6EC13F;
+  box-shadow: inset 3px 0 0 #6EC13F;
+}
+.nav-item--active-admin {
+  background: rgba(63,199,200,0.18);
+  color: #3FC7C8;
+  box-shadow: inset 3px 0 0 #3FC7C8;
 }
 .nav-item--highlighted {
-  color: #00A859 !important;
+  color: #6BA4D5 !important;
   animation: navHighlightPulse 1.1s ease-in-out infinite;
 }
 @keyframes navHighlightPulse {
-  0%, 100% { box-shadow: inset 3px 0 0 #00A859, 0 0 0 0 rgba(0,168,89,0.35); background-color: rgba(0,168,89,0.12); }
-  50%      { box-shadow: inset 3px 0 0 #00A859, 0 0 0 6px rgba(0,168,89,0); background-color: rgba(0,168,89,0.24); }
+  0%, 100% { box-shadow: inset 3px 0 0 #6BA4D5, 0 0 0 0 rgba(107,164,213,0.35); background-color: rgba(107,164,213,0.18); }
+  50%      { box-shadow: inset 3px 0 0 #6BA4D5, 0 0 0 6px transparent; background-color: rgba(107,164,213,0.3); }
 }
 .nav-icon {
   width: 17px;

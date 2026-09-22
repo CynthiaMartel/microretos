@@ -44,7 +44,7 @@ export const COLOR_MAP_FASES = {
   blue:   'bg-blue-50   border-blue-200   text-blue-600',
   amber:  'bg-amber-50  border-amber-200  text-amber-600',
   orange: 'bg-orange-50 border-orange-200 text-orange-600',
-  green:  'bg-[#00A859]/10 border-[#00A859]/20 text-[#00A859]',
+  green:  'bg-emerald-50 border-emerald-200 text-emerald-600',
 }
 
 // Nº de clases en las que aparece una fase concreta del calendario.

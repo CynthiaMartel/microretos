@@ -52,14 +52,14 @@ const imagenFondo = computed(() => {
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
-                bg-[#99CC33] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                bg-alumnos opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <!-- ── CARGANDO ── -->
     <div v-if="cargando" class="flex flex-col items-center justify-center min-h-screen">
-      <svg class="animate-spin w-12 h-12 text-[#00A859] mb-4" viewBox="0 0 24 24">
+      <svg class="animate-spin w-12 h-12 text-alumnos mb-4" viewBox="0 0 24 24">
         <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
       </svg>
-      <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">
+      <p class="text-alumnos-dark font-black tracking-widest uppercase text-sm animate-pulse">
         Cargando reto...
       </p>
     </div>
@@ -102,7 +102,7 @@ const imagenFondo = computed(() => {
       <div class="flex items-center justify-between mb-8
                   transition-all duration-700 ease-out"
            :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'">
-        <span class="text-[#00A859] font-black text-lg tracking-tight">DuaLab</span>
+        <span class="text-alumnos-dark font-black text-lg tracking-tight">DuaLab</span>
         <span v-if="expira"
               class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200
                      text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
@@ -130,7 +130,7 @@ const imagenFondo = computed(() => {
           </div>
 
           <div class="relative z-10 px-6 py-8 md:px-10 md:pt-10 md:pb-8">
-            <p class="text-[#00A859] font-bold text-[10px] tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
+            <p class="text-alumnos-dark font-bold text-[10px] tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
@@ -155,8 +155,8 @@ const imagenFondo = computed(() => {
                 {{ reto.familia }}
               </span>
               <span v-if="reto.ciclo"
-                    class="flex items-center gap-1.5 px-3 py-1.5 bg-[#00A859]/10 border border-[#00A859]/20
-                           text-[#00A859] rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                    class="flex items-center gap-1.5 px-3 py-1.5 bg-alumnos/10 border border-alumnos/20
+                           text-alumnos-dark rounded-lg text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.ciclo }}
               </span>
               <span v-if="reto.curso"
@@ -180,7 +180,7 @@ const imagenFondo = computed(() => {
           <div v-if="reto.quien_es || reto.dia_a_dia"
                class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div v-if="reto.quien_es">
-              <h3 class="flex items-center gap-2 text-[#00A859] font-black text-[11px]
+              <h3 class="flex items-center gap-2 text-alumnos-dark font-black text-[11px]
                          uppercase tracking-[0.15em] mb-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -192,7 +192,7 @@ const imagenFondo = computed(() => {
               <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
             </div>
             <div v-if="reto.dia_a_dia">
-              <h3 class="flex items-center gap-2 text-[#00A859] font-black text-[11px]
+              <h3 class="flex items-center gap-2 text-alumnos-dark font-black text-[11px]
                          uppercase tracking-[0.15em] mb-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -226,9 +226,9 @@ const imagenFondo = computed(() => {
           </div>
 
           <!-- Pregunta del reto -->
-          <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
+          <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-alumnos
                       p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-            <p class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
+            <p class="text-alumnos-dark font-black uppercase text-[10px] tracking-[0.2em] mb-3">
               Pregunta del Reto
             </p>
             <p class="text-xl md:text-2xl font-bold text-[#1F2937] leading-snug">
@@ -240,7 +240,7 @@ const imagenFondo = computed(() => {
           <div v-if="reto.que_necesitan?.length || reto.limitaciones?.length"
                class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div v-if="reto.que_necesitan?.length">
-              <h3 class="flex items-center gap-2 text-[#00A859] font-black text-[11px]
+              <h3 class="flex items-center gap-2 text-alumnos-dark font-black text-[11px]
                          uppercase tracking-[0.15em] mb-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -253,7 +253,7 @@ const imagenFondo = computed(() => {
               <ul class="space-y-2 pl-1">
                 <li v-for="(item, i) in reto.que_necesitan" :key="i"
                     class="flex items-start gap-3 text-sm text-gray-700">
-                  <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                  <span class="text-alumnos-dark font-black mt-0.5 shrink-0">•</span>
                   <span>{{ item }}</span>
                 </li>
               </ul>
@@ -280,7 +280,7 @@ const imagenFondo = computed(() => {
 
           <!-- Prototipos -->
           <div v-if="reto.prototipos?.length">
-            <h3 class="flex items-center gap-2 text-[#00A859] font-black text-[11px]
+            <h3 class="flex items-center gap-2 text-alumnos-dark font-black text-[11px]
                        uppercase tracking-[0.15em] mb-3">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -294,7 +294,7 @@ const imagenFondo = computed(() => {
             <ul class="space-y-2 pl-1">
               <li v-for="(item, i) in reto.prototipos" :key="i"
                   class="flex items-start gap-3 text-sm text-gray-700">
-                <span class="text-[#00A859] font-black mt-0.5 shrink-0">→</span>
+                <span class="text-alumnos-dark font-black mt-0.5 shrink-0">→</span>
                 <span>{{ item }}</span>
               </li>
             </ul>

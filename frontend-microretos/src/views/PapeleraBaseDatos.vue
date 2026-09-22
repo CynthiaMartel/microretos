@@ -29,10 +29,13 @@ const TIPOS = {
   empresas: {
     label: 'Empresa',
     labelPlural: 'Empresas',
-    color: '#00A859',
-    bgLight: 'bg-[#00A859]/10',
-    textColor: 'text-[#00A859]',
-    borderColor: 'border-[#00A859]/20',
+    // Nota: color meramente distintivo de esta leyenda de tipos, sin relación con
+    // los colores de marca por colectivo (centros/empresas/administraciones/alumnos)
+    // — "empresas" aquí es un tipo de registro eliminado, no el rol de usuario.
+    color: '#10b981',
+    bgLight: 'bg-emerald-50',
+    textColor: 'text-emerald-600',
+    borderColor: 'border-emerald-200',
   },
   microretos: {
     label: 'Reto',
@@ -53,7 +56,7 @@ const TIPOS = {
   familias: {
     label: 'Familia profesional',
     labelPlural: 'Familias',
-    color: '#99CC33',
+    color: '#4d7c0f',
     bgLight: 'bg-lime-50',
     textColor: 'text-lime-700',
     borderColor: 'border-lime-200',
@@ -207,7 +210,7 @@ onMounted(cargarPapelera)
 </script>
 
 <template>
-  <div class="min-h-screen pb-20 pt-12 md:pt-12">
+  <div class="min-h-screen pb-20 pt-16 md:pt-16">
 
     <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
     <div class="bg-white border-b border-gray-100 shadow-sm">
@@ -418,8 +421,8 @@ onMounted(cargarPapelera)
               @click="restaurar(item)"
               :disabled="restaurando === item.id + item.tipo"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
-                     bg-[#00A859]/10 border border-[#00A859]/20 text-[#00A859]
-                     hover:bg-[#00A859]/20 hover:border-[#00A859]/40
+                     bg-administraciones/10 border border-administraciones/20 text-administraciones
+                     hover:bg-administraciones/20 hover:border-administraciones/40
                      font-bold text-xs transition-all duration-150
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >

@@ -3,11 +3,13 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSidePanel } from '../composables/useSidePanel.js'
+import { useRoleTheme } from '../composables/useRoleTheme.js'
 
 const authStore = useAuthStore()
 const route     = useRoute()
 const router    = useRouter()
 const { mobileOpen, toggleMobilePanel } = useSidePanel()
+const { theme } = useRoleTheme()
 
 const irHome = () => {
   const destino = authStore.isAuthenticated && (authStore.isDocente || authStore.isAdmin)
@@ -49,15 +51,15 @@ const cerrarSesion = async () => {
 
 <template>
   <header
-    class="fixed top-0 left-0 right-0 h-12 z-50 flex items-center gap-2 px-3
-           bg-[#1F2937] border-b border-[#333333] select-none"
+    class="fixed top-0 left-0 right-0 h-16 z-50 flex items-center gap-2 px-3
+           bg-[#223244] border-b border-[#37495D] select-none"
   >
     <!-- Menú (cajón lateral) — solo visible en móvil/tablet con sesión iniciada -->
     <button
       v-if="authStore.isAuthenticated"
       @click="toggleMobilePanel"
       title="Menú"
-      class="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+      class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center shrink-0
              text-white/60 hover:text-white hover:bg-white/10
              transition-all duration-150"
     >
@@ -69,14 +71,14 @@ const cerrarSesion = async () => {
       </svg>
     </button>
 
-    <!-- Logo DuaLab -->
+    <!-- Logo DuaLab — el color de "Lab" refleja el rol de quien ha iniciado sesión -->
     <button
       @click="irHome"
-      class="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity duration-150 cursor-pointer"
+      class="flex items-center gap-2 mr-1 shrink-0 hover:opacity-80 transition-opacity duration-150 cursor-pointer"
     >
-      <img src="../assets/logo.png" alt="DuaLab" class="h-6 w-auto object-contain" />
-      <span class="font-black text-sm tracking-tighter text-white uppercase select-none">
-        Dua<span class="text-[#00A859]">Lab</span>
+      <img src="../assets/logo_colores.png" alt="DuaLab" class="h-11 w-auto object-contain" />
+      <span class="font-black text-lg tracking-tighter text-white uppercase select-none">
+        Dua<span :class="theme.textDark">Lab</span>
       </span>
     </button>
 
@@ -95,7 +97,7 @@ const cerrarSesion = async () => {
 
       <!-- Nombre y rol -->
       <div class="hidden sm:flex flex-col items-end leading-none gap-0.5">
-        <span class="text-[9px] font-black uppercase tracking-widest text-white/30">
+        <span class="text-[9px] font-black uppercase tracking-widest" :class="theme.textDark">
           {{ authStore.roleLabel }}
         </span>
         <span class="text-[11px] font-bold text-white/70 truncate max-w-[130px]">
@@ -107,7 +109,7 @@ const cerrarSesion = async () => {
       <button
         @click="router.push('/mi-usuario')"
         title="Mi usuario"
-        class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0
+        class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                text-white/40 hover:text-white/80 hover:bg-white/10
                transition-all duration-150"
       >
@@ -123,7 +125,7 @@ const cerrarSesion = async () => {
         @click="cerrarSesion"
         :disabled="cargandoOut"
         title="Cerrar sesión"
-        class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0
+        class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                text-red-400/60 hover:text-red-300 hover:bg-red-500/10
                transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
       >

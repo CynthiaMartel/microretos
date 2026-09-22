@@ -51,7 +51,7 @@ watch(() => props.proyectoUuid, async (uuid) => {
   <div>
     <!-- Carga / error -->
     <div v-if="cargando" class="flex items-center justify-center py-10">
-      <div class="w-6 h-6 border-2 border-[#00A859] border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-6 h-6 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
     </div>
     <div v-else-if="error" class="rounded-2xl bg-red-50 border border-red-200 p-5 text-center text-red-600 text-xs font-semibold">
       {{ error }}

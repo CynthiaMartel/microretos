@@ -85,7 +85,7 @@ function cerrar() {
               <button v-if="reto" @click="descargarPDF(reto)"
                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl
                              bg-gray-50 border border-gray-200 text-[10px] font-black uppercase
-                             tracking-widest text-gray-500 hover:border-[#00A859] hover:text-[#00A859]
+                             tracking-widest text-gray-500 hover:border-centros hover:text-centros
                              transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -108,10 +108,10 @@ function cerrar() {
 
           <!-- ── Cargando ── -->
           <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-            <svg class="animate-spin w-10 h-10 text-[#00A859] mb-4" viewBox="0 0 24 24">
+            <svg class="animate-spin w-10 h-10 text-centros mb-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
             </svg>
-            <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">
+            <p class="text-centros font-black tracking-widest uppercase text-sm animate-pulse">
               Cargando ficha...
             </p>
           </div>
@@ -145,7 +145,7 @@ function cerrar() {
                 </div>
 
                 <div class="relative z-10 px-6 py-8 md:px-12 md:pt-10 md:pb-8 max-w-3xl">
-                  <p class="text-[#00A859] font-bold text-[10px] tracking-[0.2em] uppercase mb-3
+                  <p class="text-centros font-bold text-[10px] tracking-[0.2em] uppercase mb-3
                             flex items-center gap-2">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -208,8 +208,8 @@ function cerrar() {
                       {{ reto.familia }}
                     </span>
                     <span v-if="reto.ciclo"
-                          class="flex items-center gap-1.5 px-3 py-1.5 bg-[#00A859]/10 border
-                                 border-[#00A859]/20 text-[#00A859] rounded-lg text-[10px] font-bold
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-centros/10 border
+                                 border-centros/20 text-centros rounded-lg text-[10px] font-bold
                                  uppercase tracking-wider">
                       {{ reto.ciclo }}
                     </span>
@@ -296,7 +296,7 @@ function cerrar() {
                 <div class="space-y-8">
                   <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
                              tracking-widest border-b-2 border-gray-200 pb-2">
-                    <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
                                a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -307,7 +307,7 @@ function cerrar() {
                   <!-- Quién es / Día a día -->
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                     <div v-if="reto.quien_es">
-                      <h3 class="section-title text-[#00A859]">
+                      <h3 class="section-title text-centros">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0
@@ -320,7 +320,7 @@ function cerrar() {
                       <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
                     </div>
                     <div v-if="reto.dia_a_dia">
-                      <h3 class="section-title text-[#00A859]">
+                      <h3 class="section-title text-centros">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -351,9 +351,9 @@ function cerrar() {
                   </div>
 
                   <!-- Pregunta del reto -->
-                  <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-[#00A859]
+                  <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-centros
                               p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
-                    <h3 class="text-[#00A859] font-black uppercase text-[10px] tracking-[0.2em] mb-3">
+                    <h3 class="text-centros font-black uppercase text-[10px] tracking-[0.2em] mb-3">
                       Este reto consiste en responder a:
                     </h3>
                     <p class="text-lg md:text-xl font-bold text-[#1F2937] leading-snug">
@@ -364,7 +364,7 @@ function cerrar() {
                   <!-- Qué necesitan / Limitaciones -->
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                     <div v-if="reto.que_necesitan?.length">
-                      <h3 class="section-title text-[#00A859]">
+                      <h3 class="section-title text-centros">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
@@ -375,7 +375,7 @@ function cerrar() {
                       <ul class="space-y-2 pl-1">
                         <li v-for="(item, i) in reto.que_necesitan" :key="i"
                             class="flex items-start gap-3 text-sm text-gray-700">
-                          <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                          <span class="text-centros font-black mt-0.5 shrink-0">•</span>
                           <span>{{ item }}</span>
                         </li>
                       </ul>
@@ -403,7 +403,7 @@ function cerrar() {
                 <!-- Prototipos / ODS -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                   <div v-if="reto.prototipos?.length">
-                    <h3 class="section-title text-[#00A859]">
+                    <h3 class="section-title text-centros">
                       <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -413,7 +413,7 @@ function cerrar() {
                     <ul class="space-y-2 pl-1">
                       <li v-for="(item, i) in reto.prototipos" :key="i"
                           class="flex items-start gap-3 text-sm text-gray-700">
-                        <span class="text-[#00A859] font-black mt-0.5 shrink-0">•</span>
+                        <span class="text-centros font-black mt-0.5 shrink-0">•</span>
                         <span>{{ item }}</span>
                       </li>
                     </ul>
@@ -459,7 +459,7 @@ function cerrar() {
                 <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
                   <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
                              tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
-                    <svg class="w-5 h-5 text-[#00A859] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0
@@ -474,7 +474,7 @@ function cerrar() {
                       <p class="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Módulo</p>
                       <p class="font-black text-[#1F2937] text-base mb-4">{{ evalObj.modulo }}</p>
                       <div class="mb-4">
-                        <p class="text-[10px] uppercase font-bold text-[#00A859] mb-1">Resultado de Aprendizaje</p>
+                        <p class="text-[10px] uppercase font-bold text-centros mb-1">Resultado de Aprendizaje</p>
                         <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
                           {{ evalObj.ra }}
                         </p>
@@ -484,7 +484,7 @@ function cerrar() {
                         <ul class="space-y-1.5">
                           <li v-for="(ce, i) in evalObj.ce" :key="i"
                               class="text-sm text-gray-600 flex items-start gap-2">
-                            <span class="text-[#00A859] font-bold mt-0.5 shrink-0">✓</span>
+                            <span class="text-centros font-bold mt-0.5 shrink-0">✓</span>
                             <span>{{ ce }}</span>
                           </li>
                         </ul>
@@ -501,7 +501,7 @@ function cerrar() {
 
                 <!-- Variantes -->
                 <div v-if="reto.variantes?.length" class="pt-2">
-                  <h3 class="section-title text-[#00A859]">
+                  <h3 class="section-title text-centros">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
@@ -548,7 +548,7 @@ function cerrar() {
                      class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                   <div class="text-sm text-gray-700 leading-relaxed">
                     <template v-if="tip.includes(':')">
-                      <strong class="text-[#00A859] flex items-center gap-1.5 mb-2
+                      <strong class="text-centros flex items-center gap-1.5 mb-2
                                      uppercase tracking-wider text-[10px]">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

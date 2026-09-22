@@ -577,18 +577,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen text-[#121212] px-4 py-8 lg:px-8 pt-12 md:pt-12">
+  <div class="min-h-screen text-[#121212] px-4 py-8 lg:px-8 pt-16 md:pt-16">
 
     <!-- ── Cabecera ────────────────────────────────────────── -->
     <div class="max-w-5xl mx-auto mb-8 flex flex-col sm:flex-row sm:items-end gap-4">
       <div class="flex-1">
-        <p class="text-[10px] font-black uppercase tracking-[0.25em] text-[#00A859] mb-1">Administración</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.25em] text-administraciones mb-1">Administración</p>
         <h1 class="text-2xl font-black tracking-tight">Gestión de cuentas</h1>
         <p class="text-sm text-gray-500 mt-1">Crea, activa, bloquea y elimina cuentas de docentes y empresas.</p>
       </div>
       <button
         @click="abrirModalCrear()"
-        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A859] hover:bg-[#009950]
+        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-administraciones hover:bg-administraciones/90
                text-white font-black text-xs uppercase tracking-widest transition-all shrink-0"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -643,7 +643,7 @@ onMounted(async () => {
     <div class="max-w-5xl mx-auto mb-5 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
       <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-xl">
         <button @click="cambiarVista('activos')"
-          :class="vista === 'activos' ? 'bg-[#00A859]/20 text-[#00A859] border border-[#00A859]/40' : 'text-gray-400 hover:text-gray-600'"
+          :class="vista === 'activos' ? 'bg-administraciones/20 text-administraciones border border-administraciones/40' : 'text-gray-400 hover:text-gray-600'"
           class="px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all">
           Activos
         </button>
@@ -772,7 +772,7 @@ onMounted(async () => {
                   <div v-if="highlightId === u.id"
                        class="absolute -top-11 left-1/2 -translate-x-1/2 z-10 pointer-events-none
                               whitespace-nowrap px-3 py-1.5 rounded-lg
-                              bg-[#00A859] text-white text-[10px] font-black shadow-lg
+                              bg-administraciones text-white text-[10px] font-black shadow-lg
                               flex items-center gap-1.5">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -780,7 +780,7 @@ onMounted(async () => {
                     Activa esta cuenta aquí
                     <!-- Flecha apuntando abajo -->
                     <span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3
-                                 bg-[#00A859] rotate-45 rounded-sm"/>
+                                 bg-administraciones rotate-45 rounded-sm"/>
                   </div>
                 </Transition>
 
@@ -844,8 +844,8 @@ onMounted(async () => {
             <div v-else class="flex items-center gap-1.5 shrink-0">
               <button @click="restaurar(u)"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
-                       uppercase tracking-wider bg-[#00A859]/15 text-[#00A859]
-                       border border-[#00A859]/30 hover:bg-[#00A859]/25 transition-all">
+                       uppercase tracking-wider bg-administraciones/15 text-administraciones
+                       border border-administraciones/30 hover:bg-administraciones/25 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -899,7 +899,7 @@ onMounted(async () => {
                 <input v-model="form.name" type="text" placeholder="Nombre completo"
                   maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.name ? 'border-red-400' : 'border-gray-200'" />
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formErrors.name" class="text-[10px] text-red-500">{{ formErrors.name }}</p>
@@ -924,7 +924,7 @@ onMounted(async () => {
                 <!-- Con dominio (centro o empresa): input dividido -->
                 <div v-else-if="activeEmailDomain"
                   class="flex items-center bg-gray-50 border rounded-xl overflow-hidden transition-all
-                         focus-within:border-[#00A859]/50 focus-within:ring-2 focus-within:ring-[#00A859]/10"
+                         focus-within:border-administraciones/50 focus-within:ring-2 focus-within:ring-administraciones/10"
                   :class="formErrors.email ? 'border-red-400' : 'border-gray-200'">
                   <input v-model="formEmailLocal" type="text" placeholder="nombreusuario"
                     class="flex-1 min-w-0 bg-transparent px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300 outline-none" />
@@ -934,7 +934,7 @@ onMounted(async () => {
                 <input v-else v-model="form.email" type="email" placeholder="correo@ejemplo.com"
                   maxlength="254"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.email ? 'border-red-400' : 'border-gray-200'" />
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formErrors.email" class="text-[10px] text-red-500">{{ formErrors.email }}</p>
@@ -949,13 +949,13 @@ onMounted(async () => {
                 <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas, minúsculas, número y símbolo"
                   maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.password ? 'border-red-400' : 'border-gray-200'" />
                 <p v-if="formErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formErrors.password }}</p>
                 <ul class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   <li v-for="req in passwordRequisitos" :key="req.label"
                     class="flex items-center gap-1 text-[10px] transition-colors"
-                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    :class="req.ok ? 'text-administraciones font-bold' : 'text-gray-400'">
                     <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                     </svg>
@@ -973,7 +973,7 @@ onMounted(async () => {
                 <input v-model="form.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
                   maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
                 <p v-if="formErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formErrors.password_confirmation }}</p>
               </div>
@@ -1031,7 +1031,7 @@ onMounted(async () => {
                 <div v-if="cargandoCentros" class="text-xs text-gray-400 py-2">Cargando centros…</div>
                 <select v-else v-model="form.centro_educativo_id"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.centro_educativo_id ? 'border-red-400' : 'border-gray-200'">
                   <option :value="null">— Selecciona un centro —</option>
                   <option v-for="c in centros" :key="c.id" :value="c.id">{{ c.nombre }}</option>
@@ -1048,7 +1048,7 @@ onMounted(async () => {
                 <div v-if="cargandoEmpresas" class="text-xs text-gray-400 py-2">Cargando empresas…</div>
                 <select v-else v-model="form.empresa_id"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formErrors.empresa_id ? 'border-red-400' : 'border-gray-200'">
                   <option :value="null">— Selecciona una empresa —</option>
                   <option v-for="e in empresasList" :key="e.id" :value="e.id">{{ e.nombre_comercial }}</option>
@@ -1061,7 +1061,7 @@ onMounted(async () => {
               </p>
 
               <button type="submit" :disabled="creando"
-                class="w-full py-3 rounded-xl bg-[#00A859] hover:bg-[#009950] text-white font-black
+                class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white font-black
                        text-xs uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                 {{ creando ? 'Creando...' : 'Crear cuenta' }}
               </button>
@@ -1073,9 +1073,9 @@ onMounted(async () => {
     <Modal :visible="modalExito" max-width="max-w-sm" :z-index="9100" :closable="false" card-class="p-8 text-center overflow-y-auto">
 
             <!-- Icono -->
-            <div class="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
+            <div class="mx-auto mb-5 w-16 h-16 rounded-2xl bg-administraciones/10 border border-administraciones/20
                         flex items-center justify-center">
-              <svg class="w-8 h-8 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-8 h-8 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
@@ -1086,7 +1086,7 @@ onMounted(async () => {
               <span class="text-[#1F2937] font-bold">{{ cuentaRecienCreada?.name }}</span>
               se ha creado correctamente.
             </p>
-            <p class="text-xs text-[#00A859] font-bold flex items-center justify-center gap-1.5">
+            <p class="text-xs text-administraciones font-bold flex items-center justify-center gap-1.5">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
@@ -1104,14 +1104,14 @@ onMounted(async () => {
                 <p class="text-xs font-black text-yellow-600 uppercase tracking-wider mb-0.5">Pendiente de activación</p>
                 <p class="text-xs text-gray-500">
                   La cuenta aún no puede iniciar sesión.
-                  Pulsa el botón <span class="text-[#00A859] font-bold">Activar</span> en la fila
+                  Pulsa el botón <span class="text-administraciones font-bold">Activar</span> en la fila
                   de esta cuenta para habilitarla.
                 </p>
               </div>
             </div>
 
             <button @click="cerrarModalExito"
-              class="w-full py-3 rounded-xl bg-[#00A859] hover:bg-[#009950] text-white
+              class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white
                      font-black text-xs uppercase tracking-widest transition-all">
               Entendido, ir a activar
             </button>
@@ -1172,7 +1172,7 @@ onMounted(async () => {
                   autofocus
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5
                          text-sm text-[#1F2937] placeholder-gray-300 outline-none
-                         focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10 transition-all"
+                         focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10 transition-all"
                 />
               </div>
             </div>
@@ -1258,7 +1258,7 @@ onMounted(async () => {
                 <input v-model="formEditar.name" type="text" placeholder="Nombre completo"
                   maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.name ? 'border-red-400' : 'border-gray-200'" />
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formEditarErrors.name" class="text-[10px] text-red-500">{{ formEditarErrors.name }}</p>
@@ -1273,7 +1273,7 @@ onMounted(async () => {
                 <!-- Con dominio (centro o empresa): input dividido -->
                 <div v-if="activeEmailEditarDomain"
                   class="flex items-center bg-gray-50 border rounded-xl overflow-hidden transition-all
-                         focus-within:border-[#00A859]/50 focus-within:ring-2 focus-within:ring-[#00A859]/10"
+                         focus-within:border-administraciones/50 focus-within:ring-2 focus-within:ring-administraciones/10"
                   :class="formEditarErrors.email ? 'border-red-400' : 'border-gray-200'">
                   <input v-model="formEditarEmailLocal" type="text" placeholder="nombreusuario"
                     class="flex-1 min-w-0 bg-transparent px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300 outline-none" />
@@ -1283,7 +1283,7 @@ onMounted(async () => {
                 <input v-else v-model="formEditar.email" type="email" placeholder="correo@ejemplo.com"
                   maxlength="254"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.email ? 'border-red-400' : 'border-gray-200'" />
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formEditarErrors.email" class="text-[10px] text-red-500">{{ formEditarErrors.email }}</p>
@@ -1298,13 +1298,13 @@ onMounted(async () => {
                 <input v-model="formEditar.password" type="password" placeholder="Dejar en blanco para no cambiar"
                   maxlength="128"
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.password ? 'border-red-400' : 'border-gray-200'" />
                 <p v-if="formEditarErrors.password" class="text-[10px] text-red-500 font-bold mt-1.5">{{ formEditarErrors.password }}</p>
                 <ul v-if="formEditar.password" class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   <li v-for="req in passwordRequisitosEditar" :key="req.label"
                     class="flex items-center gap-1 text-[10px] transition-colors"
-                    :class="req.ok ? 'text-[#00A859] font-bold' : 'text-gray-400'">
+                    :class="req.ok ? 'text-administraciones font-bold' : 'text-gray-400'">
                     <svg v-if="req.ok" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                     </svg>
@@ -1322,7 +1322,7 @@ onMounted(async () => {
                 <input v-model="formEditar.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
                   maxlength="128"
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.password_confirmation ? 'border-red-400' : 'border-gray-200'" />
                 <p v-if="formEditarErrors.password_confirmation" class="text-[10px] text-red-500 mt-1">{{ formEditarErrors.password_confirmation }}</p>
               </div>
@@ -1396,7 +1396,7 @@ onMounted(async () => {
                 <div v-if="cargandoCentros" class="text-xs text-gray-400 py-2">Cargando centros…</div>
                 <select v-else v-model="formEditar.centro_educativo_id"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.centro_educativo_id ? 'border-red-400' : 'border-gray-200'">
                   <option :value="null">— Selecciona un centro —</option>
                   <option v-for="c in centros" :key="c.id" :value="c.id">{{ c.nombre }}</option>
@@ -1413,7 +1413,7 @@ onMounted(async () => {
                 <div v-if="cargandoEmpresas" class="text-xs text-gray-400 py-2">Cargando empresas…</div>
                 <select v-else v-model="formEditar.empresa_id"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937]
-                         outline-none transition-all focus:border-[#00A859]/50 focus:ring-2 focus:ring-[#00A859]/10"
+                         outline-none transition-all focus:border-administraciones/50 focus:ring-2 focus:ring-administraciones/10"
                   :class="formEditarErrors.empresa_id ? 'border-red-400' : 'border-gray-200'">
                   <option :value="null">— Selecciona una empresa —</option>
                   <option v-for="e in empresasList" :key="e.id" :value="e.id">{{ e.nombre_comercial }}</option>
@@ -1428,7 +1428,7 @@ onMounted(async () => {
                   <button type="button"
                     @click="!usuarioEditando?.is_active && activarEnModal()"
                     :class="usuarioEditando?.is_active
-                      ? 'bg-[#00A859] cursor-default'
+                      ? 'bg-administraciones cursor-default'
                       : 'bg-orange-400 hover:bg-orange-500 cursor-pointer'"
                     class="relative w-12 h-6 rounded-full transition-all duration-200 shrink-0">
                     <span
@@ -1436,7 +1436,7 @@ onMounted(async () => {
                       class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 block">
                     </span>
                   </button>
-                  <span :class="usuarioEditando?.is_active ? 'text-[#00A859]' : 'text-orange-500'"
+                  <span :class="usuarioEditando?.is_active ? 'text-administraciones' : 'text-orange-500'"
                         class="text-xs font-bold">
                     {{ usuarioEditando?.is_active ? 'Activada' : 'Sin activar' }}
                   </span>
@@ -1448,7 +1448,7 @@ onMounted(async () => {
               </p>
 
               <button type="submit" :disabled="editando"
-                class="w-full py-3 rounded-xl bg-[#00A859] hover:bg-[#009950] text-white font-black
+                class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white font-black
                        text-xs uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                 {{ editando ? 'Guardando...' : 'Guardar cambios' }}
               </button>
@@ -1473,7 +1473,7 @@ onMounted(async () => {
             <button @click="ejecutarConfirm"
               :class="confirm.danger
                 ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                : 'bg-[#00A859]/10 border-[#00A859]/30 text-[#00A859] hover:bg-[#00A859]/20'"
+                : 'bg-administraciones/10 border-administraciones/30 text-administraciones hover:bg-administraciones/20'"
               class="flex-1 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all">
               Confirmar
             </button>
@@ -1489,7 +1489,7 @@ onMounted(async () => {
              class="pointer-events-auto flex items-center gap-3 px-5 py-3.5
                     rounded-xl border shadow-2xl text-xs font-bold text-white"
              :class="toast.ok
-               ? 'bg-[#00A859] border-[#00A859]'
+               ? 'bg-administraciones border-administraciones'
                : 'bg-red-600 border-red-600'">
           <svg v-if="toast.ok" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -1527,8 +1527,8 @@ onMounted(async () => {
 
 /* Pulso suave para el botón destacado */
 @keyframes pulse-soft {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(0, 168, 89, 0.5), 0 0 0 6px rgba(0, 168, 89, 0.15); }
-  50%       { box-shadow: 0 0 0 5px rgba(0, 168, 89, 0.35), 0 0 0 10px rgba(0, 168, 89, 0.05); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(25, 167, 168, 0.5), 0 0 0 6px rgba(25, 167, 168, 0.15); }
+  50%       { box-shadow: 0 0 0 5px rgba(25, 167, 168, 0.35), 0 0 0 10px rgba(25, 167, 168, 0.05); }
 }
 .animate-pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }
 </style>

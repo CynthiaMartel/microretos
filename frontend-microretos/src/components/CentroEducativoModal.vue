@@ -407,11 +407,11 @@ function resetear() {
             <!-- Cabecera -->
             <div class="cce-header">
               <div class="cce-icon-box" :class="modoEditar ? 'cce-icon-box--edit' : ''">
-                <svg v-if="modoEditar" class="w-7 h-7 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-if="modoEditar" class="w-7 h-7 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
-                <svg v-else class="w-7 h-7 text-[#99CC33]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else class="w-7 h-7 text-centros-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
                 </svg>
@@ -477,10 +477,10 @@ function resetear() {
             <div class="mt-6">
               <label class="cce-label">Imagen del centro</label>
               <div class="flex items-center gap-3">
-                <div class="w-20 h-20 rounded-2xl border-2 border-dashed border-[#BBE8D0] bg-[#F0FBF4]
+                <div class="w-20 h-20 rounded-2xl border-2 border-dashed border-[#C7DCEC] bg-[#F2F7FB]
                             flex items-center justify-center shrink-0 overflow-hidden">
                   <img v-if="imgUrl" :src="imgUrl" alt="" class="w-full h-full object-cover" />
-                  <svg v-else class="w-8 h-8 text-[#00A859]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-else class="w-8 h-8 text-centros/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                           d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
                   </svg>
@@ -512,7 +512,7 @@ function resetear() {
                 <p class="cce-label mb-0">Ciclos que imparte *</p>
                 <span v-if="totalSeleccionados > 0"
                   class="text-[10px] font-black uppercase tracking-widest
-                         bg-[#00A859]/10 text-[#00A859] px-2.5 py-1 rounded-full">
+                         bg-centros/10 text-centros px-2.5 py-1 rounded-full">
                   {{ totalSeleccionados }} seleccionados
                 </span>
               </div>
@@ -529,7 +529,7 @@ function resetear() {
                   :key="familia.id"
                   class="rounded-2xl border overflow-hidden transition-colors"
                   :class="ciclosPreseleccionadosDeFamilia(familia.id) > 0
-                    ? 'border-[#00A859]/30 bg-[#F0FBF4]'
+                    ? 'border-centros/30 bg-[#F2F7FB]'
                     : 'border-gray-100 bg-white'"
                 >
                   <!-- Cabecera familia -->
@@ -539,11 +539,11 @@ function resetear() {
                     class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition-colors"
                   >
                     <div class="w-2 h-2 rounded-full shrink-0"
-                      :class="ciclosPreseleccionadosDeFamilia(familia.id) > 0 ? 'bg-[#00A859]' : 'bg-gray-300'"/>
+                      :class="ciclosPreseleccionadosDeFamilia(familia.id) > 0 ? 'bg-centros' : 'bg-gray-300'"/>
                     <span class="flex-1 font-bold text-sm text-[#1F2937]">{{ familia.nombre }}</span>
                     <span v-if="ciclosPreseleccionadosDeFamilia(familia.id) > 0"
                       class="text-[10px] font-black uppercase tracking-widest
-                             bg-[#00A859]/15 text-[#00A859] px-2 py-0.5 rounded-full shrink-0">
+                             bg-centros/15 text-centros px-2 py-0.5 rounded-full shrink-0">
                       {{ ciclosPreseleccionadosDeFamilia(familia.id) }}
                     </span>
                     <svg
@@ -558,18 +558,18 @@ function resetear() {
                   <!-- Lista de ciclos -->
                   <div v-if="familiasExpandidas.has(familia.id)" class="border-t border-gray-100 px-4 py-3">
                     <div v-if="cargandoCiclos[familia.id]" class="flex items-center gap-2 py-2">
-                      <div class="w-4 h-4 rounded-full border-2 border-[#00A859]/30 border-t-[#00A859] animate-spin shrink-0"/>
+                      <div class="w-4 h-4 rounded-full border-2 border-centros/30 border-t-centros animate-spin shrink-0"/>
                       <span class="text-xs text-gray-400">Cargando ciclos...</span>
                     </div>
                     <div v-else-if="ciclosPorFamilia[familia.id]?.length">
                       <!-- Seleccionar todos -->
                       <label class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500
-                                   cursor-pointer pb-2 mb-2 border-b border-gray-100 hover:text-[#00A859]">
+                                   cursor-pointer pb-2 mb-2 border-b border-gray-100 hover:text-centros">
                         <input
                           type="checkbox"
                           :checked="todosDeFamiliaSeleccionados(familia.id)"
                           @change="toggleTodosDeFamilia(familia.id)"
-                          class="accent-[#00A859] w-3.5 h-3.5 shrink-0"
+                          class="accent-centros w-3.5 h-3.5 shrink-0"
                         />
                         Seleccionar todos
                       </label>
@@ -577,13 +577,13 @@ function resetear() {
                         <label
                           v-for="ciclo in ciclosPorFamilia[familia.id]"
                           :key="ciclo.id"
-                          class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-[#00A859] py-0.5"
+                          class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-0.5"
                         >
                           <input
                             type="checkbox"
                             :value="ciclo.id"
                             v-model="seleccionados"
-                            class="accent-[#00A859] w-4 h-4 shrink-0"
+                            class="accent-centros w-4 h-4 shrink-0"
                           />
                           {{ ciclo.nombre }}
                         </label>
@@ -654,26 +654,26 @@ function resetear() {
                     <input
                       type="checkbox"
                       v-model="filtrarPorFamilia"
-                      class="accent-[#00A859] w-3.5 h-3.5 shrink-0"
+                      class="accent-centros w-3.5 h-3.5 shrink-0"
                     />
                     Mostrar solo empresas de las familias que imparte este centro
                   </label>
 
                   <div v-if="cargandoEmpresas" class="flex items-center gap-2 py-3">
-                    <div class="w-4 h-4 rounded-full border-2 border-[#00A859]/30 border-t-[#00A859] animate-spin shrink-0"/>
+                    <div class="w-4 h-4 rounded-full border-2 border-centros/30 border-t-centros animate-spin shrink-0"/>
                     <span class="text-xs text-gray-400">Cargando empresas...</span>
                   </div>
                   <div v-else class="max-h-[30vh] overflow-y-auto cce-scroll mt-2 space-y-0.5">
                     <label
                       v-for="e in empresasCandidatas"
                       :key="e.id"
-                      class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-[#00A859] py-1.5"
+                      class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-1.5"
                     >
                       <input
                         type="checkbox"
                         :value="e.id"
                         v-model="empresasSeleccionadasNuevas"
-                        class="accent-[#00A859] w-4 h-4 shrink-0"
+                        class="accent-centros w-4 h-4 shrink-0"
                       />
                       <span class="flex-1 min-w-0">
                         <span class="block truncate">{{ e.nombre_comercial }}</span>
@@ -765,11 +765,11 @@ function resetear() {
   position: relative; background: #fff;
   border: 1px solid #e5e7eb; border-radius: 2rem; padding: 2.5rem;
   width: 100%; max-width: 760px; max-height: 92vh; overflow-y: auto;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.18), 0 0 80px rgba(153,204,51,.07);
-  scrollbar-width: thin; scrollbar-color: #BBE8D0 transparent;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.18), 0 0 80px rgba(48,114,170,.07);
+  scrollbar-width: thin; scrollbar-color: #C7DCEC transparent;
 }
 .cce-card::-webkit-scrollbar       { width: 5px; }
-.cce-card::-webkit-scrollbar-thumb { background: #BBE8D0; border-radius: 3px; }
+.cce-card::-webkit-scrollbar-thumb { background: #C7DCEC; border-radius: 3px; }
 
 .cce-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
 .cce-scroll::-webkit-scrollbar       { width: 4px; }
@@ -786,11 +786,11 @@ function resetear() {
 .cce-err   { font-size: .7rem; color: #ef4444; font-weight: 700; margin-top: .35rem; margin-left: .25rem; }
 
 .cce-input {
-  width: 100%; border: 2px solid #BBE8D0; border-radius: 1rem; padding: .85rem 1rem;
-  font-size: .875rem; font-weight: 600; color: #1F2937; background: #F0FBF4; outline: none; transition: all .2s;
+  width: 100%; border: 2px solid #C7DCEC; border-radius: 1rem; padding: .85rem 1rem;
+  font-size: .875rem; font-weight: 600; color: #1F2937; background: #F2F7FB; outline: none; transition: all .2s;
 }
 .cce-input::placeholder { color: #9CA3AF; }
-.cce-input:focus        { background: #E6F7EE; border-color: #00A859; box-shadow: 0 0 0 4px rgba(0,168,89,.12); }
+.cce-input:focus        { background: #E5EFF7; border-color: #3072AA; box-shadow: 0 0 0 4px rgba(48,114,170,.12); }
 .cce-input-err          { border-color: #fca5a5 !important; background: #fff5f5 !important; }
 
 .cce-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
@@ -798,25 +798,25 @@ function resetear() {
 .cce-btn-add-empresa {
   display: flex; align-items: center; gap: .35rem;
   font-size: .625rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
-  color: #00A859; background: rgba(0,168,89,.08); border: none; border-radius: .75rem;
+  color: #3072AA; background: rgba(48,114,170,.08); border: none; border-radius: .75rem;
   padding: .4rem .7rem; cursor: pointer; transition: background .2s;
 }
-.cce-btn-add-empresa:hover { background: rgba(0,168,89,.16); }
+.cce-btn-add-empresa:hover { background: rgba(48,114,170,.16); }
 
 .cce-btn-add-empresa--alt { color: #374151; background: rgba(55,65,81,.06); }
 .cce-btn-add-empresa--alt:hover { background: rgba(55,65,81,.12); }
 
 .cce-chip-empresa {
   display: inline-flex; flex-direction: column; align-items: flex-start; gap: .1rem;
-  font-size: .72rem; font-weight: 700; color: #1F2937; background: #F0FBF4;
-  border: 1px solid #BBE8D0; border-radius: 1rem; padding: .35rem .75rem;
+  font-size: .72rem; font-weight: 700; color: #1F2937; background: #F2F7FB;
+  border: 1px solid #C7DCEC; border-radius: 1rem; padding: .35rem .75rem;
 }
 .cce-chip-empresa-sub {
   font-size: .6rem; font-weight: 600; color: #6b7280; text-transform: none; letter-spacing: 0;
 }
 
 .cce-empresas-selector {
-  border: 2px solid #BBE8D0; border-radius: 1rem; padding: .85rem; background: #FAFDFB;
+  border: 2px solid #C7DCEC; border-radius: 1rem; padding: .85rem; background: #F8FAFC;
 }
 
 .cce-btn-refresh {
@@ -825,7 +825,7 @@ function resetear() {
   color: #374151; background: #fff; border: 2px solid #e5e7eb; border-radius: .75rem;
   padding: .5rem .7rem; cursor: pointer; transition: all .2s; white-space: nowrap;
 }
-.cce-btn-refresh:hover { border-color: #BBE8D0; color: #00A859; }
+.cce-btn-refresh:hover { border-color: #C7DCEC; color: #3072AA; }
 
 .cce-input-sm { padding: .55rem .8rem; font-size: .8rem; }
 

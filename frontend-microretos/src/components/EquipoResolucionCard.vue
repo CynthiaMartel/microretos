@@ -138,11 +138,11 @@ function formatItemFase(item) {
       <div class="shrink-0 w-12 h-12 relative">
         <svg class="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
           <circle cx="24" cy="24" r="20" fill="none" stroke="#F3F4F6" stroke-width="4"/>
-          <circle cx="24" cy="24" r="20" fill="none" stroke="#00A859" stroke-width="4"
+          <circle cx="24" cy="24" r="20" fill="none" stroke="#3072AA" stroke-width="4"
                   :stroke-dasharray="`${progresoPct() * 1.257} 125.7`"
                   stroke-linecap="round"/>
         </svg>
-        <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#00A859]">
+        <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-centros">
           {{ progresoPct() }}%
         </span>
       </div>
@@ -174,7 +174,7 @@ function formatItemFase(item) {
                  equipo.fases[f.num]?.validado_docente
                    ? 'bg-emerald-500 text-white'
                    : equipo.fases[f.num]?.completada
-                     ? 'bg-[#00A859]/20 text-[#00A859]'
+                     ? 'bg-centros/20 text-centros'
                      : equipo.fase_actual === f.num
                        ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-300'
                        : 'bg-gray-100 text-gray-400'
@@ -217,7 +217,7 @@ function formatItemFase(item) {
                 Validado
               </span>
               <span v-else-if="equipo.fases[f.num]?.completada"
-                    class="px-2 py-0.5 rounded-full bg-[#00A859]/10 text-[#00A859] text-[10px] font-black">
+                    class="px-2 py-0.5 rounded-full bg-centros/10 text-centros text-[10px] font-black">
                 Completa
               </span>
               <span v-else-if="equipo.fase_actual === f.num"
@@ -257,7 +257,7 @@ function formatItemFase(item) {
                         {{ item.pregunta }}
                       </p>
                       <p class="text-sm text-[#1F2937] leading-relaxed bg-white
-                                border border-gray-100 border-l-4 border-l-[#00A859] rounded-lg px-2.5 py-1.5 ml-3">
+                                border border-gray-100 border-l-4 border-l-centros rounded-lg px-2.5 py-1.5 ml-3">
                         <span v-if="item.respuesta">{{ item.respuesta }}</span>
                         <span v-else class="text-gray-400 italic">Sin responder</span>
                       </p>
@@ -266,7 +266,7 @@ function formatItemFase(item) {
 
                   <ul v-else class="space-y-1.5">
                     <li v-for="(item, i) in entry.items" :key="i"
-                        class="text-sm text-[#1F2937] leading-relaxed border-l-2 border-[#00A859]/30 pl-2.5">
+                        class="text-sm text-[#1F2937] leading-relaxed border-l-2 border-centros/30 pl-2.5">
                       {{ item }}
                     </li>
                   </ul>

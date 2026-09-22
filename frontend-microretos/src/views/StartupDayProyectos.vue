@@ -5,13 +5,23 @@ import api from '../api.js';
 import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
 import ProyectoCard from '../components/ProyectoCard.vue';
+import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFlotante.vue';
 import { useUIState } from '../composables/useUIState.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 
 const router = useRouter();
 const route  = useRoute();
 const { tourActivo } = useUIState();
 const authStore = useAuthStore();
+const { theme } = useRoleTheme();
+
+const paletteExtra = {
+  centros:          { hoverBorderText: 'hover:border-centros hover:text-centros', groupHoverBg: 'group-hover:bg-centros/10', focusBorder: 'focus:border-centros' },
+  empresas:         { hoverBorderText: 'hover:border-empresas hover:text-empresas', groupHoverBg: 'group-hover:bg-empresas/10', focusBorder: 'focus:border-empresas' },
+  administraciones: { hoverBorderText: 'hover:border-administraciones hover:text-administraciones', groupHoverBg: 'group-hover:bg-administraciones/10', focusBorder: 'focus:border-administraciones' },
+  primary:          { hoverBorderText: 'hover:border-primary-600 hover:text-primary-700', groupHoverBg: 'group-hover:bg-primary-600/10', focusBorder: 'focus:border-primary-600' },
+}
 
 // ── Datos ───────────────────────────────────────────────────────────────────
 const proyectos    = ref([]);
@@ -214,10 +224,11 @@ function mostrarSnack(mensaje, accion = null) {
   snackbar.value = { visible: true, mensaje, accion };
   setTimeout(() => { snackbar.value.visible = false; }, 5000);
 }
+
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-16 md:pt-16">
 
     <!-- Modal bienvenida -->
     <BienvenidaStartupDayModal :show="guiaBienvenida" @seleccionar="seleccionarOpcionBienvenida" />
@@ -255,8 +266,8 @@ function mostrarSnack(mensaje, accion = null) {
                   ← Ant.
                 </button>
                 <button @click="avanzarPaso"
-                        class="px-3 py-1.5 rounded-xl bg-[#00A859] text-white text-[11px] font-black
-                               hover:bg-[#00A859]/80 transition-all">
+                        class="px-3 py-1.5 rounded-xl text-white text-[11px] font-black
+                               transition-all" :class="[theme.bg, theme.bgHover]">
                   {{ pasoGuia < guiaPasosData.length ? 'Siguiente →' : 'Finalizar' }}
                 </button>
               </div>
@@ -273,7 +284,7 @@ function mostrarSnack(mensaje, accion = null) {
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px]
-                bg-[#99CC33] opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
+                opacity-5 blur-[120px] rounded-full pointer-events-none z-0" :class="theme.bg" />
 
     <div class="relative z-10 max-w-6xl mx-auto"
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
@@ -282,13 +293,29 @@ function mostrarSnack(mensaje, accion = null) {
       <!-- Cabecera -->
       <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#00A859] to-[#99CC33]">Propuestas-Proyecto</span>
-          </h1>
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
+              <span :class="theme.text">Propuestas-Proyecto</span>
+            </h1>
+            <RecordatorioPropuestaFlotante />
+          </div>
           <p class="text-gray-500 text-sm mt-1">
             Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa.
           </p>
           <div class="mt-3 flex flex-wrap gap-2">
+            <!-- Botón ¿Qué necesitas? — abre el modal de opciones (guiaBienvenida),
+                 antes solo se disparaba automáticamente y no tenía botón propio. -->
+            <button @click="guiaBienvenida = true"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full
+                           bg-centros/10 border border-centros/20 text-centros
+                           text-[10px] font-black uppercase tracking-widest
+                           hover:bg-centros/20 transition-all">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              ¿Qué necesitas?
+            </button>
             <!-- Botón Guía -->
             <button ref="refBtnGuia"
                     @click="modoGuia = true; pasoGuia = 1"
@@ -340,14 +367,13 @@ function mostrarSnack(mensaje, accion = null) {
           v-if="!authStore.isEmpresa"
           ref="refBtnNuevo"
           @click="router.push({ name: 'startup-day-crear' })"
-          :class="{
+          :class="[{
             'tour-active': pasoRefActivo === 'refBtnNuevo',
             'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'btn-nuevo'
-          }"
-          class="inline-flex items-center gap-2 px-5 py-2.5
-                 bg-[#00A859] text-white rounded-full
+          }, theme.bg, theme.bgHover]"
+          class="btn-nueva-propuesta inline-flex items-center gap-2 px-5 py-2.5
+                 text-white rounded-full
                  text-xs font-black uppercase tracking-widest shadow-sm
-                 hover:bg-[#00A859]/90 hover:shadow-[0_0_0_3px_rgba(0,168,89,0.2)]
                  transition-all active:scale-95 shrink-0"
         >
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,7 +403,8 @@ function mostrarSnack(mensaje, accion = null) {
             placeholder="Buscar por título, empresa o centro..."
             class="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-3
                    text-sm text-[#1F2937] placeholder-gray-400 shadow-sm
-                   focus:outline-none focus:border-[#00A859] transition-colors"
+                   focus:outline-none transition-colors"
+            :class="paletteExtra[theme.key].focusBorder"
           />
         </div>
 
@@ -394,14 +421,14 @@ function mostrarSnack(mensaje, accion = null) {
                     'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border transition-all',
                     filtroEstado === op
                       ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]'
+                      : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
                   ]">
             {{ filtroLabels[op] }}
             <span :class="[
               'inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] rounded-full text-[9px] font-black transition-all',
               filtroEstado === op
                 ? 'bg-white/20 text-white'
-                : 'bg-gray-100 text-gray-500 group-hover:bg-[#00A859]/10'
+                : ['bg-gray-100 text-gray-500', paletteExtra[theme.key].groupHoverBg]
             ]">{{ conteosPorEstado[op] }}</span>
           </button>
           <button
@@ -425,10 +452,10 @@ function mostrarSnack(mensaje, accion = null) {
 
         <!-- Cargando -->
         <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-          <svg class="animate-spin w-12 h-12 text-[#00A859] mb-4" viewBox="0 0 24 24">
+          <svg class="animate-spin w-12 h-12 mb-4" :class="theme.text" viewBox="0 0 24 24">
             <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
           </svg>
-          <p class="text-[#00A859] font-black tracking-widest uppercase text-sm animate-pulse">Cargando...</p>
+          <p class="font-black tracking-widest uppercase text-sm animate-pulse" :class="theme.text">Cargando...</p>
         </div>
 
         <!-- Vacío -->
@@ -436,7 +463,7 @@ function mostrarSnack(mensaje, accion = null) {
              class="text-center py-24 bg-white rounded-[2rem] border border-dashed border-gray-200 shadow-sm">
           <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-5
                       border border-gray-100 shadow-inner">
-            <svg class="w-10 h-10 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-10 h-10" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                     d="M12 2L2 7l10 5 10-5-10-5zm0 10l-10-5m10 5l10-5m-10 5v10"/>
             </svg>
@@ -449,9 +476,9 @@ function mostrarSnack(mensaje, accion = null) {
           </p>
           <button v-if="!busqueda && filtroEstado === 'todos' && !authStore.isEmpresa"
                   @click="router.push({ name: 'startup-day-crear' })"
-                  class="inline-flex items-center gap-2 px-6 py-3 bg-[#00A859] text-white rounded-full
-                         text-xs font-black uppercase tracking-widest shadow-sm hover:bg-[#00A859]/90
-                         transition-all active:scale-95">
+                  class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-full
+                         text-xs font-black uppercase tracking-widest shadow-sm
+                         transition-all active:scale-95" :class="[theme.bg, theme.bgHover]">
             Crear el primero
           </button>
         </div>
@@ -461,6 +488,7 @@ function mostrarSnack(mensaje, accion = null) {
           <ProyectoCard
             v-for="p in proyectosFiltrados" :key="p.uuid"
             :proyecto="p"
+            :resaltar-editar="filtroEstado === 'en_edicion'"
             @eliminar="abrirModalEliminar"
           />
         </div>
@@ -512,9 +540,13 @@ function mostrarSnack(mensaje, accion = null) {
 .sp-snack-leave-to     { opacity: 0; transform: translateY(8px); }
 
 .tour-active {
-  box-shadow: 0 0 0 3px #00A859, 0 0 0 8px rgba(0,168,89,0.15);
+  box-shadow: 0 0 0 3px v-bind('theme.hex'), 0 0 0 8px v-bind('theme.hexSoft');
   border-radius: 1rem;
   transition: box-shadow 0.3s ease;
+}
+
+.btn-nueva-propuesta:hover {
+  box-shadow: 0 0 0 3px v-bind('theme.hexSoft');
 }
 
 .tour-seccion-blur {

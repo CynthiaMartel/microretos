@@ -19,7 +19,7 @@ defineEmits(['toggle-modulo'])
       <div v-for="n in numEquipos" :key="n"
            class="p-3 rounded-xl bg-gradient-to-br from-[#F8FAFC] to-white border border-gray-100">
         <div class="flex items-center gap-1.5 mb-2">
-          <span class="w-5 h-5 rounded-full bg-[#00A859]/10 text-[#00A859] font-black text-[9px]
+          <span class="w-5 h-5 rounded-full bg-centros/10 text-centros font-black text-[9px]
                        flex items-center justify-center shrink-0">{{ n }}</span>
           <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">
             Equipo {{ n }}
@@ -40,7 +40,7 @@ defineEmits(['toggle-modulo'])
 
   <!-- Módulos trabajados con sus RA/CE -->
   <div v-if="cargandoRaCe" class="flex justify-center py-4">
-    <svg class="animate-spin w-4 h-4 text-[#00A859]" viewBox="0 0 24 24">
+    <svg class="animate-spin w-4 h-4 text-centros" viewBox="0 0 24 24">
       <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
     </svg>
   </div>
@@ -60,7 +60,7 @@ defineEmits(['toggle-modulo'])
                   leave-active-class="transition-all duration-150 ease-in" leave-to-class="opacity-0 -translate-y-1">
         <div v-if="modulosExpandidos.has(block.modulo)" class="px-3.5 pb-3.5 space-y-3">
           <div v-for="(item, i) in block.items" :key="i" :class="{ 'pt-3 border-t border-gray-100': i > 0 }">
-            <p class="text-[9px] uppercase font-bold text-[#00A859] mb-1">Resultado de Aprendizaje</p>
+            <p class="text-[9px] uppercase font-bold text-centros mb-1">Resultado de Aprendizaje</p>
             <p class="text-sm font-semibold text-[#1F2937] mb-2">{{ item.ra }}</p>
             <template v-if="item.ce?.length">
               <p class="text-[9px] uppercase font-bold text-gray-400 mb-1">Criterios de Evaluación</p>

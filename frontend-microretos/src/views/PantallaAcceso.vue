@@ -63,7 +63,7 @@ onMounted(cargar)
 
       <div class="flex items-center justify-between mb-8">
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[#00A859] mb-1">Pantalla de acceso — alumnado</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-centros mb-1">Pantalla de acceso — alumnado</p>
           <h1 class="text-2xl font-black">{{ proyectoTitulo || 'Cargando...' }}</h1>
         </div>
         <button @click="router.back()"
@@ -73,7 +73,7 @@ onMounted(cargar)
       </div>
 
       <div v-if="cargando" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 border-2 border-[#00A859] border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-8 h-8 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
       </div>
 
       <div v-else-if="error" class="rounded-3xl bg-red-950/40 border border-red-500/30 p-8 text-center text-red-300 text-sm font-semibold">
@@ -96,7 +96,7 @@ onMounted(cargar)
                class="bg-white rounded-3xl p-5 flex flex-col items-center text-center gap-3">
             <p class="text-sm font-black text-[#1F2937]">{{ equipo.nombre }}</p>
             <canvas :ref="el => setCanvasRef(el, equipo.id)" class="rounded-xl"></canvas>
-            <p class="text-2xl font-black tracking-[0.2em] text-[#00A859]">{{ equipo.codigo_acceso }}</p>
+            <p class="text-2xl font-black tracking-[0.2em] text-centros">{{ equipo.codigo_acceso }}</p>
           </div>
         </div>
       </template>

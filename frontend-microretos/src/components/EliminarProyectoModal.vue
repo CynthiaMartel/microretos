@@ -79,7 +79,7 @@ async function confirmarEliminacion() {
               <p class="font-black text-[#1F2937] text-sm leading-snug">{{ proyecto?.titulo }}</p>
               <div class="flex flex-wrap gap-1.5 mt-2">
                 <span v-if="proyecto?.empresa_nombre"
-                  class="text-[10px] font-bold bg-[#00A859]/10 text-[#00A859] px-2 py-0.5 rounded-full">
+                  class="text-[10px] font-bold bg-centros/10 text-centros px-2 py-0.5 rounded-full">
                   {{ proyecto.empresa_nombre }}
                 </span>
                 <span v-if="proyecto?.centro_nombre"

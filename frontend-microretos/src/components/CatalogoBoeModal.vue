@@ -1,6 +1,9 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import api from '../api.js'
+import { useRoleTheme } from '../composables/useRoleTheme.js'
+
+const { theme } = useRoleTheme()
 
 const props = defineProps({
   show: Boolean,
@@ -122,10 +125,10 @@ async function toggleBoeModulo(cicloId, moduloId) {
             <span class="text-[11px] font-black text-indigo-600">{{ totalFamilias }}</span>
             <span class="text-[11px] text-indigo-400">familias</span>
           </div>
-          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00A859]/8 border border-[#00A859]/20">
-            <span class="w-1.5 h-1.5 rounded-full bg-[#00A859] shrink-0" />
-            <span class="text-[11px] font-black text-[#00A859]">{{ totalCiclos }}</span>
-            <span class="text-[11px] text-[#00A859]/70">ciclos</span>
+          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full border" :class="[theme.bg5, theme.border20]">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="theme.bg" />
+            <span class="text-[11px] font-black" :class="theme.text">{{ totalCiclos }}</span>
+            <span class="text-[11px]" :class="theme.text50">ciclos</span>
           </div>
         </div>
 
@@ -135,11 +138,11 @@ async function toggleBoeModulo(cicloId, moduloId) {
           <span class="text-[10px] text-gray-500">
             <span class="font-bold text-indigo-400">modulos</span>
             <span class="mx-1 text-gray-300">→</span>
-            <span class="font-bold text-[#00A859]">resultados_aprendizaje</span>
+            <span class="font-bold" :class="theme.text">resultados_aprendizaje</span>
             <span class="text-gray-400 ml-1">( idmodulo )</span>
           </span>
           <span class="text-[10px] text-gray-500">
-            <span class="font-bold text-[#00A859]">resultados_aprendizaje</span>
+            <span class="font-bold" :class="theme.text">resultados_aprendizaje</span>
             <span class="mx-1 text-gray-300">→</span>
             <span class="font-bold text-amber-500">criterios_evaluacion</span>
             <span class="text-gray-400 ml-1">( idmoduloRA )</span>
@@ -293,13 +296,13 @@ async function toggleBoeModulo(cicloId, moduloId) {
                               </div>
 
                               <div v-for="ra in boeRaCeMap[modulo.id].ra" :key="ra.id"
-                                   class="rounded-xl border border-[#00A859]/20 bg-[#00A859]/4 overflow-hidden">
+                                   class="rounded-xl border overflow-hidden" :class="[theme.border20, theme.bg5]">
 
                                 <!-- Cabecera RA -->
                                 <div class="flex items-start gap-2 px-3 py-2.5">
                                   <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
-                                    <span class="text-[9px] font-black uppercase tracking-widest text-[#00A859]
-                                                 bg-[#00A859]/10 px-2 py-0.5 rounded-full">
+                                    <span class="text-[9px] font-black uppercase tracking-widest
+                                                 px-2 py-0.5 rounded-full" :class="[theme.text, theme.bg5]">
                                       RA{{ ra.orden }}
                                     </span>
                                     <span class="text-[9px] text-gray-300">#{{ ra.id }}</span>
@@ -314,7 +317,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
                                   BD: criterios_evaluacion.idmoduloRA = ra.id (resultados_aprendizaje.id)
                                 -->
                                 <div v-if="ra.criterios?.length"
-                                     class="border-t border-[#00A859]/15 px-3 pb-2.5 pt-2 bg-white/60">
+                                     class="border-t px-3 pb-2.5 pt-2 bg-white/60" :class="theme.border15">
                                   <div class="flex items-center gap-1.5 mb-1.5">
                                     <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                                     <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">
@@ -335,7 +338,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
 
                                 <!-- RA sin CE -->
                                 <div v-else
-                                     class="border-t border-[#00A859]/10 px-3 py-1.5 bg-white/40">
+                                     class="border-t px-3 py-1.5 bg-white/40" :class="theme.border15">
                                   <span class="text-[9px] text-gray-400 italic">Sin criterios de evaluación registrados</span>
                                 </div>
                               </div>
@@ -355,7 +358,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
         <div class="shrink-0 px-7 py-4 border-t border-gray-100 flex items-center gap-3">
           <div class="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-[#00A859]" />
+              <span class="w-2 h-2 rounded-full" :class="theme.bg" />
               <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">RA — resultados_aprendizaje</span>
             </div>
             <div class="flex items-center gap-1.5">

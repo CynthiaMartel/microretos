@@ -35,12 +35,12 @@ const emit = defineEmits(['seleccionar'])
           <!-- a) Crear microproyecto -->
           <button @click="emit('seleccionar', 'crear')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
-                         bg-gray-50 hover:bg-[#00A859]/8 hover:border-[#00A859]/30
+                         bg-gray-50 hover:bg-centros/8 hover:border-centros/30
                          transition-all duration-200 text-left group">
-            <div class="w-9 h-9 rounded-xl bg-[#00A859]/10 border border-[#00A859]/20
+            <div class="w-9 h-9 rounded-xl bg-centros/10 border border-centros/20
                         flex items-center justify-center shrink-0 mt-0.5
-                        group-hover:bg-[#00A859]/20 transition-colors">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        group-hover:bg-centros/20 transition-colors">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
               </svg>
             </div>
@@ -53,12 +53,12 @@ const emit = defineEmits(['seleccionar'])
           <!-- b) Continuar con una propuesta o proyecto -->
           <button @click="emit('seleccionar', 'trabajar')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
-                         bg-gray-50 hover:bg-[#99CC33]/8 hover:border-[#99CC33]/40
+                         bg-gray-50 hover:bg-centros/8 hover:border-centros/40
                          transition-all duration-200 text-left group">
-            <div class="w-9 h-9 rounded-xl bg-[#99CC33]/10 border border-[#99CC33]/30
+            <div class="w-9 h-9 rounded-xl bg-centros/10 border border-centros/30
                         flex items-center justify-center shrink-0 mt-0.5
-                        group-hover:bg-[#99CC33]/20 transition-colors">
-              <svg class="w-4 h-4 text-[#6ea800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        group-hover:bg-centros/20 transition-colors">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

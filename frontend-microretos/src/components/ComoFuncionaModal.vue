@@ -29,8 +29,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 // Colores por rol — solo Docente y Alumnado/Equipo actúan dentro del flujo.
 // Empresa y Admin se explican aparte, en la sección de roles.
 const ROL = {
-  docente:  { bg: 'bg-[#00A859]/10', border: 'border-[#00A859]/25', text: 'text-[#00A859]' },
-  alumnado: { bg: 'bg-blue-50',      border: 'border-blue-200',     text: 'text-blue-600' },
+  docente:  { bg: 'bg-centros/10', border: 'border-centros/25', text: 'text-centros' },
+  alumnado: { bg: 'bg-alumnos/10', border: 'border-alumnos/25', text: 'text-alumnos-dark' },
 }
 
 const roles = [
@@ -38,7 +38,7 @@ const roles = [
     desc: 'Crea retos y proyectos, los comparte con el alumnado y hace seguimiento del progreso.' },
   { label: 'Alumnado / Equipo',  icon: UserGroupIcon,       ...ROL.alumnado,
     desc: 'Accede sin necesidad de cuenta y resuelve retos, avanza en el proyecto por fases.' },
-  { label: 'Empresa',            icon: BuildingOfficeIcon,  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-600',
+  { label: 'Empresa',            icon: BuildingOfficeIcon,  bg: 'bg-empresas/10',  border: 'border-empresas/25',  text: 'text-empresas',
     desc: 'Valida la entrega del equipo desde un enlace público, sin necesidad de cuenta. El alumnado resuelve sus necesidades a partir de un reto.' },
   { label: 'Admin',               icon: ShieldCheckIcon,     bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600',
     desc: 'Gestiona centros, ciclos formativos y usuarios de forma transversal.' },
@@ -89,7 +89,7 @@ const pasosEncuentro = [
     <button
       @click="abrir"
       aria-label="¿Cómo funciona DuaLab?"
-      class="w-14 h-14 rounded-full bg-[#00A859] hover:bg-[#009950] text-white shadow-lg
+      class="w-14 h-14 rounded-full bg-centros hover:bg-primary-700 text-white shadow-lg
              hover:shadow-xl hover:scale-105 flex items-center justify-center
              transition-all duration-200"
     >
@@ -115,13 +115,13 @@ const pasosEncuentro = [
             <div class="shrink-0 flex items-start justify-between gap-4 px-6 sm:px-10 py-6
                         bg-white border-b border-gray-100">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/25
+                <div class="w-12 h-12 rounded-2xl bg-centros/10 border border-centros/25
                             flex items-center justify-center shrink-0">
-                  <LightBulbIcon class="w-6 h-6 text-[#00A859]" />
+                  <LightBulbIcon class="w-6 h-6 text-centros" />
                 </div>
                 <div>
                   <h2 class="text-xl sm:text-2xl font-black tracking-tight text-[#121212]">
-                    ¿Cómo funciona Dua<span class="text-[#00A859]">Lab</span>?
+                    ¿Cómo funciona Dua<span class="text-centros">Lab</span>?
                   </h2>
                   <p class="text-gray-400 text-xs sm:text-sm font-medium mt-0.5">
                     Plataforma de retos para FP Dual
@@ -178,20 +178,20 @@ const pasosEncuentro = [
                 <!-- Bloque: Retos -->
                 <div class="lg:contents">
                   <div class="lg:col-start-1 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-lime-700 mb-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
                       Retos
                     </p>
                     <h3 class="text-lg font-black text-[#121212] mb-2">Generador y biblioteca</h3>
                   </div>
 
-                  <div class="lg:col-start-1 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-lime-50 border-2 border-lime-300 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-lime-200 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-lime-800">?</span>
+                  <div class="lg:col-start-1 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-centros/20 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-centros">?</span>
                     </div>
                     <p class="text-sm text-gray-900 leading-relaxed">
-                      Un <span class="font-black text-lime-700">RETO</span> es la necesidad real de una
+                      Un <span class="font-black text-centros">RETO</span> es la necesidad real de una
                       empresa, transformada (con ayuda de la IA) en una
-                      <span class="font-black text-lime-700">pregunta</span> que el alumnado deberá responder.
+                      <span class="font-black text-centros">pregunta</span> que el alumnado deberá responder.
                     </p>
                   </div>
 
@@ -217,20 +217,20 @@ const pasosEncuentro = [
                 <!-- Bloque: Taller de Ideas -->
                 <div class="lg:contents">
                   <div class="lg:col-start-2 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
                       Taller de Ideas
                     </p>
                     <h3 class="text-lg font-black text-[#121212] mb-2">Propuestas y proyectos</h3>
                   </div>
 
-                  <div class="lg:col-start-2 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-amber-50 border-2 border-amber-300 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-amber-200 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-amber-800">?</span>
+                  <div class="lg:col-start-2 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-centros/20 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-centros">?</span>
                     </div>
                     <p class="text-sm text-gray-900 leading-relaxed">
-                      Una <span class="font-black text-amber-700">PROPUESTA</span> es la concreción
+                      Una <span class="font-black text-centros">PROPUESTA</span> es la concreción
                       curricular del reto que hace el docente. Al validarla la empresa y el propio docente,
-                      pasa a ser <span class="font-black text-amber-700">PROYECTO</span>: la respuesta que
+                      pasa a ser <span class="font-black text-centros">PROYECTO</span>: la respuesta que
                       elaborará el alumnado, con sus fases, entregables y evaluación.
                     </p>
                   </div>
@@ -257,21 +257,21 @@ const pasosEncuentro = [
                 <!-- Bloque: Encuentro con alumnado -->
                 <div class="lg:contents">
                   <div class="lg:col-start-3 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-blue-600 mb-1">
+                    <p class="text-[11px] font-black uppercase tracking-widest text-alumnos-dark mb-1">
                       Encuentro con alumnado
                     </p>
                     <h3 class="text-lg font-black text-[#121212] mb-2">Acceso y seguimiento</h3>
                   </div>
 
-                  <div class="lg:col-start-3 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-blue-50 border-2 border-blue-300 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-blue-200 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-blue-800">?</span>
+                  <div class="lg:col-start-3 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-alumnos/10 border-2 border-alumnos/30 p-4 mb-5 lg:mb-0 shadow-sm">
+                    <div class="shrink-0 w-7 h-7 rounded-lg bg-alumnos/20 flex items-center justify-center mt-0.5">
+                      <span class="text-xs font-black text-alumnos-dark">?</span>
                     </div>
                     <p class="text-sm text-gray-900 leading-relaxed">
-                      Un <span class="font-black text-blue-700">ENCUENTRO</span> es el
-                      <span class="font-black text-blue-700">cuándo</span>: la fecha y los equipos con los
+                      Un <span class="font-black text-alumnos-dark">ENCUENTRO</span> es el
+                      <span class="font-black text-alumnos-dark">cuándo</span>: la fecha y los equipos con los
                       que ese proyecto se trabaja en el aula. A partir de ahí, cada equipo avanza el
-                      proyecto por fases en su <span class="font-black text-blue-700">workspace</span>.
+                      proyecto por fases en su <span class="font-black text-alumnos-dark">workspace</span>.
                     </p>
                   </div>
 
@@ -300,8 +300,8 @@ const pasosEncuentro = [
             <div class="shrink-0 px-6 sm:px-10 py-4 bg-white border-t border-gray-100">
               <button
                 @click="cerrar"
-                class="w-full sm:w-auto sm:ml-auto sm:block py-3 px-8 rounded-xl bg-[#00A859] text-white
-                       font-black text-xs uppercase tracking-widest hover:bg-[#009950] transition-all"
+                class="w-full sm:w-auto sm:ml-auto sm:block py-3 px-8 rounded-xl bg-centros text-white
+                       font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all"
               >
                 Entendido
               </button>

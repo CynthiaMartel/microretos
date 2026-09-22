@@ -47,7 +47,7 @@ export const iconoFamilia = (nombre) => ICONOS[nombre] || ICONO_DEFECTO;
 // Paleta de acento por familia: 4 familias de color (verde, índigo, ámbar, teal) con una
 // variante tonal cada una, para dar más variedad sin salirse de la paleta (sin rojo ni gris).
 const PALETA_COLORES = [
-  { bg: 'from-[#00A859]/10 via-[#99CC33]/15 to-gray-50', icon: 'text-[#00A859]' },
+  { bg: 'from-[#3B82F6]/10 via-[#93C5FD]/15 to-gray-50', icon: 'text-[#3B82F6]' },
   { bg: 'from-[#10B981]/10 via-[#6EE7B7]/15 to-gray-50', icon: 'text-[#10B981]' },
   { bg: 'from-[#6366F1]/10 via-[#818CF8]/15 to-gray-50', icon: 'text-[#6366F1]' },
   { bg: 'from-[#8B5CF6]/10 via-[#C4B5FD]/15 to-gray-50', icon: 'text-[#8B5CF6]' },

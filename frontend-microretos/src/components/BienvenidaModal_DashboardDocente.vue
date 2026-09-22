@@ -12,16 +12,16 @@ const emit = defineEmits(['seleccionar'])
 
         <!-- Cabecera -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="w-12 h-12 rounded-2xl bg-[#00A859]/10 border border-[#00A859]/20
+          <div class="w-12 h-12 rounded-2xl bg-centros/10 border border-centros/20
                       flex items-center justify-center shrink-0">
-            <svg class="w-6 h-6 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
                    M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-widest text-[#00A859] mb-0.5">Dashboard docente</p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-centros mb-0.5">Dashboard docente</p>
             <h2 class="text-xl font-black tracking-tight text-[#121212]">¿Qué necesitas?</h2>
           </div>
         </div>
@@ -32,12 +32,12 @@ const emit = defineEmits(['seleccionar'])
           <!-- a) Crear encuentro -->
           <button @click="emit('seleccionar', 'crear')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
-                         bg-gray-50 hover:bg-[#00A859]/8 hover:border-[#00A859]/30
+                         bg-gray-50 hover:bg-centros/8 hover:border-centros/30
                          transition-all duration-200 text-left group">
-            <div class="w-9 h-9 rounded-xl bg-[#00A859]/10 border border-[#00A859]/20
+            <div class="w-9 h-9 rounded-xl bg-centros/10 border border-centros/20
                         flex items-center justify-center shrink-0 mt-0.5
-                        group-hover:bg-[#00A859]/20 transition-colors">
-              <svg class="w-4 h-4 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        group-hover:bg-centros/20 transition-colors">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
               </svg>
             </div>
@@ -50,12 +50,12 @@ const emit = defineEmits(['seleccionar'])
           <!-- b) Ver encuentros creados -->
           <button @click="emit('seleccionar', 'encuentros')"
                   class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
-                         bg-gray-50 hover:bg-[#99CC33]/8 hover:border-[#99CC33]/40
+                         bg-gray-50 hover:bg-centros/8 hover:border-centros/40
                          transition-all duration-200 text-left group">
-            <div class="w-9 h-9 rounded-xl bg-[#99CC33]/10 border border-[#99CC33]/30
+            <div class="w-9 h-9 rounded-xl bg-centros/10 border border-centros/30
                         flex items-center justify-center shrink-0 mt-0.5
-                        group-hover:bg-[#99CC33]/20 transition-colors">
-              <svg class="w-4 h-4 text-[#6ea800]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        group-hover:bg-centros/20 transition-colors">
+              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
               </svg>

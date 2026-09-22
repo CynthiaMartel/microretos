@@ -4,10 +4,21 @@ import { useRouter } from 'vue-router';
 import api from '../api.js';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
 import ProyectoCard from '../components/ProyectoCard.vue';
+import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFlotante.vue';
+import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
 import { useAuthStore } from '../stores/auth.js';
+import { useRoleTheme } from '../composables/useRoleTheme.js';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { theme } = useRoleTheme();
+
+const paletteExtra = {
+  centros:          { focusBorder: 'focus:border-centros', hoverBorderText: 'hover:border-centros hover:text-centros' },
+  empresas:         { focusBorder: 'focus:border-empresas', hoverBorderText: 'hover:border-empresas hover:text-empresas' },
+  administraciones: { focusBorder: 'focus:border-administraciones', hoverBorderText: 'hover:border-administraciones hover:text-administraciones' },
+  primary:          { focusBorder: 'focus:border-primary-600', hoverBorderText: 'hover:border-primary-600 hover:text-primary-700' },
+};
 
 const proyectos = ref([]);
 const cargando  = ref(true);
@@ -26,6 +37,19 @@ onMounted(async () => {
 
 function irAPendientes() {
   router.push({ name: 'startup-day' });
+}
+
+// ─── Modal "¿Qué necesitas?" ──────────────────────────────────────────────────
+// Este archivo es solo el histórico de completados, así que 'crear'/'trabajar'/'guia'
+// llevan siempre a /proyectos (la biblioteca activa), que es donde vive cada acción.
+const guiaBienvenida = ref(false);
+function seleccionarOpcionBienvenida(opcion) {
+  guiaBienvenida.value = false;
+  if (opcion === 'crear') {
+    router.push({ name: 'startup-day-crear' });
+  } else if (opcion === 'trabajar' || opcion === 'guia') {
+    router.push({ name: 'startup-day' });
+  }
 }
 
 const completados = computed(() => proyectos.value.filter(p => p.estado === 'completado'));
@@ -75,7 +99,7 @@ function mostrarSnack(mensaje, accion = null) {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-12 md:pt-12">
+  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-16 md:pt-16">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px]
@@ -85,21 +109,48 @@ function mostrarSnack(mensaje, accion = null) {
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <!-- Cabecera -->
-      <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <!-- HEADER -->
+      <header class="mb-10 text-center flex flex-col items-center">
+        <div
+          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
+          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
+            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
+          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
+            Dua<span class="text-centros-light">Lab</span>
+            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Proyectos</span>
+          </span>
+        </div>
+        <h1
+          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+          Proyectos <span :class="theme.text">Completados</span>
+        </h1>
+        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
+          Consulta el histórico de proyectos ya finalizados y revisa el trabajo entregado por cada equipo.
+        </p>
+      </header>
+
+      <!-- Acciones -->
+      <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div class="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full
-                      bg-sky-400/10 border border-sky-400/20">
-            <span class="w-2 h-2 rounded-full bg-sky-400" />
-            <span class="text-[10px] font-black uppercase tracking-widest text-sky-600">Startup Day</span>
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <RecordatorioPropuestaFlotante />
           </div>
-          <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-[#00A859]">Proyectos Completados</span>
-          </h1>
-          <p class="text-gray-500 text-sm mt-1">
-            Proyectos StartUp Day ya completados por los equipos.
-          </p>
           <div class="mt-3 flex flex-wrap gap-2">
+            <!-- Botón ¿Qué necesitas? — mismo patrón que /proyectos y /encuentros. -->
+            <button @click="guiaBienvenida = true"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full
+                           bg-centros/10 border border-centros/20 text-centros
+                           text-[10px] font-black uppercase tracking-widest
+                           hover:bg-centros/20 transition-all">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              ¿Qué necesitas?
+            </button>
             <button
               @click="router.push({ name: 'startup-day' })"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-full
@@ -113,7 +164,7 @@ function mostrarSnack(mensaje, accion = null) {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <!-- Filtros -->
       <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
@@ -130,7 +181,8 @@ function mostrarSnack(mensaje, accion = null) {
             placeholder="Buscar por título, empresa o centro..."
             class="w-full bg-white border border-gray-200 rounded-2xl pl-10 pr-4 py-3
                    text-sm text-[#1F2937] placeholder-gray-400 shadow-sm
-                   focus:outline-none focus:border-[#00A859] transition-colors"
+                   focus:outline-none transition-colors"
+            :class="paletteExtra[theme.key].focusBorder"
           />
         </div>
 
@@ -148,8 +200,9 @@ function mostrarSnack(mensaje, accion = null) {
             @click="irAPendientes"
             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black
                    uppercase tracking-widest border transition-all
-                   bg-white text-gray-500 border-gray-200 hover:border-[#00A859] hover:text-[#00A859]">
-            Pendientes
+                   bg-white text-gray-500 border-gray-200"
+            :class="paletteExtra[theme.key].hoverBorderText">
+            En proceso
           </button>
         </div>
 
@@ -191,6 +244,9 @@ function mostrarSnack(mensaje, accion = null) {
 
     </div>
   </div>
+
+  <!-- MODAL ¿QUÉ NECESITAS? -->
+  <BienvenidaStartupDayModal :show="guiaBienvenida" @seleccionar="seleccionarOpcionBienvenida" />
 
   <!-- MODAL ELIMINAR PROYECTO -->
   <EliminarProyectoModal

@@ -350,7 +350,7 @@ const editarLoading = ref(false)
 const editarErrors  = reactive({})
 const ESTADOS_CONTACTO = [
   { value: 'Pendiente de llamar',            label: 'Pendiente de llamar',       bg: 'bg-amber-100',    text: 'text-amber-700',  border: 'border-amber-300',    dot: 'bg-amber-400',   pulse: true  },
-  { value: 'Llamado - Información obtenida', label: 'Llamado — Info obtenida ✓', bg: 'bg-[#00A859]/10', text: 'text-[#00A859]',  border: 'border-[#00A859]/30', dot: 'bg-[#00A859]',   pulse: false },
+  { value: 'Llamado - Información obtenida', label: 'Llamado — Info obtenida ✓', bg: 'bg-centros/10', text: 'text-centros',  border: 'border-centros/30', dot: 'bg-centros',   pulse: false },
   { value: 'Llamado - Negativa',             label: 'Llamado — Negativa ✗',      bg: 'bg-red-50',       text: 'text-red-600',    border: 'border-red-200',      dot: 'bg-red-400',     pulse: false },
   { value: 'Llamado - Llamar más tarde',     label: 'Llamado — Llamar más tarde', bg: 'bg-blue-50',     text: 'text-blue-600',   border: 'border-blue-200',     dot: 'bg-blue-400',    pulse: false },
   { value: 'En colaboración activa',         label: 'En colaboración activa ★',  bg: 'bg-gray-100',     text: 'text-gray-700',   border: 'border-gray-300',     dot: 'bg-gray-600',    pulse: false },
@@ -480,8 +480,8 @@ defineExpose({ abrirTrasLogin })
           <div v-if="mostrarNuevaEmpresa" ref="nuevaCardRef" class="ime-card">
 
             <div class="ime-header">
-              <div class="ime-icon-box" style="background:rgba(153,204,51,0.1)">
-                <svg class="w-7 h-7 text-[#00A859]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="ime-icon-box" style="background:rgba(48,114,170,0.1)">
+                <svg class="w-7 h-7 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z"/>
                 </svg>
@@ -489,7 +489,7 @@ defineExpose({ abrirTrasLogin })
               <div class="min-w-0 flex-1">
                 <h2 class="ime-title">Registrar nueva empresa</h2>
                 <p class="ime-sub">
-                  "<span class="text-[#00A859] font-black">{{ nombreBuscado }}</span>"
+                  "<span class="text-centros font-black">{{ nombreBuscado }}</span>"
                   no está en DuaLab — completa los datos para añadirla
                 </p>
               </div>
@@ -497,13 +497,13 @@ defineExpose({ abrirTrasLogin })
 
             <!-- Selector: ¿Empresa real o ficticia? -->
             <div class="mt-5 p-4 rounded-2xl border-2 transition-colors"
-              :class="nuevaForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-[#00A859]/20 bg-[#00A859]/5'">
+              :class="nuevaForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-centros/20 bg-centros/5'">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3">¿Qué tipo de empresa es?</p>
               <div class="flex gap-3">
                 <button
                   type="button"
                   @click="nuevaForm.es_simulada = false"
-                  :class="!nuevaForm.es_simulada ? 'bg-[#00A859] text-white border-[#00A859] shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859]/50'"
+                  :class="!nuevaForm.es_simulada ? 'bg-centros text-white border-centros shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-centros/50'"
                   class="flex-1 py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z"/>
@@ -930,13 +930,13 @@ defineExpose({ abrirTrasLogin })
 
             <!-- Tipo de empresa (es_simulada) -->
             <div class="mt-5 p-4 rounded-2xl border-2 transition-colors"
-              :class="editarForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-[#00A859]/20 bg-[#00A859]/5'">
+              :class="editarForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-centros/20 bg-centros/5'">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3">Tipo de empresa</p>
               <div class="flex gap-3">
                 <button
                   type="button"
                   @click="editarForm.es_simulada = false"
-                  :class="!editarForm.es_simulada ? 'bg-[#00A859] text-white border-[#00A859] shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-[#00A859]/50'"
+                  :class="!editarForm.es_simulada ? 'bg-centros text-white border-centros shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-centros/50'"
                   class="flex-1 py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7z"/>
@@ -1176,11 +1176,11 @@ defineExpose({ abrirTrasLogin })
   position: relative; background: #fff;
   border: 1px solid #e5e7eb; border-radius: 2rem; padding: 2.5rem;
   width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.16), 0 0 80px rgba(0,168,89,.05);
-  scrollbar-width: thin; scrollbar-color: #BBE8D0 transparent;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.16), 0 0 80px rgba(48,114,170,.05);
+  scrollbar-width: thin; scrollbar-color: #BAD5EC transparent;
 }
 .ime-card::-webkit-scrollbar       { width: 5px; }
-.ime-card::-webkit-scrollbar-thumb { background: #BBE8D0; border-radius: 3px; }
+.ime-card::-webkit-scrollbar-thumb { background: #BAD5EC; border-radius: 3px; }
 
 .ime-header   { display: flex; align-items: flex-start; gap: 1rem; }
 .ime-icon-box { flex-shrink: 0; width: 52px; height: 52px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
@@ -1201,11 +1201,11 @@ defineExpose({ abrirTrasLogin })
 .ime-tab-off:hover { color: #374151; }
 
 .ime-input {
-  width: 100%; border: 2px solid #BBE8D0; border-radius: 1rem; padding: .85rem 1rem;
-  font-size: .875rem; font-weight: 600; color: #1F2937; background: #F0FBF4; outline: none; transition: all .2s; appearance: none;
+  width: 100%; border: 2px solid #BAD5EC; border-radius: 1rem; padding: .85rem 1rem;
+  font-size: .875rem; font-weight: 600; color: #1F2937; background: #F6FAFC; outline: none; transition: all .2s; appearance: none;
 }
 .ime-input::placeholder { color: #9CA3AF; }
-.ime-input:focus        { background: #E6F7EE; border-color: #00A859; box-shadow: 0 0 0 4px rgba(0,168,89,.12); }
+.ime-input:focus        { background: #DAE8F5; border-color: #3072AA; box-shadow: 0 0 0 4px rgba(48,114,170,.12); }
 .ime-input-err          { border-color: #fca5a5 !important; background: #fff5f5 !important; }
 .ime-input-err:focus    { border-color: #ef4444 !important; box-shadow: 0 0 0 4px rgba(239,68,68,.1) !important; }
 
@@ -1220,8 +1220,8 @@ defineExpose({ abrirTrasLogin })
 
 .ime-actions { display: flex; gap: .75rem; margin-top: 2rem; }
 
-.ime-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #00A859, #99CC33); color: #fff; border: none; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(0,168,89,.28); transition: all .2s; }
-.ime-btn-green:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,168,89,.38); }
+.ime-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #3072AA, #6BA4D5); color: #fff; border: none; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(48,114,170,.28); transition: all .2s; }
+.ime-btn-green:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(48,114,170,.38); }
 .ime-btn-green:active:not(:disabled) { transform: scale(.97); }
 .ime-btn-green:disabled              { opacity: .5; cursor: not-allowed; }
 

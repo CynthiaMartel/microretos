@@ -11,11 +11,13 @@ import { useAuthStore, ROLE_DOCENTE, ROLE_ADMIN, ROLE_EMPRESA } from './stores/a
 import { useIdleTimer } from './composables/useIdleTimer'
 import { useLoginModal } from './composables/useLoginModal.js'
 import { useUIState } from './composables/useUIState.js'
+import { useRoleTheme } from './composables/useRoleTheme.js'
 import api from './api.js'
 
 const router    = useRouter()
 const route     = useRoute()
 const authStore = useAuthStore()
+const { theme } = useRoleTheme()
 
 const isPublicRetoRoute = computed(() =>
   route.path.startsWith('/reto/') ||
@@ -236,7 +238,8 @@ const extenderDesdeToast = async () => {
           </button>
           <button @click="seguirConectado"
             class="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest
-                   bg-[#00A859] hover:bg-[#009950] text-white transition-all shadow-md">
+                   text-white transition-all shadow-md"
+            :class="[theme.bg, theme.bgHover]">
             Seguir conectado
           </button>
         </div>
@@ -292,8 +295,9 @@ const extenderDesdeToast = async () => {
           @click="extenderDesdeToast"
           :disabled="tokenToastRefreshing"
           class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest
-                 bg-[#00A859] hover:bg-[#009950] text-white transition-all shadow-md
+                 text-white transition-all shadow-md
                  disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="[theme.bg, theme.bgHover]"
         >
           {{ tokenToastRefreshing ? 'Extendiendo…' : 'Extender sesión' }}
         </button>
