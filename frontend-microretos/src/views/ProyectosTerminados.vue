@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import api from '../api.js';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
 import ProyectoCard from '../components/ProyectoCard.vue';
@@ -8,8 +8,10 @@ import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFl
 import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
 import { useAuthStore } from '../stores/auth.js';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
+import { useFiltrosProyectos } from '../composables/useFiltrosProyectos.js';
 
 const router = useRouter();
+const route  = useRoute();
 const authStore = useAuthStore();
 const { theme } = useRoleTheme();
 
@@ -22,7 +24,6 @@ const paletteExtra = {
 
 const proyectos = ref([]);
 const cargando  = ref(true);
-const busqueda  = ref('');
 const isLoaded  = ref(false);
 
 onMounted(async () => {
@@ -32,6 +33,12 @@ onMounted(async () => {
     proyectos.value = res.data;
   } finally {
     cargando.value = false;
+  }
+  // Deep-link desde la card de familia de /proyectos ("Ver completados") —
+  // preselecciona el chip de familia y limpia la query.
+  if (route.query.familia) {
+    seleccionarFamilia(String(route.query.familia));
+    router.replace({ name: 'proyectos-terminados' });
   }
 });
 
@@ -54,18 +61,23 @@ function seleccionarOpcionBienvenida(opcion) {
 
 const completados = computed(() => proyectos.value.filter(p => p.estado === 'completado'));
 
-const proyectosFiltrados = computed(() => {
-  let lista = completados.value;
-  if (busqueda.value.trim()) {
-    const q = busqueda.value.toLowerCase();
-    lista = lista.filter(p =>
-      p.titulo?.toLowerCase().includes(q) ||
-      p.empresa_nombre?.toLowerCase().includes(q) ||
-      p.centro_nombre?.toLowerCase().includes(q)
-    );
-  }
-  return lista;
-});
+// Filtros por familia/ciclo/curso — chips planos (sin capa de familias: esta
+// vista ya cuelga de un clic extra desde /proyectos, así que se evita otro).
+const {
+  busqueda, filtroFamilia, filtroCiclo, filtroCurso,
+  familiasDisponibles, ciclosDisponibles, cursosDisponibles,
+  seleccionarFamilia, seleccionarCiclo, seleccionarCurso,
+  limpiarFiltrosDetalle, hayFiltrosDetalleActivos, aplicarFiltros,
+} = useFiltrosProyectos(completados);
+
+const proyectosFiltrados = computed(() => aplicarFiltros(completados.value));
+
+const hayFiltrosActivos = computed(() => !!filtroFamilia.value || hayFiltrosDetalleActivos.value);
+
+function limpiarFiltros() {
+  seleccionarFamilia('');
+  limpiarFiltrosDetalle();
+}
 
 // ── Modal eliminar ──────────────────────────────────────────────────────────
 const modalEliminarVisible = ref(false);
@@ -167,7 +179,7 @@ function mostrarSnack(mensaje, accion = null) {
       </div>
 
       <!-- Filtros -->
-      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-5">
 
         <!-- Búsqueda -->
         <div class="relative w-full lg:flex-1 lg:min-w-[240px]">
@@ -208,6 +220,63 @@ function mostrarSnack(mensaje, accion = null) {
 
       </div>
 
+      <!-- Separador: distingue el filtro de estado (arriba) del filtro por taxonomía académica (abajo) -->
+      <div v-if="familiasDisponibles.length > 0" class="border-t border-gray-100 mb-5"></div>
+
+      <!-- Filtros por familia / ciclo / curso -->
+      <div v-if="familiasDisponibles.length > 0" class="flex flex-col gap-2 mb-6">
+        <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 -mt-1">Filtrar por familia profesional</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <button v-for="f in familiasDisponibles" :key="f.nombre"
+                  @click="seleccionarFamilia(f.nombre)"
+                  :class="[
+                    'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wide border transition-all',
+                    filtroFamilia === f.nombre
+                      ? [theme.bg, theme.border, 'text-white shadow-sm']
+                      : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
+                  ]">
+            {{ f.nombre }}
+            <span :class="[
+              'inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] rounded-full text-[9px] font-black',
+              filtroFamilia === f.nombre ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+            ]">{{ f.count }}</span>
+          </button>
+          <button v-if="hayFiltrosActivos" @click="limpiarFiltros"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold
+                         text-gray-400 hover:text-gray-600 transition-colors">
+            Limpiar filtros ✕
+          </button>
+        </div>
+
+        <div v-if="filtroFamilia && ciclosDisponibles.length > 0" class="flex flex-wrap items-center gap-2">
+          <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Ciclo</span>
+          <button v-for="c in ciclosDisponibles" :key="c"
+                  @click="seleccionarCiclo(c)"
+                  :class="[
+                    'px-3 py-1 rounded-full text-[10px] font-bold border transition-all',
+                    filtroCiclo === c
+                      ? 'bg-[#1F2937] text-white border-[#1F2937]'
+                      : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
+                  ]">
+            {{ c }}
+          </button>
+        </div>
+
+        <div v-if="filtroFamilia && cursosDisponibles.length > 0" class="flex flex-wrap items-center gap-2">
+          <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Curso</span>
+          <button v-for="cu in cursosDisponibles" :key="cu"
+                  @click="seleccionarCurso(cu)"
+                  :class="[
+                    'px-3 py-1 rounded-full text-[10px] font-bold border transition-all',
+                    filtroCurso === cu
+                      ? 'bg-[#1F2937] text-white border-[#1F2937]'
+                      : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
+                  ]">
+            {{ cu }}º
+          </button>
+        </div>
+      </div>
+
       <!-- Cargando -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
         <svg class="animate-spin w-12 h-12 text-sky-500 mb-4" viewBox="0 0 24 24">
@@ -226,10 +295,10 @@ function mostrarSnack(mensaje, accion = null) {
           </svg>
         </div>
         <h3 class="text-[#1F2937] font-black text-xl mb-2">
-          {{ busqueda ? 'Sin resultados' : 'Todavía no hay proyectos completados' }}
+          {{ hayFiltrosActivos ? 'Sin resultados' : 'Todavía no hay proyectos completados' }}
         </h3>
         <p class="text-gray-400 text-sm">
-          {{ busqueda ? 'Prueba con otro término de búsqueda' : 'Aquí aparecerán los proyectos cuando se marquen como completados' }}
+          {{ hayFiltrosActivos ? 'Prueba con otros filtros' : 'Aquí aparecerán los proyectos cuando se marquen como completados' }}
         </p>
       </div>
 

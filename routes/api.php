@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\EquipoPublicoController;
 use App\Http\Controllers\EquipoGestionController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
+use App\Http\Controllers\PublicMicroproyectoCatalogoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -117,6 +118,11 @@ Route::middleware('throttle:catalogo-publico')->group(function () {
     Route::get('/public/microretos/familias', [PublicMicroretoCatalogoController::class, 'familias']);
     Route::get('/public/microretos/{uuid}',    [PublicMicroretoCatalogoController::class, 'show']);
     Route::get('/public/microretos',           [PublicMicroretoCatalogoController::class, 'index']);
+
+    // Proyectos completados marcados visible_publico=true — misma política de acceso.
+    Route::get('/public/microproyectos/{uuid}/equipos', [PublicMicroproyectoCatalogoController::class, 'equipos']);
+    Route::get('/public/microproyectos/{uuid}',          [PublicMicroproyectoCatalogoController::class, 'show']);
+    Route::get('/public/microproyectos',                 [PublicMicroproyectoCatalogoController::class, 'index']);
 });
 
 // Auth pública — throttle estricto para prevenir fuerza bruta
@@ -208,6 +214,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/guardar-microreto-bd',    [MicroretoIAController::class, 'guardarEnBD']);
         Route::post('/guardar-microretos-lote', [MicroretoIAController::class, 'guardarLote']);
         Route::delete('/microretos/{id}',       [MicroretoIAController::class, 'destroy']);
+        Route::patch('/microretos/{id}/visible-publico', [MicroretoIAController::class, 'toggleVisiblePublico']);
 
         // Tokens QR temporales
         Route::get('/microretos/{id}/token',    [MicroretoTokenController::class, 'get']);
@@ -255,6 +262,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/startup/proyectos/{uuid}',                 [MicroproyectoController::class, 'show']);
         Route::put('/startup/proyectos/{uuid}',                 [MicroproyectoController::class, 'update']);
         Route::post('/startup/proyectos/{uuid}/validar-docente',[MicroproyectoController::class, 'validarDocente']);
+        Route::patch('/startup/proyectos/{uuid}/visible-publico',[MicroproyectoController::class, 'toggleVisiblePublico']);
         Route::delete('/startup/proyectos/{uuid}',              [MicroproyectoController::class, 'destroy']);
 
         // StartUp Day — IA: sugerencia de RA/CE y KPIs

@@ -11,6 +11,10 @@ const router    = useRouter()
 const { mobileOpen, toggleMobilePanel } = useSidePanel()
 const { theme } = useRoleTheme()
 
+// La Home/login muestra el panel lateral también sin sesión (ver App.vue), así que el
+// botón de menú móvil tiene que poder abrirlo ahí igual que con sesión iniciada.
+const isHomeRoute = computed(() => route.path === '/' || route.path === '/login')
+
 const irHome = () => {
   const destino = authStore.isAuthenticated && (authStore.isDocente || authStore.isAdmin)
     ? '/panel-docente'
@@ -56,7 +60,7 @@ const cerrarSesion = async () => {
   >
     <!-- Menú (cajón lateral) — solo visible en móvil/tablet con sesión iniciada -->
     <button
-      v-if="authStore.isAuthenticated"
+      v-if="authStore.isAuthenticated || isHomeRoute"
       @click="toggleMobilePanel"
       title="Menú"
       class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center shrink-0

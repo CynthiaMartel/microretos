@@ -33,8 +33,12 @@ class PublicMicroretoCatalogoController extends Controller
         $cacheKey = "publico:microretos:index:{$perPage}:" . ($familiaId ?? 'todas');
 
         $data = Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL_MINUTOS), function () use ($perPage, $familiaId) {
-            $query = Microreto::with(['empresa.centroEducativo', 'empresa.familias'])
-                ->where('visible_publico', true);
+            $query = Microreto::with([
+                'empresa.centroEducativo',
+                'empresa.familias',
+                'microproyectos' => self::relacionProyectoCompletado(),
+            ])->where('visible_publico', true);
+            self::conProyectoCompletadoPublico($query);
 
             if ($familiaId) {
                 $query->whereHas('empresa.familias', fn ($q) => $q->where('familias.id', $familiaId));
@@ -53,10 +57,15 @@ class PublicMicroretoCatalogoController extends Controller
         $cacheKey = "publico:microretos:show:{$uuid}";
 
         $reto = Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL_MINUTOS), function () use ($uuid) {
-            $reto = Microreto::with(['empresa.centroEducativo', 'empresa.familias'])
-                ->where('uuid', $uuid)
-                ->where('visible_publico', true)
-                ->first();
+            $query = Microreto::with([
+                'empresa.centroEducativo',
+                'empresa.familias',
+                'microproyectos' => self::relacionProyectoCompletado(),
+            ])->where('uuid', $uuid)
+                ->where('visible_publico', true);
+            self::conProyectoCompletadoPublico($query);
+
+            $reto = $query->first();
 
             return $reto ? MicroretoFichaService::enriquecer($reto) : null;
         });
@@ -71,9 +80,31 @@ class PublicMicroretoCatalogoController extends Controller
         $data = Cache::remember('publico:microretos:familias', now()->addMinutes(self::CACHE_TTL_MINUTOS), function () {
             return Familia::whereHas('empresas.microretos', function ($q) {
                 $q->where('visible_publico', true);
+                self::conProyectoCompletadoPublico($q);
             })->get();
         });
 
         return FamiliaPublicaResource::collection($data);
+    }
+
+    // Un microreto solo entra al escaparate si, además de visible_publico, tiene al
+    // menos un proyecto ya completado y también marcado visible_publico — el escaparate
+    // muestra el reto como puerta de entrada al proyecto real hecho con él, no como
+    // ficha suelta.
+    private static function conProyectoCompletadoPublico($query): void
+    {
+        $query->whereHas('microproyectos', function ($q) {
+            $q->where('estado', 'completado')->where('visible_publico', true);
+        });
+    }
+
+    // Eager load constreñido al mismo criterio (completado + visible_publico), el más
+    // reciente primero — así el Resource puede enlazar "Ver proyecto asociado
+    // completado" (microproyectos->first()->uuid) sin lanzar otra query.
+    private static function relacionProyectoCompletado(): \Closure
+    {
+        return fn ($q) => $q->where('estado', 'completado')
+            ->where('visible_publico', true)
+            ->orderByDesc('updated_at');
     }
 }

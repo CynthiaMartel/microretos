@@ -11,7 +11,7 @@ class MicroproyectoController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $query = Microproyecto::with(['empresa', 'centroEducativo', 'cicloFormativo', 'microreto', 'imagenPortada'])
+        $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada'])
             ->orderByDesc('updated_at');
 
         if ($user->isSuperAdmin()) {
@@ -141,6 +141,30 @@ class MicroproyectoController extends Controller
         $proyecto->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    // Alterna la visibilidad de un proyecto en el escaparate público (dualab.es).
+    // Ver PublicMicroproyectoCatalogoController: visible_publico es opt-in manual,
+    // default false, y solo tiene sentido sobre un proyecto ya completado.
+    public function toggleVisiblePublico($uuid)
+    {
+        $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
+
+        $this->authorize('update', $proyecto);
+
+        if ($proyecto->estado !== 'completado' && !$proyecto->visible_publico) {
+            return response()->json(['error' => 'Solo se puede publicar un proyecto ya completado.'], 422);
+        }
+
+        $proyecto->visible_publico = !$proyecto->visible_publico;
+        $proyecto->save();
+
+        \Illuminate\Support\Facades\Cache::forget("publico:microproyectos:show:{$proyecto->uuid}");
+
+        return response()->json([
+            'uuid'            => $proyecto->uuid,
+            'visible_publico' => $proyecto->visible_publico,
+        ]);
     }
 
     // --- Validación pública empresa (acceso por token) ---
@@ -548,6 +572,7 @@ class MicroproyectoController extends Controller
             'titulo'           => $p->titulo,
             'curso'            => $p->curso,
             'estado'           => $p->estado,
+            'visible_publico'  => (bool) $p->visible_publico,
             'paso_actual'      => $p->paso_actual,
             'empresa_validado'      => $p->empresa_validado,
             'empresa_no_valida_aun' => $p->empresa_no_valida_aun,
@@ -561,6 +586,7 @@ class MicroproyectoController extends Controller
             'ciclo_id'         => $p->ciclo_id,
             'ciclo_nombre'     => $p->cicloFormativo?->nombre,
             'familia_id'       => $p->familia_id,
+            'familia_nombre'   => $p->familia?->nombre,
             'microreto_id'     => $p->microreto_id,
             'microreto_titulo' => $p->microreto?->titulo,
             'encuentro_id'     => $p->encuentros()->value('id'),

@@ -18,13 +18,18 @@ class MicroretoListadoPublicoResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'uuid'           => $this->uuid,
-            'titulo'         => $this->titulo,
-            'subtitulo'      => $this->subtitulo,
-            'familia'        => $this->familia,
-            'empresa_nombre' => $this->empresa_nombre,
-            'nivel_grupo'    => $this->nivel_grupo,
-            'curso'          => $this->curso,
+            'uuid'                => $this->uuid,
+            'titulo'              => $this->titulo,
+            'subtitulo'           => $this->subtitulo,
+            'pregunta_reto'       => $this->pregunta_reto,
+            'familia'             => $this->familia,
+            'empresa_nombre'      => $this->empresa_nombre,
+            'empresa_es_simulada' => $this->empresa_es_simulada,
+            'es_simulado'         => (bool) $this->es_simulado,
+            'centro_educativo'    => $this->centro_educativo,
+            'nivel_grupo'         => $this->nivel_grupo,
+            'ciclo'               => $this->ciclo,
+            'curso'               => $this->curso,
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Microreto;
@@ -640,18 +641,42 @@ Reglas:
     {
         try {
             $microreto = Microreto::with('empresa')->findOrFail($id);
-            $user      = $request->user();
-
-            if (!$user->isSuperAdmin() && ($user->isDocente() || $user->isAdmin())) {
-                if (!$microreto->empresa || !$microreto->empresa->perteneceAlCentroDe($user)) {
-                    return response()->json(['error' => 'No autorizado: este micro-reto no pertenece a tu centro educativo.'], 403);
-                }
-            }
+            $this->authorize('delete', $microreto);
 
             $microreto->delete();
             return response()->json(['mensaje' => 'Micro-reto eliminado correctamente'], 200);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'No autorizado: este micro-reto no pertenece a tu centro educativo.'], 403);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al eliminar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Alterna la visibilidad de un micro-reto en el escaparate público (dualab.es/info.dualab.es).
+    // Ver PublicMicroretoCatalogoController: visible_publico es opt-in manual, default false.
+    public function toggleVisiblePublico(Request $request, $id)
+    {
+        try {
+            $microreto = Microreto::with('empresa')->findOrFail($id);
+            $this->authorize('update', $microreto);
+
+            $microreto->visible_publico = !$microreto->visible_publico;
+            $microreto->save();
+
+            // Invalida las claves de caché pública que se pueden identificar de forma
+            // determinista. Las claves de index() varían por per_page/familia_id (ver
+            // PublicMicroretoCatalogoController::index) y expiran solas en 5 min.
+            Cache::forget('publico:microretos:familias');
+            Cache::forget("publico:microretos:show:{$microreto->uuid}");
+
+            return response()->json([
+                'id'              => $microreto->id,
+                'visible_publico' => $microreto->visible_publico,
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'No autorizado: este micro-reto no pertenece a tu centro educativo.'], 403);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al actualizar: ' . $e->getMessage()], 500);
         }
     }
 }

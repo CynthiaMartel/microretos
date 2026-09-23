@@ -45,6 +45,9 @@ class MicroretoFichaResource extends JsonResource
             'centro_educativo'    => $this->centro_educativo,
             'empresa_es_simulada' => $this->empresa_es_simulada,
             'es_simulado'         => (bool) $this->es_simulado,
+            // Botón "Ver proyecto asociado completado" — el más reciente que cumple el
+            // mismo gate (completado + visible_publico), ver PublicMicroretoCatalogoController.
+            'proyecto_completado_uuid' => $this->whenLoaded('microproyectos', fn () => $this->microproyectos->first()?->uuid),
             // Sector/tamaño + diagnóstico crudo de la empresa ("Datos recogidos de la empresa"
             // en la ficha — la materia prima que la IA resume en quien_es/dia_a_dia/dificultades/
             // que_necesitan/limitaciones, mostrada aparte para lectura comparativa). Nunca

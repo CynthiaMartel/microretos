@@ -26,8 +26,12 @@ const isPublicRetoRoute = computed(() =>
 )
 
 // El panel lateral es navegación de docente/admin/empresa: sin sesión no aporta nada
-// y solo resta ancho útil a las vistas públicas (Home, Unirse, etc.)
-const showSidePanel = computed(() => !isPublicRetoRoute.value && authStore.isAuthenticated)
+// y solo resta ancho útil a las vistas públicas (Unirse, etc.) — excepto en la Home/login,
+// donde se muestra como escaparate de lo que hay detrás del login (ver SidePanel.vue).
+const isHomeRoute = computed(() => route.path === '/' || route.path === '/login')
+const showSidePanel = computed(() =>
+  !isPublicRetoRoute.value && (authStore.isAuthenticated || isHomeRoute.value)
+)
 
 // ── Login modal: vivía dentro de SidePanel, pero este ya no se monta sin sesión.
 // Se sube a App.vue para que las vistas públicas (Home, etc.) puedan seguir abriéndolo.

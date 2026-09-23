@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth'
 import { useUiHighlightStore } from '../stores/uiHighlight'
@@ -8,6 +8,7 @@ import { useCredits } from '../composables/useCredits.js'
 import { useComoFunciona } from '../composables/useComoFunciona.js'
 import { useSidePanel } from '../composables/useSidePanel.js'
 import { useRoleTheme } from '../composables/useRoleTheme.js'
+import { useLoginModal } from '../composables/useLoginModal.js'
 
 const authStore = useAuthStore()
 const { theme } = useRoleTheme()
@@ -16,6 +17,7 @@ const { tourActivo, showWelcome, welcomeRole, welcomeName } = useUIState()
 const { abrirCreditos } = useCredits()
 const { abrirComoFunciona } = useComoFunciona()
 const { mobileOpen, closeMobilePanel } = useSidePanel()
+const { openLogin } = useLoginModal()
 
 // Mostrar autoría una vez tras cerrar el modal de bienvenida
 let _welShown = false
@@ -28,6 +30,17 @@ const router    = useRouter()
 
 const isActive = (path) =>
   path === '/' ? route.path === '/' : route.path.startsWith(path)
+
+// ─── Escaparate sin sesión (Home/login, ver App.vue) ─────────────────────────
+// Sin sesión se muestra la unión de todas las secciones (como si se tuviera acceso
+// a todo) y cualquier click que navegue pide login en vez de moverse. Estos wrappers
+// solo afectan a la VISIBILIDAD aquí; no tocan authStore, que sigue siendo la fuente
+// real de permisos.
+const isGuest         = computed(() => !authStore.isAuthenticated)
+const isDocenteNav    = computed(() => isGuest.value || authStore.isDocente)
+const isAdminNav      = computed(() => isGuest.value || authStore.isAdmin)
+const isSuperAdminNav = computed(() => isGuest.value || authStore.isSuperAdmin)
+const canAccessNav    = (routeName) => isGuest.value || authStore.canAccess(routeName)
 
 // ─── Tooltip flotante (Teleport a body: el nav recorta con overflow-y:auto) ──
 const tooltip = ref({ visible: false, text: '', top: 0, left: 0 })
@@ -48,8 +61,9 @@ const hideTooltip = () => {
   tooltip.value.visible = false
 }
 
-// El panel solo se monta con sesión iniciada (ver App.vue), así que aquí siempre hay usuario autenticado
+// Sin sesión (escaparate en Home/login) cualquier navegación pide login antes de moverse
 const irA = (ruta) => {
+  if (!authStore.isAuthenticated) { openLogin(ruta); return }
   const yaEstoy = route.path === ruta || route.path.startsWith(ruta + '/')
   router.push(yaEstoy ? { path: ruta, query: { _t: Date.now() } } : ruta)
 }
@@ -82,7 +96,7 @@ watch(() => route.fullPath, closeMobilePanel)
       <nav class="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto overscroll-contain" @scroll.passive="hideTooltip">
 
         <!-- ═══ DOCENTE ═══ -->
-        <template v-if="authStore.isDocente || authStore.canAccess('microretos') || authStore.canAccess('dashboard-docente') || authStore.canAccess('startup-day')">
+        <template v-if="isDocenteNav || canAccessNav('microretos') || canAccessNav('dashboard-docente') || canAccessNav('startup-day')">
 
           <div v-if="!authStore.isEmpresa" class="px-3 mb-1.5 flex items-center gap-1.5
                       text-[9px] font-black uppercase tracking-[0.2em] text-centros-light select-none">
@@ -94,7 +108,7 @@ watch(() => route.fullPath, closeMobilePanel)
           <div class="rounded-2xl border px-2 pt-2 pb-2 space-y-1" :class="[theme.border20, theme.bg5]">
 
             <!-- Panel docente -->
-            <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="group/tip relative">
+            <div v-if="isDocenteNav || isAdminNav || isSuperAdminNav" class="group/tip relative">
               <button
                 @click="irA('/panel-docente')"
                 data-tip="Panel de inicio para docentes"
@@ -116,12 +130,12 @@ watch(() => route.fullPath, closeMobilePanel)
 
             <!-- Separador Panel / Retos -->
             <div
-              v-if="(authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin) && (authStore.canAccess('microretos') || authStore.canAccess('biblioteca'))"
+              v-if="(isDocenteNav || isAdminNav || isSuperAdminNav) && (canAccessNav('microretos') || canAccessNav('biblioteca'))"
               class="border-t mx-1 my-1" :class="theme.border15"
             />
 
             <!-- RETOS — color fijo de docente (azul), no del rol de quien mira -->
-            <div v-if="authStore.canAccess('microretos') || authStore.canAccess('biblioteca')">
+            <div v-if="canAccessNav('microretos') || canAccessNav('biblioteca')">
               <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                           text-[9px] font-black uppercase tracking-[0.2em]
                           text-centros-light bg-centros/15 select-none">
@@ -135,7 +149,7 @@ watch(() => route.fullPath, closeMobilePanel)
               <div class="space-y-0.5">
 
                 <!-- Generador -->
-                <div v-if="authStore.canAccess('microretos')" class="group/tip relative">
+                <div v-if="canAccessNav('microretos')" class="group/tip relative">
                   <button
                     @click="irA('/retos/crear')"
                     data-tip="Genera retos con IA a partir de una empresa y los criterios del ciclo"
@@ -153,7 +167,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Biblioteca Retos -->
-                <div v-if="authStore.canAccess('biblioteca')" class="group/tip relative">
+                <div v-if="canAccessNav('biblioteca')" class="group/tip relative">
                   <button
                     @click="irA('/retos')"
                     data-tip="Consulta todos los retos guardados y comparte el QR con el alumnado"
@@ -178,12 +192,12 @@ watch(() => route.fullPath, closeMobilePanel)
 
             <!-- Separador Retos / Taller de Ideas -->
             <div
-              v-if="(authStore.canAccess('microretos') || authStore.canAccess('biblioteca')) && authStore.canAccess('startup-day')"
+              v-if="(canAccessNav('microretos') || canAccessNav('biblioteca')) && canAccessNav('startup-day')"
               class="border-t mx-1 my-1" :class="theme.border15"
             />
 
             <!-- TALLER DE IDEAS — color fijo de docente (azul) -->
-            <div v-if="authStore.canAccess('startup-day')">
+            <div v-if="canAccessNav('startup-day')">
               <div class="w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg
                           text-[9px] font-black uppercase tracking-[0.2em]
                           text-centros-light bg-centros/15 select-none">
@@ -197,7 +211,7 @@ watch(() => route.fullPath, closeMobilePanel)
               <div class="space-y-0.5">
 
                 <!-- Generar Propuesta-Proyecto -->
-                <div v-if="authStore.canAccess('startup-day-crear')" class="group/tip relative">
+                <div v-if="canAccessNav('startup-day-crear')" class="group/tip relative">
                   <button
                     @click="irA('/proyectos/crear')"
                     data-tip="Crea una nueva propuesta para el Taller de Ideas"
@@ -218,9 +232,9 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Biblioteca Propuestas-Proyecto -->
-                <div v-if="authStore.canAccess('startup-day')" class="group/tip relative">
+                <div v-if="canAccessNav('startup-day')" class="group/tip relative">
                   <button
-                    @click="irA('/proyectos/terminados')"
+                    @click="irA('/proyectos')"
                     data-tip="Crea y gestiona propuestas y proyectos del Taller de Ideas"
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
@@ -258,7 +272,7 @@ watch(() => route.fullPath, closeMobilePanel)
               <div class="space-y-0.5">
 
                 <!-- Generar Encuentros -->
-                <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
+                <div v-if="canAccessNav('dashboard-docente')" class="group/tip relative">
                   <button
                     @click="irA('/encuentros/crear')"
                     data-tip="Crea encuentros de trabajo con retos"
@@ -278,7 +292,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Biblioteca de Encuentros -->
-                <div v-if="authStore.canAccess('dashboard-docente')" class="group/tip relative">
+                <div v-if="canAccessNav('dashboard-docente')" class="group/tip relative">
                   <button
                     @click="irA('/encuentros')"
                     data-tip="Consulta todos los encuentros registrados"
@@ -299,7 +313,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Dar acceso alumnado (docentes, admin y superadmin) — elige el encuentro y abre su QR/código -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="group/tip relative">
+                <div v-if="isDocenteNav || isAdminNav || isSuperAdminNav" class="group/tip relative">
                   <button
                     @click="irA('/pantalla-acceso')"
                     data-tip="Elige un encuentro y proyecta su QR y código para el alumnado"
@@ -319,7 +333,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Separador docente / alumnado -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t mx-1 my-1" :class="theme.border15" />
+                <div v-if="isDocenteNav || isAdminNav || isSuperAdminNav" class="border-t mx-1 my-1" :class="theme.border15" />
 
                 <!-- Título distintivo: separa los dos accesos "Alumnado: ..." (unirse / retomar),
                      ambos puntos de entrada al workspace del equipo, del resto de la sección.
@@ -332,7 +346,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 <!-- Unirse a equipo -->
                 <div class="group/tip relative">
                   <button
-                    @click="router.push('/unirse')"
+                    @click="irA('/unirse')"
                     data-tip="Primera vez: elige tu clase y tu equipo"
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
@@ -352,7 +366,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 <!-- Workspace proyecto: reentrada directa con el código del equipo -->
                 <div class="group/tip relative">
                   <button
-                    @click="router.push('/workspace-proyecto')"
+                    @click="irA('/workspace-proyecto')"
                     data-tip="Mete tu código para ver tu flujo de trabajo"
                     class="nav-item w-full text-left"
                     @mouseenter="showTooltip"
@@ -368,7 +382,7 @@ watch(() => route.fullPath, closeMobilePanel)
                 </div>
 
                 <!-- Separador alumnado / docente -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="border-t mx-1 my-1" :class="theme.border15" />
+                <div v-if="isDocenteNav || isAdminNav || isSuperAdminNav" class="border-t mx-1 my-1" :class="theme.border15" />
 
                 <!-- Mis grupos — seguimiento del avance del alumnado (docentes, admin y superadmin).
                      Ruta /mis-equipos (antes /mis-grupos): "grupo" ya significa la clase/curso del
@@ -376,7 +390,7 @@ watch(() => route.fullPath, closeMobilePanel)
                      EQUIPOS de alumnado dentro de cada grupo/encuentro — de ahí el nuevo nombre de
                      ruta, aunque el texto sigue hablando de "grupos" porque así es como el docente
                      navega (por clase), y dentro de cada uno ve sus equipos. -->
-                <div v-if="authStore.isDocente || authStore.isAdmin || authStore.isSuperAdmin" class="group/tip relative">
+                <div v-if="isDocenteNav || isAdminNav || isSuperAdminNav" class="group/tip relative">
                   <button
                     @click="irA('/mis-equipos')"
                     data-tip="Seguimiento del avance de todos tus grupos y sus equipos"
@@ -404,7 +418,7 @@ watch(() => route.fullPath, closeMobilePanel)
         <div class="border-t border-white/10 mx-1 my-2" />
 
         <!-- ═══════════════ EMPRESAS ════════════════════ -->
-        <template v-if="authStore.canAccess('empresas')">
+        <template v-if="canAccessNav('empresas')">
           <div class="my-2 border-t border-white/10" />
 
           <div class="group/tip relative">
@@ -448,7 +462,7 @@ watch(() => route.fullPath, closeMobilePanel)
         </template>
 
         <!-- ═══════════════ ADMINISTRACIÓN ═════════════ -->
-        <template v-if="authStore.canAccess('base-datos') || authStore.canAccess('papelera') || authStore.canAccess('gestion-usuarios')">
+        <template v-if="canAccessNav('base-datos') || canAccessNav('papelera') || canAccessNav('gestion-usuarios')">
           <div class="my-2 border-t border-white/10" />
 
           <div class="group/tip relative">
@@ -463,7 +477,7 @@ watch(() => route.fullPath, closeMobilePanel)
           <div class="space-y-0.5">
 
               <!-- Gestión de usuarios -->
-              <div v-if="authStore.canAccess('gestion-usuarios')" class="group/tip relative">
+              <div v-if="canAccessNav('gestion-usuarios')" class="group/tip relative">
                 <button
                   @click="irA('/usuarios')"
                   data-tip="Gestiona las cuentas de docentes y empresas"
@@ -484,7 +498,7 @@ watch(() => route.fullPath, closeMobilePanel)
               </div>
 
               <!-- Base de datos -->
-              <div v-if="authStore.canAccess('base-datos')" class="group/tip relative">
+              <div v-if="canAccessNav('base-datos')" class="group/tip relative">
                 <button
                   @click="irA('/base-datos')"
                   data-tip="Empresas, centros educativos, familias y ciclos del ecosistema DuaLab"
@@ -505,7 +519,7 @@ watch(() => route.fullPath, closeMobilePanel)
               </div>
 
               <!-- Papelera -->
-              <div v-if="authStore.canAccess('papelera')" class="group/tip relative">
+              <div v-if="canAccessNav('papelera')" class="group/tip relative">
                 <button
                   @click="irA('/papelera')"
                   data-tip="Elementos eliminados — restáuralos o bórralos definitivamente"

@@ -65,4 +65,9 @@ class Microreto extends Model
     {
         return $this->belongsTo(CicloFormativo::class, 'ciclo_id');
     }
+
+    public function microproyectos()
+    {
+        return $this->hasMany(Microproyecto::class, 'microreto_id');
+    }
 }
