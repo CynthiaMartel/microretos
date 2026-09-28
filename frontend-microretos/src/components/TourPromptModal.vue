@@ -24,7 +24,7 @@ const emit = defineEmits(['activar', 'omitir'])
             </svg>
           </div>
           <div>
-            <h2 class="text-lg font-black tracking-tight text-[#121212] leading-tight">{{ titulo }}</h2>
+            <h2 class="text-lg font-black tracking-tight text-azul-noche leading-tight">{{ titulo }}</h2>
             <p class="text-xs text-gray-500 leading-relaxed mt-1">{{ descripcion }}</p>
           </div>
         </div>

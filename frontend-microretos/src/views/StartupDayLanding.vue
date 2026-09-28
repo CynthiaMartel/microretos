@@ -136,7 +136,7 @@ function youtubeId(url) {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <h2 class="text-xl font-black text-[#121212] mb-2">¡Propuesta validada!</h2>
+          <h2 class="text-xl font-black text-azul-noche mb-2">¡Propuesta validada!</h2>
           <p class="text-gray-400 text-sm max-w-sm mx-auto">
             Muchas gracias por vuestra confianza. El equipo docente recibirá vuestra validación
             y se pondrá en contacto para los próximos pasos.
@@ -156,7 +156,7 @@ function youtubeId(url) {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
-          <h2 class="text-xl font-black text-[#121212] mb-2">Respuesta registrada</h2>
+          <h2 class="text-xl font-black text-azul-noche mb-2">Respuesta registrada</h2>
           <p class="text-gray-400 text-sm max-w-sm mx-auto">
             Hemos registrado vuestra respuesta de "no validar aún". El equipo docente la recibirá
             y se pondrá en contacto con vosotros para resolver cualquier duda antes de continuar.
@@ -196,7 +196,7 @@ function youtubeId(url) {
                   </div>
                   <div>
                     <p class="text-[10px] font-black uppercase tracking-widest text-empresas">Bienvenido/a</p>
-                    <h2 class="text-base font-black text-[#121212]">¿Qué es este portal y qué se espera de vosotros?</h2>
+                    <h2 class="text-base font-black text-azul-noche">¿Qué es este portal y qué se espera de vosotros?</h2>
                   </div>
                 </div>
                 <button @click="guiaVisible = false"
@@ -309,7 +309,7 @@ function youtubeId(url) {
           <div class="bg-white border border-gray-100 rounded-[1.5rem] shadow-sm p-6 mb-5 space-y-6">
             <div>
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Proyecto</p>
-              <h1 class="text-xl font-black text-[#121212]">{{ proyecto.titulo }}</h1>
+              <h1 class="text-xl font-black text-azul-noche">{{ proyecto.titulo }}</h1>
             </div>
 
             <!-- Resumen ejecutivo -->

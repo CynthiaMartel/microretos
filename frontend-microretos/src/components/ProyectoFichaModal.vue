@@ -228,7 +228,7 @@ function irAPaginaCompleta() {
                   <div class="notebook-hole" /><div class="notebook-hole" />
                 </div>
 
-                <h1 class="text-xl md:text-2xl font-black tracking-tight text-[#121212] mb-2 leading-tight">
+                <h1 class="text-xl md:text-2xl font-black tracking-tight text-azul-noche mb-2 leading-tight">
                   {{ proyecto.titulo }}
                 </h1>
                 <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-sm md:text-base font-bold italic mb-5 leading-snug" :class="theme.text">

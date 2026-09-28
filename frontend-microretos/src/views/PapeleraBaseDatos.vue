@@ -227,7 +227,7 @@ onMounted(cargarPapelera)
               </svg>
             </div>
             <div>
-              <h1 class="text-xl font-black text-[#1F2937] tracking-tight">Papelera</h1>
+              <h1 class="text-xl font-black text-azul-noche tracking-tight">Papelera</h1>
               <p class="text-xs text-gray-400 mt-0.5">
                 Elementos eliminados de la base de datos — restáuralos o bórralos definitivamente
               </p>
@@ -476,7 +476,7 @@ onMounted(cargarPapelera)
               </svg>
             </div>
             <div>
-              <h2 class="text-base font-black text-[#1F2937]">Eliminar permanentemente</h2>
+              <h2 class="text-base font-black text-azul-noche">Eliminar permanentemente</h2>
               <p class="text-xs text-gray-400">Esta acción no se puede deshacer</p>
             </div>
           </div>
@@ -547,7 +547,7 @@ onMounted(cargarPapelera)
               </svg>
             </div>
             <div>
-              <h2 class="text-base font-black text-[#1F2937]">Vaciar papelera</h2>
+              <h2 class="text-base font-black text-azul-noche">Vaciar papelera</h2>
               <p class="text-xs text-gray-400">
                 {{ filtroActivo === 'todos'
                    ? `${total} elementos serán eliminados permanentemente`

@@ -1203,7 +1203,7 @@ onUnmounted(() => { tourActivo.value = false; });
           Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
         </span>
       </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
         Taller de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Ideas</span>
       </h1>
@@ -1374,7 +1374,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 1</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Datos básicos</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Datos básicos</h2>
             <p class="text-gray-500 text-sm mt-1">
               {{ uuid ? 'Revisa los datos de base de la propuesta.' : 'Elige el reto de la biblioteca al que responde esta propuesta y completa los datos de base.' }}
             </p>
@@ -1712,7 +1712,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 2</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Datos de la empresa</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Datos de la empresa</h2>
             <p class="text-gray-500 text-sm mt-1">
               {{ empresaDesdeReto ? 'Información autocompleta desde el reto. Solo lectura.' : 'Confirma o completa la información de la empresa colaboradora.' }}
             </p>
@@ -1799,7 +1799,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 3</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Módulos y currículum</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Módulos y currículum</h2>
             <p class="text-gray-500 text-sm mt-1">Selecciona los módulos del ciclo que se trabajan en esta propuesta.</p>
           </div>
 
@@ -2299,7 +2299,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 4</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">El reto</h2>
+            <h2 class="text-2xl font-black text-azul-noche">El reto</h2>
             <p class="text-gray-500 text-sm mt-1">Define el contexto, la fundamentación y el reto central de la propuesta.</p>
           </div>
 
@@ -2361,7 +2361,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 5</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Diseño de la propuesta</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Diseño de la propuesta</h2>
             <p class="text-gray-500 text-sm mt-1">Define las fases, metodología y cronograma del trabajo.</p>
           </div>
 
@@ -2491,7 +2491,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 6</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Objetivos y KPIs</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Objetivos y KPIs</h2>
             <p class="text-gray-500 text-sm mt-1">Define los objetivos de la propuesta y los indicadores de éxito.</p>
           </div>
 
@@ -2584,7 +2584,7 @@ onUnmounted(() => { tourActivo.value = false; });
               </svg>
             </div>
             <div>
-              <h2 class="text-2xl font-black text-[#121212]">¡Propuesta lista!</h2>
+              <h2 class="text-2xl font-black text-azul-noche">¡Propuesta lista!</h2>
               <p class="text-gray-500 text-sm mt-1.5 max-w-sm mx-auto">
                 El enlace de validación ya está listo. Puedes enviárselo a la empresa por correo para que valide la propuesta.
                 Cuando la valide, pasará a llamarse <strong>proyecto</strong>.
@@ -2614,7 +2614,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
               <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 7</span>
             </div>
-            <h2 class="text-2xl font-black text-[#121212]">Publicar propuesta</h2>
+            <h2 class="text-2xl font-black text-azul-noche">Publicar propuesta</h2>
             <p class="text-gray-500 text-sm mt-1">
               Márcala como <strong class="text-[#1F2937]">Propuesta</strong> para generar el enlace de validación
               y enviárselo a la empresa colaboradora. La empresa accederá al enlace, revisará la propuesta
@@ -3109,7 +3109,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-4">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-4">
           Propuesta en edición
         </h3>
 
@@ -3166,7 +3166,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </span>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-2">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-2">
           Propuesta pendiente de validar
         </h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
@@ -3354,7 +3354,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-1">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-1">
           Confirmar envío
         </h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
@@ -3569,7 +3569,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-4">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-4">
           Sobre la publicación de la propuesta
         </h3>
 

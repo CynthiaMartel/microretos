@@ -73,7 +73,7 @@ const imagenFondo = computed(() => {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-black text-[#1F2937] mb-3">Acceso no disponible</h1>
+      <h1 class="text-2xl font-black text-azul-noche mb-3">Acceso no disponible</h1>
       <p class="text-gray-500 text-sm max-w-sm leading-relaxed">
         Este enlace ha caducado o ha sido desactivado por tu profesora o profesor.
         Solicita el QR actualizado para continuar.
@@ -91,7 +91,7 @@ const imagenFondo = computed(() => {
                    L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-black text-[#1F2937] mb-3">Error de conexión</h1>
+      <h1 class="text-2xl font-black text-azul-noche mb-3">Error de conexión</h1>
       <p class="text-gray-500 text-sm max-w-sm">Comprueba tu conexión a internet e intenta de nuevo.</p>
     </div>
 
@@ -139,7 +139,7 @@ const imagenFondo = computed(() => {
               DuaLab · Ficha de Reto
             </p>
 
-            <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-[#1F2937]
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-azul-noche
                        tracking-tight leading-tight mb-3">
               {{ reto.titulo }}
             </h1>

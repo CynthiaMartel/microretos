@@ -29,7 +29,7 @@ const emit = defineEmits(['confirm', 'cancel'])
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-2">Validar como docente</h3>
+        <h3 class="text-xl font-black text-azul-noche text-center mb-2">Validar como docente</h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
           ¿Confirmas que este proyecto cumple los criterios pedagógicos?
         </p>

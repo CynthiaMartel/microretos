@@ -102,7 +102,7 @@ async function guardar() {
           </svg>
           Volver
         </button>
-        <h1 class="text-2xl font-black text-[#1F2937]">Mi usuario</h1>
+        <h1 class="text-2xl font-black text-azul-noche">Mi usuario</h1>
         <p class="text-sm text-gray-400 mt-1">Edita tu nombre o cambia la contraseña de acceso.</p>
       </div>
 

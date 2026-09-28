@@ -105,7 +105,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
             </svg>
           </div>
           <div class="flex-1 min-w-0">
-            <h2 class="font-black text-lg text-[#1F2937]">Catálogo BOE — Solo lectura</h2>
+            <h2 class="font-black text-lg text-azul-noche">Catálogo BOE — Solo lectura</h2>
             <p class="text-xs text-gray-400">Familias · Ciclos · Módulos · Resultados de Aprendizaje · Criterios de Evaluación</p>
           </div>
           <button @click="cerrar"

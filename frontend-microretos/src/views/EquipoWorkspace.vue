@@ -130,7 +130,13 @@ onMounted(async () => {
   try {
     const res = await api.get(`/equipo/${token}`)
     workspace.value = res.data
-    faseVista.value = equipo.value.fase_actual
+    // Enlaces "Ver en workspace" desde la ficha de proyecto completado abren directamente
+    // en la fase indicada (?fase=1); si no es una fase visible para el equipo, se cae a
+    // la fase actual como siempre.
+    const faseSolicitada = Number(route.query.fase)
+    faseVista.value = Number.isInteger(faseSolicitada) && puedeVerFase(faseSolicitada)
+      ? faseSolicitada
+      : equipo.value.fase_actual
     localStorage.setItem('dualab_equipo_token', token)
     localStorage.setItem('dualab_equipo_nombre', equipo.value.nombre)
     localStorage.setItem('dualab_proyecto_titulo', proyecto.value.titulo)
@@ -998,7 +1004,7 @@ watch(workspace, (val) => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </div>
-      <h2 class="text-lg font-black text-[#1F2937] mb-2">Enlace no válido</h2>
+      <h2 class="text-lg font-black text-azul-noche mb-2">Enlace no válido</h2>
       <p class="text-sm text-gray-500 mb-6">Este enlace no existe o ha caducado. Comprueba el código con tu docente.</p>
       <button @click="router.push({ name: 'unirse-equipo' })"
               class="px-6 py-3 rounded-2xl bg-alumnos text-white text-sm font-black uppercase tracking-widest">
@@ -2261,7 +2267,7 @@ watch(workspace, (val) => {
 
             <!-- Tarjeta equipo + miembros -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-              <h3 class="text-sm font-black text-[#121212] mb-4">{{ equipo.nombre }}</h3>
+              <h3 class="text-sm font-black text-azul-noche mb-4">{{ equipo.nombre }}</h3>
 
               <div v-if="equipo.miembros?.length" class="space-y-3">
                 <div v-for="(m, i) in equipo.miembros" :key="i" class="flex items-center gap-3">
@@ -2404,7 +2410,7 @@ watch(workspace, (val) => {
           <div @click="mostrarModalPasoF3 = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
           <div class="relative z-10 w-full max-w-lg bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
             <p class="text-[10px] font-black uppercase tracking-[0.18em] text-orange-500 mb-3">Antes de continuar</p>
-            <h2 class="text-xl font-black text-[#1F2937] mb-3 leading-snug">
+            <h2 class="text-xl font-black text-azul-noche mb-3 leading-snug">
               Vais a pasar a la fase de Entrega de la solución
             </h2>
             <p class="text-sm text-gray-600 leading-relaxed mb-4">
@@ -2442,7 +2448,7 @@ watch(workspace, (val) => {
           <div @click="mostrarModalPasoF4 = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
           <div class="relative z-10 w-full max-w-lg bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
             <p class="text-[10px] font-black uppercase tracking-[0.18em] text-green-600 mb-3">Antes de continuar</p>
-            <h2 class="text-xl font-black text-[#1F2937] mb-3 leading-snug">
+            <h2 class="text-xl font-black text-azul-noche mb-3 leading-snug">
               Vais a pasar a la fase de Presentación
             </h2>
             <p class="text-sm text-gray-600 leading-relaxed mb-3">

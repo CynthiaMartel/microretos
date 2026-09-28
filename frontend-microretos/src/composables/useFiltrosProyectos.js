@@ -26,10 +26,17 @@ export function useFiltrosProyectos(proyectosBase) {
     return true;
   }
 
+  // 'Agraria' oculta temporalmente a petición de Cynthia (2026-09-28) — sus
+  // proyectos, si los hay, siguen contando en "Todos los proyectos", solo se
+  // oculta la familia como opción de filtro.
+  const FAMILIAS_OCULTAS = ['Agraria'];
+
   const familiasDisponibles = computed(() => {
     const mapa = new Map();
     proyectosBase.value.forEach(p => {
-      if (p.familia_nombre) mapa.set(p.familia_nombre, (mapa.get(p.familia_nombre) || 0) + 1);
+      if (p.familia_nombre && !FAMILIAS_OCULTAS.includes(p.familia_nombre)) {
+        mapa.set(p.familia_nombre, (mapa.get(p.familia_nombre) || 0) + 1);
+      }
     });
     return [...mapa.entries()]
       .map(([nombre, count]) => ({ nombre, count }))

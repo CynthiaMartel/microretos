@@ -1,13 +1,22 @@
+/* Tipografía de marca — Manual de marca e imagen DUALAB V2.0 (A3PRO
+   Marketing, sept. 2026): Montserrat para titulares, Inter para texto de
+   lectura e interfaz. Debe ir antes que cualquier otra regla, incluido el
+   @import de Tailwind, o el navegador la ignora. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700&display=swap');
 @import "tailwindcss";
 
 /* ---------------------------------------------------
-   Paleta de marca — extraída de logo_colores.png.
+   Paleta de marca — extraída de logo_colores.png, alineada con el
+   Manual de marca e imagen DUALAB V2.0 (sección 05/Paleta).
    Un color por colectivo (usados dinámicamente según el rol de quien ha
    iniciado sesión, ver useRoleTheme.js) + escala `primary` (azul) como
    marca genérica para el punto de entrada, vistas compartidas y chrome
    sin rol conocido todavía.
 --------------------------------------------------- */
 @theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+
   --color-primary-50:  #f6fafc;
   --color-primary-100: #dae8f5;
   --color-primary-200: #bad5ec;
@@ -24,8 +33,17 @@
   --color-administraciones: #19A7A8;
   --color-alumnos: #FF8920;
 
+  /* Azul noche de marca (manual, sección 05): color global de estructura y
+     navegación. Sustituye al gris/azul de chrome ad-hoc (#223244) que usaba
+     el TopBar/SidePanel antes de adoptar el manual. */
+  --color-azul-noche: #17283E;
+  /* Variante de borde: mismo desplazamiento de luminosidad que tenía el
+     borde ad-hoc (#37495D) sobre el fondo anterior (#223244), aplicado
+     sobre el nuevo azul noche — separador sutil sobre el propio chrome. */
+  --color-azul-noche-border: #2C3F57;
+
   /* Azul aclarado: el resto de colores de marca ya leen bien como texto sobre
-     fondo oscuro (#1F2937, el gris del TopBar/SidePanel) — el azul plano no
+     fondo oscuro (--color-azul-noche del TopBar/SidePanel) — el azul plano no
      (contraste ~2.9:1). Se usa solo para texto/iconos sobre fondo oscuro. */
   --color-centros-light: #6BA4D5;
 
@@ -42,8 +60,8 @@
 
   /* Verde aclarado: el verde de marca a opacidad reducida sobre fondo oscuro
      (SidePanel) pierde contraste y se ve apagado/ilegible. Esta variante, a
-     opacidad plena, da ~5.8:1 sobre #223244 — más legible y con mejor color
-     que difuminar el verde base. */
+     opacidad plena, da ~6,6:1 sobre --color-azul-noche — más legible y con
+     mejor color que difuminar el verde base. */
   --color-empresas-light: #6EC13F;
 }
 
@@ -51,8 +69,19 @@
    Tema Claro/Luminoso Global (Fondo y Texto Base)
 --------------------------------------------------- */
 body {
-  background-color: #F8FAFC !important; /* Fondo gris azulado muy claro */
+  background-color: #F4F7FA !important; /* Fondo neutro de marca (manual, sección 05) */
   color: #4B5563 !important; /* Texto gris medio para una lectura suave y cómoda */
+}
+
+/* ---------------------------------------------------
+   Titulares — Montserrat por defecto (manual, sección 07/Tipografía).
+   En @layer base para que cualquier utilidad de fuente aplicada en un
+   componente (p. ej. font-sans en un heading concreto) siga ganando.
+--------------------------------------------------- */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
 }
 
 /* ---------------------------------------------------

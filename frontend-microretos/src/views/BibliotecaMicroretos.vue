@@ -486,7 +486,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           </span>
         </div>
         <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Explorador de
           <span :class="theme.text">Retos</span>
@@ -621,7 +621,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
                 <div class="p-5 flex items-end justify-between gap-2">
                   <div class="min-w-0">
-                    <h3 class="font-black text-[#1F2937] text-base leading-tight mb-3 transition-colors line-clamp-2"
+                    <h3 class="font-black text-azul-noche text-base leading-tight mb-3 transition-colors line-clamp-2"
                       :class="paletteExtra[theme.key].groupHoverText">
                       {{ familia.nombre }}
                     </h3>
@@ -664,7 +664,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </svg>
                 </div>
                 <div>
-                  <h3 class="font-black text-[#1F2937] text-base leading-tight">Ver más familias</h3>
+                  <h3 class="font-black text-azul-noche text-base leading-tight">Ver más familias</h3>
                   <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
                     +{{ familiasOcultas.length }} familia{{ familiasOcultas.length !== 1 ? 's' : '' }}
                   </p>
@@ -679,7 +679,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-[#1F2937] font-black text-2xl mb-2">Sin micro-retos para este centro</h3>
+              <h3 class="text-azul-noche font-black text-2xl mb-2">Sin micro-retos para este centro</h3>
               <p class="text-gray-500 text-sm max-w-md mx-auto">Este centro todavía no tiene micro-retos generados.</p>
             </div>
 
@@ -705,7 +705,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   Todas las familias
                 </button>
                 <span class="text-gray-200">|</span>
-                <h2 class="text-xl font-black text-[#1F2937]">{{ familiaSeleccionada }}</h2>
+                <h2 class="text-xl font-black text-azul-noche">{{ familiaSeleccionada }}</h2>
               </div>
               <div class="flex items-center gap-3">
                 <span class="text-xs text-gray-400 font-bold">
@@ -1253,7 +1253,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 </div>
 
                 <div class="px-7 pb-7 pt-4 flex-1 flex flex-col">
-                  <h3 class="text-[#1F2937] font-black text-xl leading-tight mb-4 transition-colors line-clamp-2"
+                  <h3 class="text-azul-noche font-black text-xl leading-tight mb-4 transition-colors line-clamp-2"
                     :class="paletteExtra[theme.key].groupHoverText" :title="reto.titulo">
                     {{ reto.titulo }}
                   </h3>
@@ -1321,7 +1321,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="text-[#1F2937] font-black text-2xl mb-2">No hay resultados</h3>
+              <h3 class="text-azul-noche font-black text-2xl mb-2">No hay resultados</h3>
               <p class="text-gray-500 text-sm max-w-md mx-auto">Prueba a limpiar los filtros o genera nuevos retos en el Estudio interactivo.</p>
               <button @click="limpiarFiltros"
                 class="mt-6 px-6 py-2 bg-white border border-gray-200 text-[#1F2937] rounded-full text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"

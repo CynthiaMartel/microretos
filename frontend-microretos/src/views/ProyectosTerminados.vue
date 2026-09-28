@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import api from '../api.js';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
@@ -35,15 +35,14 @@ onMounted(async () => {
     cargando.value = false;
   }
   // Deep-link desde la card de familia de /proyectos ("Ver completados") —
-  // preselecciona el chip de familia y limpia la query.
+  // preselecciona el chip de familia.
   if (route.query.familia) {
     seleccionarFamilia(String(route.query.familia));
-    router.replace({ name: 'proyectos-terminados' });
   }
 });
 
 function irAPendientes() {
-  router.push({ name: 'startup-day' });
+  router.push({ name: 'startup-day', query: filtroFamilia.value ? { familia: filtroFamilia.value } : {} });
 }
 
 // ─── Modal "¿Qué necesitas?" ──────────────────────────────────────────────────
@@ -69,6 +68,14 @@ const {
   seleccionarFamilia, seleccionarCiclo, seleccionarCurso,
   limpiarFiltrosDetalle, hayFiltrosDetalleActivos, aplicarFiltros,
 } = useFiltrosProyectos(completados);
+
+// La familia se refleja en la URL (en vez de limpiarla tras aplicarla) para que
+// el botón "Atrás" del navegador, al volver desde la ficha de un proyecto,
+// restaure la misma URL y el chip siga marcado — si no, al desmontarse esta
+// vista se pierde el estado y no hay forma de recuperarlo solo con el historial.
+watch(filtroFamilia, (nombre) => {
+  router.replace({ name: 'proyectos-terminados', query: nombre ? { familia: nombre } : {} });
+});
 
 const proyectosFiltrados = computed(() => aplicarFiltros(completados.value));
 
@@ -134,7 +141,7 @@ function mostrarSnack(mensaje, accion = null) {
           </span>
         </div>
         <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Proyectos <span :class="theme.text">Completados</span>
         </h1>
@@ -294,7 +301,7 @@ function mostrarSnack(mensaje, accion = null) {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
           </svg>
         </div>
-        <h3 class="text-[#1F2937] font-black text-xl mb-2">
+        <h3 class="text-azul-noche font-black text-xl mb-2">
           {{ hayFiltrosActivos ? 'Sin resultados' : 'Todavía no hay proyectos completados' }}
         </h3>
         <p class="text-gray-400 text-sm">

@@ -46,7 +46,7 @@ onUnmounted(() => clearTimeout(destacarTimeout));
     <button v-if="dashed" type="button" @click="$emit('click')"
             class="w-full text-left p-5 focus:outline-none focus:ring-2 focus:ring-gray-300 rounded-2xl">
       <div class="flex items-start justify-between gap-2 mb-4">
-        <h3 class="font-black text-[#1F2937] text-sm leading-snug line-clamp-2">{{ nombre }}</h3>
+        <h3 class="font-black text-azul-noche text-sm leading-snug line-clamp-2">{{ nombre }}</h3>
         <span class="shrink-0 text-2xl font-black text-gray-300 leading-none">{{ total }}</span>
       </div>
       <div v-if="total > 0" class="flex h-2 rounded-full overflow-hidden bg-gray-100 mb-3">
@@ -67,7 +67,7 @@ onUnmounted(() => clearTimeout(destacarTimeout));
          los botones) no navega — solo resalta las dos opciones de abajo. -->
     <div v-else class="p-5 cursor-pointer" @click="resaltarBotones">
       <div class="flex items-start justify-between gap-2 mb-4">
-        <h3 class="font-black text-[#1F2937] text-sm leading-snug line-clamp-2">{{ nombre }}</h3>
+        <h3 class="font-black text-azul-noche text-sm leading-snug line-clamp-2">{{ nombre }}</h3>
         <span class="shrink-0 text-2xl font-black text-gray-300 leading-none">{{ total }}</span>
       </div>
       <div v-if="total > 0" class="flex h-2 rounded-full overflow-hidden bg-gray-100 mb-3">

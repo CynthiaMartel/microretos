@@ -293,7 +293,7 @@ async function copiarUrl() {
                      L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
         </div>
-        <h3 class="text-[#1F2937] font-black text-2xl mb-2">No se pudo cargar el reto</h3>
+        <h3 class="text-azul-noche font-black text-2xl mb-2">No se pudo cargar el reto</h3>
         <p class="text-gray-500 text-sm mb-6">Comprueba tu conexión o vuelve a intentarlo.</p>
         <button @click="volver"
                 class="px-6 py-2.5 bg-white border border-gray-200
@@ -341,7 +341,7 @@ async function copiarUrl() {
                 DuaLab · Ficha de Reto
               </p>
 
-              <h1 class="text-2xl sm:text-3xl md:text-5xl font-black text-[#1F2937]
+              <h1 class="text-2xl sm:text-3xl md:text-5xl font-black text-azul-noche
                          tracking-tight leading-tight mb-3">
                 {{ reto.titulo }}
               </h1>
@@ -532,7 +532,7 @@ async function copiarUrl() {
 
             <!-- Resumen de diagnóstico: la lectura de la IA a partir de los datos de arriba. -->
             <div class="space-y-10 md:space-y-14">
-              <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+              <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
                          tracking-widest border-b-2 border-gray-200 pb-2">
                 <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -696,7 +696,7 @@ async function copiarUrl() {
 
             <!-- RA / CE -->
             <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
-              <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+              <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
                          tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
                 <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -806,7 +806,7 @@ async function copiarUrl() {
             Uso Exclusivo Docente
           </div>
 
-          <h2 class="text-xl md:text-2xl font-black text-[#1F2937] mb-1 mt-2 flex items-center gap-3">
+          <h2 class="text-xl md:text-2xl font-black text-azul-noche mb-1 mt-2 flex items-center gap-3">
             <svg class="w-6 h-6 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0
@@ -904,7 +904,7 @@ async function copiarUrl() {
               <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5" :class="theme.text">
                 Acceso Alumnado
               </p>
-              <h3 class="text-lg font-black text-[#1F2937]">QR del Reto</h3>
+              <h3 class="text-lg font-black text-azul-noche">QR del Reto</h3>
             </div>
             <button @click="showQrModal = false"
                     class="w-8 h-8 flex items-center justify-center rounded-full

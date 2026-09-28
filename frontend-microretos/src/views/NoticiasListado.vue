@@ -43,7 +43,7 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
           </svg>
           Panel docente
         </button>
-        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-azul-noche">
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">{{ config.titulo }}</span>
         </h1>
         <p class="text-gray-500 text-sm mt-1">{{ config.descripcion }}</p>

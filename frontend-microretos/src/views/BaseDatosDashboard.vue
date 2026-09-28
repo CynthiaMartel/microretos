@@ -740,7 +740,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <span class="w-2 h-2 rounded-full bg-administraciones" />
               <span class="text-[10px] font-black uppercase tracking-widest text-administraciones">Base de datos</span>
             </div>
-            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-azul-noche">
               Empresas <span class="text-transparent bg-clip-text bg-gradient-to-r from-administraciones to-administraciones/60">DuaLab</span>
             </h1>
             <p class="text-gray-500 text-sm mt-1">Consulta, edita y gestiona todas las empresas registradas.</p>
@@ -1098,7 +1098,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="font-black text-lg text-[#1F2937] truncate">{{ centro }}</h2>
+                <h2 class="font-black text-lg text-azul-noche truncate">{{ centro }}</h2>
                 <p class="text-xs text-gray-400 font-medium mt-0.5">
                   {{ Object.values(datosPorCentro[centro].familias).reduce((n,f) => n + f.empresas.length, 0) }}
                   {{ Object.values(datosPorCentro[centro].familias).reduce((n,f) => n + f.empresas.length, 0) === 1 ? 'empresa' : 'empresas' }}
@@ -1872,7 +1872,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-lg text-[#1F2937]">Nueva empresa</h3>
+                <h3 class="font-black text-lg text-azul-noche">Nueva empresa</h3>
                 <p class="text-xs text-gray-400">Vas a añadir una empresa a la base de datos</p>
               </div>
             </div>
@@ -1911,7 +1911,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-lg text-[#1F2937]">Nuevo centro educativo</h3>
+                <h3 class="font-black text-lg text-azul-noche">Nuevo centro educativo</h3>
                 <p class="text-xs text-gray-400">Vas a añadir un centro al catálogo</p>
               </div>
             </div>
@@ -1950,7 +1950,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-lg text-[#1F2937]">Modificar centro</h3>
+                <h3 class="font-black text-lg text-azul-noche">Modificar centro</h3>
                 <p class="text-xs text-gray-400">Vas a editar los datos de este centro educativo</p>
               </div>
             </div>
@@ -1989,7 +1989,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-lg text-[#1F2937]">Modificar empresa</h3>
+                <h3 class="font-black text-lg text-azul-noche">Modificar empresa</h3>
                 <p class="text-xs text-gray-400">Vas a editar los datos de esta empresa</p>
               </div>
             </div>
@@ -2041,7 +2041,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-lg text-[#1F2937]">Acceso restringido</h3>
+                <h3 class="font-black text-lg text-azul-noche">Acceso restringido</h3>
                 <p class="text-xs text-gray-400">Catálogo de familias y ciclos formativos</p>
               </div>
             </div>
@@ -2199,7 +2199,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div>
-                <h3 class="font-black text-base text-[#1F2937]">Modificar estado de contacto</h3>
+                <h3 class="font-black text-base text-azul-noche">Modificar estado de contacto</h3>
                 <p class="text-xs text-gray-400 mt-0.5">Esta acción quedará registrada en la base de datos</p>
               </div>
             </div>

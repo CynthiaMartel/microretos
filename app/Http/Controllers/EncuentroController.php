@@ -412,6 +412,7 @@ class EncuentroController extends Controller
             'equipos.miembros',
             'equipos.fases',
             'equipos.reflexiones',
+            'equipos.prototipos',
         ])->whereHas('equipos')->visiblesPara($user)->orderBy('created_at', 'desc');
 
         $grupos = $query->get()->map(function ($encuentro) {
@@ -449,7 +450,7 @@ class EncuentroController extends Controller
             ->firstOrFail();
 
         $equipos = $proyecto->equipos()
-            ->with(['microproyecto.familia', 'miembros', 'fases', 'reflexiones', 'encuentro:id,grupo,curso,fecha'])
+            ->with(['microproyecto.familia', 'miembros', 'fases', 'reflexiones', 'prototipos', 'encuentro:id,grupo,curso,fecha'])
             ->get();
 
         return response()->json([
@@ -506,6 +507,20 @@ class EncuentroController extends Controller
                     'dafo'       => $m->dafo,
                 ]),
                 'fases'       => $fases,
+                // Archivos de F3 "Entrega de la solución" tal cual se suben desde el
+                // workspace del alumnado (equipo_prototipos, contexto='entregable') —
+                // para que la ficha del proyecto muestre el mismo adjunto clicable
+                // (icono según mime + nombre real), no solo la URL suelta que ya vive
+                // en fases[3].datos.url_entregable.
+                'archivos_entregable' => $equipo->prototipos
+                    ->where('contexto', 'entregable')
+                    ->map(fn ($p) => [
+                        'id'       => $p->id,
+                        'filename' => $p->filename,
+                        'url'      => $p->url,
+                        'mime'     => $p->mime,
+                        'size'     => $p->size,
+                    ])->values(),
                 'reflexiones' => $equipo->reflexiones->map(fn($r) => [
                     'id'           => $r->id,
                     'tipo'         => $r->tipo,

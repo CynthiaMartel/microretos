@@ -73,11 +73,29 @@ function formatDatos(datos) {
   if (!datos) return []
   const entries = []
   for (const [k, v] of Object.entries(datos)) {
-    if (k === 'evaluacion_docente') continue
+    // 'evaluacion_docente': notas internas, no se listan aquí.
+    // 'url_entregable' (F3): se pinta aparte como adjunto clicable (ver
+    // archivosEntregable más abajo), no como texto plano con la URL cruda.
+    if (k === 'evaluacion_docente' || k === 'url_entregable') continue
     const entry = formatEntradaFase(v)
     if (entry) entries.push({ clave: k.replace(/_/g, ' '), ...entry })
   }
   return entries
+}
+
+// Icono según mime — idéntico a iconoMime() en EquipoWorkspace.vue, para que el
+// adjunto se vea igual aquí que en el workspace del alumnado.
+function iconoMime(mime) {
+  if (mime?.startsWith('image/')) return '🖼️'
+  if (mime?.startsWith('video/')) return '🎬'
+  if (mime === 'application/pdf') return '📄'
+  return '📎'
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return ''
+  const mb = bytes / (1024 * 1024)
+  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
 function formatEntradaFase(v) {
@@ -185,6 +203,19 @@ function formatItemFase(item) {
         </div>
       </div>
 
+      <router-link
+        :to="{ name: 'equipo-workspace', params: { token: equipo.token } }"
+        target="_blank"
+        rel="noopener"
+        @click.stop
+        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-600 text-[10px] font-black uppercase tracking-wide hover:bg-violet-100 transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+        Ver en workspace
+      </router-link>
+
       <slot name="acciones-cabecera" :equipo="equipo" />
 
       <svg v-if="!expandidoSiempre"
@@ -208,7 +239,11 @@ function formatItemFase(item) {
             <span :class="['w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0',
                            FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">{{ f.icono }}</span>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-[#1F2937]">{{ f.label }}</p>
+              <p class="text-sm font-bold text-[#1F2937] flex items-center gap-1.5">
+                <span :class="['px-1.5 py-px rounded text-[9px] font-black uppercase tracking-wide shrink-0',
+                               FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">F{{ f.num }}</span>
+                {{ f.label }}
+              </p>
               <p class="text-xs text-gray-400">{{ f.desc }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -227,6 +262,20 @@ function formatItemFase(item) {
               <span v-else class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 text-[10px] font-semibold">
                 Pendiente
               </span>
+              <router-link
+                :to="{ name: 'equipo-workspace', params: { token: equipo.token }, query: { fase: f.num } }"
+                target="_blank"
+                rel="noopener"
+                @click.stop
+                title="Ver esta fase en el workspace"
+                :class="['inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wide hover:brightness-95 transition-all',
+                         FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                Workspace
+              </router-link>
               <svg v-if="!expandidoSiempre"
                    :class="['w-3.5 h-3.5 text-gray-400 transition-transform', faseEstaAbierta(f.num) ? 'rotate-180' : '']"
                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,6 +323,21 @@ function formatItemFase(item) {
               </div>
             </template>
             <p v-else class="text-xs text-gray-400 italic">Sin contenido registrado en esta fase.</p>
+
+            <!-- Adjunto del entregable (F3) — mismo archivo, mismo click-para-abrir que
+                 en el workspace del alumnado (equipo_prototipos, contexto='entregable'). -->
+            <div v-if="f.num === 3 && equipo.archivos_entregable?.length" class="mt-3 space-y-2">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-600">Entregable adjunto</p>
+              <a v-for="p in equipo.archivos_entregable" :key="p.id" :href="p.url" target="_blank" rel="noopener"
+                 class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-100 hover:border-orange-300 hover:bg-orange-100/60 transition-colors">
+                <span class="text-xl shrink-0">{{ iconoMime(p.mime) }}</span>
+                <div class="flex-1 min-w-0 text-left">
+                  <p class="text-sm font-semibold text-orange-700 hover:underline truncate">{{ p.filename }}</p>
+                  <p class="text-[10px] text-gray-400">{{ formatBytes(p.size) }}</p>
+                </div>
+              </a>
+            </div>
+
             <div v-if="equipo.fases[f.num]?.nota_docente !== null && equipo.fases[f.num]?.nota_docente !== undefined"
                  class="mt-3 flex items-center gap-2">
               <span class="text-xs font-black text-gray-500">Nota:</span>

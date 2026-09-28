@@ -375,7 +375,7 @@ function formatFecha(isoDate) {
           </span>
         </div>
         <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">registrados</span>
         </h1>
@@ -626,7 +626,7 @@ function formatFecha(isoDate) {
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <h2 class="font-black text-base text-[#1F2937] truncate">{{ centro }}</h2>
+              <h2 class="font-black text-base text-azul-noche truncate">{{ centro }}</h2>
               <p class="text-xs text-gray-400 font-medium mt-0.5">
                 {{ encuentrosAgrupados[centro].length }}
                 {{ encuentrosAgrupados[centro].length === 1 ? 'encuentro' : 'encuentros' }}
@@ -801,7 +801,7 @@ function formatFecha(isoDate) {
                     Encuentro
                   </p>
                 </div>
-                <h2 class="text-lg font-black text-[#1F2937] leading-snug">
+                <h2 class="text-lg font-black text-azul-noche leading-snug">
                   {{ encuentroAbierto.proyecto_titulo || '(sin título)' }}
                 </h2>
               </div>

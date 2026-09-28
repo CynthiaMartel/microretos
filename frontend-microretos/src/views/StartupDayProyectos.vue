@@ -145,6 +145,11 @@ onMounted(async () => {
   } else if (route.query.filtro) {
     filtroEstado.value = String(route.query.filtro);
     irADetalle('');
+  } else if (route.query.familia) {
+    // Deep-link desde "En proceso" en Proyectos Completados — conserva la familia
+    // que se estaba viendo en vez de aterrizar sin contexto en la capa de familias.
+    irADetalle(String(route.query.familia));
+    router.replace({ name: 'startup-day' });
   }
   try {
     const res = await api.get('/startup/proyectos');
@@ -405,8 +410,8 @@ function mostrarSnack(mensaje, accion = null) {
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <!-- Logo DuaLab Proyectos — solo en la portada de familias, igual que Biblioteca de Retos y Proyectos Completados -->
-      <header v-if="vista === 'familias'" class="mb-10 text-center flex flex-col items-center">
+      <!-- Logo DuaLab Proyectos — visible en las 3 capas, igual que en Proyectos Completados -->
+      <header class="mb-10 text-center flex flex-col items-center">
         <div
           class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
@@ -417,7 +422,7 @@ function mostrarSnack(mensaje, accion = null) {
             <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Proyectos</span>
           </span>
         </div>
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Biblioteca de <span :class="theme.text">Proyectos</span>
         </h1>
@@ -431,14 +436,11 @@ function mostrarSnack(mensaje, accion = null) {
       <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div v-if="vista !== 'familias'" class="flex flex-wrap items-center gap-3">
-            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-[#121212]">
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-azul-noche">
               <span :class="theme.text">Propuestas-Proyecto</span>
             </h1>
             <RecordatorioPropuestaFlotante />
           </div>
-          <p v-if="vista !== 'familias'" class="text-gray-500 text-sm mt-1">
-            Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa.
-          </p>
           <div v-if="vista === 'familias'" class="mb-2">
             <RecordatorioPropuestaFlotante />
           </div>
@@ -571,7 +573,7 @@ function mostrarSnack(mensaje, accion = null) {
               Todas las familias
             </button>
             <span class="text-gray-200">|</span>
-            <h2 class="text-lg font-black text-[#1F2937]">
+            <h2 class="text-lg font-black text-azul-noche">
               {{ filtroFamilia === '' ? 'Todos los proyectos' : (filtroFamilia === SIN_FAMILIA ? 'Sin familia asignada' : filtroFamilia) }}
             </h2>
           </div>
@@ -637,10 +639,35 @@ function mostrarSnack(mensaje, accion = null) {
           </div>
 
           <!-- Separador: distingue el filtro de estado (arriba) del filtro por taxonomía académica (abajo) -->
-          <div v-if="ciclosDisponibles.length > 0 || cursosDisponibles.length > 0" class="border-t border-gray-100 mb-5"></div>
+          <div v-if="familiasDisponibles.length > 0 || countSinFamilia > 0 || ciclosDisponibles.length > 0 || cursosDisponibles.length > 0"
+               class="border-t border-gray-100 mb-5"></div>
 
-          <!-- Filtros por ciclo / curso (familia ya fijada por la capa 1) -->
-          <div v-if="ciclosDisponibles.length > 0 || cursosDisponibles.length > 0" class="flex flex-col gap-2 mb-6">
+          <!-- Filtros por familia / ciclo / curso — mismo bloque y mismo orden que en
+               Proyectos Completados, para que no "salte" de sitio al cambiar entre vistas. -->
+          <div v-if="familiasDisponibles.length > 0 || countSinFamilia > 0 || ciclosDisponibles.length > 0 || cursosDisponibles.length > 0" class="flex flex-col gap-2 mb-6">
+            <div v-if="familiasDisponibles.length > 0 || countSinFamilia > 0" class="flex flex-wrap items-center gap-2">
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Familia</span>
+              <button v-for="f in familiasDisponibles" :key="f.nombre"
+                      @click="seleccionarFamilia(f.nombre)"
+                      :class="[
+                        'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wide border transition-all',
+                        filtroFamilia === f.nombre
+                          ? [theme.bg, theme.border, 'text-white shadow-sm']
+                          : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
+                      ]">
+                {{ f.nombre }}
+              </button>
+              <button v-if="countSinFamilia > 0" @click="seleccionarFamilia(SIN_FAMILIA)"
+                      :class="[
+                        'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wide border transition-all',
+                        filtroFamilia === SIN_FAMILIA
+                          ? [theme.bg, theme.border, 'text-white shadow-sm']
+                          : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]
+                      ]">
+                Sin familia asignada
+              </button>
+            </div>
+
             <div v-if="ciclosDisponibles.length > 0" class="flex flex-wrap items-center gap-2">
               <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Ciclo</span>
               <button v-for="c in ciclosDisponibles" :key="c"
@@ -692,7 +719,7 @@ function mostrarSnack(mensaje, accion = null) {
                         d="M12 2L2 7l10 5 10-5-10-5zm0 10l-10-5m10 5l10-5m-10 5v10"/>
                 </svg>
               </div>
-              <h3 class="text-[#1F2937] font-black text-xl mb-2">
+              <h3 class="text-azul-noche font-black text-xl mb-2">
                 {{ hayFiltrosDetalleActivos || filtroEstado !== 'todos' ? 'Sin resultados' : 'Todavía no hay propuestas ni proyectos' }}
               </h3>
               <p class="text-gray-400 text-sm mb-6">
@@ -736,7 +763,7 @@ function mostrarSnack(mensaje, accion = null) {
               Todas las familias
             </button>
             <span class="text-gray-200">|</span>
-            <h2 class="text-lg font-black text-[#1F2937]">Todos los proyectos</h2>
+            <h2 class="text-lg font-black text-azul-noche">Todos los proyectos</h2>
           </div>
 
           <!-- Búsqueda + orden -->
@@ -822,7 +849,7 @@ function mostrarSnack(mensaje, accion = null) {
                       d="M12 2L2 7l10 5 10-5-10-5zm0 10l-10-5m10 5l10-5m-10 5v10"/>
               </svg>
             </div>
-            <h3 class="text-[#1F2937] font-black text-xl mb-2">
+            <h3 class="text-azul-noche font-black text-xl mb-2">
               {{ hayFiltrosTodosActivos ? 'Sin resultados' : 'Todavía no hay propuestas ni proyectos' }}
             </h3>
             <p class="text-gray-400 text-sm">

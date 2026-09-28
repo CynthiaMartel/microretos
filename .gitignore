@@ -18,6 +18,13 @@ RESUMEN_*.pdf
 
 # Glosario generado para uso interno — no se versiona
 /Glosario_DuaLab.pdf
+/Glosario_DUALAB_Identidad_Actualizada.pdf
+
+# Manual de marca — documento interno, no se versiona
+/DUALAB_PreManual_de_Marca V2.0.pdf
+
+# Dossiers internos (plataforma, stack, ciberseguridad) — no se versionan
+/dossiers/
 
 # Notas internas de tareas pendientes — no debe ser público
 /TAREAS_PENDIENTES.txt

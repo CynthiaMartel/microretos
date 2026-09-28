@@ -22,7 +22,7 @@ const emit = defineEmits(['seleccionar'])
           </div>
           <div>
             <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Startup Day · Fase 2</p>
-            <h2 class="text-xl font-black tracking-tight text-[#121212]">¿Qué necesitas?</h2>
+            <h2 class="text-xl font-black tracking-tight text-azul-noche">¿Qué necesitas?</h2>
           </div>
         </div>
         <p class="text-xs text-gray-500 leading-relaxed mb-6 pl-[3.75rem]">

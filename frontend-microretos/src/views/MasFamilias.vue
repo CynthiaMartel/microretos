@@ -93,7 +93,7 @@ const seleccionarFamilia = (nombre) => {
         </button>
       </div>
 
-      <h1 class="text-2xl md:text-4xl font-black text-[#1F2937] tracking-tight leading-tight mb-2">
+      <h1 class="text-2xl md:text-4xl font-black text-azul-noche tracking-tight leading-tight mb-2">
         Más familias profesionales
       </h1>
       <p class="text-gray-400 text-sm font-bold uppercase tracking-widest mb-10">
@@ -131,7 +131,7 @@ const seleccionarFamilia = (nombre) => {
           </div>
 
           <div class="p-5">
-            <h3 class="font-black text-[#1F2937] text-base leading-tight mb-3 transition-colors line-clamp-2"
+            <h3 class="font-black text-azul-noche text-base leading-tight mb-3 transition-colors line-clamp-2"
                 :class="paletteExtra[theme.key].groupHoverText">
               {{ familia.nombre }}
             </h3>
@@ -148,7 +148,7 @@ const seleccionarFamilia = (nombre) => {
       </div>
 
       <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
-        <h3 class="text-[#1F2937] font-black text-2xl mb-2">No hay más familias</h3>
+        <h3 class="text-azul-noche font-black text-2xl mb-2">No hay más familias</h3>
         <p class="text-gray-500 text-sm max-w-md mx-auto">Todas las familias ya se muestran en la Biblioteca.</p>
       </div>
 

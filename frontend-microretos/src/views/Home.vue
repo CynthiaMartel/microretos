@@ -45,7 +45,7 @@ const irABiblioteca = () => {
             <div class="inline-block bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-2 md:mb-3 border border-primary-200">
               Innovación Educativa B2B
             </div>
-            <h1 class="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-black tracking-tighter leading-[1.1] text-[#121212] mb-2 md:mb-3">
+            <h1 class="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-black tracking-tighter leading-[1.1] text-azul-noche mb-2 md:mb-3">
               Conecta talento <br class="hidden md:block"/> con <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">retos reales.</span>
             </h1>
             <p class="text-sm md:text-base text-gray-500 leading-relaxed font-medium max-w-xl mx-auto md:mx-0">

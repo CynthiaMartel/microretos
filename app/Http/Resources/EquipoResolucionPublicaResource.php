@@ -19,7 +19,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   - `diagnostico_final`: es texto generado por IA a partir de fases/evaluación, con
  *     instrucción explícita de no repetir datos identificativos — seguro de exponer.
  *   - Fases (datos/nota_docente/observaciones_docente) NO se exponen: son notas de
- *     seguimiento interno del docente, no pensadas para publicarse.
+ *     seguimiento interno del docente, no pensadas para publicarse — con UNA excepción
+ *     a propósito: `entregable_final` (ver abajo), que expone SOLO el título y la URL
+ *     del adjunto de F3 "Entrega de la solución" (ver demo:generar-entregables-f3),
+ *     nunca el resto de `datos` de esa ni de ninguna otra fase.
  */
 class EquipoResolucionPublicaResource extends JsonResource
 {
@@ -31,6 +34,17 @@ class EquipoResolucionPublicaResource extends JsonResource
             'miembros' => $this->whenLoaded('miembros', fn () => $this->miembros
                 ->map(fn ($m) => ['alias' => $m->alias, 'rol' => $m->rol])
                 ->values()),
+
+            // Solo título + URL del PDF de F3 — nunca el resto de `datos` de la fase.
+            'entregable_final' => $this->whenLoaded('fases', function () {
+                $f3  = $this->fases->firstWhere('numero_fase', 3);
+                $url = trim($f3->datos['url_entregable'] ?? '') !== '' ? $f3->datos['url_entregable'] : null;
+
+                return $url ? [
+                    'titulo' => $f3->datos['descripcion_entregable'] ?? null,
+                    'url'    => $url,
+                ] : null;
+            }),
 
             'diagnostico_final' => $this->diagnostico_final ? [
                 'resumen'           => $this->diagnostico_final['resumen'] ?? null,

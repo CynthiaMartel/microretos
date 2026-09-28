@@ -885,7 +885,7 @@ onMounted(async () => {
     <!-- ══ MODAL: Crear cuenta ═════════════════════════════════════ -->
     <Modal :visible="modalCrear" @cerrar="modalCrear = false">
             <div class="px-8 pt-8 pb-4 shrink-0">
-              <h2 class="text-lg font-black mb-1 text-[#121212]">Nueva cuenta</h2>
+              <h2 class="text-lg font-black mb-1 text-azul-noche">Nueva cuenta</h2>
               <p class="text-xs text-gray-500">
                 La cuenta quedará pendiente de activación hasta que la valides.
               </p>
@@ -1080,7 +1080,7 @@ onMounted(async () => {
               </svg>
             </div>
 
-            <h2 class="text-xl font-black mb-2 text-[#121212]">¡Cuenta creada!</h2>
+            <h2 class="text-xl font-black mb-2 text-azul-noche">¡Cuenta creada!</h2>
             <p class="text-sm text-gray-500 leading-relaxed mb-2">
               La cuenta de
               <span class="text-[#1F2937] font-bold">{{ cuentaRecienCreada?.name }}</span>
@@ -1136,7 +1136,7 @@ onMounted(async () => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
               </button>
-              <h2 class="text-base font-black mb-0.5 text-[#121212]">Asociar centro educativo</h2>
+              <h2 class="text-base font-black mb-0.5 text-azul-noche">Asociar centro educativo</h2>
               <p class="text-xs text-gray-500">
                 Docente: <span class="text-[#1F2937] font-bold">{{ usuarioCentro?.name }}</span>
               </p>
@@ -1245,7 +1245,7 @@ onMounted(async () => {
                   <p class="text-xs text-gray-500">Estás modificando los datos de <span class="text-[#1F2937] font-bold">{{ usuarioEditando?.name }}</span>. Cualquier cambio tendrá efecto inmediato.</p>
                 </div>
               </div>
-              <h2 class="text-lg font-black mb-1 text-[#121212]">Editar cuenta</h2>
+              <h2 class="text-lg font-black mb-1 text-azul-noche">Editar cuenta</h2>
               <p class="text-xs text-gray-500">Modifica los datos de la cuenta. Deja la contraseña en blanco para no cambiarla.</p>
             </div>
 
@@ -1462,7 +1462,7 @@ onMounted(async () => {
            class="fixed inset-0 z-[9200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
            @click.self="confirm.show = false">
         <div class="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-sm p-6 overflow-y-auto max-h-[90vh]">
-          <h3 class="font-black text-base mb-2 text-[#121212]">{{ confirm.title }}</h3>
+          <h3 class="font-black text-base mb-2 text-azul-noche">{{ confirm.title }}</h3>
           <p class="text-sm text-gray-500 mb-6">{{ confirm.body }}</p>
           <div class="flex gap-3">
             <button @click="confirm.show = false"

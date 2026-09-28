@@ -22,7 +22,7 @@ const emit = defineEmits(['seleccionar'])
           </div>
           <div>
             <p class="text-[10px] font-black uppercase tracking-widest text-centros mb-0.5">Dashboard docente</p>
-            <h2 class="text-xl font-black tracking-tight text-[#121212]">¿Qué necesitas?</h2>
+            <h2 class="text-xl font-black tracking-tight text-azul-noche">¿Qué necesitas?</h2>
           </div>
         </div>
 

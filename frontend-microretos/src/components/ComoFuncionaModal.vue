@@ -120,7 +120,7 @@ const pasosEncuentro = [
                   <LightBulbIcon class="w-6 h-6 text-centros" />
                 </div>
                 <div>
-                  <h2 class="text-xl sm:text-2xl font-black tracking-tight text-[#121212]">
+                  <h2 class="text-xl sm:text-2xl font-black tracking-tight text-azul-noche">
                     ¿Cómo funciona Dua<span class="text-centros">Lab</span>?
                   </h2>
                   <p class="text-gray-400 text-xs sm:text-sm font-medium mt-0.5">
@@ -181,7 +181,7 @@ const pasosEncuentro = [
                     <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
                       Retos
                     </p>
-                    <h3 class="text-lg font-black text-[#121212] mb-2">Generador y biblioteca</h3>
+                    <h3 class="text-lg font-black text-azul-noche mb-2">Generador y biblioteca</h3>
                   </div>
 
                   <div class="lg:col-start-1 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
@@ -220,7 +220,7 @@ const pasosEncuentro = [
                     <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
                       Taller de Ideas
                     </p>
-                    <h3 class="text-lg font-black text-[#121212] mb-2">Propuestas y proyectos</h3>
+                    <h3 class="text-lg font-black text-azul-noche mb-2">Propuestas y proyectos</h3>
                   </div>
 
                   <div class="lg:col-start-2 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
@@ -260,7 +260,7 @@ const pasosEncuentro = [
                     <p class="text-[11px] font-black uppercase tracking-widest text-alumnos-dark mb-1">
                       Encuentro con alumnado
                     </p>
-                    <h3 class="text-lg font-black text-[#121212] mb-2">Acceso y seguimiento</h3>
+                    <h3 class="text-lg font-black text-azul-noche mb-2">Acceso y seguimiento</h3>
                   </div>
 
                   <div class="lg:col-start-3 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-alumnos/10 border-2 border-alumnos/30 p-4 mb-5 lg:mb-0 shadow-sm">

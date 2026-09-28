@@ -434,7 +434,7 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
             </div>
             <div>
               <p class="text-[10px] font-black uppercase tracking-widest text-empresas-dark mb-0.5">Directorio de empresas</p>
-              <h2 class="text-xl font-black tracking-tight text-[#121212]">¿Qué necesitas?</h2>
+              <h2 class="text-xl font-black tracking-tight text-azul-noche">¿Qué necesitas?</h2>
             </div>
           </div>
 
@@ -749,7 +749,7 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
           </span>
         </div>
         <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Directorio de <span class="text-empresas">Empresas</span>
         </h1>
@@ -989,7 +989,7 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
               <!-- Info -->
               <div class="flex-1 min-w-0">
                 <h2 class="font-black text-base truncate"
-                    :class="centro === SIN_CENTRO ? 'text-gray-400 italic' : 'text-[#1F2937]'">
+                    :class="centro === SIN_CENTRO ? 'text-gray-400 italic' : 'text-azul-noche'">
                   {{ centro }}
                 </h2>
                 <p class="text-xs text-gray-400 font-medium mt-0.5 flex flex-wrap items-center gap-x-1">

@@ -76,7 +76,7 @@ class PublicMicroproyectoCatalogoController extends Controller
                 return null;
             }
 
-            return $proyecto->equipos()->with(['miembros', 'reflexiones'])->get();
+            return $proyecto->equipos()->with(['miembros', 'reflexiones', 'fases'])->get();
         });
 
         abort_if(is_null($equipos), 404);

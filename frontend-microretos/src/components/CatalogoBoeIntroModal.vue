@@ -34,7 +34,7 @@ function siguiente() { emit('update:show', false); emit('siguiente') }
             <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Solo lectura</span>
           </div>
 
-          <h2 class="font-black text-2xl text-[#1F2937] mb-3 leading-tight">
+          <h2 class="font-black text-2xl text-azul-noche mb-3 leading-tight">
             Catálogo BOE
           </h2>
 

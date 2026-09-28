@@ -154,7 +154,7 @@ function cerrar() {
                     </svg>
                     DuaLab · Ficha de Reto
                   </p>
-                  <h1 class="text-2xl md:text-4xl font-black text-[#1F2937] tracking-tight leading-tight mb-2">
+                  <h1 class="text-2xl md:text-4xl font-black text-azul-noche tracking-tight leading-tight mb-2">
                     {{ reto.titulo }}
                   </h1>
                   <h2 class="text-base md:text-lg text-gray-600 font-bold leading-snug mb-2">
@@ -294,7 +294,7 @@ function cerrar() {
                      limitaciones bajo un único título para que se lea como el "resumen" del
                      diagnóstico crudo, no como información nueva y distinta. -->
                 <div class="space-y-8">
-                  <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+                  <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
                              tracking-widest border-b-2 border-gray-200 pb-2">
                     <svg class="w-5 h-5 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -457,7 +457,7 @@ function cerrar() {
 
                 <!-- RA / CE -->
                 <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
-                  <h3 class="flex items-center gap-2 text-[#1F2937] font-bold uppercase text-xs
+                  <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
                              tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
                     <svg class="w-5 h-5 text-centros shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
@@ -532,7 +532,7 @@ function cerrar() {
                           rounded-bl-2xl">
                 Uso Exclusivo Docente
               </div>
-              <h2 class="text-lg md:text-xl font-black text-[#1F2937] mb-1 mt-2 flex items-center gap-3">
+              <h2 class="text-lg md:text-xl font-black text-azul-noche mb-1 mt-2 flex items-center gap-3">
                 <svg class="w-5 h-5 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0

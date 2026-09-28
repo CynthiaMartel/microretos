@@ -72,7 +72,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
           <div class="bg-[#F0FBF4] border-b border-[#BBE8D0] px-8 py-6 flex items-start justify-between">
             <div>
               <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
-              <h2 class="text-2xl font-black tracking-tight text-[#1F2937]">Equipo de desarrollo</h2>
+              <h2 class="text-2xl font-black tracking-tight text-azul-noche">Equipo de desarrollo</h2>
               <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada íntegramente por alumnado de prácticas de empresa</p>
             </div>
             <button @click="cerrar" class="text-gray-300 hover:text-gray-500 transition-colors mt-1 p-1">

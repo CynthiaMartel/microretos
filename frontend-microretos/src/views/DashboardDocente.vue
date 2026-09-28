@@ -651,7 +651,7 @@ function formatFecha(isoDate) {
           </span>
         </div>
 
-        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">DuaLab</span>
         </h1>
@@ -726,7 +726,7 @@ function formatFecha(isoDate) {
                     <span class="w-2 h-2 rounded-full bg-centros" />
                     <span class="text-[10px] font-black uppercase tracking-widest text-centros">Nuevo encuentro</span>
                   </div>
-                  <h2 class="text-xl font-black text-[#1F2937] tracking-tight leading-tight">Creación de encuentro</h2>
+                  <h2 class="text-xl font-black text-azul-noche tracking-tight leading-tight">Creación de encuentro</h2>
                   <p class="text-xs text-gray-500 mt-0.5 font-medium">Selecciona un reto y registra los datos del grupo</p>
                 </div>
               </div>
@@ -764,7 +764,7 @@ function formatFecha(isoDate) {
                       Seleccionado
                     </p>
                   </div>
-                  <h3 class="font-black text-[#1F2937] text-base leading-snug">
+                  <h3 class="font-black text-azul-noche text-base leading-snug">
                     {{ proyectoSeleccionado.titulo }}
                   </h3>
                   <div class="flex flex-wrap gap-1.5 mt-2">
@@ -1293,7 +1293,7 @@ function formatFecha(isoDate) {
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-400" />
                     <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">Historial</span>
                   </div>
-                  <h2 class="text-base font-black text-[#1F2937] tracking-tight leading-tight truncate">
+                  <h2 class="text-base font-black text-azul-noche tracking-tight leading-tight truncate">
                     Resumen de encuentros
                   </h2>
                 </div>
@@ -1526,7 +1526,7 @@ function formatFecha(isoDate) {
                     Encuentro · {{ formatFecha(encuentroAbierto.fecha) }}
                   </p>
                 </div>
-                <h2 class="text-lg font-black text-[#1F2937] leading-snug">
+                <h2 class="text-lg font-black text-azul-noche leading-snug">
                   {{ encuentroAbierto.proyecto_titulo || '(sin título)' }}
                 </h2>
                 <p v-if="encuentroAbierto.centro_educativo"

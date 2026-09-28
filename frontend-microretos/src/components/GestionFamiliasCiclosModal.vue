@@ -356,7 +356,7 @@ async function guardarNuevoCiclo(familiaId) {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="text-xl font-black text-[#1F2937] tracking-tight">Catálogo de Familias y Ciclos</h2>
+                <h2 class="text-xl font-black text-azul-noche tracking-tight">Catálogo de Familias y Ciclos</h2>
                 <p class="text-xs text-gray-400 font-medium mt-0.5">
                   Gestiona las familias profesionales y sus ciclos formativos. Los cambios afectan a todo el sistema.
                 </p>
@@ -698,7 +698,7 @@ async function guardarNuevoCiclo(familiaId) {
                       </svg>
                     </div>
                     <div>
-                      <h3 class="font-black text-base text-[#1F2937]">Eliminar familia</h3>
+                      <h3 class="font-black text-base text-azul-noche">Eliminar familia</h3>
                       <p class="text-xs text-gray-400">Esta acción no se puede deshacer</p>
                     </div>
                   </div>
@@ -764,7 +764,7 @@ async function guardarNuevoCiclo(familiaId) {
                       </svg>
                     </div>
                     <div>
-                      <h3 class="font-black text-base text-[#1F2937]">Eliminar ciclo formativo</h3>
+                      <h3 class="font-black text-base text-azul-noche">Eliminar ciclo formativo</h3>
                       <p class="text-xs text-gray-400">Esta acción no se puede deshacer</p>
                     </div>
                   </div>

@@ -186,6 +186,11 @@ async function copiarUrl() {
 
 const { descargarPDF } = useMicroproyectoPdfExport();
 
+const refResolucionAlumnado = ref(null);
+function irAResolucionAlumnado() {
+  refResolucionAlumnado.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 const raCeBlocks = computed(() => {
   const texto = proyecto.value?.ra_ce
   if (!texto?.trim()) return []
@@ -229,7 +234,7 @@ async function completar() {
           <span class="not-italic text-[10px] sm:text-sm md:text-base ml-1 text-centros-light">Proyecto</span>
         </span>
       </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-[#121212] transition-all duration-1000 delay-150 ease-out transform"
+      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
         Ficha de <span :class="theme.text">Proyecto</span>
       </h1>
@@ -309,6 +314,27 @@ async function completar() {
                       d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2"/>
               </svg>
               PDF
+            </button>
+            <!-- Mismo botón que en la ficha pública del frontoffice (ProyectoDetalleView.vue):
+                 icono equipo + texto + chevron abajo, pastilla suave que se invierte al hover.
+                 En naranja "alumnos" (color de la sección a la que lleva), no del tema de rol. -->
+            <button
+              v-if="proyecto.estado === 'completado'"
+              @click="irAResolucionAlumnado"
+              class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider
+                     px-3.5 py-2 rounded-xl border transition-all
+                     bg-alumnos/10 border-alumnos/25 text-alumnos-dark
+                     hover:bg-alumnos hover:border-alumnos hover:text-white"
+              title="Ir a la resolución del alumnado"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.657-2.686-3-6-3s-6 1.343-6 3"/>
+              </svg>
+              Ver resolución del alumnado
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
             </button>
             <button
               v-if="proyecto.microreto_id"
@@ -399,7 +425,7 @@ async function completar() {
           </div>
 
           <!-- Título del proyecto -->
-          <h1 class="text-2xl md:text-3xl font-black tracking-tight text-[#121212] mb-2 leading-tight">
+          <h1 class="text-2xl md:text-3xl font-black tracking-tight text-azul-noche mb-2 leading-tight">
             {{ proyecto.titulo }}
           </h1>
           <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-base md:text-lg font-bold italic mb-5 leading-snug" :class="theme.text">
@@ -1077,7 +1103,7 @@ async function completar() {
         </div><!-- /notebook-page -->
 
         <!-- ══ FICHA APARTE — Resolución del alumnado (siempre la última sección, siempre desplegada) ══ -->
-        <div v-if="proyecto.estado === 'completado'" class="ficha-recortable">
+        <div v-if="proyecto.estado === 'completado'" ref="refResolucionAlumnado" class="ficha-recortable">
           <div class="ficha-recortable__corte" aria-hidden="true"></div>
           <div class="ficha-recortable__card">
             <div class="flex items-center gap-3 px-5 py-4">
@@ -1202,7 +1228,7 @@ async function completar() {
           </span>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-2">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-2">
           Proyecto en propuesta
         </h3>
         <p class="text-sm text-gray-500 text-center mb-6 leading-relaxed">
@@ -1392,7 +1418,7 @@ async function completar() {
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-1">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-1">
           Confirmar envío
         </h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
@@ -1538,7 +1564,7 @@ async function completar() {
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-[#121212] text-center mb-4">
+        <h3 class="text-xl font-black text-azul-noche text-center mb-4">
           Proyecto en edición
         </h3>
 

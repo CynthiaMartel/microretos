@@ -84,7 +84,7 @@ function getColor(p) {
       </div>
 
       <!-- Título -->
-      <h3 class="font-black text-[#1F2937] text-sm leading-snug line-clamp-2 transition-colors"
+      <h3 class="font-black text-azul-noche text-sm leading-snug line-clamp-2 transition-colors"
           :class="paletteExtra[theme.key].groupHoverText">
         {{ proyecto.titulo }}
       </h3>
