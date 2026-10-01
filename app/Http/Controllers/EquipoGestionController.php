@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\ValidarFaseEquipoRequest;
 use App\Http\Requests\RechazarFaseEquipoRequest;
 use App\Http\Requests\EvaluarEquipoRequest;
+use App\Http\Requests\UpdateDiagnosticoFinalRequest;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
 use App\Models\Microproyecto;
@@ -156,6 +157,41 @@ class EquipoGestionController extends Controller
         return response()->json([
             'diagnostico'  => $resultado,
             'generado_en'  => $equipo->diagnostico_generado_en,
+        ]);
+    }
+
+    /**
+     * PATCH /api/startup/equipos/{id}/diagnostico-final
+     * El docente corrige a mano el diagnóstico que redactó la IA. Solo sobre uno ya
+     * generado. Se marca dentro del propio JSON (editado_docente/editado_en) para que la
+     * interfaz distinga "lo dijo la IA" de "lo revisó el docente"; regenerar con IA
+     * sustituye el JSON entero y por tanto vuelve a quitar la marca.
+     */
+    public function actualizarDiagnosticoFinal(UpdateDiagnosticoFinalRequest $request, int $equipoId)
+    {
+        $equipo = $this->equipoDeMiEncuentro($request, $equipoId);
+
+        if (empty($equipo->diagnostico_final)) {
+            return response()->json(['error' => 'Este equipo todavía no tiene diagnóstico final que editar.'], 422);
+        }
+
+        $data = $request->validated();
+
+        $diagnostico = [
+            'resumen'          => $data['resumen'],
+            'fortalezas'       => array_values($data['fortalezas']),
+            'areas_mejora'     => array_values($data['areas_mejora']),
+            'valoracion_ra_ce' => $data['valoracion_ra_ce'] ?? null,
+            'conclusion'       => $data['conclusion'] ?? null,
+            'editado_docente'  => true,
+            'editado_en'       => now()->toIso8601String(),
+        ];
+
+        $equipo->update(['diagnostico_final' => $diagnostico]);
+
+        return response()->json([
+            'diagnostico' => $diagnostico,
+            'generado_en' => $equipo->diagnostico_generado_en,
         ]);
     }
 

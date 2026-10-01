@@ -192,7 +192,10 @@ function labelFase(numero) {
               </p>
 
               <p v-if="equipo.diagnostico_generado_en" class="text-[10px] text-gray-400">
-                Generado el {{ new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES') }}
+                Generado por IA el {{ new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES') }}
+                <template v-if="equipo.diagnostico_final.editado_en">
+                  · editado por docente el {{ new Date(equipo.diagnostico_final.editado_en).toLocaleString('es-ES') }}
+                </template>
               </p>
             </div>
 

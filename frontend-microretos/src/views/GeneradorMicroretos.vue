@@ -1,6 +1,6 @@
 <!-- Ruta: /retos/crear (name: microretos). Antes vivía en /microretos — ver router/index.js. -->
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import { ref, unref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api.js';
 import { useAuthStore } from '../stores/auth';
@@ -45,13 +45,20 @@ const familiasFiltradas = ref([]);
 const buscadorEmpresa = ref('');
 const filtroTipoEmpresa = ref('');   // '' = todas, 'simulada', 'real'
 const filtroSectorEmpresa = ref(''); // '' = todos los sectores
+const filtroFamiliaEmpresa = ref(''); // '' = todas las familias
+// Familia del paso 3 deducida al elegir empresa: 'filtro' (la del filtro del paso 1),
+// 'unica' (la empresa solo tiene una) o '' (hay que elegirla a mano).
+const motivoFamiliaPreseleccionada = ref('');
+const familiaPreseleccionada = ref('');
+const familiasEmpresaCargadas = ref(false);
 const mostrarDropdownEmpresas = ref(false);
 const empresaDetalle = ref(null);
 
 // --- PAGINACIÓN RESULTADOS EMPRESA ---
-// "Elige empresa" ocupa ahora el ancho completo del grid (grid-cols-1 sm:2 lg:3).
-// 12 es múltiplo de 1, 2 y 3 → siempre filas completas en los tres casos.
-const EMPRESAS_POR_PAGINA = 12;
+// "Elige empresa" ocupa el ancho completo del grid (grid-cols-1 sm:2 lg:4).
+// 8 es múltiplo de 1, 2 y 4 → siempre filas completas, y en escritorio caben
+// dos filas de cards sin tener que hacer scroll.
+const EMPRESAS_POR_PAGINA = 8;
 const paginaEmpresas = ref(1);
 
 // --- MODAL INSERT/MODIFY EMPRESA ---
@@ -104,6 +111,16 @@ const sectoresParaFiltroEmpresa = computed(() => {
     base = base.filter(e => e.centro_educativo === centroFiltro.value);
   }
   return [...new Set(base.map(e => e.sector).filter(Boolean))].sort();
+});
+
+// Familias presentes entre las empresas del centro seleccionado (mismo criterio que sectores)
+const familiasParaFiltroEmpresa = computed(() => {
+  let base = empresas.value;
+  if (centroFiltro.value) {
+    base = base.filter(e => e.centro_educativo === centroFiltro.value);
+  }
+  const nombres = base.flatMap(e => (e.familias || []).map(f => f.nombre)).filter(Boolean);
+  return [...new Set(nombres)].sort((a, b) => a.localeCompare(b, 'es'));
 });
 
 const todasLasFamilias = ref([]);
@@ -167,16 +184,70 @@ const ambosCursosModulosValidos = computed(() => {
   return (n1 === 0 && n2 === 0) || (n1 > 0 && n2 > 0);
 });
 
-const limpiarModulosAmbos = () => {
-  if (esModoDemo.value) return;
-  modulosSeleccionadosCurso1.value = [];
-  modulosSeleccionadosCurso2.value = [];
+// Algunos nombres de módulo vienen de la importación del BOE con el código pegado
+// ("Técnica Contable. Código: 0441"). Solo se limpia para mostrar; al backend va el dato tal cual.
+const nombreModuloVisible = (nombre = '') =>
+  nombre.replace(/[\s.,;:-]*C[óo]digo\s*:?\s*[\w-]+\s*\.?\s*$/i, '').trim();
+
+// --- FORZADO DE MÓDULOS: estado visible + toast al cambiar de modo ---
+// "Forzar" = elegir módulos a mano. Sin nada elegido, la IA decide (modo automático).
+const idsModulosForzados = computed(() => esAmbosCursos.value
+  ? [...modulosSeleccionadosCurso1.value, ...modulosSeleccionadosCurso2.value]
+  : modulosSeleccionados.value);
+const nombresModulosForzados = computed(() =>
+  idsModulosForzados.value.map(id => nombreModuloVisible(modulos.value.find(m => m.id === id)?.nombre)).filter(Boolean));
+const hayModulosForzados = computed(() => idsModulosForzados.value.length > 0);
+
+const toastModulos = ref(null); // { tipo: 'auto' | 'forzado', titulo, texto }
+let toastModulosTimer = null;
+const TOASTS_MODULOS = {
+  forzado: { titulo: 'Has forzado módulos', texto: 'La IA ya no elegirá: solo usará los módulos que marques. Pulsa «Vaciar» para volver al modo automático.' },
+  forzadoAmbos: { titulo: 'Has forzado módulos', texto: 'La IA solo usará los módulos que marques.', destacado: 'Recuerda: al menos uno de 1º y uno de 2º.' },
+  auto: { titulo: 'Modo automático', texto: 'No hay módulos forzados: la IA elegirá los más adecuados de todo el currículo.' },
+  ambos: { titulo: 'Reto entre 1º y 2º curso', texto: 'Sin forzar módulos, la IA cruzará RA/CE de todos los módulos de 1º y 2º (mínimo 3 módulos, al menos uno de cada curso).', destacado: 'Si fuerzas módulos, elige al menos uno de 1º y uno de 2º.' },
+};
+const mostrarToastModulos = (tipo, ms = 5000) => {
+  toastModulos.value = { tipo, ...TOASTS_MODULOS[tipo] };
+  clearTimeout(toastModulosTimer);
+  toastModulosTimer = setTimeout(() => { toastModulos.value = null; }, ms);
 };
 
-// Alterna un id dentro de un ref-array (selección de módulos por pills)
+const elegirAmbosCursos = () => {
+  if (esModoDemo.value) return;
+  const yaEstaba = esAmbosCursos.value;
+  seleccion.value.cursoSeleccionado = 'ambos_cursos';
+  if (!yaEstaba) mostrarToastModulos('ambos', 8000);
+};
+// Solo avisa cuando la acción del usuario cambia de modo (0 ↔ ≥1), no en cada clic.
+const avisarCambioModoModulos = (antes) => {
+  const despues = idsModulosForzados.value.length;
+  if (antes === 0 && despues > 0) mostrarToastModulos(esAmbosCursos.value ? 'forzadoAmbos' : 'forzado', esAmbosCursos.value ? 7000 : 5000);
+  else if (antes > 0 && despues === 0) mostrarToastModulos('auto');
+};
+
+const limpiarModulosAmbos = () => {
+  if (esModoDemo.value) return;
+  const antes = idsModulosForzados.value.length;
+  modulosSeleccionadosCurso1.value = [];
+  modulosSeleccionadosCurso2.value = [];
+  avisarCambioModoModulos(antes);
+};
+
+const limpiarModulos = () => {
+  if (esModoDemo.value) return;
+  const antes = idsModulosForzados.value.length;
+  modulosSeleccionados.value = [];
+  avisarCambioModoModulos(antes);
+};
+
+// Alterna un id dentro de un array reactivo (selección de módulos por pills).
+// Desde el template los refs llegan ya desenvueltos, así que se acepta ref o array.
 const toggleEnArray = (arr, id) => {
-  const i = arr.value.indexOf(id);
-  i === -1 ? arr.value.push(id) : arr.value.splice(i, 1);
+  const antes = idsModulosForzados.value.length;
+  const lista = unref(arr);
+  const i = lista.indexOf(id);
+  i === -1 ? lista.push(id) : lista.splice(i, 1);
+  avisarCambioModoModulos(antes);
 };
 
 const microretosGenerados = ref([]);
@@ -282,6 +353,9 @@ const empresasFiltradasBusqueda = computed(() => {
   if (filtroSectorEmpresa.value) {
     filtradas = filtradas.filter(e => e.sector === filtroSectorEmpresa.value);
   }
+  if (filtroFamiliaEmpresa.value) {
+    filtradas = filtradas.filter(e => (e.familias || []).some(f => f.nombre === filtroFamiliaEmpresa.value));
+  }
   if (buscadorEmpresa.value) {
     filtradas = filtradas.filter(e =>
       e.nombre_comercial?.toLowerCase().includes(buscadorEmpresa.value.toLowerCase())
@@ -294,12 +368,24 @@ const totalPaginasEmpresas = computed(() =>
   Math.max(1, Math.ceil(empresasFiltradasBusqueda.value.length / EMPRESAS_POR_PAGINA))
 );
 
+// Empresas que quedan en las páginas siguientes a la actual
+const empresasRestantes = computed(() =>
+  Math.max(0, empresasFiltradasBusqueda.value.length - paginaEmpresas.value * EMPRESAS_POR_PAGINA)
+);
+
+// Con filtros amplios ("Todas" / "Todas las familias") la lista es larga: se destaca
+// "Siguiente" para que se note que hay más empresas en las páginas siguientes.
+const destacarSiguienteEmpresas = computed(() =>
+  (filtroTipoEmpresa.value === '' || filtroFamiliaEmpresa.value === '')
+  && paginaEmpresas.value < totalPaginasEmpresas.value
+);
+
 const empresasPaginadas = computed(() => {
   const inicio = (paginaEmpresas.value - 1) * EMPRESAS_POR_PAGINA;
   return empresasFiltradasBusqueda.value.slice(inicio, inicio + EMPRESAS_POR_PAGINA);
 });
 
-watch([buscadorEmpresa, filtroTipoEmpresa, filtroSectorEmpresa, centroFiltro], () => {
+watch([buscadorEmpresa, filtroTipoEmpresa, filtroSectorEmpresa, filtroFamiliaEmpresa, centroFiltro], () => {
   paginaEmpresas.value = 1;
 });
 
@@ -335,6 +421,7 @@ const onEmpresaActualizada = (empresa) => {
     seleccion.value.empresaTamano = empresa.tamano || '';
     seleccion.value.empresaWeb = empresa.web || '';
     seleccion.value.empresaCentro = empresa.centro_educativo || '';
+    cargarFamiliasEmpresa(empresa.id); // las familias pueden haber cambiado en la edición
   }
 };
 
@@ -393,6 +480,7 @@ const limpiarFormulario = () => {
     mostrarDropdownSector.value = false;
     filtroTipoEmpresa.value = '';
     filtroSectorEmpresa.value = '';
+    filtroFamiliaEmpresa.value = '';
     paginaEmpresas.value = 1;
 
     seleccion.value = {
@@ -510,6 +598,13 @@ const sectorRef = ref(null);
 const mostrarDropdownSector = ref(false);
 const sectorEsLibre = ref(false);
 
+// El sector es el mismo dato que usa el filtro de búsqueda de empresas (identidad de la
+// empresa, no contexto del reto). Reescribirlo aquí reclasificaría la empresa para
+// siempre, no solo para este reto. Se bloquea en cuanto la empresa ya tiene uno asignado;
+// si a una empresa existente le falta (dato legacy), se deja completar aquí una única vez.
+const sectorBloqueado = computed(() =>
+  !!seleccion.value.empresaId && !!seleccion.value.empresaSector);
+
 const seleccionarSector = (sector) => {
   seleccion.value.empresaSector = sector;
   mostrarDropdownSector.value = false;
@@ -594,6 +689,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  clearTimeout(toastModulosTimer);
   document.removeEventListener('click', cerrarDropdownFuera);
   tourActivo.value = false;
   window.removeEventListener('scroll', onScrollGuia);
@@ -602,6 +698,7 @@ onUnmounted(() => {
 watch(() => seleccion.value.empresaId, async (nuevoId) => {
   seleccion.value.familia = ''; ciclos.value = []; seleccion.value.cicloId = ''; modulos.value = [];
   modulosSeleccionados.value = []; familiasFiltradas.value = [];
+  motivoFamiliaPreseleccionada.value = ''; familiaPreseleccionada.value = ''; familiasEmpresaCargadas.value = false;
   empresaDetalle.value = null; crmActualizado.value = false; diagnosticoRecuperado.value = false;
   microretosGenerados.value = [];
   sectorEsLibre.value = false;
@@ -629,11 +726,39 @@ watch(() => seleccion.value.empresaId, async (nuevoId) => {
       if (emp.restricciones) seleccion.value.restricciones = emp.restricciones.split(',').map(s => s.trim());
     }
   }
-  try {
-    const resFam = await api.get(`/empresas/${nuevoId}/familias`);
-    familiasFiltradas.value = resFam.data;
-  } catch(e) { console.error(e); }
+  await cargarFamiliasEmpresa(nuevoId);
 });
+
+// Carga las familias de la empresa y, si se puede deducir, preselecciona la del paso 3.
+// Se llama al elegir empresa y tras editarla en el paso 1 (p.ej. para asignarle familias).
+async function cargarFamiliasEmpresa(idEmpresa) {
+  try {
+    const resFam = await api.get(`/empresas/${idEmpresa}/familias`);
+    if (String(seleccion.value.empresaId) !== String(idEmpresa)) return; // se cambió de empresa mientras cargaba
+    familiasFiltradas.value = resFam.data;
+    familiasEmpresaCargadas.value = true;
+    if (seleccion.value.familia) return;
+
+    // Ahorrar volver a elegir la familia cuando ya se puede deducir
+    const filtro = filtroFamiliaEmpresa.value;
+    if (filtro && resFam.data.includes(filtro)) {
+      seleccion.value.familia = familiaPreseleccionada.value = filtro;
+      motivoFamiliaPreseleccionada.value = 'filtro';
+    } else if (resFam.data.length === 1) {
+      seleccion.value.familia = familiaPreseleccionada.value = resFam.data[0];
+      motivoFamiliaPreseleccionada.value = 'unica';
+    }
+  } catch(e) { console.error(e); }
+}
+
+const empresaSinFamilias = computed(() =>
+  !!seleccion.value.empresaId && familiasEmpresaCargadas.value && familiasFiltradas.value.length === 0);
+
+// El aviso de preselección solo tiene sentido mientras no se cambie la familia a mano
+const familiaSigueSiendoPreseleccionada = computed(() =>
+  !!motivoFamiliaPreseleccionada.value && seleccion.value.familia === familiaPreseleccionada.value);
+const otrasFamiliasEmpresa = computed(() =>
+  familiasFiltradas.value.filter(f => f !== seleccion.value.familia));
 
 watch(() => seleccion.value.familia, async (val) => {
   // Limpiar siempre los campos dependientes al cambiar familia, incluso si el nuevo valor es vacío
@@ -724,8 +849,12 @@ const guardarInfoEmpresa = async () => {
   const payload = {
     nombreComercial: seleccion.value.empresaNombre, centroEducativo: seleccion.value.empresaCentro, sector: seleccion.value.empresaSector, tamano: seleccion.value.empresaTamano, web: seleccion.value.empresaWeb,
     diaANormal: seleccion.value.diaANormal, friccionArea: seleccion.value.friccionArea, friccionProblema: seleccion.value.friccionProblema, consecuencias: datosP2.consecuenciasStr, restricciones: datosP2.restriccionesStr, loQueNoQuieren: seleccion.value.loQueNoQuieren,
-    familia: seleccion.value.familia
   };
+  // La familia del paso 3 es la del reto, no la de la empresa: solo se manda al CREAR
+  // (primera familia de una empresa nueva). En una empresa ya existente, enviarla en el
+  // PUT sobrescribiría la única fila del pivot y borraría otras familias ya vinculadas
+  // (p.ej. Administración + Informática → se quedaría solo con la del reto actual).
+  if (!seleccion.value.empresaId) payload.familia = seleccion.value.familia;
 
   try {
     if (seleccion.value.empresaId) {
@@ -1115,8 +1244,28 @@ async function guardarEstadoGen(nuevoEstado) {
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-12 transition-colors duration-500 font-sans text-[#1F2937] overflow-x-hidden pt-16 md:pt-16">
+  <div class="min-h-screen p-4 md:px-12 md:py-6 transition-colors duration-500 font-sans text-[#1F2937] overflow-x-hidden pt-16 md:pt-16">
     
+    <!-- ══════════ TOAST CAMBIO DE MODO DE MÓDULOS (auto ↔ forzado) ═══════ -->
+    <Transition name="toast-modulos">
+      <div v-if="toastModulos" role="status" aria-live="polite"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9995] w-[calc(100%-2rem)] max-w-md flex items-start gap-3 rounded-2xl border-2 px-5 py-4 shadow-2xl"
+        :class="toastModulos.tipo.startsWith('forzado') ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-white border-centros text-azul-noche'">
+        <svg v-if="toastModulos.tipo.startsWith('forzado')" class="w-6 h-6 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        <svg v-else class="w-6 h-6 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <div class="flex-1 text-xs leading-relaxed">
+          <p class="font-black uppercase tracking-wide text-[11px]">{{ toastModulos.titulo }}</p>
+          <p class="mt-0.5">{{ toastModulos.texto }}</p>
+          <p v-if="toastModulos.destacado" class="toast-modulos-destacado mt-2 px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 font-black text-[12px]">
+            {{ toastModulos.destacado }}
+          </p>
+        </div>
+        <button type="button" @click="toastModulos = null" aria-label="Cerrar aviso" class="shrink-0 text-gray-400 hover:text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </Transition>
+
     <!-- ══════════ TOUR OVERLAY ════════════════════════════════════════════ -->
   <Transition name="sp-fade">
     <div v-if="modoGuia" class="fixed inset-0 z-[9990] pointer-events-none">
@@ -1215,28 +1364,28 @@ async function guardarEstadoGen(nuevoEstado) {
 
   <div class="max-w-6xl mx-auto">
 
-      <header class="mb-6 md:mb-8 text-center flex flex-col items-center">
-        <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
+      <header class="mb-4 md:mb-5 text-center flex flex-col items-center">
+        <div class="inline-flex items-center gap-2 sm:gap-3 mb-3 bg-[#1F2937] py-1.5 sm:py-2 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
              :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
+          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-10 sm:h-12 md:h-14 w-auto object-contain relative z-10" />
           <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
             Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
           </span>
         </div>
 
-        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
+        <h1 class="text-2xl md:text-3xl font-black tracking-tight mb-1 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
             :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Factoría de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Retos</span>
         </h1>
 
-        <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
+        <p class="text-gray-500 max-w-2xl mx-auto text-xs md:text-sm leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
           Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial.
         </p>
 
       </header>
 
-      <div class="max-w-3xl mx-auto mb-8 md:mb-10 relative transition-all duration-1000 delay-500 ease-out transform"
+      <div class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
         <div class="flex justify-between items-center relative z-10">
           <button type="button" v-for="step in totalPasos" :key="step"
@@ -1261,8 +1410,8 @@ async function guardarEstadoGen(nuevoEstado) {
 
       <main class="min-h-[400px]">
         <transition name="fade" mode="out-in">
-          <div v-if="pasoActual === 1" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <section class="bg-white rounded-[2.5rem] p-6 md:p-8 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.05)] relative z-10">
+          <div v-if="pasoActual === 1" class="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+            <section class="bg-white rounded-[2.5rem] p-5 md:p-6 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.05)] relative z-10">
               <transition name="fade">
                 <div v-if="seleccion.empresaNombre" class="absolute -top-4 left-8">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#1F2937] text-xs font-bold tracking-wide border border-gray-100 border-b-0 shadow-[0_-4px_8px_rgb(0,0,0,0.04)]">
@@ -1274,11 +1423,11 @@ async function guardarEstadoGen(nuevoEstado) {
                 </div>
               </transition>
 
-              <div class="flex flex-wrap items-center gap-4 mb-6">
-                <div class="w-12 h-12 rounded-2xl bg-centros/10 flex items-center justify-center text-centros">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <div class="flex flex-wrap items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-2xl bg-centros/10 flex items-center justify-center text-centros">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
-                <h2 class="text-2xl font-black uppercase tracking-tight text-azul-noche">Buscar en la base de datos de DuaLab</h2>
+                <h2 class="text-xl font-black uppercase tracking-tight text-azul-noche">Buscar en la base de datos de DuaLab</h2>
 
                 <button
                   ref="refBtnGuia"
@@ -1314,8 +1463,8 @@ async function guardarEstadoGen(nuevoEstado) {
                 </p>
               </div>
 
-              <!-- FILA 1: Centro educativo, con las acciones generales debajo en horizontal -->
-              <div class="mb-8 flex flex-col gap-4">
+              <!-- FILA 1: Centro educativo + acciones generales (en la misma línea en escritorio) -->
+              <div class="mb-4 flex flex-col lg:flex-row lg:items-end gap-3">
                 <!-- PASO 1: Centro educativo obligatorio -->
                 <div ref="refCentroEducativo"
                      class="w-full lg:max-w-sm rounded-2xl transition-all duration-300"
@@ -1327,15 +1476,15 @@ async function guardarEstadoGen(nuevoEstado) {
                   <label class="label-style" :class="!centroFiltro && !esModoDemo ? '!text-centros' : ''">
                     {{ !centroFiltro && !esModoDemo ? '① Centro Educativo *' : 'Centro Educativo *' }}
                   </label>
-                  <input v-if="esModoDemo" type="text" value="IES DEMO" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
+                  <input v-if="esModoDemo" type="text" value="IES DEMO" disabled class="input-style !py-2.5 opacity-70 cursor-not-allowed bg-gray-50" />
                   <input v-else-if="centroFijadoPorRol"
                     type="text"
                     :value="authStore.userCentroNombre"
                     disabled
-                    class="input-style opacity-80 cursor-not-allowed bg-gray-50"
+                    class="input-style !py-2.5 opacity-80 cursor-not-allowed bg-gray-50"
                     title="Tu centro educativo está fijado según tu cuenta"
                   />
-                  <select v-else v-model="centroFiltro" :disabled="estaPasoBloqueado(1)" class="input-style">
+                  <select v-else v-model="centroFiltro" :disabled="estaPasoBloqueado(1)" class="input-style !py-2.5">
                     <option value="">Selecciona tu centro...</option>
                     <option v-for="centro in centrosDisponibles" :key="centro" :value="centro">{{ centro }}</option>
                   </select>
@@ -1407,7 +1556,7 @@ async function guardarEstadoGen(nuevoEstado) {
               </div>
 
               <!-- FILA 2: Elige empresa — a lo ancho del grid, coherente con las cards de resultados -->
-              <div class="mb-10 relative z-20 rounded-2xl transition-all duration-300" ref="buscadorRef"
+              <div class="mb-4 relative z-20 rounded-2xl transition-all duration-300" ref="buscadorRef"
                    :class="[
                      centroFiltro && !seleccion.empresaId && !esModoDemo ? 'step-glow-empresa' : '',
                      tourTargetActivo === 'refBuscadorEmpresa' ? 'tour-active' : '',
@@ -1460,8 +1609,10 @@ async function guardarEstadoGen(nuevoEstado) {
                     </div>
                   </div>
 
+                  <!-- Filtros + buscador: una sola fila en escritorio para ahorrar altura -->
+                  <div class="flex flex-col lg:flex-row lg:items-center gap-2">
                   <!-- Filtro simulada/real — visible solo cuando hay centro seleccionado -->
-                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="flex flex-wrap items-center gap-1.5 mb-2">
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="flex flex-wrap items-center gap-1.5 shrink-0">
                     <button
                       v-for="(label, val) in { '': 'Todas', 'simulada': 'Simuladas', 'real': 'Verídicas' }"
                       :key="val"
@@ -1474,7 +1625,7 @@ async function guardarEstadoGen(nuevoEstado) {
                   </div>
 
                   <!-- Filtro por sector — solo sectores presentes entre las empresas del centro -->
-                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && sectoresParaFiltroEmpresa.length > 0" class="mb-3">
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && sectoresParaFiltroEmpresa.length > 0" class="lg:w-48 shrink-0">
                     <select
                       v-model="filtroSectorEmpresa"
                       @change="mostrarDropdownEmpresas = true"
@@ -1485,7 +1636,19 @@ async function guardarEstadoGen(nuevoEstado) {
                     </select>
                   </div>
 
-                  <div class="relative">
+                  <!-- Filtro por familia profesional — solo familias presentes entre las empresas del centro -->
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && familiasParaFiltroEmpresa.length > 0" class="lg:w-48 shrink-0">
+                    <select
+                      v-model="filtroFamiliaEmpresa"
+                      @change="mostrarDropdownEmpresas = true"
+                      class="input-style !py-2 text-sm"
+                    >
+                      <option value="">Todas las familias</option>
+                      <option v-for="familia in familiasParaFiltroEmpresa" :key="familia" :value="familia">{{ familia }}</option>
+                    </select>
+                  </div>
+
+                  <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                       <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -1500,37 +1663,39 @@ async function guardarEstadoGen(nuevoEstado) {
                       autocomplete="new-password"
                       name="buscar-empresa-dualab"
                       type="search"
-                      class="input-style !pl-14 text-lg"
+                      class="input-style !pl-14 !py-2.5"
                       :placeholder="!centroFiltro && !esModoDemo ? 'Selecciona primero un centro...' : 'Ej: Fundación Sergio Alonso...'"
                     />
                   </div>
+                  </div>
 
+                  <!-- Resultados desplegados por defecto (filtro "Todas") mientras no haya empresa elegida -->
                   <Transition name="dropdown">
-                    <div v-if="mostrarDropdownEmpresas && centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="mt-3">
+                    <div v-if="(mostrarDropdownEmpresas || !seleccion.empresaId) && centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="mt-3">
                       <div v-if="empresasFiltradasBusqueda.length > 0">
-                        <span class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+                        <span class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
                           {{ empresasFiltradasBusqueda.length }} resultado(s)
                         </span>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                           <button
                             v-for="emp in empresasPaginadas"
                             :key="emp.id"
                             @click="seleccionarEmpresa(emp)"
-                            class="text-left px-5 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-centros hover:shadow-md transition-all"
+                            class="text-left px-4 py-2.5 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-centros hover:shadow-md transition-all"
                           >
-                            <span class="font-bold text-[#1F2937] block truncate">{{ emp.nombre_comercial }}</span>
-                            <span class="text-xs text-gray-400 uppercase tracking-widest block truncate mt-0.5">
+                            <span class="font-bold text-sm text-[#1F2937] block truncate">{{ emp.nombre_comercial }}</span>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-widest block truncate mt-0.5">
                               {{ emp.sector || 'Sin sector especificado' }}
                             </span>
-                            <span v-if="emp.es_simulada" class="inline-block mt-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-500">
+                            <span v-if="emp.es_simulada" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-500">
                               Simulada
                             </span>
                           </button>
                         </div>
 
-                        <!-- Paginación: EMPRESAS_POR_PAGINA es múltiplo de 1/2/3 columnas → siempre filas completas -->
-                        <div v-if="totalPaginasEmpresas > 1" class="flex items-center justify-between mt-3">
+                        <!-- Paginación: EMPRESAS_POR_PAGINA es múltiplo de 1/2/4 columnas → siempre filas completas -->
+                        <div v-if="totalPaginasEmpresas > 1" class="flex items-center justify-between mt-2">
                           <button
                             type="button"
                             @click="paginaEmpresas -= 1"
@@ -1542,10 +1707,19 @@ async function guardarEstadoGen(nuevoEstado) {
                           </span>
                           <button
                             type="button"
+                            :key="`siguiente-${filtroTipoEmpresa}-${filtroFamiliaEmpresa}-${filtroSectorEmpresa}-${centroFiltro}`"
                             @click="paginaEmpresas += 1"
                             :disabled="paginaEmpresas === totalPaginasEmpresas"
-                            class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white text-gray-500 border-gray-200 hover:border-gray-400"
-                          >Siguiente →</button>
+                            :class="destacarSiguienteEmpresas
+                              ? 'bg-centros text-white border-centros shadow-md hover:bg-centros/90 siguiente-empresas-glow'
+                              : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
+                            class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            Siguiente →
+                            <span v-if="destacarSiguienteEmpresas" class="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 normal-case tracking-normal">
+                              +{{ empresasRestantes }} empresas
+                            </span>
+                          </button>
                         </div>
                       </div>
 
@@ -1558,6 +1732,23 @@ async function guardarEstadoGen(nuevoEstado) {
                 </div>
 
             <div v-if="empresaDetalle" class="bg-white rounded-3xl p-8 border border-gray-100 mb-8 animate-in fade-in duration-500">
+
+            <!-- Sin familias: avisar aquí, porque al avanzar el paso 1 se bloquea y en el paso 3 ya no habría arreglo -->
+            <div v-if="empresaSinFamilias && !esModoDemo && !estaPasoBloqueado(1)"
+              class="modulos-estado mb-6 flex items-start gap-3 rounded-2xl border-2 border-red-400 bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-800">
+              <svg class="w-5 h-5 mt-0.5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              <div>
+                <p class="font-black uppercase tracking-wide text-[11px]">Esta empresa no tiene familias profesionales</p>
+                <!-- El docente no ve «Modificar datos empresa»: no prometerle una acción que no tiene -->
+                <p v-if="esDocente" class="mt-0.5">
+                  No se puede generar un reto con ella. <strong>Elige otra empresa</strong> o pide a un administrador que la complete.
+                </p>
+                <p v-else class="mt-0.5">
+                  Asígnale al menos una con <strong>«Modificar datos empresa»</strong> antes de continuar.
+                  Al avanzar, este paso se bloquea y en el paso 3 no podrás elegir familia ni ciclo.
+                </p>
+              </div>
+            </div>
 
             <!-- Cabecera empresa -->
             <div class="mb-8">
@@ -1710,8 +1901,14 @@ async function guardarEstadoGen(nuevoEstado) {
                 <div>
                   <label class="label-style" :class="!seleccion.empresaSector && (seleccion.empresaId || seleccion.empresaNombre) ? 'text-red-500' : ''">Sector de Actividad *</label>
 
-                  <!-- Modo demo o paso bloqueado: input de solo lectura -->
-                  <input v-if="esModoDemo || estaPasoBloqueado(1)" :value="seleccion.empresaSector" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
+                  <!-- Modo demo, paso bloqueado o empresa ya clasificada: input de solo lectura -->
+                  <input v-if="esModoDemo || estaPasoBloqueado(1) || sectorBloqueado" :value="seleccion.empresaSector" disabled class="input-style opacity-70 cursor-not-allowed bg-gray-50" />
+
+                  <!-- Aviso: por qué no se puede tocar aunque el paso siga abierto -->
+                  <p v-if="sectorBloqueado && !esModoDemo && !estaPasoBloqueado(1)" class="text-xs text-gray-400 italic mt-2">
+                    Es el sector con el que esta empresa aparece en las búsquedas — cambiarlo aquí la reclasificaría para siempre, no solo para este reto.
+                    Si está mal, corrígelo con «Modificar datos empresa».
+                  </p>
 
                   <!-- Modo libre: campo de texto con vuelta al listado -->
                   <div v-else-if="sectorEsLibre" class="flex gap-2">
@@ -2100,6 +2297,41 @@ async function guardarEstadoGen(nuevoEstado) {
                     <option value="">Selecciona Familia...</option>
                     <option v-for="f in familiasFiltradas" :key="f" :value="f">{{ f }}</option>
                   </select>
+
+                  <!-- Aviso: por qué la familia se elige aquí aunque ya se filtrara en el paso 1 -->
+                  <template v-if="!esModoDemo && seleccion.empresaId && familiasEmpresaCargadas">
+                    <div v-if="familiaSigueSiendoPreseleccionada"
+                      class="mt-3 flex items-start gap-2 rounded-2xl border-2 border-centros/40 bg-centros/5 px-4 py-3 text-xs leading-relaxed text-azul-noche">
+                      <svg class="w-4 h-4 mt-0.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                      <div>
+                        <p v-if="motivoFamiliaPreseleccionada === 'filtro'">
+                          <strong>Preseleccionada</strong> porque filtraste por «{{ familiaPreseleccionada }}» en el paso 1.
+                        </p>
+                        <p v-else><strong>Preseleccionada:</strong> es la única familia vinculada a {{ seleccion.empresaNombre }}.</p>
+                        <p v-if="otrasFamiliasEmpresa.length" class="mt-1 text-gray-600">
+                          Esta empresa también está vinculada a: <strong>{{ otrasFamiliasEmpresa.join(', ') }}</strong>. Cámbiala si el reto es para otra familia.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div v-else-if="familiasFiltradas.length > 1 && !seleccion.familia"
+                      class="modulos-estado mt-3 flex items-start gap-2 rounded-2xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
+                      <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <div>
+                        <p class="font-black uppercase tracking-wide text-[11px]">¿Por qué hay que elegirla otra vez?</p>
+                        <p class="mt-0.5">
+                          {{ seleccion.empresaNombre }} está vinculada a <strong>{{ familiasFiltradas.length }} familias profesionales</strong>
+                          (así se acordó al darla de alta). El filtro del paso 1 solo servía para encontrar la empresa;
+                          aquí decides <strong>para qué familia es este reto</strong>.
+                        </p>
+                      </div>
+                    </div>
+
+                    <p v-else-if="empresaSinFamilias" class="mt-3 text-xs text-red-500 font-bold">
+                      Esta empresa no tiene familias profesionales vinculadas, así que no se puede generar el reto.
+                      Pulsa «Vaciar» para empezar de nuevo con otra empresa o después de asignarle familias.
+                    </p>
+                  </template>
                 </div>
 
                 <div ref="refNivelExigencia" class="col-span-2 md:col-span-1"
@@ -2167,7 +2399,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       class="flex-1 py-3 rounded-xl text-sm transition-all">
                       2º Curso
                     </button>
-                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 'ambos_cursos')"
+                    <button @click="elegirAmbosCursos()"
                       :disabled="esModoDemo"
                       :class="seleccion.cursoSeleccionado === 'ambos_cursos' ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'"
                       class="flex-1 py-3 rounded-xl text-sm transition-all">
@@ -2188,7 +2420,23 @@ async function guardarEstadoGen(nuevoEstado) {
                         Vaciar
                       </button>
                     </div>
-                    <span class="text-xs text-gray-400 italic block mb-3">Sin módulos seleccionados, la IA cruzará RA/CE de todos los módulos de 1º y 2º, cubriendo un mínimo de 3 módulos distintos con al menos uno de cada curso. Si eliges módulos, elige al menos uno de cada curso — la IA se ceñirá a los que fuerces.</span>
+                    <!-- Estado del forzado: deja claro si la IA elige o si se ha elegido a mano -->
+                    <div :key="hayModulosForzados ? 'forzado' : 'auto'"
+                      class="modulos-estado flex items-start gap-3 rounded-2xl border-2 px-4 py-3 mb-4"
+                      :class="hayModulosForzados ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-centros bg-centros/5 text-azul-noche'">
+                      <svg v-if="!hayModulosForzados" class="w-5 h-5 mt-0.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      <svg v-else class="w-5 h-5 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                      <div class="text-xs leading-relaxed">
+                        <template v-if="!hayModulosForzados">
+                          <p class="font-black uppercase tracking-wide text-[11px]">Modo automático · la IA elige los módulos <span class="ml-1 px-2 py-0.5 rounded-full bg-centros text-white text-[9px]">Recomendado</span></p>
+                          <p class="mt-0.5">No necesitas marcar nada. <strong>Forzar un módulo significa elegirlo tú a mano</strong>: solo hazlo si quieres que el reto se limite a ese módulo en concreto.</p>
+                        </template>
+                        <template v-else>
+                          <p class="font-black uppercase tracking-wide text-[11px]">Módulos forzados a mano · la IA NO elegirá</p>
+                          <p class="mt-0.5">El reto se limitará a: <strong>{{ nombresModulosForzados.join(', ') }}</strong>. Pulsa «Vaciar» para que vuelva a decidir la IA.</p>
+                        </template>
+                      </div>
+                    </div>
 
                     <div class="grid grid-cols-2 gap-4">
                       <div>
@@ -2199,7 +2447,7 @@ async function guardarEstadoGen(nuevoEstado) {
                             :disabled="esModoDemo"
                             :class="modulosSeleccionadosCurso1.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                             class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
-                            {{ m.nombre }}
+                            {{ nombreModuloVisible(m.nombre) }}
                           </button>
                           <p v-if="modulosCurso1DelCiclo.length === 0" class="text-xs text-red-500 italic">No hay módulos de 1º cargados para este ciclo.</p>
                         </div>
@@ -2212,25 +2460,46 @@ async function guardarEstadoGen(nuevoEstado) {
                             :disabled="esModoDemo"
                             :class="modulosSeleccionadosCurso2.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                             class="px-4 py-2 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
-                            {{ m.nombre }}
+                            {{ nombreModuloVisible(m.nombre) }}
                           </button>
                           <p v-if="modulosCurso2DelCiclo.length === 0" class="text-xs text-red-500 italic">No hay módulos de 2º cargados para este ciclo.</p>
                         </div>
                       </div>
                     </div>
-                    <p v-if="!ambosCursosModulosValidos" class="text-xs text-red-500 mt-2 italic">Si eliges módulos en modo "Ambos Cursos", debes elegir al menos uno de 1º y uno de 2º.</p>
+                    <p v-if="!ambosCursosModulosValidos" class="text-xs text-red-500 mt-3 font-bold">
+                      Falta al menos un módulo de {{ modulosSeleccionadosCurso1.length === 0 ? '1º' : '2º' }} curso.
+                    </p>
                   </div>
                   <div v-else class="w-full bg-gray-50 p-6 rounded-3xl border border-gray-200 relative">
                     <div class="flex items-center justify-between mb-3">
                       <label class="label-style !mb-0 !ml-0">Forzar Módulo Específico (Opcional)</label>
-                      <button type="button" @click="!esModoDemo && (modulosSeleccionados = [])"
+                      <button type="button" @click="limpiarModulos()"
                         :disabled="esModoDemo"
                         class="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Vaciar
                       </button>
                     </div>
-                    <span class="text-xs text-gray-400 italic block mb-3">Sin módulo seleccionado, la IA cruzará RA/CE de todos los módulos del curso, cubriendo un mínimo de 3 módulos distintos si el ciclo tiene suficientes. Si fuerzas un módulo, la IA se ceñirá a ese módulo.</span>
+                    <template v-if="!esModoDemo">
+                    <!-- Estado del forzado: deja claro si la IA elige o si se ha elegido a mano -->
+                    <div :key="hayModulosForzados ? 'forzado' : 'auto'"
+                      class="modulos-estado flex items-start gap-3 rounded-2xl border-2 px-4 py-3 mb-4"
+                      :class="hayModulosForzados ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-centros bg-centros/5 text-azul-noche'">
+                      <svg v-if="!hayModulosForzados" class="w-5 h-5 mt-0.5 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      <svg v-else class="w-5 h-5 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                      <div class="text-xs leading-relaxed">
+                        <template v-if="!hayModulosForzados">
+                          <p class="font-black uppercase tracking-wide text-[11px]">Modo automático · la IA elige los módulos <span class="ml-1 px-2 py-0.5 rounded-full bg-centros text-white text-[9px]">Recomendado</span></p>
+                          <p class="mt-0.5">No necesitas marcar nada. <strong>Forzar un módulo significa elegirlo tú a mano</strong>: solo hazlo si quieres que el reto se limite a ese módulo en concreto.</p>
+                        </template>
+                        <template v-else>
+                          <p class="font-black uppercase tracking-wide text-[11px]">Módulos forzados a mano · la IA NO elegirá</p>
+                          <p class="mt-0.5">El reto se limitará a: <strong>{{ nombresModulosForzados.join(', ') }}</strong>. Pulsa «Vaciar» para que vuelva a decidir la IA.</p>
+                        </template>
+                      </div>
+                    </div>
+                    </template>
+                    <span class="text-xs text-gray-400 italic block mb-3">Sin módulos forzados, la IA cruzará RA/CE de todos los módulos del curso, cubriendo un mínimo de 3 módulos distintos si el ciclo tiene suficientes.</span>
 
                     <!-- Módulo virtual cuando la demo no tiene ciclo en BD -->
                     <div v-if="esModoDemo && modulosDelCurso.length === 0 && demoModuloNombre"
@@ -2245,7 +2514,7 @@ async function guardarEstadoGen(nuevoEstado) {
                         :disabled="esModoDemo"
                         :class="modulosSeleccionados.includes(m.id) ? 'bg-gradient-to-r from-centros to-primary-400 text-white border-transparent shadow-md' : 'bg-[#1F2937] text-gray-300 border-transparent hover:border-centros/50'"
                         class="px-5 py-2.5 rounded-2xl border-2 text-[11px] font-black uppercase text-left transition-all shadow-sm">
-                        {{ m.nombre }}
+                        {{ nombreModuloVisible(m.nombre) }}
                       </button>
                     </div>
                     <p v-if="!esModoDemo && modulosDelCurso.length === 0 && seleccion.cicloId" class="text-xs text-red-500 mt-2 italic">No hay módulos cargados para este curso.</p>
@@ -2742,6 +3011,19 @@ async function guardarEstadoGen(nuevoEstado) {
 .step-glow-empresa {
   animation: glow-lime 2s ease-in-out infinite;
 }
+.siguiente-empresas-glow {
+  /* Dos parpadeos al aparecer y después el brillo pulsante continuo */
+  animation:
+    siguiente-parpadeo 1.4s ease-in-out 2 both,
+    glow-green 2s ease-in-out 2.8s infinite;
+}
+@keyframes siguiente-parpadeo {
+  0%, 50%, 100% { opacity: 1;    transform: scale(1); }
+  25%           { opacity: 0.25; transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .siguiente-empresas-glow { animation: none; }
+}
 @keyframes glow-green {
   0%, 100% { box-shadow: 0 0 0 2px #3072AA, 0 0 14px rgba(48, 114, 170, 0.25); }
   50%       { box-shadow: 0 0 0 3px #3072AA, 0 0 24px rgba(48, 114, 170, 0.45); }
@@ -2766,6 +3048,27 @@ async function guardarEstadoGen(nuevoEstado) {
   pointer-events: none;
   transition: filter 0.3s ease, opacity 0.3s ease;
 }
+
+/* ─── Forzado de módulos ─────────────────────────────────────────────────── */
+/* El :key del banner cambia al pasar de auto ↔ forzado, así el parpadeo se repite en cada cambio */
+.modulos-estado {
+  animation: modulos-parpadeo 0.7s ease-in-out 3;
+}
+@keyframes modulos-parpadeo {
+  0%, 100% { transform: scale(1);     box-shadow: 0 0 0 0 rgba(48, 114, 170, 0); }
+  50%       { transform: scale(1.015); box-shadow: 0 0 0 6px rgba(48, 114, 170, 0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modulos-estado { animation: none; }
+}
+.toast-modulos-destacado {
+  animation: modulos-parpadeo 0.7s ease-in-out 0.3s 4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-modulos-destacado { animation: none; }
+}
+.toast-modulos-enter-active, .toast-modulos-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.toast-modulos-enter-from, .toast-modulos-leave-to { opacity: 0; transform: translate(-50%, 12px); }
 
 .sp-fade-enter-active, .sp-fade-leave-active { transition: opacity 200ms ease; }
 .sp-fade-enter-from, .sp-fade-leave-to { opacity: 0; }

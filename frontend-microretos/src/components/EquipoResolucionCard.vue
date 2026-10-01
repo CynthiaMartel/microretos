@@ -6,8 +6,8 @@
      entre ambas — vive aquí una sola vez para que "cómo se ve" no pueda desincronizarse.
 
      Todo lo que es mutación (generar/regenerar diagnóstico, evaluar RA/CE) NO vive aquí:
-     se proyecta mediante los slots `acciones-cabecera`, `evaluacion-fase-4` y
-     `diagnostico-acciones`, que solo MisGruposDetalle.vue rellena. La ficha del proyecto
+     se proyecta mediante los slots `acciones-cabecera`, `evaluacion`, `diagnostico-contenido`
+     y `diagnostico-acciones`, que solo MisGruposDetalle.vue rellena. La ficha del proyecto
      no los usa — sin contenido en el slot, sencillamente no se pinta nada ahí. -->
 <script setup>
 import { computed } from 'vue'
@@ -23,6 +23,8 @@ const props = defineProps({
   // Al abrir el equipo todas sus fases arrancan aquí dentro (el padre las precarga); el
   // usuario puede replegar las que no le interesen sin afectar a las demás.
   fasesAbiertas: { type: Set, default: () => new Set() },
+  // Resalta un momento la sección de diagnóstico (el padre lo activa al llevar el scroll ahí).
+  diagnosticoResaltado: { type: Boolean, default: false },
 })
 const emit = defineEmits(['toggle-equipo', 'toggle-fase'])
 
@@ -59,6 +61,27 @@ const reflexionesIndividuales = computed(() => props.equipo.reflexiones.filter(r
 function progresoPct() {
   return progresoPonderado(props.equipo.fases)
 }
+
+// Estado de cada fase para el stepper de la cabecera. 'actual' solo si el equipo ya ha
+// empezado: con "Sin iniciar" no hay ninguna fase en curso que resaltar.
+const ESTADO_FASE_LABEL = {
+  validada:   'Validada por docente',
+  completada: 'Completada por el equipo',
+  actual:     'En curso',
+  pendiente:  'Pendiente',
+}
+const estadosFases = computed(() => {
+  const eq = props.equipo
+  const sinIniciar = eq.fase_actual === 0 && eq.fases_completas === 0
+  return FASES.map(f => {
+    const fase = eq.fases[f.num]
+    let estado = 'pendiente'
+    if (fase?.validado_docente)                         estado = 'validada'
+    else if (fase?.completada)                          estado = 'completada'
+    else if (!sinIniciar && eq.fase_actual === f.num)   estado = 'actual'
+    return { ...f, estado, titulo: `F${f.num} · ${f.label} — ${ESTADO_FASE_LABEL[estado]}` }
+  })
+})
 
 function estadoBadge() {
   const fa = props.equipo.fase_actual
@@ -182,25 +205,55 @@ function formatItemFase(item) {
             </span>
           </span>
         </div>
+        <!-- Fases en móvil: barra segmentada (el stepper completo no cabe) -->
+        <div class="flex sm:hidden gap-1 mt-2" role="list" aria-label="Progreso por fases">
+          <span v-for="f in estadosFases" :key="f.num" role="listitem" :title="f.titulo" :aria-label="f.titulo"
+                :class="['h-1.5 flex-1 rounded-full',
+                         f.estado === 'validada'   ? 'bg-emerald-500'
+                       : f.estado === 'completada' ? 'bg-centros'
+                       : f.estado === 'actual'     ? 'bg-blue-300 animate-pulse'
+                       :                             'bg-gray-200']" />
+        </div>
       </div>
 
-      <!-- Fases visuales -->
-      <div class="shrink-0 hidden sm:flex items-center gap-1.5">
-        <div v-for="f in FASES" :key="f.num" :title="f.label" class="flex flex-col items-center gap-0.5">
-          <div :class="[
-                 'w-7 h-7 rounded-lg flex items-center justify-center text-xs',
-                 equipo.fases[f.num]?.validado_docente
-                   ? 'bg-emerald-500 text-white'
-                   : equipo.fases[f.num]?.completada
-                     ? 'bg-centros/20 text-centros'
-                     : equipo.fase_actual === f.num
-                       ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-300'
-                       : 'bg-gray-100 text-gray-400'
-               ]">
-            {{ f.icono }}
+      <!-- Fases visuales: stepper con conectores. Pendientes en gris y desaturadas (el
+           emoji conserva su color si no), la fase en curso más grande y marcada "Ahora",
+           completadas/validadas con check en la esquina. -->
+      <div class="shrink-0 hidden sm:flex items-start" role="list" aria-label="Progreso por fases">
+        <template v-for="(f, i) in estadosFases" :key="f.num">
+          <div v-if="i > 0"
+               :class="['w-3 h-0.5 mt-4 rounded-full',
+                        estadosFases[i - 1].estado === 'validada' || estadosFases[i - 1].estado === 'completada'
+                          ? 'bg-centros/50' : 'bg-gray-200']" />
+          <div role="listitem" :title="f.titulo" :aria-label="f.titulo"
+               class="flex flex-col items-center gap-0.5 w-9">
+            <div :class="[
+                   'relative w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all',
+                   f.estado === 'validada'   ? 'bg-emerald-100 ring-1 ring-emerald-300'
+                 : f.estado === 'completada' ? 'bg-centros/15 ring-1 ring-centros/30'
+                 : f.estado === 'actual'     ? 'bg-blue-50 ring-2 ring-blue-500 shadow-sm shadow-blue-200 scale-110'
+                 :                             'bg-gray-50 border border-dashed border-gray-200'
+                 ]">
+              <span :class="f.estado === 'pendiente' ? 'grayscale opacity-40' : ''">{{ f.icono }}</span>
+              <span v-if="f.estado === 'validada' || f.estado === 'completada'"
+                    :class="['absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-white',
+                             f.estado === 'validada' ? 'bg-emerald-500' : 'bg-centros']">
+                <svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
+              <span v-else-if="f.estado === 'actual'"
+                    class="absolute -top-1 -right-1 flex w-2.5 h-2.5">
+                <span class="absolute inline-flex w-full h-full rounded-full bg-blue-400 opacity-75 animate-ping" />
+                <span class="relative inline-flex w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
+              </span>
+            </div>
+            <span :class="['text-[8px] font-black uppercase tracking-wider',
+                           f.estado === 'actual' ? 'text-blue-600 mt-0.5' : 'text-gray-400']">
+              {{ f.estado === 'actual' ? 'Ahora' : `F${f.num}` }}
+            </span>
           </div>
-          <span class="text-[8px] font-black text-gray-400 uppercase tracking-wider">F{{ f.num }}</span>
-        </div>
+        </template>
       </div>
 
       <router-link
@@ -348,51 +401,8 @@ function formatItemFase(item) {
               <p class="text-[10px] font-black uppercase tracking-wider text-amber-600 mb-1">Observaciones docente</p>
               <p class="text-xs text-amber-800">{{ equipo.fases[f.num].observaciones_docente }}</p>
             </div>
-
-            <slot v-if="f.num === 4" name="evaluacion-fase-4" :equipo="equipo" />
           </div>
         </div>
-      </div>
-
-      <!-- Diagnóstico final IA — solo con las 5 fases completas -->
-      <div v-if="equipo.fases_completas === 5" class="mt-2 pt-4 border-t border-gray-100 space-y-3">
-        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Diagnóstico final</p>
-
-        <div v-if="equipo.diagnostico_final" class="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 space-y-3">
-          <p class="text-sm text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.resumen }}</p>
-
-          <div v-if="equipo.diagnostico_final.fortalezas?.length" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fortalezas</p>
-            <ul class="space-y-1">
-              <li v-for="(f, i) in equipo.diagnostico_final.fortalezas" :key="i"
-                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-emerald-300 pl-2.5">{{ f }}</li>
-            </ul>
-          </div>
-
-          <div v-if="equipo.diagnostico_final.areas_mejora?.length" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-amber-600">Áreas de mejora</p>
-            <ul class="space-y-1">
-              <li v-for="(a, i) in equipo.diagnostico_final.areas_mejora" :key="i"
-                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-amber-300 pl-2.5">{{ a }}</li>
-            </ul>
-          </div>
-
-          <div v-if="equipo.diagnostico_final.valoracion_ra_ce" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-gray-400">Valoración RA/CE</p>
-            <p class="text-xs text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.valoracion_ra_ce }}</p>
-          </div>
-
-          <p v-if="equipo.diagnostico_final.conclusion" class="text-xs font-semibold text-[#1F2937] italic">
-            {{ equipo.diagnostico_final.conclusion }}
-          </p>
-
-          <p v-if="equipo.diagnostico_generado_en" class="text-[10px] text-gray-400">
-            Generado el {{ new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES') }}
-          </p>
-        </div>
-        <p v-else class="text-xs text-gray-400 italic">Todavía no se ha generado el diagnóstico final de este equipo.</p>
-
-        <slot name="diagnostico-acciones" :equipo="equipo" />
       </div>
 
       <!-- Reflexión grupal -->
@@ -427,6 +437,63 @@ function formatItemFase(item) {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Evaluación curricular RA/CE — antes vivía dentro de F4; va justo encima del
+           diagnóstico porque la IA la usa como insumo: primero se evalúa, luego se genera. -->
+      <slot name="evaluacion" :equipo="equipo" />
+
+      <!-- Diagnóstico final IA — solo con las 5 fases completas -->
+      <!-- id + tabindex: destino del scroll/foco desde el botón "Ver diagnóstico" de la
+           cabecera. scroll-mt deja hueco para la TopBar global + topbar sticky de la vista. -->
+      <div v-if="equipo.fases_completas === 5"
+           :id="`diagnostico-equipo-${equipo.id}`"
+           tabindex="-1"
+           :class="['mt-2 pt-4 border-t border-gray-100 space-y-3 scroll-mt-36 rounded-2xl outline-none transition-shadow duration-500',
+                    diagnosticoResaltado ? 'ring-2 ring-emerald-300 ring-offset-4' : '']">
+        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Diagnóstico final</p>
+
+        <!-- Slot para sustituir la lectura por el formulario de edición (solo gestión docente) -->
+        <slot name="diagnostico-contenido" :equipo="equipo">
+        <div v-if="equipo.diagnostico_final" class="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 space-y-3">
+          <p class="text-sm text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.resumen }}</p>
+
+          <div v-if="equipo.diagnostico_final.fortalezas?.length" class="space-y-1">
+            <p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fortalezas</p>
+            <ul class="space-y-1">
+              <li v-for="(f, i) in equipo.diagnostico_final.fortalezas" :key="i"
+                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-emerald-300 pl-2.5">{{ f }}</li>
+            </ul>
+          </div>
+
+          <div v-if="equipo.diagnostico_final.areas_mejora?.length" class="space-y-1">
+            <p class="text-[10px] font-black uppercase tracking-wider text-amber-600">Áreas de mejora</p>
+            <ul class="space-y-1">
+              <li v-for="(a, i) in equipo.diagnostico_final.areas_mejora" :key="i"
+                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-amber-300 pl-2.5">{{ a }}</li>
+            </ul>
+          </div>
+
+          <div v-if="equipo.diagnostico_final.valoracion_ra_ce" class="space-y-1">
+            <p class="text-[10px] font-black uppercase tracking-wider text-gray-400">Valoración RA/CE</p>
+            <p class="text-xs text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.valoracion_ra_ce }}</p>
+          </div>
+
+          <p v-if="equipo.diagnostico_final.conclusion" class="text-xs font-semibold text-[#1F2937] italic">
+            {{ equipo.diagnostico_final.conclusion }}
+          </p>
+
+          <p v-if="equipo.diagnostico_generado_en" class="text-[10px] text-gray-400">
+            Generado por IA el {{ new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES') }}
+            <template v-if="equipo.diagnostico_final.editado_en">
+              · editado por docente el {{ new Date(equipo.diagnostico_final.editado_en).toLocaleString('es-ES') }}
+            </template>
+          </p>
+        </div>
+        <p v-else class="text-xs text-gray-400 italic">Todavía no se ha generado el diagnóstico final de este equipo.</p>
+        </slot>
+
+        <slot name="diagnostico-acciones" :equipo="equipo" />
       </div>
 
     </div>

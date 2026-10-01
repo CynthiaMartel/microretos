@@ -216,7 +216,8 @@ function makeRenderer(doc) {
       s.y += 2;
       setFont(7.5, 'normal', GRAY);
       doc.text(
-        `Diagnóstico generado el ${new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES')}`,
+        `Diagnóstico generado por IA el ${new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES')}`
+          + (diag.editado_en ? ` · editado por docente el ${new Date(diag.editado_en).toLocaleString('es-ES')}` : ''),
         MARGIN, s.y
       );
       s.y += 5;

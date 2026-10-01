@@ -292,6 +292,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('throttle:10,1')
             ->post('/startup/equipos/{id}/diagnostico-final', [EquipoGestionController::class, 'diagnosticoFinal'])
             ->whereNumber('id');
+        // Edición manual del diagnóstico — sin llamada externa, basta el throttle global
+        Route::patch('/startup/equipos/{id}/diagnostico-final', [EquipoGestionController::class, 'actualizarDiagnosticoFinal'])
+            ->whereNumber('id');
     });
 
     // ── Gestión de usuarios (solo admin) ─────────────────────────────

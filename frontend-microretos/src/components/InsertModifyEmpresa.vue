@@ -138,8 +138,8 @@ watch(() => nuevaForm.nombre_comercial, (val) => {
   if (val) limpiarDestacado('nombre_comercial')
 })
 
-const familiasFiltradas = computed(() => {
-  const centroNombre = nuevaForm.centro_educativo
+// Familias que imparte el centro indicado (compartido por los modales de crear y editar)
+function familiasDelCentro(centroNombre) {
   if (!centroNombre) return props.familiasProfesionales
   const centro = centrosInternos.value.find(c => c.nombre === centroNombre)
   if (!centro?.ciclos?.length) return props.familiasProfesionales
@@ -147,7 +147,9 @@ const familiasFiltradas = computed(() => {
   // pasan familiasProfesionales ya reducido a strings, sin id.
   const nombres = new Set(centro.ciclos.map(c => c.familia_nombre).filter(Boolean))
   return props.familiasProfesionales.filter(f => nombres.has(f.nombre ?? f))
-})
+}
+
+const familiasFiltradas = computed(() => familiasDelCentro(nuevaForm.centro_educativo))
 
 const nuevaConfirmando = ref(false)
 const nuevaCardRef     = ref(null)
@@ -369,6 +371,16 @@ const editarForm               = reactive({
   web: '', centro_educativo: '', persona_contacto: '', telefono: '',
   email_general: '', direccion: '', municipio: '', provincia: '',
   codigo_postal: '', actividad: '', estado_contacto: '', es_simulada: false,
+  familia: '',
+})
+
+// En edición se mantiene visible la familia actual aunque el centro ya no la imparta,
+// para no perderla en silencio al abrir el modal.
+const familiasFiltradasEditar = computed(() => {
+  const lista = familiasDelCentro(editarForm.centro_educativo)
+  const actual = editarForm.familia
+  if (actual && !lista.some(f => (f.nombre ?? f) === actual)) return [actual, ...lista]
+  return lista
 })
 
 watch(() => props.mostrarEditarEmpresa, (v) => {
@@ -394,6 +406,8 @@ watch(() => props.mostrarEditarEmpresa, (v) => {
     editarForm.actividad        = e.actividad        || ''
     editarForm.estado_contacto  = e.estado_contacto  || ''
     editarForm.es_simulada      = !!e.es_simulada
+    // /empresas devuelve familias [{id, nombre}]; /empresas/dashboard además familias_nombres
+    editarForm.familia          = e.familias?.[0]?.nombre ?? e.familias_nombres?.[0] ?? ''
     tabEditar.value = 'basico'
   }
 })
@@ -423,6 +437,7 @@ async function guardarEdicion() {
       tamano:          editarForm.tamano           || null,
       web:             editarForm.web              || null,
       centroEducativo: editarForm.centro_educativo || null,
+      familia:         editarForm.familia          || null,
       ciclosIds:       [],
       personaContacto: editarForm.persona_contacto || null,
       telefono:        editarForm.telefono         || null,
@@ -1071,9 +1086,17 @@ defineExpose({ abrirTrasLogin })
                   <p v-if="editarErrors.centro_educativo" class="ime-err">{{ editarErrors.centro_educativo }}</p>
                 </div>
                 <div>
-                  <label class="ime-label">Actividad</label>
-                  <input v-model="editarForm.actividad" class="ime-input" placeholder="Descripción de actividad"/>
+                  <label class="ime-label">Familia Profesional</label>
+                  <select v-model="editarForm.familia" class="ime-input" :class="{'ime-input-err': editarErrors.familia}">
+                    <option value="">Selecciona familia...</option>
+                    <option v-for="f in familiasFiltradasEditar" :key="f.id ?? f" :value="f.nombre ?? f">{{ f.nombre ?? f }}</option>
+                  </select>
+                  <p v-if="editarErrors.familia" class="ime-err">{{ editarErrors.familia }}</p>
                 </div>
+              </div>
+              <div>
+                <label class="ime-label">Actividad</label>
+                <input v-model="editarForm.actividad" class="ime-input" placeholder="Descripción de actividad"/>
               </div>
             </div>
 

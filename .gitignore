@@ -4,6 +4,9 @@
 # Backups de BD de producción bajados localmente — contienen datos reales (PII), nunca versionar
 /backups_produccion/
 
+# Dumps locales (incluido el que se sube a producción al sincronizar BD) — contienen datos, nunca versionar
+/backups/
+
 # Proyecto del frontoffice — repo git propio e independiente (frontoffice_dualab),
 # solo vive anidado aquí en disco. Nunca debe entrar en este repo.
 /FRONTOFFICE/

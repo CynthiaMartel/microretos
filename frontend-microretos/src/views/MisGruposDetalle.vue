@@ -5,7 +5,7 @@
      El componente sigue llamándose MisGruposDetalle.vue (no renombrado, para no ampliar el diff).
      Ver router/index.js. -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
@@ -169,10 +169,68 @@ function verDiagnostico(equipo) {
   diagnosticoModalEquipo.value = equipo
 }
 
+// Botones de la cabecera ("Ir a generar diagnóstico" / "Ir al diagnóstico"): abren el
+// equipo y llevan el scroll + foco a su sección de diagnóstico, resaltándola un momento.
+// No abren el modal: todas las acciones (ver, editar, regenerar) viven en la sección, y
+// el halo de "Ver diagnóstico completo" se dispara al entrar en pantalla.
+const diagnosticoResaltado = ref(null)
+let timerResaltado = null
+const reducirMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+async function irADiagnostico(equipo) {
+  if (equipoAbierto.value !== equipo.id) abrirDiagnostico(equipo)
+  await nextTick()
+  const el = document.getElementById(`diagnostico-equipo-${equipo.id}`)
+  if (el) {
+    el.scrollIntoView({ behavior: reducirMovimiento() ? 'auto' : 'smooth', block: 'start' })
+    el.focus({ preventScroll: true })
+    diagnosticoResaltado.value = equipo.id
+    clearTimeout(timerResaltado)
+    timerResaltado = setTimeout(() => { diagnosticoResaltado.value = null }, 2500)
+  }
+}
+
+// ── Halo de "Ver diagnóstico completo" ──────────────────────────────────────
+// Parpadea 3 veces solo cuando el botón entra en pantalla (no al pintarse fuera de vista),
+// nunca con el modal abierto (se vería detrás), y una única vez por equipo: al terminar
+// se marca y no se repite aunque el panel se cierre y reabra.
+const halosVistos     = ref(new Set())
+const halosActivos    = ref(new Set())
+const halosTerminados = ref(new Set())
+
+function activarHalosPendientes() {
+  if (diagnosticoModalEquipo.value) return
+  const pendientes = [...halosVistos.value].filter(id => !halosTerminados.value.has(id))
+  if (pendientes.length) halosActivos.value = new Set([...halosActivos.value, ...pendientes])
+}
+function marcarHaloVisto(id) {
+  halosVistos.value = new Set([...halosVistos.value, id])
+  activarHalosPendientes()
+}
+function terminarHalo(id) {
+  halosTerminados.value = new Set([...halosTerminados.value, id])
+}
+watch(diagnosticoModalEquipo, v => { if (!v) activarHalosPendientes() })
+
+// v-al-ver="callback": ejecuta el callback la primera vez que el elemento es visible.
+const vAlVer = {
+  mounted(el, { value }) {
+    el._alVer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { value(); el._alVer.disconnect() }
+    }, { threshold: 0.9 })
+    el._alVer.observe(el)
+  },
+  unmounted(el) { el._alVer?.disconnect() },
+}
+
 async function generarDiagnostico(equipo) {
   if (generandoDiagnostico.value[equipo.id]) return
   // Ya existe uno: pulsar el mismo botón lo sobrescribiría sin más aviso — confirmar antes.
-  if (equipo.diagnostico_final && !confirm('Ya existe un diagnóstico final para este equipo. ¿Quieres generarlo de nuevo? Se sustituirá el actual.')) {
+  // Si el docente lo había retocado a mano, avisar expresamente de que esos cambios se pierden.
+  const aviso = equipo.diagnostico_final?.editado_docente
+    ? 'Este diagnóstico tiene cambios manuales del docente. Si la IA lo regenera, esos cambios se perderán. ¿Continuar?'
+    : 'Ya existe un diagnóstico final para este equipo. ¿Quieres que la IA lo genere de nuevo? Se sustituirá el actual.'
+  if (equipo.diagnostico_final && !confirm(aviso)) {
     return
   }
   generandoDiagnostico.value = { ...generandoDiagnostico.value, [equipo.id]: true }
@@ -188,11 +246,73 @@ async function generarDiagnostico(equipo) {
   }
 }
 
+// ── Edición manual del diagnóstico ──────────────────────────────────────────
+// Las listas (fortalezas/áreas de mejora) se editan como texto, una por línea, y se
+// vuelven a partir al guardar — más rápido de corregir que un input por elemento.
+const diagnosticoForms     = ref({})
+const guardandoDiagnostico = ref({})
+
+function editarDiagnostico(equipo) {
+  const d = equipo.diagnostico_final || {}
+  errorDiagnostico.value = { ...errorDiagnostico.value, [equipo.id]: '' }
+  diagnosticoForms.value = {
+    ...diagnosticoForms.value,
+    [equipo.id]: {
+      resumen:          d.resumen ?? '',
+      fortalezas:       (d.fortalezas ?? []).join('\n'),
+      areas_mejora:     (d.areas_mejora ?? []).join('\n'),
+      valoracion_ra_ce: d.valoracion_ra_ce ?? '',
+      conclusion:       d.conclusion ?? '',
+    },
+  }
+}
+
+function cancelarEdicionDiagnostico(equipo) {
+  const { [equipo.id]: _, ...resto } = diagnosticoForms.value
+  diagnosticoForms.value = resto
+}
+
+const aLista = (texto) => texto.split('\n').map(l => l.trim()).filter(Boolean)
+
+async function guardarDiagnostico(equipo) {
+  const form = diagnosticoForms.value[equipo.id]
+  if (!form || guardandoDiagnostico.value[equipo.id]) return
+  guardandoDiagnostico.value = { ...guardandoDiagnostico.value, [equipo.id]: true }
+  errorDiagnostico.value = { ...errorDiagnostico.value, [equipo.id]: '' }
+  try {
+    const res = await api.patch(`/startup/equipos/${equipo.id}/diagnostico-final`, {
+      resumen:          form.resumen.trim(),
+      fortalezas:       aLista(form.fortalezas),
+      areas_mejora:     aLista(form.areas_mejora),
+      valoracion_ra_ce: form.valoracion_ra_ce.trim() || null,
+      conclusion:       form.conclusion.trim() || null,
+    })
+    equipo.diagnostico_final = res.data.diagnostico
+    cancelarEdicionDiagnostico(equipo)
+  } catch (e) {
+    const errores = e.response?.data?.errors
+    errorDiagnostico.value = {
+      ...errorDiagnostico.value,
+      [equipo.id]: e.response?.data?.error
+        ?? (errores ? Object.values(errores).flat()[0] : 'No se pudo guardar el diagnóstico.'),
+    }
+  } finally {
+    guardandoDiagnostico.value = { ...guardandoDiagnostico.value, [equipo.id]: false }
+  }
+}
+
 function progresoPct(equipo) {
   return progresoPonderado(equipo.fases)
 }
 
-onMounted(cargar)
+// Llegada desde /mis-equipos con ?equipo=&ver=diagnostico (aviso "Aquí puedes ver el
+// diagnóstico del equipo"): tras cargar, abrir ese equipo y llevar el scroll a su diagnóstico.
+onMounted(async () => {
+  await cargar()
+  if (route.query.ver !== 'diagnostico') return
+  const equipo = equipos.value.find(e => String(e.id) === String(route.query.equipo))
+  if (equipo) irADiagnostico(equipo)
+})
 </script>
 
 <template>
@@ -323,7 +443,16 @@ onMounted(cargar)
 
         <!-- Sección: Equipos -->
         <section class="space-y-3 pt-6 border-t border-gray-100">
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Equipos</p>
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Equipos</p>
+            <!-- Leyenda del stepper de fases de cada tarjeta (EquipoResolucionCard) -->
+            <div v-if="equipos.length" class="flex items-center gap-3 flex-wrap text-[10px] font-semibold text-gray-500">
+              <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-200" />En curso</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-centros" />Completada</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500" />Validada</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full border border-dashed border-gray-300 bg-gray-50" />Pendiente</span>
+            </div>
+          </div>
 
           <!-- Sin equipos -->
           <div v-if="!equipos.length"
@@ -336,39 +465,54 @@ onMounted(cargar)
             :equipo="equipo"
             :abierto="equipoAbierto === equipo.id"
             :fases-abiertas="fasesAbiertas"
+            :diagnostico-resaltado="diagnosticoResaltado === equipo.id"
             @toggle-equipo="toggleEquipo(equipo.id)"
             @toggle-fase="(faseNum) => abrirFase(equipo, faseNum)">
 
-            <!-- Solo cuando el equipo ha completado sus 5 fases. Sin diagnóstico aún: abre
-                 el detalle (igual que pulsar en cualquier otra parte de la cabecera) para
-                 dejar a la vista el botón de generar dentro del panel. Con diagnóstico ya
-                 generado: abre directamente el modal, sin pasar por el panel inline. -->
+            <!-- Solo cuando el equipo ha completado sus 5 fases. Ambos botones hacen lo mismo
+                 (irADiagnostico: desplegar + scroll/foco a la sección); solo cambia el aviso
+                 visual: claro = diagnóstico pendiente de generar, sólido = ya generado. -->
             <template #acciones-cabecera="{ equipo: eq }">
-              <button v-if="eq.fases_completas === 5 && !eq.diagnostico_final"
-                      @click.stop="abrirDiagnostico(eq)"
-                      class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700
-                             hover:bg-emerald-100 transition-colors text-[10px] font-black uppercase tracking-wider">
-                Generar diagnóstico final
-              </button>
-              <button v-else-if="eq.fases_completas === 5"
-                      @click.stop="verDiagnostico(eq)"
-                      class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500 text-white
-                             hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
-                Ver diagnóstico
+              <button v-if="eq.fases_completas === 5"
+                      @click.stop="irADiagnostico(eq)"
+                      :class="['shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors text-[10px] font-black uppercase tracking-wider',
+                               eq.diagnostico_final
+                                 ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                 : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100']">
+                {{ eq.diagnostico_final ? 'Ir al diagnóstico' : 'Ir a generar diagnóstico' }}
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                </svg>
               </button>
             </template>
 
-            <!-- Evaluación curricular RA/CE — solo en Cierre (F4) -->
-            <template #evaluacion-fase-4="{ equipo: eq }">
-              <div v-if="evaluacionForms[eq.id]" class="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Evaluación curricular (RA/CE)</p>
+            <!-- Evaluación curricular RA/CE — se guarda en F4 (Presentación), pero se pinta
+                 encima del diagnóstico final, que la usa como insumo -->
+            <template #evaluacion="{ equipo: eq }">
+              <!-- Tarjeta propia con acento de marca (centros) para que no se confunda con
+                   las reflexiones de arriba ni con el diagnóstico de abajo -->
+              <div v-if="evaluacionForms[eq.id]"
+                   class="mt-4 rounded-2xl border-2 border-centros/30 bg-centros/5 p-4 sm:p-5 space-y-3">
+                <div class="flex items-start gap-3">
+                  <span class="shrink-0 w-9 h-9 rounded-xl bg-centros text-white flex items-center justify-center text-base">📋</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-black text-centros">Evaluación curricular (RA/CE)</p>
+                    <p class="text-[11px] text-gray-500 leading-snug">
+                      Valora el nivel alcanzado en cada resultado de aprendizaje. Se usa para el diagnóstico final.
+                    </p>
+                  </div>
+                  <span :class="['shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black',
+                                 eq.fases[4]?.validado_docente ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                    {{ eq.fases[4]?.validado_docente ? 'Evaluada' : 'Pendiente de evaluar' }}
+                  </span>
+                </div>
 
                 <p v-if="!evaluacionForms[eq.id].ras.length" class="text-xs text-gray-400 italic">
                   El proyecto no tiene RA/CE oficiales asignados todavía.
                 </p>
 
                 <div v-for="(r, idx) in evaluacionForms[eq.id].ras" :key="idx"
-                     class="bg-gray-50 rounded-xl p-3 space-y-2">
+                     class="bg-white border border-centros/10 rounded-xl p-3 space-y-2">
                   <p class="text-xs font-semibold text-[#1F2937]">{{ r.ra }}</p>
                   <div class="flex flex-wrap gap-1.5">
                     <button v-for="op in NIVEL_OPCIONES" :key="op.value"
@@ -406,23 +550,95 @@ onMounted(cargar)
               </div>
             </template>
 
+            <!-- Formulario de edición manual: solo mientras se edita ESTE equipo; si no, la
+                 tarjeta pinta su lectura por defecto -->
+            <template v-if="diagnosticoForms[equipo.id]" #diagnostico-contenido="{ equipo: eq }">
+              <div class="bg-white border border-amber-200 rounded-2xl p-4 space-y-3">
+                <p class="text-[11px] text-amber-700 font-semibold">
+                  Estás editando el texto que redactó la IA. Al guardar quedará marcado como revisado por docente.
+                </p>
+                <label class="block space-y-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Resumen</span>
+                  <textarea v-model="diagnosticoForms[eq.id].resumen" rows="4" maxlength="3000"
+                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                </label>
+                <label class="block space-y-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fortalezas <span class="normal-case font-semibold text-gray-400">(una por línea)</span></span>
+                  <textarea v-model="diagnosticoForms[eq.id].fortalezas" rows="4"
+                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                </label>
+                <label class="block space-y-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Áreas de mejora <span class="normal-case font-semibold text-gray-400">(una por línea)</span></span>
+                  <textarea v-model="diagnosticoForms[eq.id].areas_mejora" rows="4"
+                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                </label>
+                <label class="block space-y-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Valoración RA/CE</span>
+                  <textarea v-model="diagnosticoForms[eq.id].valoracion_ra_ce" rows="3" maxlength="3000"
+                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                </label>
+                <label class="block space-y-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Conclusión</span>
+                  <textarea v-model="diagnosticoForms[eq.id].conclusion" rows="2" maxlength="1000"
+                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                </label>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button @click="guardarDiagnostico(eq)"
+                          :disabled="guardandoDiagnostico[eq.id] || !diagnosticoForms[eq.id].resumen.trim()"
+                          class="px-3 py-1.5 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-colors
+                                 text-[10px] font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed">
+                    {{ guardandoDiagnostico[eq.id] ? 'Guardando…' : 'Guardar cambios' }}
+                  </button>
+                  <button @click="cancelarEdicionDiagnostico(eq)"
+                          :disabled="guardandoDiagnostico[eq.id]"
+                          class="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50
+                                 transition-colors text-[10px] font-black uppercase tracking-wider">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </template>
+
             <template #diagnostico-acciones="{ equipo: eq }">
               <p v-if="errorDiagnostico[eq.id]" class="text-xs text-red-500 font-semibold">{{ errorDiagnostico[eq.id] }}</p>
-              <div class="flex flex-wrap items-center gap-2">
+              <div v-if="!diagnosticoForms[eq.id]" class="flex flex-wrap items-center gap-2">
+                <!-- Destacado con halo: parpadea 3 veces lentamente cuando el botón entra en
+                     pantalla (y el modal está cerrado), una sola vez por equipo — ver
+                     marcarHaloVisto/activarHalosPendientes. Sin animación con reduced-motion. -->
+                <span v-if="eq.diagnostico_final" class="relative inline-flex shrink-0"
+                      v-al-ver="() => marcarHaloVisto(eq.id)">
+                  <span :class="['halo-diagnostico absolute inset-0 rounded-xl bg-emerald-400',
+                                 halosActivos.has(eq.id) && !halosTerminados.has(eq.id) ? 'activo' : '']"
+                        @animationend="terminarHalo(eq.id)"
+                        aria-hidden="true" />
+                  <button @click="verDiagnostico(eq)"
+                          class="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-200
+                                 hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Ver diagnóstico completo
+                  </button>
+                </span>
                 <button v-if="eq.diagnostico_final"
-                        @click="verDiagnostico(eq)"
-                        class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500 text-white
-                               hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
-                  Ver diagnóstico completo
+                        @click="editarDiagnostico(eq)"
+                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700
+                               hover:bg-amber-100 transition-colors text-[10px] font-black uppercase tracking-wider">
+                  ✏️ Editar manualmente
                 </button>
                 <button @click="generarDiagnostico(eq)"
                         :disabled="generandoDiagnostico[eq.id]"
-                        class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700
-                               hover:bg-emerald-100 transition-colors text-[10px] font-black uppercase tracking-wider
+                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700
+                               hover:bg-violet-100 transition-colors text-[10px] font-black uppercase tracking-wider
                                disabled:opacity-50 disabled:cursor-not-allowed">
-                  {{ generandoDiagnostico[eq.id] ? 'Generando…' : (eq.diagnostico_final ? 'Regenerar diagnóstico' : 'Generar diagnóstico final') }}
+                  ✨ {{ generandoDiagnostico[eq.id] ? 'La IA está redactando…' : (eq.diagnostico_final ? 'Regenerar diagnóstico con IA' : 'Generar diagnóstico con IA') }}
                 </button>
               </div>
+              <p v-if="!diagnosticoForms[eq.id]" class="text-[10px] text-gray-400">
+                La IA redacta el diagnóstico a partir de las fases, la evaluación RA/CE y las reflexiones del equipo.
+                Revísalo antes de compartirlo; puedes corregirlo a mano.
+              </p>
             </template>
           </EquipoResolucionCard>
         </section>
@@ -433,3 +649,21 @@ onMounted(cargar)
     <DiagnosticoModal :equipo="diagnosticoModalEquipo" :encuentro="encuentro" @close="diagnosticoModalEquipo = null" />
   </div>
 </template>
+
+<style scoped>
+/* Halo de "Ver diagnóstico completo": 3 pulsos lentos al activarse (clase .activo) y se
+   apaga (forwards deja opacity 0) */
+.halo-diagnostico {
+  opacity: 0;
+}
+.halo-diagnostico.activo {
+  animation: halo-diagnostico 1.8s ease-out 3 forwards;
+}
+@keyframes halo-diagnostico {
+  0%   { transform: scale(1);    opacity: 0.6; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .halo-diagnostico.activo { animation: none; }
+}
+</style>

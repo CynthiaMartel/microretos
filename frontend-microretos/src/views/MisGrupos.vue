@@ -83,10 +83,39 @@ function estadoFase(equipo, faseNum) {
   return { label: 'Pendiente', cls: 'bg-gray-100 text-gray-400' }
 }
 
+// Estado global de un equipo — mismo criterio que los contadores de arriba.
+function estadoEquipo(equipo) {
+  if (equipo.fases_completas === 5) return 'completado'
+  if (equipo.fase_actual === 0 && equipo.fases_completas === 0) return 'sin_iniciar'
+  return 'en_curso'
+}
+
+// `borde`: franja lateral de la fila del equipo, para distinguir el estado de un vistazo
+// antes de desplegarla.
 function estadoBadge(equipo) {
-  if (equipo.fases_completas === 5) return { label: 'Completado', cls: 'bg-emerald-100 text-emerald-700' }
-  if (equipo.fase_actual === 0 && equipo.fases_completas === 0) return { label: 'Sin iniciar', cls: 'bg-gray-100 text-gray-500' }
-  return { label: `${FASES_PROYECTO[equipo.fase_actual]?.label ?? ''}`, cls: 'bg-blue-100 text-blue-700' }
+  const estado = estadoEquipo(equipo)
+  if (estado === 'completado')  return { label: '✓ Completado', cls: 'bg-emerald-100 text-emerald-700', borde: 'border-l-emerald-500' }
+  if (estado === 'sin_iniciar') return { label: 'Sin iniciar', cls: 'bg-gray-100 text-gray-500', borde: 'border-l-gray-300' }
+  const fa = equipo.fase_actual
+  return { label: `En curso · F${fa} ${FASES_PROYECTO[fa]?.label ?? ''}`, cls: 'bg-blue-100 text-blue-700', borde: 'border-l-blue-500' }
+}
+
+// Resumen por encuentro para su cabecera (visible con el desplegable cerrado). Sobre
+// equiposDeGrupo para que respete la pestaña de estado activa, igual que "N equipo(s)".
+function resumenGrupo(g) {
+  const eqs = equiposDeGrupo(g)
+  return {
+    completados:  eqs.filter(e => estadoEquipo(e) === 'completado').length,
+    enCurso:      eqs.filter(e => estadoEquipo(e) === 'en_curso').length,
+    sinIniciar:   eqs.filter(e => estadoEquipo(e) === 'sin_iniciar').length,
+    diagnosticos: eqs.filter(e => e.diagnostico_final).length,
+  }
+}
+
+// Lleva al detalle del encuentro directamente a la sección de diagnóstico de ese equipo
+// (MisGruposDetalle lee ?equipo=&ver=diagnostico al cargar).
+function irADiagnostico(g, equipo) {
+  router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id }, query: { equipo: equipo.id, ver: 'diagnostico' } })
 }
 
 // Grupos con al menos un equipo que no ha avanzado (para destacarlos como alerta)
@@ -359,14 +388,39 @@ onMounted(cargar)
                 <span v-if="g.encuentro.fecha" class="font-bold text-gray-400">· {{ formatoFecha(g.encuentro.fecha) }}</span>
               </p>
               <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ equiposDeGrupo(g).length }} equipo(s)</p>
+              <!-- Estado de sus equipos sin tener que desplegar -->
+              <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span v-if="resumenGrupo(g).completados"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">
+                  ✓ {{ resumenGrupo(g).completados }} completado{{ resumenGrupo(g).completados === 1 ? '' : 's' }}
+                </span>
+                <span v-if="resumenGrupo(g).enCurso"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  {{ resumenGrupo(g).enCurso }} en curso
+                </span>
+                <span v-if="resumenGrupo(g).sinIniciar"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black">
+                  {{ resumenGrupo(g).sinIniciar }} sin iniciar
+                </span>
+                <span v-if="resumenGrupo(g).diagnosticos"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-emerald-300 text-emerald-700 text-[10px] font-black">
+                  📊 {{ resumenGrupo(g).diagnosticos }} diagnóstico{{ resumenGrupo(g).diagnosticos === 1 ? '' : 's' }} disponible{{ resumenGrupo(g).diagnosticos === 1 ? '' : 's' }}
+                </span>
+              </div>
               <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5" @click.stop>
                 <CodigoBadgeMini v-if="g.encuentro.codigo_clase" :code="g.encuentro.codigo_clase" variant="clase" @copiar="copiarCodigo" />
                 <CodigoBadgeMini v-if="g.encuentro.codigo_ia" :code="g.encuentro.codigo_ia" variant="ia" @copiar="copiarCodigo" />
               </div>
             </div>
+            <!-- Acceso principal al trabajo real de los equipos: color de marca sólido para que
+                 no se confunda con el desplegable (que solo muestra un resumen). -->
             <button @click.stop="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
-                    class="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors
-                           text-[10px] font-black text-gray-600 uppercase tracking-wider">
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-centros text-white shadow-md shadow-centros/20
+                           hover:bg-centros/90 hover:shadow-lg transition-all text-[10px] font-black uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
               Detalle equipos →
             </button>
             <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', encuentrosAbiertos.has(g.encuentro.id) ? 'rotate-180' : '']"
@@ -377,7 +431,7 @@ onMounted(cargar)
 
           <div v-if="encuentrosAbiertos.has(g.encuentro.id)" class="border-t border-gray-100 px-5 py-4 space-y-3">
             <div v-for="equipo in equiposDeGrupo(g)" :key="equipo.id"
-                 class="rounded-2xl border border-gray-100 overflow-hidden">
+                 :class="['rounded-2xl border border-gray-100 border-l-4 overflow-hidden', estadoBadge(equipo).borde]">
 
               <button @click="toggleEquipo(equipo.id)"
                       class="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left">
@@ -396,6 +450,11 @@ onMounted(cargar)
                     <p class="font-bold text-sm text-[#121212]">{{ equipo.nombre }}</p>
                     <span :class="['px-2 py-0.5 rounded-full text-[10px] font-black', estadoBadge(equipo).cls]">
                       {{ estadoBadge(equipo).label }}
+                    </span>
+                    <span v-if="equipo.fases_completas === 5"
+                          :class="['px-2 py-0.5 rounded-full text-[10px] font-black',
+                                   equipo.diagnostico_final ? 'bg-white border border-emerald-300 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                      {{ equipo.diagnostico_final ? '📊 Diagnóstico listo' : 'Diagnóstico pendiente' }}
                     </span>
                   </div>
                   <p v-if="equipo.proyecto" class="text-[11px] font-semibold text-gray-500 truncate">
@@ -419,6 +478,30 @@ onMounted(cargar)
               </button>
 
               <div v-if="equiposAbiertos.has(equipo.id)" class="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+                <!-- Aviso destacado de diagnóstico — lo primero del desplegable cuando el equipo
+                     ha terminado, con acceso directo a su sección en el detalle del encuentro. -->
+                <div v-if="equipo.fases_completas === 5"
+                     class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+                  <div class="flex items-start gap-3 flex-1 min-w-0">
+                    <span class="shrink-0 w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-base">📊</span>
+                    <div class="min-w-0">
+                      <p class="text-sm font-black text-emerald-800">Aquí puedes ver el diagnóstico del equipo</p>
+                      <p class="text-[11px] text-emerald-700/80 leading-snug">
+                        {{ equipo.diagnostico_final
+                            ? 'La IA ya lo ha redactado a partir de lo trabajado. Puedes revisarlo, editarlo o descargarlo en PDF.'
+                            : 'El equipo ha completado las 5 fases. Genera su diagnóstico final con IA a partir de lo trabajado.' }}
+                      </p>
+                    </div>
+                  </div>
+                  <button @click="irADiagnostico(g, equipo)"
+                          :class="['shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors',
+                                   equipo.diagnostico_final
+                                     ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-200'
+                                     : 'bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50']">
+                    {{ equipo.diagnostico_final ? 'Ver diagnóstico' : 'Ir a generar diagnóstico' }} →
+                  </button>
+                </div>
+
                 <!-- Deja claro que esto es solo un resumen de estado, no el contenido de las
                      fases — para eso hay que entrar en "Ver detalle de equipos". -->
                 <div class="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
@@ -453,8 +536,12 @@ onMounted(cargar)
                 </p>
 
                 <button @click="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
-                        class="w-full py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100
-                               transition-colors text-[10px] font-black text-gray-500 uppercase tracking-wider">
+                        class="w-full inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-centros text-white shadow-md shadow-centros/20
+                               hover:bg-centros/90 hover:shadow-lg transition-all text-xs font-black uppercase tracking-wider">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
                   Ver detalle de equipos →
                 </button>
               </div>
