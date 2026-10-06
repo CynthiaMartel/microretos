@@ -253,6 +253,25 @@ const router = createRouter({
 // Si no hay sesión → redirige a / con ?redirect=<ruta>
 // Si hay sesión pero el rol no tiene acceso → redirige a /
 router.beforeEach(async (to, _from, next) => {
+  // Con sesión iniciada, la home (/) y /login no tienen sentido: se va directo al panel
+  // (docente/admin/superadmin) o, en cuentas de empresa, a sus proyectos. Si llega un
+  // ?redirect interno (p. ej. desde un enlace /login?redirect=/retos/crear), se respeta.
+  if (to.name === 'home' || to.name === 'login') {
+    const auth = useAuthStore()
+    if (!auth.isInitialized) await auth.init()
+    if (auth.isAuthenticated) {
+      const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : ''
+      if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+        next(redirect)
+        return
+      }
+      if ([SA, AD, DO].includes(auth.userRole)) { next({ name: 'inicio-docente' }); return }
+      if (auth.userRole === EM) { next({ path: '/proyectos' }); return }
+    }
+    next()
+    return
+  }
+
   if (!to.meta.requiresAuth) {
     next()
     return
