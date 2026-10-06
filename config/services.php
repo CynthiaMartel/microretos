@@ -56,4 +56,11 @@ return [
         'password' => env('ADMIN_PASSWORD'),
     ],
 
+    // Contraseñas de las cuentas de prueba del DatabaseSeeder. Sin valor, el seeder
+    // no crea esas cuentas (nunca se usan contraseñas escritas en el código).
+    'seed' => [
+        'docente_password' => env('SEED_DOCENTE_PASSWORD'),
+        'empresa_password' => env('SEED_EMPRESA_PASSWORD'),
+    ],
+
 ];

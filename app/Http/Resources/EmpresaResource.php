@@ -12,6 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * Paso 2 del generador. Quedan fuera timestamps, soft-delete y campos internos
  * sin uso en cliente (proyecto_asociado, fecha_cita).
  */
+/** @mixin \App\Models\Empresa */
 class EmpresaResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -22,6 +23,9 @@ class EmpresaResource extends JsonResource
             'nombre_comercial'    => $this->nombre_comercial,
             'razon_social'        => $this->razon_social,
             'es_simulada'         => $this->es_simulada,
+            // Catálogo DuaLab (T2): plantilla compartida, o copia de una plantilla en un centro
+            'es_catalogo'         => (bool) $this->es_catalogo,
+            'copiada_de_id'       => $this->copiada_de_id,
             'sector'              => $this->sector,
             'actividad'           => $this->actividad,
             'tamano'              => $this->tamano,

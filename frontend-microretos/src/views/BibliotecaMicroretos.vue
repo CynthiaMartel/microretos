@@ -1,5 +1,6 @@
 <!-- Ruta: /retos (name: biblioteca). Antes vivía en /biblioteca — ver router/index.js. -->
 <script setup>
+import { formatearFecha } from '../utils/fechas.js';
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
@@ -1273,6 +1274,17 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                           d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                       </svg>
                       <span class="truncate">{{ reto.centro_educativo || 'Centro ND' }}</span>
+                    </p>
+                    <p v-if="reto.creado_en || reto.created_at" class="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                      Creado el {{ formatearFecha(reto.creado_en || reto.created_at) }}
+                    </p>
+                    <p v-if="reto.diagnostico_modificado_en_reto" class="text-amber-600 text-[10px] font-bold uppercase tracking-wider"
+                       title="Se generó con cambios en el diagnóstico que no se guardaron en la empresa">
+                      Diagnóstico ajustado para este reto
+                    </p>
+                    <p v-if="reto.diagnostico_desactualizado" class="text-amber-600 text-[10px] font-bold uppercase tracking-wider"
+                       title="La empresa ha actualizado su diagnóstico después de crear este reto">
+                      ⚠ Diagnóstico de la empresa actualizado después
                     </p>
                   </div>
                   <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-6 flex-1">

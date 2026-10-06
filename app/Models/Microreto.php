@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Microreto extends Model
 {
@@ -22,7 +24,7 @@ class Microreto extends Model
         'curso',
         'ciclo_id',         // FK (nueva)
         'ciclo',            // legacy — se mantiene hasta completar backfill
-        'modulo', 'multimodulo', 'duracion', 'es_simulado',
+        'modulo', 'multimodulo', 'ra_ce_origen', 'duracion', 'es_simulado',
         'visible_publico',
     ];
 
@@ -44,6 +46,7 @@ class Microreto extends Model
         'ods_sugeridos'      => 'array',
         'soft_skills'        => 'array',
         'evaluacion_oficial' => 'array',
+        'diagnostico_empresa' => 'array', // copia de la empresa al guardar (no fillable: la pone el backend)
         'tips_profesorado'   => 'array',
         'variantes'          => 'array',
         'es_simulado'        => 'boolean',
@@ -56,7 +59,8 @@ class Microreto extends Model
         return $this->belongsTo(Demo::class, 'demo_id');
     }
 
-    public function empresa()
+    /** @return BelongsTo<Empresa, $this> */
+    public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'empresa_id');
     }
@@ -66,7 +70,8 @@ class Microreto extends Model
         return $this->belongsTo(CicloFormativo::class, 'ciclo_id');
     }
 
-    public function microproyectos()
+    /** @return HasMany<Microproyecto, $this> */
+    public function microproyectos(): HasMany
     {
         return $this->hasMany(Microproyecto::class, 'microreto_id');
     }

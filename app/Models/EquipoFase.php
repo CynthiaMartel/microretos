@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EquipoFase extends Model
 {
@@ -24,7 +25,8 @@ class EquipoFase extends Model
         'nota_docente'             => 'decimal:2',
     ];
 
-    public function equipo()
+    /** @return BelongsTo<Equipo, $this> */
+    public function equipo(): BelongsTo
     {
         return $this->belongsTo(Equipo::class);
     }

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Encuentro extends Model
 {
@@ -37,24 +40,28 @@ class Encuentro extends Model
         'alumnados'        => 'array',
     ];
 
-    public function docente()
+    /** @return BelongsTo<User, $this> */
+    public function docente(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
 
-    public function microproyecto()
+    /** @return BelongsTo<Microproyecto, $this> */
+    public function microproyecto(): BelongsTo
     {
         return $this->belongsTo(Microproyecto::class);
     }
 
-    public function equipos()
+    /** @return HasMany<Equipo, $this> */
+    public function equipos(): HasMany
     {
         return $this->hasMany(\App\Models\Equipo::class);
     }
 
     // Docentes con los que el propietario ha compartido explícitamente este encuentro.
     // El pivot 'puede_editar' decide si el colaborador solo puede ver o también mutar.
-    public function colaboradores()
+    /** @return BelongsToMany<User, $this> */
+    public function colaboradores(): BelongsToMany
     {
         return $this->belongsToMany(\App\Models\User::class, 'encuentro_colaboradores')
             ->withPivot('puede_editar')

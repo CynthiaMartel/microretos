@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use App\Models\CicloFormativo;
 use App\Models\Modulo;
 use App\Models\ResultadoAprendizaje;
@@ -15,6 +17,7 @@ use App\Models\Microproyecto;
 use App\Http\Requests\AsociarEmpresasCentroRequest;
 use App\Http\Requests\StoreEmpresaRequest;
 use App\Http\Requests\UpdateEmpresaRequest;
+use App\Http\Requests\UpdateDiagnosticoEmpresaRequest;
 use App\Http\Resources\EmpresaResource;
 use App\Http\Resources\EmpresaDashboardResource;
 
@@ -565,9 +568,37 @@ class DatosFPController extends Controller
         'consecuencias'    => 'consecuencias',
         'restricciones'    => 'restricciones',
         'loQueNoQuieren'   => 'lo_que_no_quieren',
+        'expectativasAlumno' => 'expectativas_alumno',
         'esSimulada'       => 'es_simulada',
         'estadoContacto'   => 'estado_contacto',
     ];
+
+    private const COLUMNAS_DIAGNOSTICO = [
+        'dia_a_normal', 'friccion_area', 'friccion_problema',
+        'consecuencias', 'restricciones', 'lo_que_no_quieren', 'expectativas_alumno',
+    ];
+    // Listas guardadas como texto "a, b, c": se comparan como conjunto, no como texto,
+    // porque el frontend las parte y las vuelve a unir (puede cambiar espacios/orden).
+    private const COLUMNAS_LISTA = ['consecuencias', 'restricciones'];
+
+    /** @param array<string, mixed> $updateData */
+    private function cambiaDiagnostico(Empresa $empresa, array $updateData): bool
+    {
+        $normalizar = function (string $columna, mixed $valor): string {
+            $texto = trim((string) $valor);
+            if (!in_array($columna, self::COLUMNAS_LISTA, true)) return $texto;
+            $items = array_filter(array_map('trim', explode(',', $texto)), fn ($i) => $i !== '');
+            sort($items);
+            return implode(',', $items);
+        };
+        foreach (self::COLUMNAS_DIAGNOSTICO as $columna) {
+            if (!array_key_exists($columna, $updateData)) continue;
+            if ($normalizar($columna, $updateData[$columna]) !== $normalizar($columna, $empresa->getAttribute($columna))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** Traduce solo los campos validados que llegaron en la petición a columnas de BD. */
     private function columnasEmpresa(array $validated): array
@@ -685,29 +716,64 @@ class DatosFPController extends Controller
 
     public function actualizarEmpresa(UpdateEmpresaRequest $request, $id)
     {
+        /** @var Empresa|null $empresa  {id} es un único id, nunca un array */
         $empresa = Empresa::find($id);
 
         if (!$empresa) {
             return response()->json(['error' => 'Empresa no encontrada'], 404);
         }
 
+        /** @var \App\Models\User $auth  ruta bajo auth:sanctum + docente */
         $auth = $request->user();
-        if ($auth->isAdmin() && !$empresa->perteneceAlCentroDe($auth)) {
-            return response()->json(['error' => 'No autorizado: esta empresa no pertenece a tu centro educativo.'], 403);
+        $permiso = Gate::inspect('update', $empresa);
+        if ($permiso->denied()) {
+            Log::warning('Edición de empresa denegada.', ['empresa_id' => $empresa->id, 'user_id' => $auth->id]);
+            return response()->json(['error' => $permiso->message()], 403);
         }
 
         $validated = $request->validated();
+        // Vincular ciclos al centro es gestión del centro (admin/superadmin), no del docente.
+        if ($auth->isDocente()) {
+            unset($validated['ciclosIds'], $validated['estadoContacto']);
+        }
 
         // Solo se actualizan los campos que llegan: el Generador de Retos envía únicamente
         // el diagnóstico y no debe vaciar CIF, contacto, dirección, etc.
         $updateData = $this->columnasEmpresa($validated);
 
-        // Admin de centro: no puede mover la empresa a otro centro ni desvincularla del
-        // suyo — el campo se ignora y se mantiene el centro actual (que ya se comprobó
+        // Real ↔ ficticia solo lo cambia superadmin (DuaLab): si no, un admin podría marcar
+        // una empresa real como ficticia y editar después su diagnóstico protegido. Solo se
+        // bloquea si cambia: el modal de edición reenvía siempre el valor actual.
+        if (array_key_exists('es_simulada', $updateData)
+            && (bool) $updateData['es_simulada'] !== (bool) $empresa->es_simulada
+            && !$auth->isSuperAdmin()) {
+            Log::warning('Cambio de real/ficticia de empresa denegado.', [
+                'empresa_id' => $empresa->id,
+                'user_id'    => $auth->id,
+            ]);
+            return response()->json(['error' => 'Solo DuaLab puede cambiar si una empresa es real o ficticia. Ponte en contacto con DuaLab.'], 403);
+        }
+
+        // El diagnóstico de una empresa real solo lo cambia superadmin (DuaLab), igual que
+        // en PATCH /empresas/{id}/diagnostico. Solo se bloquea si de verdad cambia: el
+        // modal de "Base de datos" reenvía el diagnóstico intacto al editar el contacto.
+        if ($this->cambiaDiagnostico($empresa, $updateData)) {
+            $decision = Gate::inspect('actualizarDiagnostico', $empresa);
+            if ($decision->denied()) {
+                Log::warning('Edición de diagnóstico de empresa denegada.', [
+                    'empresa_id' => $empresa->id,
+                    'user_id'    => $request->user()?->id,
+                ]);
+                return response()->json(['error' => $decision->message()], 403);
+            }
+        }
+
+        // Admin de centro y docente: no pueden mover la empresa a otro centro ni desvincularla
+        // del suyo — el campo se ignora y se mantiene el centro actual (que ya se comprobó
         // arriba que es el propio). Solo superadmin puede reasignar libremente.
         $centroEducativoNombre = $empresa->centro_educativo;
         $centroId              = $empresa->centro_id;
-        if (!$auth->isAdmin() && array_key_exists('centroEducativo', $validated)) {
+        if ($auth->isSuperAdmin() && array_key_exists('centroEducativo', $validated)) {
             $centroEducativoNombre = $validated['centroEducativo'];
             $centroId = $centroEducativoNombre
                 ? CentroEducativo::firstOrCreate(['nombre' => $centroEducativoNombre])->id
@@ -728,6 +794,35 @@ class DatosFPController extends Controller
             'message' => 'Empresa actualizada correctamente',
             // Con familias cargadas: el generador inserta/reemplaza esta empresa en su
             // lista local y el filtro por familia la necesita sin recargar.
+            'empresa' => new EmpresaResource($empresa->load('familias:id,nombre')),
+        ]);
+    }
+
+    /**
+     * PATCH /empresas/{id}/diagnostico — el docente actualiza el diagnóstico (P1–P4) desde
+     * el Generador de Retos. Solo empresas ficticias de su centro (o cualquiera si es
+     * superadmin): ver EmpresaPolicy::actualizarDiagnostico.
+     */
+    public function actualizarDiagnosticoEmpresa(UpdateDiagnosticoEmpresaRequest $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        $empresa = Empresa::find($id);
+        if (!$empresa) {
+            return response()->json(['error' => 'Empresa no encontrada'], 404);
+        }
+
+        $decision = Gate::inspect('actualizarDiagnostico', $empresa);
+        if ($decision->denied()) {
+            Log::warning('Edición de diagnóstico de empresa denegada.', [
+                'empresa_id' => $empresa->id,
+                'user_id'    => $request->user()?->id,
+            ]);
+            return response()->json(['error' => $decision->message()], 403);
+        }
+
+        $empresa->update($this->columnasEmpresa($request->validated()));
+
+        return response()->json([
+            'message' => 'Diagnóstico actualizado',
             'empresa' => new EmpresaResource($empresa->load('familias:id,nombre')),
         ]);
     }

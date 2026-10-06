@@ -91,11 +91,17 @@ class StoreMicroretoRequest extends FormRequest
             'variantes'            => 'nullable|array',
             'variantes.*'          => 'nullable|string|max:2000',
             'nivel_grupo'          => 'nullable|string|max:100',
-            'curso'                => 'nullable|integer',
+            'curso'                => 'nullable|in:1,2,ambos_cursos', // columna varchar: 1, 2 o 'ambos_cursos'
             'ciclo_id'             => 'nullable|integer|exists:ciclos_formativos,id',
             'ciclo'                => 'nullable|string|max:255',
             'modulo'               => 'nullable|string|max:255',
             'multimodulo'          => 'nullable|boolean',
+            'ra_ce_origen'         => 'nullable|in:ia,docente,mixto',
+            'ra_ce_firma'          => 'nullable|string|size:64',
+            // Diagnóstico con el que se generó (si difería del guardado) + su firma de generar()
+            'diagnostico_usado'   => 'nullable|array',
+            'diagnostico_usado.*' => 'nullable|string|max:2000',
+            'diagnostico_firma'   => 'nullable|string|size:64',
             'duracion'             => 'nullable|string|max:100',
             'es_simulado'          => 'nullable|boolean',
         ];

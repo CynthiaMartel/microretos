@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use App\Models\MicroproyectoRecurso;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Microproyecto extends Model
 {
@@ -61,22 +63,26 @@ class Microproyecto extends Model
         });
     }
 
-    public function recursos()
+    /** @return HasMany<MicroproyectoRecurso, $this> */
+    public function recursos(): HasMany
     {
         return $this->hasMany(MicroproyectoRecurso::class)->orderBy('created_at');
     }
 
-    public function imagenPortada()
+    /** @return BelongsTo<MicroproyectoRecurso, $this> */
+    public function imagenPortada(): BelongsTo
     {
         return $this->belongsTo(MicroproyectoRecurso::class, 'imagen_portada_id');
     }
 
-    public function microreto()
+    /** @return BelongsTo<Microreto, $this> */
+    public function microreto(): BelongsTo
     {
         return $this->belongsTo(Microreto::class);
     }
 
-    public function encuentros()
+    /** @return HasMany<Encuentro, $this> */
+    public function encuentros(): HasMany
     {
         return $this->hasMany(Encuentro::class);
     }
@@ -142,22 +148,26 @@ class Microproyecto extends Model
         return $fechaInicio->copy()->addWeeks($totalClases * self::SEMANAS_POR_CLASE);
     }
 
-    public function empresa()
+    /** @return BelongsTo<Empresa, $this> */
+    public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);
     }
 
-    public function centroEducativo()
+    /** @return BelongsTo<CentroEducativo, $this> */
+    public function centroEducativo(): BelongsTo
     {
         return $this->belongsTo(CentroEducativo::class, 'centro_id');
     }
 
-    public function familia()
+    /** @return BelongsTo<Familia, $this> */
+    public function familia(): BelongsTo
     {
         return $this->belongsTo(Familia::class);
     }
 
-    public function cicloFormativo()
+    /** @return BelongsTo<CicloFormativo, $this> */
+    public function cicloFormativo(): BelongsTo
     {
         return $this->belongsTo(CicloFormativo::class, 'ciclo_id');
     }

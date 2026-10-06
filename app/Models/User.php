@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -17,13 +18,12 @@ class User extends Authenticatable
     const ROLE_EMPRESA    = 3;
     const ROLE_ADMIN      = 4;
 
+    // role, is_blocked y email_verified_at quedan fuera a propósito: son campos
+    // sensibles y solo se asignan de forma explícita (ver AdminUserController).
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
-        'is_blocked',
-        'email_verified_at',
         'centro_educativo_id',
         'empresa_id',
     ];
@@ -61,12 +61,14 @@ class User extends Authenticatable
     }
 
     // El superadmin siempre es operativo. Todos los demás necesitan activación y no estar bloqueados.
-    public function centroEducativo()
+    /** @return BelongsTo<CentroEducativo, $this> */
+    public function centroEducativo(): BelongsTo
     {
         return $this->belongsTo(\App\Models\CentroEducativo::class, 'centro_educativo_id');
     }
 
-    public function empresa()
+    /** @return BelongsTo<Empresa, $this> */
+    public function empresa(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Empresa::class, 'empresa_id');
     }

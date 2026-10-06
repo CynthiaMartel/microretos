@@ -1,5 +1,6 @@
 <!-- Ruta: /retos/:id (name: detalle-microreto). Antes vivía en /biblioteca/:id — ver router/index.js. -->
 <script setup>
+import { formatearFecha } from '../utils/fechas.js'
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import QRCode from 'qrcode';
@@ -351,6 +352,9 @@ async function copiarUrl() {
               <h3 class="text-base md:text-xl text-gray-500 font-medium leading-relaxed mb-8">
                 {{ reto.subtitulo }}
               </h3>
+              <p v-if="reto.creado_en" class="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">
+                Reto creado el {{ formatearFecha(reto.creado_en) }}
+              </p>
 
               <div class="flex flex-wrap gap-2 md:gap-3">
                 <span class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
@@ -498,9 +502,21 @@ async function copiarUrl() {
                   <h3 class="text-orange-700 font-black uppercase text-xs md:text-sm tracking-[0.15em]">
                     Datos recogidos de la empresa
                   </h3>
-                  <p class="text-[11px] text-orange-400 font-medium">Diagnóstico original, sin resumir por IA</p>
+                  <p class="text-[11px] text-orange-400 font-medium">
+                    <template v-if="reto.diagnostico_modificado_en_reto">Diagnóstico ajustado para este reto · no coincide con la ficha de la empresa</template>
+                    <template v-else>Diagnóstico original, sin resumir por IA</template><template v-if="reto.diagnostico_recogido_en"> · recogido el {{ formatearFecha(reto.diagnostico_recogido_en) }}</template>
+                  </p>
                 </div>
               </div>
+                <!-- La empresa cambió su diagnóstico después de crear el reto (solo lo recibe el personal) -->
+                <div v-if="reto.diagnostico_desactualizado" role="note"
+                     class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  <p class="text-xs text-amber-800 leading-relaxed">
+                    <strong>La empresa ha actualizado su diagnóstico después de crear este reto.</strong>
+                    Este reto se basa en la versión anterior, que es la que se muestra aquí.
+                  </p>
+                </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div v-if="reto.empresa.dia_a_normal" class="bg-white/70 rounded-xl p-4 border border-orange-100">
                   <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Su día a día</p>

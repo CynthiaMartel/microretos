@@ -60,6 +60,7 @@ class StoreEmpresaRequest extends FormRequest
             'consecuencias'    => 'nullable|string|max:2000',
             'restricciones'    => 'nullable|string|max:600',
             'loQueNoQuieren'   => 'nullable|string|max:500',
+            'expectativasAlumno' => 'nullable|string|max:800',
             'esSimulada'       => 'nullable|boolean',
             'estadoContacto'   => 'nullable|string|in:' . implode(',', self::ESTADOS_CONTACTO),
             // Obligatoria en el alta: toda empresa nueva nace con al menos una familia vinculada

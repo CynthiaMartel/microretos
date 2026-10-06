@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\AliasGenerator;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EquipoMiembro extends Model
 {
@@ -29,7 +30,8 @@ class EquipoMiembro extends Model
         });
     }
 
-    public function equipo()
+    /** @return BelongsTo<Equipo, $this> */
+    public function equipo(): BelongsTo
     {
         return $this->belongsTo(Equipo::class);
     }

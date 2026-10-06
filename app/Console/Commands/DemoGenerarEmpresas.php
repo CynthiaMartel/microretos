@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\InvocaControladoresReales;
 use App\Http\Controllers\MicroretoIAController;
-use App\Http\Requests\GenerarEmpresaFicticiaRequest;
 use App\Http\Requests\SimularInfoEmpresaRequest;
 use App\Models\CentroEducativo;
 use App\Models\Empresa;
@@ -13,7 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Genera empresas ficticias de demo reutilizando MicroretoIAController::generarEmpresaFicticia()
+ * Genera empresas ficticias de demo reutilizando EmpresaFicticiaIAService::generarDatosEmpresa()
  * (datos de la empresa) y ::simularInfoEmpresa() (diagnóstico: día a día, fricciones,
  * restricciones, expectativas) — los mismos prompts que usa el Generador de Retos real.
  *
@@ -35,9 +34,12 @@ class DemoGenerarEmpresas extends Command
     protected $signature = 'demo:generar-empresas
                             {--total=10 : Nº total de empresas simuladas que debe haber al terminar (acumulado, no por ejecución).}
                             {--limit=0 : Tope de empresas a generar en ESTA ejecución (0 = hasta completar --total).}
-                            {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste (ni IA ni escritura).}';
+                            {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste (ni IA ni escritura).}
+                            {--catalogo : Genera plantillas del catálogo DuaLab (sin centro, compartidas con todos los centros) en vez de empresas del centro DuaLab.}
+                            {--familias= : Ids de familia separados por coma para el reparto (por defecto: las 3 objetivo; con --catalogo, todas).}
+                            {--por-familia=0 : Con --catalogo: asegura N plantillas en CADA familia (solo crea las que falten). Sustituye a --total.}';
 
-    protected $description = 'Genera empresas ficticias de demo (con diagnóstico) repartidas entre las 3 familias objetivo, todas asociadas al centro DuaLab.';
+    protected $description = 'Genera empresas ficticias de demo (con diagnóstico): del centro DuaLab, o plantillas del catálogo DuaLab con --catalogo.';
 
     // Único centro al que se asocian las empresas ficticias — ver cabecera de la clase.
     private const CENTRO_ID = 10;
@@ -53,7 +55,7 @@ class DemoGenerarEmpresas extends Command
     // De cada 10 empresas, estas posiciones (índice global % 10) se dejan al criterio
     // libre de la IA; el resto (7 de 10) se fuerza a Micropyme/Pequeña — así se cumple
     // "la mayoría deben ser Micropyme o Pequeña" sin perder toda variedad de tamaños.
-    // generarEmpresaFicticia() no acepta un hint de tamaño en el prompt (no se toca el
+    // generarDatosEmpresa() no acepta un hint de tamaño en el prompt (no se toca el
     // controller), así que el forzado se hace aquí, después de recibir la respuesta.
     private const POSICIONES_TAMANO_LIBRE = [2, 5, 9];
 
@@ -67,16 +69,29 @@ class DemoGenerarEmpresas extends Command
             $this->warn('Modo DRY-RUN — no se llama a la IA ni se escribe nada. Relanza con --commit para generar de verdad.');
         }
 
-        $centro = CentroEducativo::find(self::CENTRO_ID);
-        if (!$centro) {
-            $this->error('No existe el centro educativo id=' . self::CENTRO_ID . ' (DuaLab). Abortando.');
+        // --catalogo: plantillas sin centro (T2). Si no, siempre el centro DuaLab (ver cabecera).
+        $catalogo = (bool) $this->option('catalogo');
+        $centro = null;
+        if (!$catalogo) {
+            $centro = CentroEducativo::find(self::CENTRO_ID);
+            if (!$centro) {
+                $this->error('No existe el centro educativo id=' . self::CENTRO_ID . ' (DuaLab). Abortando.');
+                return self::FAILURE;
+            }
+        }
+
+        $idsFamilias = $this->option('familias')
+            ? array_values(array_filter(array_map('intval', explode(',', (string) $this->option('familias')))))
+            : ($catalogo ? Familia::orderBy('id')->pluck('id')->all() : self::FAMILIAS_OBJETIVO);
+        if (!$idsFamilias) {
+            $this->error('No hay familias para el reparto. Revisa --familias. Abortando.');
             return self::FAILURE;
         }
 
-        $familias = Familia::whereIn('id', self::FAMILIAS_OBJETIVO)->get()->keyBy('id');
-        foreach (self::FAMILIAS_OBJETIVO as $familiaId) {
+        $familias = Familia::whereIn('id', $idsFamilias)->get()->keyBy('id');
+        foreach ($idsFamilias as $familiaId) {
             if (!$familias->has($familiaId)) {
-                $this->error("No existe la familia id={$familiaId}. Revisa FAMILIAS_OBJETIVO. Abortando.");
+                $this->error("No existe la familia id={$familiaId}. Revisa --familias / FAMILIAS_OBJETIVO. Abortando.");
                 return self::FAILURE;
             }
         }
@@ -85,31 +100,61 @@ class DemoGenerarEmpresas extends Command
         // empresas de prueba ajenas a este comando (creadas manualmente, de otros centros)
         // — contar solo por el flag sobrecontaría el objetivo y command5 podría llegar a
         // borrar datos que no son suyos (ver DemoBorrarFicticios).
-        $yaExistentes = Empresa::where('es_simulada', true)->where('centro_id', self::CENTRO_ID)->count();
-        $pendientes   = max(0, $total - $yaExistentes);
-        $aGenerar     = $limite > 0 ? min($limite, $pendientes) : $pendientes;
+        $yaExistentes = $catalogo
+            ? Empresa::where('es_catalogo', true)->count()
+            : Empresa::where('es_simulada', true)->where('centro_id', self::CENTRO_ID)->count();
+        // Plan: qué familia toca en cada empresa a generar.
+        $porFamilia = $catalogo ? max(0, (int) $this->option('por-familia')) : 0;
+        if ($porFamilia > 0) {
+            // --por-familia: las plantillas que faltan en cada familia para llegar a N.
+            $existentesPorFamilia = DB::table('empresa_familia')
+                ->join('empresas', 'empresas.id', '=', 'empresa_familia.empresa_id')
+                ->where('empresas.es_catalogo', true)->whereNull('empresas.deleted_at')
+                ->whereIn('empresa_familia.familia_id', $idsFamilias)
+                ->groupBy('empresa_familia.familia_id')
+                ->pluck(DB::raw('COUNT(*)'), 'empresa_familia.familia_id');
+            $plan = [];
+            foreach ($idsFamilias as $familiaId) {
+                $faltan = max(0, $porFamilia - (int) ($existentesPorFamilia[$familiaId] ?? 0));
+                for ($k = 0; $k < $faltan; $k++) $plan[] = $familiaId;
+            }
+            $pendientes = count($plan);
+        } else {
+            $pendientes = max(0, $total - $yaExistentes);
+            $plan = [];
+            for ($k = 0; $k < $pendientes; $k++) $plan[] = $idsFamilias[($yaExistentes + $k) % count($idsFamilias)];
+        }
+        $aGenerar = $limite > 0 ? min($limite, $pendientes) : $pendientes;
 
         if ($aGenerar === 0) {
-            $this->info("Ya hay {$yaExistentes} empresas simuladas de las {$total} objetivo. Nada que hacer (sube --total si quieres más).");
+            $this->info($porFamilia > 0
+                ? "Todas las familias tienen ya al menos {$porFamilia} plantilla(s) en el catálogo. Nada que hacer."
+                : "Ya hay {$yaExistentes} de las {$total} objetivo. Nada que hacer (sube --total si quieres más).");
             return self::SUCCESS;
         }
 
-        $this->info("Empresas simuladas existentes: {$yaExistentes}. Objetivo total: {$total}. Generando {$aGenerar} en esta ejecución.");
+        $tipo = $catalogo ? 'Plantillas del catálogo DuaLab' : 'Empresas simuladas del centro DuaLab';
+        $objetivo = $porFamilia > 0 ? "{$porFamilia} por familia" : "{$total} en total";
+        $this->info("{$tipo} existentes: {$yaExistentes}. Objetivo: {$objetivo}. Faltan {$pendientes}; se generan {$aGenerar} en esta ejecución.");
         $this->newLine();
 
         $creadas = 0;
         for ($i = 0; $i < $aGenerar; $i++) {
             $indiceGlobal = $yaExistentes + $i;
-            $familiaId    = self::FAMILIAS_OBJETIVO[$indiceGlobal % count(self::FAMILIAS_OBJETIVO)];
+            $familiaId    = $plan[$i];
             $familia      = $familias[$familiaId];
+            if (!$familia) {
+                $this->error("  ✗ La familia {$familiaId} no existe en BD; se omite.");
+                continue;
+            }
             $forzarTamanoPequeno = !in_array($indiceGlobal % 10, self::POSICIONES_TAMANO_LIBRE, true);
 
             $this->line(sprintf(
                 '[%d] Empresa a generar → familia: %s | centro: %s (id %d) | tamaño: %s',
                 $indiceGlobal,
                 $familia->nombre,
-                $centro->nombre,
-                self::CENTRO_ID,
+                $centro ? $centro->nombre : 'Catálogo DuaLab',
+                $centro ? self::CENTRO_ID : 0,
                 $forzarTamanoPequeno ? 'forzado a Micropyme/Pequeña' : 'libre criterio de la IA'
             ));
 
@@ -118,12 +163,8 @@ class DemoGenerarEmpresas extends Command
             }
 
             try {
-                $reqEmpresa = $this->peticion(GenerarEmpresaFicticiaRequest::class, [
-                    'centroId'  => self::CENTRO_ID,
-                    'familiaId' => $familiaId,
-                ]);
-                $respuestaEmpresa = app(MicroretoIAController::class)->generarEmpresaFicticia($reqEmpresa);
-                $datosEmpresa     = json_decode($respuestaEmpresa->getContent(), true);
+                // Mismo prompt que «Crear empresa ficticia con IA» del generador.
+                $datosEmpresa = app(\App\Services\EmpresaFicticiaIAService::class)->generarDatosEmpresa($centro, $familia);
 
                 if (!is_array($datosEmpresa) || empty($datosEmpresa['nombre_comercial'])) {
                     $this->error('  ✗ La IA no devolvió una empresa válida: ' . json_encode($datosEmpresa));
@@ -160,12 +201,12 @@ class DemoGenerarEmpresas extends Command
                     $consecuencias->push($diagnostico['otraConsecuencia']);
                 }
 
-                $empresa = Empresa::create([
+                $empresa = new Empresa([
                     'nombre_comercial'    => $datosEmpresa['nombre_comercial'],
                     'razon_social'        => $datosEmpresa['razon_social'] ?? null,
                     'cif'                 => $datosEmpresa['cif'] ?? null,
-                    'centro_educativo'    => $centro->nombre, // legacy, mismo criterio que guardarEmpresa
-                    'centro_id'           => self::CENTRO_ID,
+                    'centro_educativo'    => $centro?->nombre, // legacy, mismo criterio que guardarEmpresa
+                    'centro_id'           => $centro?->id,
                     'sector'              => $datosEmpresa['sector'] ?? null,
                     'tamano'              => $datosEmpresa['tamano'] ?? null,
                     'web'                 => $datosEmpresa['web'] ?? null,
@@ -185,10 +226,13 @@ class DemoGenerarEmpresas extends Command
                     'consecuencias'       => $consecuencias->implode(', '),
                     'expectativas_alumno' => $diagnostico['expectativasAlumno'] ?? null,
                     // Empresa ficticia "activa": es la que va a tener retos/proyectos generados
-                    // encima, tiene más sentido narrativo que "pendiente de llamar".
-                    'estado_contacto'     => 'En colaboración activa',
+                    // encima, tiene más sentido narrativo que "pendiente de llamar". Las
+                    // plantillas del catálogo no tienen contacto propio: sin estado.
+                    'estado_contacto'     => $catalogo ? null : 'En colaboración activa',
                     'es_simulada'         => true,
                 ]);
+                $empresa->es_catalogo = $catalogo; // no fillable: solo lo fija el backend
+                $empresa->save();
 
                 // Mismo patrón exacto que DatosFPController::guardarEmpresa: familia_id normalizada
                 // + campo legacy 'familia' (texto) en la tabla pivote.

@@ -1,0 +1,18 @@
+# Falsos positivos revisados a mano (2026-10-02). Formato: huella de gitleaks.
+# NO añadir aquí la BLOCKCHAIN_PRIVATE_KEY de .github/workflows/testing.yml: es una clave real pendiente de rotar.
+# nombre de clave de caché
+fa84a000e88a0ee355deca8559b7e2ee3a6aff43:app/Http/Controllers/EquipoGestionController.php:generic-api-key:122
+# nombre de clave de caché
+e817c4c04b5de4501dde6fd1c3b4ca4fb01592e5:app/Http/Controllers/EquipoPublicoController.php:generic-api-key:326
+# nombre de clave de caché
+e817c4c04b5de4501dde6fd1c3b4ca4fb01592e5:app/Http/Controllers/EquipoPublicoController.php:generic-api-key:392
+# credencial por defecto del SonarQube efímero del CI / secret de GitHub
+6294bd09994311ec6c7c517eb28f98e7ccc1c127:.github/workflows/security-report.yml:curl-auth-user:65
+# credencial por defecto del SonarQube efímero del CI / secret de GitHub
+0c2178f4d20ecfb4ee6fa62883be0fdeef80bccf:.github/workflows/security-report.yml:curl-auth-user:61
+# cabecera de ejemplo en informe HTML de ZAP/dependency-check
+0c2178f4d20ecfb4ee6fa62883be0fdeef80bccf:security-reports/2026-05-15-ZAP-Report-.html:generic-api-key:16507
+# cabecera de ejemplo en informe HTML de ZAP/dependency-check
+0c2178f4d20ecfb4ee6fa62883be0fdeef80bccf:security-reports/dependency-check-report.html:generic-api-key:152443
+# cabecera de ejemplo en informe HTML de ZAP/dependency-check
+0c2178f4d20ecfb4ee6fa62883be0fdeef80bccf:security-reports/dependency-check-report.html:generic-api-key:152445

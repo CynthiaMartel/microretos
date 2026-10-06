@@ -1,0 +1,11 @@
+# Larastan nivel 8 (ver CI en ~/.claude/CLAUDE.md). phpstan-baseline.neon congela los
+# errores que ya existían al instalarlo (2026-10-02): el código nuevo debe pasar limpio.
+# Al corregir errores antiguos, regenerar con: vendor/bin/phpstan analyse --generate-baseline
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 8
+    paths:
+        - app/

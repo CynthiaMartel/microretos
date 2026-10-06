@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MicroproyectoRecurso extends Model
 {
@@ -13,7 +14,8 @@ class MicroproyectoRecurso extends Model
         'url', 'public_id', 'resource_type', 'mime', 'size',
     ];
 
-    public function microproyecto()
+    /** @return BelongsTo<Microproyecto, $this> */
+    public function microproyecto(): BelongsTo
     {
         return $this->belongsTo(Microproyecto::class);
     }

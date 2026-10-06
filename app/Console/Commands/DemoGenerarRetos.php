@@ -525,6 +525,8 @@ class DemoGenerarRetos extends Command
                         'duracion'           => $duracion,
                         'es_simulado'        => true,
                     ]);
+                    // Copia del diagnóstico de la empresa en el reto (no fillable: se fuerza aquí).
+                    $microreto->forceFill(['diagnostico_empresa' => \App\Services\MicroretoFichaService::copiaDiagnostico($empresa)])->save();
 
                     $generados++;
                     $aviso = !empty($reto['aviso_cobertura_incompleta']) ? ' [aviso: cobertura de currículo incompleta]' : '';

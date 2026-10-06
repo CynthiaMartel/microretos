@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AsociarCentroUsuarioRequest;
 use App\Http\Requests\StoreAdminUserRequest;
 use App\Http\Requests\UpdateAdminUserRequest;
 use App\Models\User;
@@ -42,28 +43,31 @@ class AdminUserController extends Controller
 
         if ($auth->isAdmin()) {
             // Admin de centro: solo puede crear docentes, asignados automáticamente a su centro
-            $user = User::create([
+            $user = new User([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
                 'password'            => Hash::make($data['password']),
-                'role'                => User::ROLE_DOCENTE,
-                'is_blocked'          => false,
-                'email_verified_at'   => null,
                 'centro_educativo_id' => $auth->centro_educativo_id,
             ]);
+            $user->role = User::ROLE_DOCENTE;
         } else {
             // Superadmin: puede crear docente (2), empresa (3) o admin de centro (4)
-            $user = User::create([
+            $user = new User([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
                 'password'            => Hash::make($data['password']),
-                'role'                => (int) $data['role'],
-                'is_blocked'          => false,
-                'email_verified_at'   => null,
                 'centro_educativo_id' => $data['centro_educativo_id'] ?? null,
                 'empresa_id'          => $data['empresa_id'] ?? null,
             ]);
+            /** @var int<0, max> $rol  StoreAdminUserRequest restringe role a 2|3|4 */
+            $rol = (int) $data['role'];
+            $user->role = $rol;
         }
+
+        // Campos sensibles fuera de $fillable: se asignan explícitamente.
+        $user->is_blocked        = false;
+        $user->email_verified_at = null;
+        $user->save();
 
         return response()->json([
             'success' => true,
@@ -76,7 +80,8 @@ class AdminUserController extends Controller
     {
         if ($error = $this->checkScope($request->user(), $user)) return $error;
 
-        $user->update(['email_verified_at' => now()]);
+        $user->email_verified_at = now();
+        $user->save();
 
         return response()->json(['success' => true, 'data' => $this->formatUser($user->fresh())]);
     }
@@ -85,7 +90,8 @@ class AdminUserController extends Controller
     {
         if ($error = $this->checkScope($request->user(), $user)) return $error;
 
-        $user->update(['is_blocked' => !$user->is_blocked]);
+        $user->is_blocked = !$user->is_blocked;
+        $user->save();
 
         if ($user->is_blocked) {
             DB::table('sessions')->where('user_id', $user->id)->delete();
@@ -95,17 +101,15 @@ class AdminUserController extends Controller
     }
 
     // Solo accesible por superadmin (middleware en ruta)
-    public function asociarCentro(Request $request, User $user): JsonResponse
+    public function asociarCentro(AsociarCentroUsuarioRequest $request, User $user): JsonResponse
     {
         if (!$user->isDocente() && !$user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'Solo los docentes y administradores de centro pueden tener un centro asociado.'], 422);
         }
 
-        $data = $request->validate([
-            'centro_educativo_id' => 'nullable|exists:centro_educativo,id',
-        ]);
+        $data = $request->validated();
 
-        $user->update(['centro_educativo_id' => $data['centro_educativo_id']]);
+        $user->update(['centro_educativo_id' => $data['centro_educativo_id'] ?? null]);
 
         return response()->json(['success' => true, 'data' => $this->formatUser($user->fresh()->load('centroEducativo'))]);
     }

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use App\Models\Encuentro;
 use App\Support\CodigoLegible;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Equipo extends Model
 {
@@ -42,37 +44,44 @@ class Equipo extends Model
 
     // ── Relaciones ────────────────────────────────────────────────────────────
 
-    public function microproyecto()
+    /** @return BelongsTo<Microproyecto, $this> */
+    public function microproyecto(): BelongsTo
     {
         return $this->belongsTo(Microproyecto::class);
     }
 
-    public function encuentro()
+    /** @return BelongsTo<Encuentro, $this> */
+    public function encuentro(): BelongsTo
     {
         return $this->belongsTo(Encuentro::class);
     }
 
-    public function miembros()
+    /** @return HasMany<EquipoMiembro, $this> */
+    public function miembros(): HasMany
     {
         return $this->hasMany(EquipoMiembro::class)->orderBy('id');
     }
 
-    public function fases()
+    /** @return HasMany<EquipoFase, $this> */
+    public function fases(): HasMany
     {
         return $this->hasMany(EquipoFase::class)->orderBy('numero_fase');
     }
 
-    public function tareas()
+    /** @return HasMany<EquipoTarea, $this> */
+    public function tareas(): HasMany
     {
         return $this->hasMany(EquipoTarea::class)->orderBy('orden')->orderBy('id');
     }
 
-    public function reflexiones()
+    /** @return HasMany<EquipoReflexion, $this> */
+    public function reflexiones(): HasMany
     {
         return $this->hasMany(EquipoReflexion::class)->orderBy('created_at');
     }
 
-    public function prototipos()
+    /** @return HasMany<EquipoPrototipo, $this> */
+    public function prototipos(): HasMany
     {
         return $this->hasMany(EquipoPrototipo::class)->orderBy('created_at');
     }

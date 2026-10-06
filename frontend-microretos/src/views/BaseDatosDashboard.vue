@@ -4,6 +4,7 @@ import { useRouter, onBeforeRouteUpdate } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js'
 import InsertModifyEmpresa from '../components/InsertModifyEmpresa.vue'
+import CrearEmpresaFicticiaIA from '../components/CrearEmpresaFicticiaIA.vue'
 import CentroEducativoModal from '../components/CentroEducativoModal.vue'
 import EliminarCentroModal from '../components/EliminarCentroModal.vue'
 import EliminarEmpresaModal from '../components/EliminarEmpresaModal.vue'
@@ -170,6 +171,27 @@ async function pedirNuevaEmpresa() {
 }
 function confirmarNuevaEmpresa() { mostrarConfirmNuevaEmpresa.value = false; mostrarNuevaEmpresa.value = true }
 
+// ─── Empresa ficticia con IA (flujo único, mismo componente que el Generador) ─────
+// Superadmin elige centro o catálogo DuaLab; la propuesta se revisa antes de guardarla.
+const mostrarFicticiaIA = ref(false)
+const nombresCentros = computed(() => centros.value.map(c => c.nombre).filter(Boolean).sort((a, b) => a.localeCompare(b)))
+async function pedirFicticiaIA() {
+  if (!await dbSecurity.requireDbSecurity()) return
+  mostrarFicticiaIA.value = true
+}
+// Desde el modal «Nueva empresa» → «Crear empresa ficticia con IA» (la seguridad ya se pidió).
+function abrirFicticiaIADesdeModal() {
+  mostrarNuevaEmpresa.value = false
+  mostrarFicticiaIA.value = true
+}
+function onFicticiaIAGuardada(empresa, { paraCatalogo }) {
+  mostrarFicticiaIA.value = false
+  mostrarSnack(paraCatalogo
+    ? `"${empresa.nombre_comercial}" añadida al catálogo DuaLab.`
+    : `"${empresa.nombre_comercial}" creada correctamente.`, 'ok')
+  cargarDatos()
+}
+
 // ─── Modal EDITAR ─────────────────────────────────────────
 const mostrarEditarEmpresa = ref(false)
 const empresaAEditar       = ref(null)
@@ -254,9 +276,22 @@ const todosCentros = computed(() => {
 })
 
 // Empresas sin centro (se muestran en la sección huérfanas, fuera del acordeón)
+// Catálogo DuaLab (T2): plantillas sin centro, compartidas y de solo lectura para los centros.
+// Se cuentan sus copias (empresas de centro con copiada_de_id) para ver cuánto se usan.
+const plantillasCatalogo = computed(() => {
+  const q = busqueda.value.toLowerCase().trim()
+  const copias = {}
+  for (const e of empresas.value) if (e.copiada_de_id) copias[e.copiada_de_id] = (copias[e.copiada_de_id] || 0) + 1
+  return empresas.value
+    .filter(e => e.es_catalogo && (!q || e.nombre_comercial?.toLowerCase().includes(q) || e.sector?.toLowerCase().includes(q)))
+    .map(e => ({ ...e, num_copias: copias[e.id] || 0 }))
+    .sort((a, b) => (a.nombre_comercial || '').localeCompare(b.nombre_comercial || ''))
+})
+
 const empresasHuerfanas = computed(() => {
   const q = busqueda.value.toLowerCase().trim()
   return empresas.value.filter(e => {
+    if (e.es_catalogo) return false                        // plantilla del catálogo: sin centro a propósito
     if (e.centro_educativo || e.centro_id) return false   // tiene centro → no es huérfana
     if (filtroCentro.value) return false                  // filtro de centro activo → ocultarlas
     if (q) {
@@ -319,6 +354,7 @@ const datosPorCentro = computed(() => {
 
   // 2. Incorporar empresas filtradas (incluyendo centros legacy sin normalizar)
   for (const e of empresasFiltradas.value) {
+    if (e.es_catalogo) continue // las plantillas del catálogo tienen su propia sección
     const centroNombre = e.centro_educativo || '— Sin centro asignado —'
     if (!mapa[centroNombre]) mapa[centroNombre] = { id: null, familias: {} }
     const familias = e.familias_nombres?.length ? e.familias_nombres : ['— Sin familia asignada —']
@@ -861,6 +897,21 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   d="M12 4v16m8-8H4"/>
               </svg>
               Nueva empresa
+            </button>
+
+            <!-- Empresa ficticia con IA: centro o catálogo DuaLab, con revisión antes de guardar -->
+            <button
+              @click="pedirFicticiaIA"
+              :disabled="cargando"
+              class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
+                     bg-[#1F2937] text-white hover:bg-[#374151] transition-all duration-200 shadow-sm
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+              </svg>
+              Empresa ficticia con IA
             </button>
 
             <!-- Botón recargar -->
@@ -1651,6 +1702,53 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         </div>
       </div>
 
+      <!-- ══════════════ CATÁLOGO DUALAB (plantillas compartidas) ══════════════════ -->
+      <Transition name="expand">
+        <div
+          v-if="!cargando && !errorCarga && plantillasCatalogo.length > 0 && !filtroCentro"
+          class="mt-6 rounded-[1.75rem] border border-[#1F2937]/15 bg-[#1F2937]/5 overflow-hidden"
+        >
+          <div class="flex items-center gap-4 px-6 py-5 border-b border-[#1F2937]/10">
+            <div class="w-10 h-10 rounded-2xl bg-[#1F2937] flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h2 class="font-black text-lg text-azul-noche">Catálogo DuaLab</h2>
+              <p class="text-xs text-gray-500 font-medium mt-0.5">
+                {{ plantillasCatalogo.length }} {{ plantillasCatalogo.length === 1 ? 'plantilla' : 'plantillas' }}
+                ficticias compartidas con todos los centros · Solo lectura para los centros: las usan a través de una copia
+              </p>
+            </div>
+          </div>
+          <div>
+            <div v-for="empresa in plantillasCatalogo" :key="empresa.id"
+                 class="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-[#1F2937]/10 last:border-b-0">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-sm text-[#1F2937] break-words">{{ empresa.nombre_comercial }}</span>
+                  <span class="text-[10px] font-black uppercase tracking-wider bg-[#1F2937] text-white px-2 py-0.5 rounded-full shrink-0">Plantilla</span>
+                  <span v-if="empresa.sector" class="text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">{{ empresa.sector }}</span>
+                  <span v-if="empresa.tamano" class="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full shrink-0">{{ empresa.tamano }}</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                  {{ (empresa.familias_nombres || []).join(', ') || 'Sin familia' }}
+                  · {{ empresa.num_copias === 0 ? 'Ningún centro la usa todavía' : `Usada por ${empresa.num_copias} ${empresa.num_copias === 1 ? 'centro' : 'centros'}` }}
+                </p>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <button @click="pedirEdicion(empresa)"
+                  class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Editar</button>
+                <button @click="pedirEliminacion(empresa)"
+                  class="px-4 py-2 rounded-xl border border-red-200 bg-white text-xs font-bold text-red-500 hover:bg-red-50 transition-all">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
       <!-- ══════════════ EMPRESAS HUÉRFANAS ══════════════════ -->
       <Transition name="expand">
         <div
@@ -2181,7 +2279,25 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       :elevar-z-index="mostrarNuevoCentro || mostrarEditarCentro"
       @empresa-creada="onEmpresaCreada"
       @empresa-actualizada="onEmpresaActualizada"
+      @crear-con-ia="abrirFicticiaIADesdeModal"
     />
+
+    <!-- ══════════════ MODAL: EMPRESA FICTICIA CON IA ══════════════ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="mostrarFicticiaIA"
+             class="fixed inset-0 z-[10060] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div class="bg-white rounded-[2rem] shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-gray-100 my-auto">
+            <CrearEmpresaFicticiaIA
+              :familias="familiasProfesionales"
+              :centros="nombresCentros"
+              :selecciona-al-guardar="false"
+              @guardada="onFicticiaIAGuardada"
+              @cerrar="mostrarFicticiaIA = false" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- ════════════ MODAL: CONFIRMAR EDICIÓN DE ESTADO ════ -->
     <Teleport to="body">

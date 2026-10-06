@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DatosFPController;
 use App\Http\Controllers\MicroretoIAController;
+use App\Http\Controllers\EmpresaFicticiaController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\MicroretoTokenController;
@@ -184,15 +185,15 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Empresas — lectura (propio centro para docente/admin) para todos los roles autenticados.
-    // Alta/edición/estado: admin (acotado a su propio centro, ver DatosFPController) o superadmin
+    // Alta/estado: admin (acotado a su propio centro, ver DatosFPController) o superadmin
     // — se usa tanto desde "Base de datos" como desde el alta inline en el Generador de Retos.
+    // La edición (PUT) está en el grupo 'docente': la acota EmpresaPolicy::update.
     // El dashboard global (todos los centros) y el borrado son solo superadmin: es catálogo
     // cross-centro, no trabajo del día a día de un centro concreto.
     Route::get('/empresas',                [DatosFPController::class, 'getEmpresas']);
     Route::get('/empresas/{id}/familias',  [DatosFPController::class, 'getFamiliasPorEmpresa']);
     Route::middleware('admin')->group(function () {
         Route::post('/empresas',               [DatosFPController::class, 'guardarEmpresa']);
-        Route::put('/empresas/{id}',           [DatosFPController::class, 'actualizarEmpresa']);
         Route::patch('/empresas/{id}/estado',  [DatosFPController::class, 'actualizarEstadoEmpresa']);
     });
     Route::middleware('superadmin')->group(function () {
@@ -207,8 +208,38 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('throttle:5,1')->group(function () {
             Route::post('/generar-microreto',        [MicroretoIAController::class, 'generar']);
             Route::post('/simular-info-empresa',     [MicroretoIAController::class, 'simularInfoEmpresa']);
-            Route::post('/generar-empresa-ficticia', [MicroretoIAController::class, 'generarEmpresaFicticia']);
+            // Empresa ficticia completa (datos + diagnóstico) desde el Generador: la IA genera
+            // una propuesta que el usuario revisa antes de guardarla (ver rutas de abajo).
+            Route::post('/empresas/ficticia-ia/propuesta', [EmpresaFicticiaController::class, 'propuesta']);
         });
+
+        // Confirmar (guardar) o descartar la propuesta de empresa ficticia generada con IA.
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::post('/empresas/ficticia-ia',                     [EmpresaFicticiaController::class, 'store']);
+            Route::get('/empresas/ficticia-ia/propuesta/{token}',    [EmpresaFicticiaController::class, 'verPropuesta'])
+                ->whereUuid('token');
+            Route::delete('/empresas/ficticia-ia/propuesta/{token}', [EmpresaFicticiaController::class, 'descartar'])
+                ->whereUuid('token');
+        });
+
+        // Catálogo DuaLab de empresas ficticias (T2): lectura y copia al propio centro.
+        // Rutas específicas antes que /empresas/{id}/... (no colisionan: prefijo 'catalogo').
+        Route::get('/empresas/catalogo',             [EmpresaFicticiaController::class, 'catalogo']);
+        Route::post('/empresas/catalogo/{id}/usar',  [EmpresaFicticiaController::class, 'usarEnCentro'])
+            ->whereNumber('id')
+            ->middleware('throttle:30,1');
+
+        // Datos de ficha de una empresa: docente solo sus ficticias, admin las de su centro,
+        // superadmin todas (EmpresaPolicy::update). Alta y estado siguen siendo de admin.
+        Route::put('/empresas/{id}', [DatosFPController::class, 'actualizarEmpresa'])
+            ->whereNumber('id')
+            ->middleware('throttle:30,1');
+
+        // Diagnóstico de empresa desde el Generador (P1–P4): solo ficticias de su centro,
+        // las reales están protegidas (ver EmpresaPolicy::actualizarDiagnostico).
+        Route::patch('/empresas/{id}/diagnostico', [DatosFPController::class, 'actualizarDiagnosticoEmpresa'])
+            ->whereNumber('id')
+            ->middleware('throttle:30,1');
 
         // Guardado y borrado de microretos
         Route::post('/guardar-microreto-bd',    [MicroretoIAController::class, 'guardarEnBD']);

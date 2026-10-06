@@ -52,34 +52,33 @@ class DatabaseSeeder extends Seeder
     );
 
     // Admin — credenciales desde .env
-    \App\Models\User::updateOrCreate(
-        ['email' => config('services.admin.email')],
-        [
+    // role no es asignable en masa (User::$fillable): se asigna explícitamente.
+    \App\Models\User::firstOrNew(['email' => config('services.admin.email')])
+        ->forceFill([
             'name'     => 'Administrador DuaLab',
             'password' => bcrypt(config('services.admin.password')),
             'role'     => \App\Models\User::ROLE_SUPERADMIN,
-        ]
-    );
+        ])
+        ->save();
 
-    // Docente de prueba
-    \App\Models\User::updateOrCreate(
-        ['email' => 'docente@dualab.es'],
-        [
-            'name'     => 'Docente DuaLab',
-            'password' => bcrypt('Docente2024!'),
-            'role'     => \App\Models\User::ROLE_DOCENTE,
-        ]
-    );
-
-    // Empresa de prueba
-    \App\Models\User::updateOrCreate(
-        ['email' => 'empresa@dualab.com'],
-        [
-            'name'     => 'Empresa DuaLab',
-            'password' => bcrypt('Empresa2024!'),
-            'role'     => \App\Models\User::ROLE_EMPRESA,
-        ]
-    );
+    // Cuentas de prueba — contraseñas desde .env (SEED_*_PASSWORD); sin valor, no se crean.
+    $cuentasPrueba = [
+        ['email' => 'docente@dualab.es',  'name' => 'Docente DuaLab', 'role' => \App\Models\User::ROLE_DOCENTE, 'password' => config('services.seed.docente_password')],
+        ['email' => 'empresa@dualab.com', 'name' => 'Empresa DuaLab', 'role' => \App\Models\User::ROLE_EMPRESA, 'password' => config('services.seed.empresa_password')],
+    ];
+    foreach ($cuentasPrueba as $cuenta) {
+        if (empty($cuenta['password'])) {
+            $this->command?->warn("Cuenta de prueba {$cuenta['name']} no creada: falta su SEED_*_PASSWORD en .env.");
+            continue;
+        }
+        \App\Models\User::firstOrNew(['email' => $cuenta['email']])
+            ->forceFill([
+                'name'     => $cuenta['name'],
+                'password' => bcrypt($cuenta['password']),
+                'role'     => $cuenta['role'],
+            ])
+            ->save();
+    }
 
     $this->call(EnergiasRenovablesSeeder::class);
     $this->call(DemosSeeder::class);

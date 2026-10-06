@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Empresa extends Model
 {
@@ -47,19 +50,23 @@ class Empresa extends Model
 
     protected $casts = [
         'es_simulada' => 'boolean',
+        'es_catalogo' => 'boolean', // catálogo DuaLab (T2): no fillable, solo lo fija el backend
     ];
 
-    public function centroEducativo()
+    /** @return BelongsTo<CentroEducativo, $this> */
+    public function centroEducativo(): BelongsTo
     {
         return $this->belongsTo(CentroEducativo::class, 'centro_id');
     }
 
-    public function familias()
+    /** @return BelongsToMany<Familia, $this> */
+    public function familias(): BelongsToMany
     {
         return $this->belongsToMany(Familia::class, 'empresa_familia', 'empresa_id', 'familia_id');
     }
 
-    public function microretos()
+    /** @return HasMany<Microreto, $this> */
+    public function microretos(): HasMany
     {
         return $this->hasMany(Microreto::class, 'empresa_id');
     }
@@ -81,6 +88,23 @@ class Empresa extends Model
                 $q->orWhere('centro_educativo', $centroNombre);
             }
         });
+    }
+
+    /** @return BelongsTo<Empresa, $this> Plantilla del catálogo de la que es copia (T2) */
+    public function copiadaDe(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class, 'copiada_de_id');
+    }
+
+    // Nombre no repetido entre las empresas del centro: añade " (2)", " (3)"...
+    public static function nombreLibreEnCentro(?int $centroId, string $nombre): string
+    {
+        $base = mb_substr($nombre, 0, 240);
+        $candidato = $base;
+        for ($n = 2; static::where('centro_id', $centroId)->where('nombre_comercial', $candidato)->exists(); $n++) {
+            $candidato = "{$base} ({$n})";
+        }
+        return $candidato;
     }
 
     // Comprueba si esta empresa concreta pertenece al centro del usuario
