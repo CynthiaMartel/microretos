@@ -61,3 +61,6 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 desahucio_.png
+
+# Diseños de referencia (maquetas PNG en la raíz) — no se versionan
+/*.png
