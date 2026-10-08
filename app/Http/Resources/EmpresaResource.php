@@ -61,9 +61,10 @@ class EmpresaResource extends JsonResource
             'lo_que_no_quieren'   => $this->lo_que_no_quieren,
             'expectativas_alumno' => $this->expectativas_alumno,
 
-            // Familias vinculadas (filtro del generador, chips en Empresas, autoselección en Startup Day)
+            // Familias vinculadas (filtro del generador, chips en Empresas, autoselección en Startup Day).
+            // Una empresa puede tener varias; cada una aparece una sola vez.
             'familias'            => $this->whenLoaded('familias', fn () =>
-                $this->familias->map(fn ($f) => ['id' => $f->id, 'nombre' => $f->nombre])->values()
+                $this->familias->unique('id')->map(fn ($f) => ['id' => $f->id, 'nombre' => $f->nombre])->values()
             ),
         ];
     }

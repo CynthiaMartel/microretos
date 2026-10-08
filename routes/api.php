@@ -353,7 +353,6 @@ Route::middleware('auth:sanctum')->get('/importar-excel', function () {
     if (!file_exists($path)) return "No se encuentra el archivo agraria.csv en storage/app/";
 
     $familiaImport = 'Agraria'; /////////////////////////////////////
-    $familiaId     = \App\Models\Familia::where('nombre', $familiaImport)->value('id');
 
     $file     = fopen($path, 'r');
     $contador = 0;
@@ -361,7 +360,7 @@ Route::middleware('auth:sanctum')->get('/importar-excel', function () {
     // Ignoramos las primeras 4 líneas (cabeceras)
     for ($i = 0; $i < 4; $i++) fgetcsv($file, 0, ',', '"');
 
-    \Illuminate\Support\Facades\DB::transaction(function () use ($file, $familiaImport, $familiaId, &$contador) {
+    \Illuminate\Support\Facades\DB::transaction(function () use ($file, $familiaImport, &$contador) {
         while (($data = fgetcsv($file, 0, ',', '"')) !== false) {
             if (empty($data[4])) continue;
 
@@ -387,13 +386,7 @@ Route::middleware('auth:sanctum')->get('/importar-excel', function () {
                 'proyecto_asociado' => $data[21] ?? null,
             ]);
 
-            \Illuminate\Support\Facades\DB::table('empresa_familia')->insert([
-                'empresa_id' => $empresa->id,
-                'familia'    => $familiaImport,
-                'familia_id' => $familiaId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            app(\App\Services\EmpresaFamiliaService::class)->anadirPorNombre($empresa->id, [$familiaImport]);
 
             $contador++;
         }
@@ -621,14 +614,7 @@ Route::middleware('auth:sanctum')->get('/importar-excel-5', function () {
 
         // 4. Asignamos la Familia Profesional (con FK normalizada)
         $familiaImport5 = 'Energía y Agua';
-        $familiaId5 = \App\Models\Familia::where('nombre', $familiaImport5)->value('id');
-        \Illuminate\Support\Facades\DB::table('empresa_familia')->insert([
-            'empresa_id' => $empresa->id,
-            'familia'    => $familiaImport5,
-            'familia_id' => $familiaId5,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        app(\App\Services\EmpresaFamiliaService::class)->anadirPorNombre($empresa->id, [$familiaImport5]);
 
         $contador++;
     }

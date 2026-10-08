@@ -1,1521 +1,1158 @@
-<!-- Ruta: /panel-docente (name: inicio-docente). Antes vivía en /inicio-docente — ver router/index.js. -->
+<!-- Ruta: /panel-docente (name: inicio-docente). Antes vivía en /inicio-docente — ver router/index.js.
+     Diseño basado en "Aplicación moodboard a dashboard.png" e "idea_dashboard.png".
+     Usa endpoints que ya existen (/encuentros, /startup/proyectos y /microretos):
+     todas las métricas se derivan en cliente, sin cambios de backend.
+
+     Responsive con container queries (@container) en vez de breakpoints de viewport:
+     el SidePanel fijo resta 288px en lg+, así que el ancho útil real no coincide con
+     el de la ventana y los breakpoints normales hacían que unas tarjetas tapasen a otras. -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import api from '../api.js'
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
-import { noticiasDualab, novedadesPlataforma } from '../data/noticiasMock.js'
+import bannerCasoReal from '../assets/banner_caso_real.jpg'
+import bienvenidaCasoReal from '../assets/bienvenida_caso_real.jpg'
 
 const router    = useRouter()
 const authStore = useAuthStore()
-const isLoaded  = ref(false)
 
 // ── Datos ─────────────────────────────────────────────────────────────────────
-const encuentros          = ref([])
-const proyectos         = ref([])
-const cargandoEncuentros  = ref(true)
-const cargandoProyectos = ref(true)
+const encuentros = ref([])
+const proyectos  = ref([])
+const retos      = ref([])
+const cargando   = ref(true)
 
-// ── Listas derivadas ──────────────────────────────────────────────────────────
-const ultimosEncuentros = computed(() =>
-  [...encuentros.value]
-    .filter(s => s.fecha)
-    .sort((a, b) => _pf(b.fecha) - _pf(a.fecha))
-    .slice(0, 3)
-)
-
-const ultimosProyectosEnCurso = computed(() =>
-  proyectos.value
-    .filter(p => p.estado === 'validado')
-    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-    .slice(0, 4)
-)
-
-const proyectosValidados = computed(() =>
-  proyectos.value.filter(p => p.estado === 'validado')
-)
-
-const proyectosPendientes = computed(() =>
-  proyectos.value.filter(p => p.estado === 'propuesta' && !p.empresa_validado)
-)
-
-const proyectosEnEdicion = computed(() =>
-  proyectos.value.filter(p => p.estado === 'en_edicion')
-)
-
-const hayProyectos = computed(() =>
-  proyectosValidados.value.length > 0 ||
-  proyectosPendientes.value.length > 0 ||
-  proyectosEnEdicion.value.length > 0
-)
-
-// ── Donut progreso proyectos ───────────────────────────────────────────────────
-const DONUT_C = 2 * Math.PI * 38 // circunferencia con r=38
-
-const donutSegmentos = computed(() => {
-  const all = proyectos.value
-  if (!all.length) return []
-
-  const total = all.length
-  const grupos = [
-    { label: 'Validados',                      valor: all.filter(p => p.estado === 'validado').length,                                                                      color: '#509928' },
-    { label: 'Esperando respuesta de empresa', valor: all.filter(p => p.enviado_a_empresa_mail && p.estado === 'propuesta' && !p.empresa_no_valida_aun).length,            color: '#3B82F6' },
-    { label: 'Pendiente de enviar a empresa',  valor: all.filter(p => p.estado === 'propuesta' && !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun).length,           color: '#6366F1' },
-    { label: 'Respuesta de empresa a revisar', valor: all.filter(p => p.empresa_no_valida_aun && p.estado === 'propuesta').length,                                         color: '#F59E0B' },
-    { label: 'En edición',                     valor: all.filter(p => p.estado === 'en_edicion').length,                                                                   color: '#D1D5DB' },
-  ].filter(g => g.valor > 0)
-
-  let acum = 0
-  return grupos.map(g => {
-    const dash = (g.valor / total) * DONUT_C
-    const rotacion = (acum / total) * 360
-    acum += g.valor
-    return { ...g, dash, gap: DONUT_C - dash, rotacion }
-  })
+onMounted(async () => {
+  // /microretos devuelve fichas completas: para elegir el reto destacado bastan los más recientes.
+  const [enc, pro, ret] = await Promise.allSettled([
+    api.get('/encuentros'),
+    api.get('/startup/proyectos'),
+    api.get('/microretos', { params: { limit: 60 } }),
+  ])
+  if (enc.status === 'fulfilled') encuentros.value = enc.value.data
+  if (pro.status === 'fulfilled') proyectos.value  = pro.value.data
+  if (ret.status === 'fulfilled') retos.value      = ret.value.data
+  cargando.value = false
 })
 
-const _pf = (s) => s ? (s.includes('T') ? new Date(s) : new Date(s + 'T12:00:00')) : null
+const _pf  = (s) => s ? (s.includes('T') ? new Date(s) : new Date(s + 'T12:00:00')) : null
+const pad  = (n) => String(n).padStart(2, '0')
+const iso  = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
+const hoy  = new Date()
+const hoyISO = iso(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
 
-function formatFecha(isoDate) {
-  if (!isoDate) return ''
-  const d = _pf(isoDate)
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
-}
+// ── Curso académico (septiembre → agosto) ─────────────────────────────────────
+// El campo `curso` de encuentros/proyectos es el nivel (1º, 2º), no el año
+// académico, así que el curso se deduce de la fecha de cada registro.
+const cursoDe = (d) => d ? (d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1) : null
+const etiquetaCurso = (y) => `Curso ${y}/${y + 1}`
 
-const primerNombre = computed(() => {
-  const n = authStore.userName || ''
-  return n.split(' ')[0] || n
+const cursoActual = cursoDe(hoy)
+const cursoSel    = ref(cursoActual)
+
+const cursosDisponibles = computed(() => {
+  const set = new Set([cursoActual])
+  encuentros.value.forEach(e => { const c = cursoDe(_pf(e.fecha)); if (c) set.add(c) })
+  proyectos.value.forEach(p => { const c = cursoDe(fechaProyecto(p)); if (c) set.add(c) })
+  return [...set].sort((a, b) => b - a)
 })
 
-const userCentroNombre = computed(() => authStore.userCentroNombre || '')
-const userCentroImg    = computed(() => authStore.userCentroImg || '')
+// Fecha de referencia de un proyecto = la de su encuentro; si no tiene, la de creación.
+// Así contadores, gráfica, donut y lista asignan cada proyecto al MISMO curso (antes la
+// gráfica iba por encuentro y el donut por created_at, y no cuadraban).
+const fechaEncuentroPorId = computed(() => new Map(encuentros.value.map(e => [e.id, e.fecha])))
+const fechaProyecto = (p) => _pf(fechaEncuentroPorId.value.get(p.encuentro_id) || p.created_at)
 
-// Preview de las noticias — el listado completo vive en NoticiasListado.vue,
-// ambas vistas comparten la misma fuente de datos (ver src/data/noticiasMock.js).
-const previewNoticiasDualab = noticiasDualab.slice(0, 3)
-const previewNovedadesPlataforma = novedadesPlataforma.slice(0, 3)
+const encCurso   = computed(() => encuentros.value.filter(e => cursoDe(_pf(e.fecha)) === cursoSel.value))
+const proCurso   = computed(() => proyectos.value.filter(p => cursoDe(fechaProyecto(p)) === cursoSel.value))
 
-function abrirNoticias(tipo) {
-  router.push({ name: 'noticias-listado', params: { tipo } })
-}
+// ── Contadores ────────────────────────────────────────────────────────────────
+const kpis = computed(() => [
+  { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/mis-equipos' },
+  { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/empresas' },
+  { key: 'encuentros', valor: encCurso.value.length,                                                 label: 'Encuentros realizados',  tile: 'bg-centros',          num: 'text-centros',          icon: 'encuentro', ruta: '/encuentros' },
+  { key: 'validados',  valor: proCurso.value.filter(p => ['validado', 'completado'].includes(p.estado)).length, label: 'Proyectos validados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
+])
 
-// ── Carga ──────────────────────────────────────────────────────────────────────
-onMounted(() => {
-  setTimeout(() => { isLoaded.value = true }, 100)
-  cargarEncuentros()
-  cargarProyectos()
-})
+// ── Impacto acumulado del curso ───────────────────────────────────────────────
+// Una sola gráfica con 4 líneas acumuladas en el MISMO eje (como el PNG); eje X de
+// septiembre a junio completo. Si el curso tiene datos en julio/agosto, el eje se alarga.
+// En el curso en marcha las líneas se detienen en el mes actual (sin meses futuros).
+// Escalas: los alumnos suelen ser muchos más que el resto; para que eso no aplaste
+// las otras líneas, la leyenda permite ocultar/mostrar cada serie y el eje se reajusta
+// a las visibles. Nunca un segundo eje. Mismas fuentes que contadores y donut:
+//   · Alumnos en proyectos completados: num_alumnos de encuentros del curso cuyo proyecto está completado
+//   · Proyectos completados: esos proyectos, en el mes de su primer encuentro del curso
+//   · Empresas colaboradoras: empresas de proyectos del curso, en el mes del primero
+//   · Encuentros realizados: encuentros del curso por fecha
+const MESES = ['Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago']
+const mesIdx = (d) => (d.getMonth() + 4) % 12 // septiembre = 0
 
-async function cargarEncuentros() {
-  try {
-    const { data } = await api.get('/encuentros')
-    encuentros.value = data
-  } catch { /* silencioso */ } finally {
-    cargandoEncuentros.value = false
-  }
-}
-
-async function cargarProyectos() {
-  try {
-    const { data } = await api.get('/startup/proyectos')
-    proyectos.value = data
-  } catch { /* silencioso */ } finally {
-    cargandoProyectos.value = false
-  }
-}
-
-// ── Navegación ─────────────────────────────────────────────────────────────────
-const irA = (path) => router.push(path)
-const irAStartupFiltrado = (filtro) => router.push({ path: '/proyectos', query: { filtro } })
-
-// ── Calendario ─────────────────────────────────────────────────────────────────
-const calendarDate = ref(new Date())
-
-const calendarMonthLabel = computed(() =>
-  calendarDate.value.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
-)
-
-const calendarDays = computed(() => {
-  const year  = calendarDate.value.getFullYear()
-  const month = calendarDate.value.getMonth()
-  const firstWeekday = new Date(year, month, 1).getDay()
-  const daysInMonth  = new Date(year, month + 1, 0).getDate()
-  const offset = (firstWeekday + 6) % 7 // semana empieza en lunes
-  const days = Array(offset).fill(null)
-  for (let d = 1; d <= daysInMonth; d++) days.push(d)
-  return days
-})
-
-const _today = new Date()
-const isToday = (day) =>
-  day === _today.getDate() &&
-  calendarDate.value.getMonth() === _today.getMonth() &&
-  calendarDate.value.getFullYear() === _today.getFullYear()
-
-function prevMonth() {
-  const d = new Date(calendarDate.value); d.setDate(1); d.setMonth(d.getMonth() - 1)
-  calendarDate.value = d
-}
-function nextMonth() {
-  const d = new Date(calendarDate.value); d.setDate(1); d.setMonth(d.getMonth() + 1)
-  calendarDate.value = d
-}
-
-// ── Eventos del calendario ─────────────────────────────────────────────────────
-const eventos       = ref([])
-const selectedDate  = ref(null)
-const newEventText  = ref('')
-const newEventColor = ref('#509928')
-const eventColors   = ['#509928', '#FF8920', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
-
-function selectCalDay(day) {
-  if (!day) return
-  const m = calendarDate.value.getMonth()
-  const y = calendarDate.value.getFullYear()
-  if (selectedDate.value?.day === day && selectedDate.value?.month === m && selectedDate.value?.year === y) {
-    selectedDate.value = null
-  } else {
-    selectedDate.value = { day, month: m, year: y }
-    newEventText.value = ''
-  }
-}
-
-function addEvento() {
-  if (!newEventText.value.trim() || !selectedDate.value) return
-  eventos.value.push({ ...selectedDate.value, text: newEventText.value.trim(), color: newEventColor.value })
-  newEventText.value = ''
-  selectedDate.value = null
-}
-
-function removeEvento(i) { eventos.value.splice(i, 1) }
-
-const eventosDelMes = computed(() =>
-  eventos.value.filter(e =>
-    e.month === calendarDate.value.getMonth() && e.year === calendarDate.value.getFullYear()
-  )
-)
-const dayEvents = (day) =>
-  eventos.value.filter(e =>
-    e.day === day && e.month === calendarDate.value.getMonth() && e.year === calendarDate.value.getFullYear()
-  )
-const isDaySelected = (day) =>
-  selectedDate.value?.day === day &&
-  selectedDate.value?.month === calendarDate.value.getMonth() &&
-  selectedDate.value?.year  === calendarDate.value.getFullYear()
-
-// ── Encuentros en el calendario ──────────────────────────────────────────────────
-const encuentrosDelDia = (day) => {
-  if (!day) return []
-  const y = calendarDate.value.getFullYear()
-  const m = calendarDate.value.getMonth()
-  return encuentros.value.filter(s => {
-    if (!s.fecha) return false
-    const d = _pf(s.fecha)
-    return d.getFullYear() === y && d.getMonth() === m && d.getDate() === day
-  })
-}
-
-const encuentrosDelMes = computed(() =>
-  encuentros.value
-    .filter(s => {
-      if (!s.fecha) return false
-      const d = _pf(s.fecha)
-      return d.getFullYear() === calendarDate.value.getFullYear() &&
-             d.getMonth()    === calendarDate.value.getMonth()
-    })
-    .sort((a, b) => _pf(a.fecha) - _pf(b.fecha))
-)
-
-// Día del calendario sobre el que está el cursor
-const hoveredDay = ref(null)
-
-const hexToRgba = (hex, alpha = 0.13) => {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
-// Comprueba si un encuentro debe destacarse porque su día coincide con hoveredDay
-// y el calendario está en el mismo mes/año que el encuentro
-const isSessionHovered = (s) => {
-  if (hoveredDay.value === null || !s.fecha) return false
-  const d = _pf(s.fecha)
-  return d.getDate() === hoveredDay.value &&
-         d.getMonth() === calendarDate.value.getMonth() &&
-         d.getFullYear() === calendarDate.value.getFullYear()
-}
-
-const setHoveredFromSession = (s) => {
-  hoveredDay.value = s.fecha ? _pf(s.fecha).getDate() : null
-}
-
-// Color de fondo transparente de la celda del día según sus eventos
-const dayAccentBg = (day) => {
-  if (!day) return {}
-  const ses = encuentrosDelDia(day)
-  if (ses.length) return { backgroundColor: 'rgba(59,130,246,0.10)' }
-  const evs = dayEvents(day)
-  if (evs.length) return { backgroundColor: hexToRgba(evs[0].color, 0.12) }
-  return { backgroundColor: 'rgba(243,244,246,1)' } // gray-50 neutro
-}
-
-// Lista combinada encuentros + eventos personales del mes, ordenada por día
-const todoDelMes = computed(() => {
-  const evs = eventosDelMes.value.map(e => ({ tipo: 'evento', dia: e.day, label: e.text, color: e.color, _ref: e }))
-  const ses = encuentrosDelMes.value.map(s => {
-    const dia = _pf(s.fecha).getDate()
-    return { tipo: 'encuentro', dia, label: s.microreto_titulo || 'Encuentro', sub: [s.ciclo_formativo, s.grupo].filter(Boolean).join(' · '), _ref: s }
-  })
-  return [...evs, ...ses].sort((a, b) => a.dia - b.dia)
-})
-
-// ── Alertas inteligentes ───────────────────────────────────────────────────────
-const alertas = computed(() => {
-  if (cargandoProyectos.value && cargandoEncuentros.value) return []
-
-  const now = Date.now()
-  const diasDesde = (iso) => Math.floor((now - new Date(iso).getTime()) / 86_400_000)
-  const lista = []
-
-  // Proyectos en edición estancados +14 días
-  const estancados = proyectos.value.filter(p =>
-    p.estado === 'en_edicion' && p.updated_at && diasDesde(p.updated_at) >= 14
-  )
-  if (estancados.length)
-    lista.push({
-      nivel: 'warning',
-      texto: `${estancados.length} proyecto${estancados.length > 1 ? 's llevan' : ' lleva'} más de 14 días en edición sin actualizar`,
-      ruta: '/proyectos',
-    })
-
-  // Propuestas enviadas a empresa sin validar +10 días
-  const sinRespuesta = proyectos.value.filter(p =>
-    p.estado === 'propuesta' && !p.empresa_validado &&
-    p.enviado_a_empresa_mail && p.updated_at && diasDesde(p.updated_at) >= 10
-  )
-  if (sinRespuesta.length)
-    lista.push({
-      nivel: 'warning',
-      texto: `${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's llevan' : ' lleva'} más de 10 días sin responder`,
-      ruta: '/proyectos',
-    })
-
-  // Empresa respondió "aún no puede validar"
-  const noAun = proyectos.value.filter(p => p.empresa_no_valida_aun)
-  if (noAun.length)
-    lista.push({
-      nivel: 'info',
-      texto: `${noAun.length} empresa${noAun.length > 1 ? 's indicaron' : ' indicó'} que aún no puede${noAun.length > 1 ? 'n' : ''} validar`,
-      ruta: '/proyectos',
-    })
-
-  // Sin encuentros este mes (solo si hay historial de encuentros)
-  if (encuentros.value.length > 0 && !cargandoEncuentros.value) {
-    const hoy = new Date()
-    const hayEsteMes = encuentros.value.some(s => {
-      if (!s.fecha) return false
-      const d = _pf(s.fecha)
-      return d.getMonth() === hoy.getMonth() && d.getFullYear() === hoy.getFullYear()
-    })
-    if (!hayEsteMes)
-      lista.push({
-        nivel: 'info',
-        texto: 'No has registrado ningún encuentro este mes',
-        ruta: '/encuentros/crear',
-      })
-  }
-
-  // Proyectos validados esta semana (positivo)
-  const validadosRecientes = proyectos.value.filter(p =>
-    p.estado === 'validado' && p.updated_at && diasDesde(p.updated_at) <= 7
-  )
-  if (validadosRecientes.length)
-    lista.push({
-      nivel: 'success',
-      texto: `${validadosRecientes.length} proyecto${validadosRecientes.length > 1 ? 's validados' : ' validado'} esta semana`,
-      ruta: '/proyectos',
-    })
-
-  return lista
-})
-
-// ── Modal catálogo BOE ─────────────────────────────────────────────────────────
-const mostrarCatalogoBoe = ref(false)
-
-// ── Miniaturas demo para proyectos en curso ────────────────────────────────────
-const proyectoImgs = [
-  'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=120&q=80',
+const INDICADORES = [
+  { key: 'alumnos',     label: 'Alumnos en proyectos completados', color: '#FF8920' },
+  { key: 'completados', label: 'Proyectos completados',            color: '#19A7A8' },
+  { key: 'empresas',    label: 'Empresas colaboradoras',           color: '#509928' },
+  { key: 'encuentros',  label: 'Encuentros realizados',            color: '#3072AA' },
 ]
 
-// ── Notas personales (localStorage) ────────────────────────────────────────────
-const notas     = ref(JSON.parse(localStorage.getItem('docente_notas') || '[]'))
+const impacto = computed(() => {
+  const estadoPorUuid = new Map(proyectos.value.map(p => [p.uuid, p.estado]))
+  const mes = Object.fromEntries(INDICADORES.map(ind => [ind.key, Array(12).fill(0)]))
+
+  const completadosVistos = new Set()
+  ;[...encCurso.value].sort((a, b) => a.fecha.localeCompare(b.fecha)).forEach(e => {
+    const m = mesIdx(_pf(e.fecha))
+    mes.encuentros[m]++
+    if (e.microproyecto_uuid && estadoPorUuid.get(e.microproyecto_uuid) === 'completado') {
+      mes.alumnos[m] += Number(e.num_alumnos) || 0
+      if (!completadosVistos.has(e.microproyecto_uuid)) {
+        completadosVistos.add(e.microproyecto_uuid)
+        mes.completados[m]++
+      }
+    }
+  })
+  const empresasVistas = new Set()
+  ;[...proCurso.value].sort((a, b) => fechaProyecto(a) - fechaProyecto(b)).forEach(p => {
+    if (!p.empresa_id || empresasVistas.has(p.empresa_id)) return
+    empresasVistas.add(p.empresa_id)
+    mes.empresas[mesIdx(fechaProyecto(p))]++
+  })
+
+  // Eje: Sep–Jun siempre; Jul/Ago solo si hay datos en esos meses
+  const ultimoConDatos = Math.max(-1, ...INDICADORES.map(ind => mes[ind.key].findLastIndex(v => v > 0)))
+  const enCurso = cursoSel.value === cursoActual
+  const eje = Math.max(10, ultimoConDatos + 1, enCurso ? mesIdx(hoy) + 1 : 0)
+  const n   = enCurso ? mesIdx(hoy) + 1 : eje // meses con línea dibujada
+
+  const acumular = (arr) => { let t = 0; return arr.slice(0, n).map(v => (t += v)) }
+  return {
+    eje, n, meses: MESES.slice(0, eje),
+    series: INDICADORES.map(ind => {
+      const acum = acumular(mes[ind.key])
+      return { ...ind, acum, delMes: mes[ind.key].slice(0, n), total: acum[n - 1] ?? 0 }
+    }),
+  }
+})
+const hayImpacto = computed(() => impacto.value.series.some(s => s.total > 0))
+
+// Series ocultas desde la leyenda (el eje se reajusta a las visibles)
+const seriesOcultas = ref([])
+const toggleSerie = (key) => {
+  seriesOcultas.value = seriesOcultas.value.includes(key)
+    ? seriesOcultas.value.filter(k => k !== key)
+    : [...seriesOcultas.value, key]
+}
+const seriesVisibles = computed(() => impacto.value.series.filter(s => !seriesOcultas.value.includes(s.key)))
+
+// El SVG se dibuja al ancho real del contenedor para que el texto de los ejes no encoja
+const chartW = ref(560)
+let chartRO = null
+let chartEl = null
+function observarChart(el) {
+  if (!el || el === chartEl) return
+  chartEl = el
+  chartRO?.disconnect()
+  chartRO = new ResizeObserver(([entry]) => {
+    chartW.value = Math.max(240, Math.round(entry.contentRect.width))
+  })
+  chartRO.observe(el)
+}
+onBeforeUnmount(() => chartRO?.disconnect())
+
+const techo = (v) => {
+  if (v <= 4) return 4
+  const mag = 10 ** Math.floor(Math.log10(v))
+  const paso = v / mag <= 2 ? mag / 2 : mag
+  return Math.ceil(v / paso) * paso
+}
+const CH = computed(() => ({ w: chartW.value, h: 200, l: 36, r: 12, t: 12, b: 26 }))
+const yMaxImp  = computed(() => techo(Math.max(1, ...seriesVisibles.value.flatMap(s => s.acum))))
+const ticksImp = computed(() => [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(yMaxImp.value * f)))
+const pasoImp  = computed(() => (CH.value.w - CH.value.l - CH.value.r) / (impacto.value.eje - 1))
+const ix = (i) => CH.value.l + i * pasoImp.value
+const iy = (v) => CH.value.t + (1 - v / yMaxImp.value) * (CH.value.h - CH.value.t - CH.value.b)
+const mostrarMesImp = (i) => pasoImp.value >= 32 || i % 2 === 0
+
+const curvasImpacto = computed(() => seriesVisibles.value.map(serie => {
+  const pts = serie.acum.map((v, i) => [ix(i), iy(v)])
+  return { ...serie, pts, linea: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ') }
+}))
+// Área suave bajo la serie más alta, como el sombreado del PNG
+const areaImpacto = computed(() => {
+  const top = [...curvasImpacto.value].sort((a, b) => b.total - a.total)[0]
+  if (!top) return null
+  const base = iy(0)
+  return { color: top.color, d: `M${top.pts[0][0]},${base} ` + top.pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${top.pts.at(-1)[0]},${base} Z` }
+})
+
+const mesHoverImp = ref(null)
+const tooltipLeftImp = computed(() => mesHoverImp.value === null ? 0 : Math.min(Math.max(ix(mesHoverImp.value), 120), chartW.value - 120))
+
+// ── Donut: estado de los proyectos como recorrido ─────────────────────────────
+// Los segmentos y la leyenda siguen el orden real del proyecto (del borrador al
+// cierre) y cada paso lleva a la biblioteca filtrada. Colores = los 4 corporativos
+// del moodboard. En anillo, ningún orden de esos 4 pasa todas las comprobaciones de
+// daltonismo: este (naranja → azul → verde → turquesa) es el mejor (verde/turquesa
+// quedan en el límite), y se compensa con separadores de 2px y cifra + % en la leyenda.
+const R = 54
+const CIRC = 2 * Math.PI * R
+const donutHover = ref(null) // etiqueta del estado señalado en la leyenda o en el anillo
+const filtroRuta = (filtro) => ({ path: '/proyectos', query: { filtro } })
+const donut = computed(() => {
+  const all = proCurso.value
+  const prop = all.filter(p => p.estado === 'propuesta')
+  const sinEnviar = prop.filter(p => !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun).length
+  const esperando = prop.filter(p => p.enviado_a_empresa_mail && !p.empresa_no_valida_aun).length
+  const revisar   = prop.filter(p => p.empresa_no_valida_aun).length
+  const grupos = [
+    { label: 'En edición',        color: '#FF8920', ruta: filtroRuta('en_edicion'), valor: all.filter(p => p.estado === 'en_edicion').length },
+    { label: 'Pendiente validar', color: '#3072AA', ruta: filtroRuta('propuesta'),  valor: prop.length,
+      detalle: [esperando && `${esperando} esperando`, sinEnviar && `${sinEnviar} sin enviar`, revisar && `${revisar} a revisar`].filter(Boolean).join(' · ') },
+    { label: 'Validados',         color: '#509928', ruta: filtroRuta('validado'),   valor: all.filter(p => p.estado === 'validado').length },
+    { label: 'Completados',       color: '#19A7A8', ruta: '/proyectos/terminados',  valor: all.filter(p => p.estado === 'completado').length },
+  ]
+  const total = grupos.reduce((s, g) => s + g.valor, 0)
+  const GAP = grupos.filter(g => g.valor).length > 1 ? 2 : 0 // separador de 2px entre segmentos
+  let acum = 0
+  const segmentos = grupos.map(g => {
+    const len = total ? (g.valor / total) * CIRC : 0
+    const seg = { ...g, pct: total ? Math.round((g.valor / total) * 100) : 0, dash: Math.max(len - GAP, 0), offset: -acum }
+    acum += len
+    return seg
+  })
+  return { total, segmentos }
+})
+
+// ── Reto destacado de la semana ───────────────────────────────────────────────
+// Elección determinista, sin backend ni aleatoriedad:
+//  1. Candidatos: los 60 retos más recientes que devuelve /microretos (hoy, solo
+//     los del propio centro).
+//  2. Se descartan los que el docente ya usa en algún proyecto.
+//  3. Si quedan retos de las familias en las que el docente tiene proyectos, solo esos.
+//  4. Se ordenan por id y se elige el de posición (nº de semana % nº de candidatos).
+// Cambia cada lunes; dentro de la semana es el mismo salvo que cambien los candidatos
+// (p. ej. el docente usa ese reto en un proyecto → pasa al siguiente).
+const retosEnUso = computed(() => new Set(proyectos.value.map(p => p.microreto_id).filter(Boolean)))
+const retoDestacado = computed(() => {
+  if (!retos.value.length) return null
+  // Días desde 1970 (jueves) + 3 → las semanas empiezan en lunes
+  const dias     = Math.floor((Date.now() - hoy.getTimezoneOffset() * 60_000) / 86_400_000)
+  const semana   = Math.floor((dias + 3) / 7)
+  const familias = new Set(proyectos.value.map(p => p.familia_nombre).filter(Boolean))
+  const libres   = retos.value.filter(r => !retosEnUso.value.has(r.id))
+  const afines   = libres.filter(r => familias.has(r.familia))
+  const lista    = [...(afines.length ? afines : libres.length ? libres : retos.value)].sort((a, b) => a.id - b.id)
+  return lista[semana % lista.length]
+})
+const nivelClase = (nivel) => ({
+  Bajo:  'bg-centros/5 border-centros/20 text-centros',
+  Medio: 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#B45309]',
+  Alto:  'bg-[#D64545]/10 border-[#D64545]/20 text-[#D64545]',
+}[nivel] || 'bg-gray-100 border-gray-200 text-gray-500') // = BibliotecaMicroretos.vue
+const abrirReto = (r) => router.push({ name: 'detalle-microreto', params: { id: r.uuid || r.id } })
+
+// ── Próximos encuentros + mini calendario enlazados ───────────────────────────
+// Pasar el ratón (o el foco) por un encuentro de la lista ilumina sus días en el
+// calendario; hacer clic lo deja fijado. Al revés, clicar un día del calendario
+// ilumina los encuentros de la lista que caen ese día y muestra el detalle.
+const proximosEncuentros = computed(() =>
+  encuentros.value
+    .filter(e => e.fecha && (e.fecha_fin || e.fecha) >= hoyISO)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .slice(0, 2)
+)
+
+const cubreDia = (e, diaISO) => e.fecha && diaISO >= e.fecha && diaISO <= (e.fecha_fin || e.fecha)
+
+const hoverEncId = ref(null)
+const selEncId   = ref(null)
+const selDia     = ref(null) // ISO del día clicado en el calendario
+const encActivo  = computed(() => {
+  const id = hoverEncId.value ?? selEncId.value
+  return id ? encuentros.value.find(e => e.id === id) : null
+})
+
+function seleccionarEncuentro(e) {
+  selDia.value   = null
+  selEncId.value = selEncId.value === e.id ? null : e.id
+}
+
+const encDestacado = (e) =>
+  encActivo.value?.id === e.id || (selDia.value && cubreDia(e, selDia.value))
+
+// Mes visible: el del encuentro activo si lo hay; si no, el que haya navegado el usuario
+const calMes = ref(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
+const mesVisible = computed(() => {
+  const d = encActivo.value ? _pf(encActivo.value.fecha) : calMes.value
+  return { y: d.getFullYear(), m: d.getMonth() }
+})
+const calLabel = computed(() =>
+  new Date(mesVisible.value.y, mesVisible.value.m, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+)
+function moverMes(delta) {
+  const { y, m } = mesVisible.value
+  calMes.value     = new Date(y, m + delta, 1)
+  selEncId.value   = null
+  hoverEncId.value = null
+}
+
+const calDias = computed(() => {
+  const { y, m } = mesVisible.value
+  const offset = (new Date(y, m, 1).getDay() + 6) % 7 // semana empieza en lunes
+  const total  = new Date(y, m + 1, 0).getDate()
+  // Como en "Mi agenda" (idea_dashboard.png): semanas completas, con los días del mes
+  // anterior y siguiente en gris claro y sin interacción.
+  const finMesAnterior = new Date(y, m, 0).getDate()
+  const celdas = Array.from({ length: offset }, (_, i) => ({ d: finMesAnterior - offset + 1 + i, otroMes: true }))
+  for (let d = 1; d <= total; d++) {
+    const diaISO = iso(y, m, d)
+    celdas.push({
+      d, iso: diaISO,
+      encs: encuentros.value.filter(e => cubreDia(e, diaISO)),
+      hoy: diaISO === hoyISO,
+    })
+  }
+  // Siempre 6 semanas: así el calendario mide lo mismo en todos los meses
+  for (let d = 1; celdas.length < 42; d++) celdas.push({ d, otroMes: true })
+  return celdas
+})
+
+const diaIluminado = (c) =>
+  (encActivo.value && cubreDia(encActivo.value, c.iso)) || selDia.value === c.iso
+
+function clicDia(c) {
+  if (!c.encs.length) return
+  selEncId.value = null
+  selDia.value   = selDia.value === c.iso ? null : c.iso
+}
+
+const encuentrosSelDia = computed(() =>
+  selDia.value ? encuentros.value.filter(e => cubreDia(e, selDia.value)) : []
+)
+
+const tituloEnc = (e) => e.proyecto_titulo || e.microreto_titulo || 'Encuentro'
+const fechaTile = (isoStr) => {
+  const d = _pf(isoStr)
+  return { dia: d.getDate(), mes: d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '').toUpperCase() }
+}
+const fechaCorta = (isoStr) => _pf(isoStr).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
+
+// ── Proyectos ─────────────────────────────────────────────────────────────────
+// Proyectos: mismos filtros que StartupDayProyectos.vue (filtroOpciones/filtroLabels)
+// + "Completados", que allí tiene vista propia. Etiquetas y colores = ProyectoCard.vue
+// (getEtiqueta/getColor), con el tema docente (centros) para "Validado".
+const FILTROS_PROY = [
+  { key: 'todos',      label: 'Todos' },
+  { key: 'validado',   label: 'Validados' },
+  { key: 'propuesta',  label: 'Pendiente validar' },
+  { key: 'en_edicion', label: 'En edición' },
+  { key: 'completado', label: 'Completados' },
+  { key: 'archivado',  label: 'Archivado' },
+]
+const filtroProy = ref('completado') // por defecto: lo que mejor luce el trabajo hecho
+const conteoProy = (key) => key === 'todos' ? proCurso.value.length : proCurso.value.filter(p => p.estado === key).length
+const proyectosFiltrados = computed(() =>
+  proCurso.value
+    .filter(p => filtroProy.value === 'todos' || p.estado === filtroProy.value)
+    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+)
+
+// Paginación de 5 con alto fijo: la tarjeta mide lo mismo con 0, 2 o 5 proyectos
+// (la lista siempre reserva 5 filas y el pie de paginación siempre ocupa su sitio).
+const PROY_POR_PAGINA = 5
+const paginaProy = ref(0)
+const totalPaginasProy = computed(() => Math.max(1, Math.ceil(proyectosFiltrados.value.length / PROY_POR_PAGINA)))
+const paginaProyActual = computed(() => Math.min(paginaProy.value, totalPaginasProy.value - 1))
+const proyectosPagina = computed(() =>
+  proyectosFiltrados.value.slice(paginaProyActual.value * PROY_POR_PAGINA, (paginaProyActual.value + 1) * PROY_POR_PAGINA))
+const moverPaginaProy = (d) => { paginaProy.value = Math.min(Math.max(paginaProyActual.value + d, 0), totalPaginasProy.value - 1) }
+watch([filtroProy, cursoSel], () => { paginaProy.value = 0 })
+
+function etiquetaProyecto(p) {
+  if (p.estado === 'en_edicion') return 'En edición'
+  if (p.estado === 'archivado')  return 'Archivado'
+  if (p.estado === 'completado') return 'Completado'
+  if (p.estado === 'validado') {
+    if (p.empresa_validado && p.docente_validado) return 'Validado · Completo'
+    if (p.empresa_validado) return 'Validado · Empresa'
+    if (p.docente_validado) return 'Validado · Docente'
+    return 'Validado'
+  }
+  if (p.empresa_no_valida_aun)  return 'No validar aún'
+  if (p.enviado_a_empresa_mail) return 'Esperando respuesta'
+  return 'Pendiente enviar'
+}
+function colorProyecto(p) {
+  if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700'
+  if (p.estado === 'archivado')  return 'bg-gray-100 border-gray-200 text-gray-400'
+  if (p.estado === 'completado') return 'bg-sky-50 border-sky-300 text-sky-700'
+  if (p.estado === 'validado') {
+    if (p.docente_validado && !p.empresa_validado) return 'bg-emerald-50 border-emerald-300 text-emerald-700'
+    return 'bg-centros/5 border-centros/20 text-centros'
+  }
+  if (p.empresa_no_valida_aun)  return 'bg-red-50 border-red-300 text-red-700'
+  if (p.enviado_a_empresa_mail) return 'bg-blue-50 border-blue-200 text-blue-700'
+  return 'bg-violet-50 border-violet-300 text-violet-700'
+}
+
+function verTodosProyectos() {
+  if (filtroProy.value === 'todos') return irA('/proyectos')
+  router.push({ path: '/proyectos', query: { filtro: filtroProy.value } })
+}
+
+// ── Empresas colaboradoras ────────────────────────────────────────────────────
+const AVATAR_COLORES = ['bg-centros', 'bg-empresas', 'bg-alumnos', 'bg-administraciones']
+const empresasTop = computed(() => {
+  const map = new Map()
+  proCurso.value.forEach(p => {
+    if (!p.empresa_id) return
+    const e = map.get(p.empresa_id) ?? { id: p.empresa_id, nombre: p.empresa_nombre || 'Empresa', familia: p.familia_nombre, proyectos: 0, validados: 0 }
+    e.proyectos++
+    if (['validado', 'completado'].includes(p.estado)) e.validados++
+    map.set(p.empresa_id, e)
+  })
+  return [...map.values()].sort((a, b) => b.proyectos - a.proyectos).slice(0, 3)
+})
+const iniciales = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+
+// ── Tareas pendientes = avisos automáticos + notas personales ────────────────
+// Las notas comparten la clave de localStorage del panel actual ('docente_notas'),
+// así que lo que se apunte aquí aparece también allí y viceversa.
+const tareasAuto = computed(() => {
+  if (cargando.value) return []
+  const now = Date.now()
+  const dias = (d) => Math.floor((now - new Date(d).getTime()) / 86_400_000)
+  const t = []
+  const revisar = proyectos.value.filter(p => p.estado === 'propuesta' && p.empresa_no_valida_aun)
+  if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar la respuesta de ${revisar.length} empresa${revisar.length > 1 ? 's' : ''}`, ruta: '/proyectos', nivel: 'alta' })
+  const sinEnviar = proyectos.value.filter(p => p.estado === 'propuesta' && !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun)
+  if (sinEnviar.length) t.push({ id: `enviar:${sinEnviar.length}`, texto: `Enviar ${sinEnviar.length} propuesta${sinEnviar.length > 1 ? 's' : ''} a la empresa`, ruta: '/proyectos', nivel: 'media' })
+  const estancados = proyectos.value.filter(p => p.estado === 'en_edicion' && p.updated_at && dias(p.updated_at) >= 14)
+  if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} proyecto${estancados.length > 1 ? 's' : ''} parado${estancados.length > 1 ? 's' : ''} hace +14 días`, ruta: '/proyectos', nivel: 'media' })
+  const sinRespuesta = proyectos.value.filter(p => p.estado === 'propuesta' && p.enviado_a_empresa_mail && !p.empresa_validado && p.updated_at && dias(p.updated_at) >= 10)
+  if (sinRespuesta.length) t.push({ id: `recordar:${sinRespuesta.length}`, texto: `Recordar a ${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's' : ''} sin responder (+10 días)`, ruta: '/proyectos', nivel: 'media' })
+  return t
+})
+
+// Tareas automáticas marcadas como hechas: se guarda su id, que incluye el recuento
+// (p. ej. "enviar:3"). Si la situación cambia (pasan a ser 4), es una tarea nueva y
+// vuelve a salir sin marcar. Solo es una preferencia del navegador del docente.
+const leerJSON = (clave, defecto) => { try { return JSON.parse(localStorage.getItem(clave) || 'null') ?? defecto } catch { return defecto } }
+const guardarJSON = (clave, valor) => { try { localStorage.setItem(clave, JSON.stringify(valor)) } catch { /* sin almacenamiento */ } }
+
+const autoHechas = ref(leerJSON('docente_tareas_hechas', []))
+const autoHecha  = (t) => autoHechas.value.includes(t.id)
+function toggleAuto(t) {
+  autoHechas.value = autoHecha(t) ? autoHechas.value.filter(id => id !== t.id) : [...autoHechas.value, t.id]
+  guardarJSON('docente_tareas_hechas', autoHechas.value)
+}
+
+// Notas personales: { id, text, hecha? } — "hecha" es un campo nuevo; el panel actual lo ignora
+const notas     = ref(leerJSON('docente_notas', []))
 const nuevaNota = ref('')
-
+function guardarNotas(lista) {
+  notas.value = lista
+  guardarJSON('docente_notas', lista)
+}
 function addNota() {
-  if (!nuevaNota.value.trim()) return
-  const updated = [...notas.value, { id: Date.now(), text: nuevaNota.value.trim() }]
-  notas.value    = updated
+  const texto = nuevaNota.value.trim()
+  if (!texto) return
+  guardarNotas([...notas.value, { id: Date.now(), text: texto }])
   nuevaNota.value = ''
-  localStorage.setItem('docente_notas', JSON.stringify(updated))
+}
+const toggleNota = (id) => guardarNotas(notas.value.map(n => n.id === id ? { ...n, hecha: !n.hecha } : n))
+const borrarNota = (id) => guardarNotas(notas.value.filter(n => n.id !== id))
+// Una sola lista de 3 por página: primero las automáticas pendientes, luego tus notas
+// pendientes y al final las hechas (tachadas). Así las automáticas siempre salen arriba.
+// Igual que Proyectos: la lista reserva siempre 3 filas y el pie siempre ocupa su sitio,
+// así la tarjeta no cambia de tamaño aunque se añadan tareas.
+const TAREAS_POR_PAGINA = 3
+const paginaTareas = ref(0)
+const listaTareas = computed(() => {
+  const autos = tareasAuto.value.map(t => ({ key: t.id, tipo: 'auto', t, hecha: autoHecha(t) }))
+  const propias = notas.value.map(n => ({ key: 'nota-' + n.id, tipo: 'nota', n, hecha: !!n.hecha }))
+  return [...autos.filter(x => !x.hecha), ...propias.filter(x => !x.hecha), ...autos.filter(x => x.hecha), ...propias.filter(x => x.hecha)]
+})
+const totalPaginasTareas = computed(() => Math.max(1, Math.ceil(listaTareas.value.length / TAREAS_POR_PAGINA)))
+const paginaTareasActual = computed(() => Math.min(paginaTareas.value, totalPaginasTareas.value - 1))
+const tareasPagina = computed(() =>
+  listaTareas.value.slice(paginaTareasActual.value * TAREAS_POR_PAGINA, (paginaTareasActual.value + 1) * TAREAS_POR_PAGINA))
+const moverPaginaTareas = (d) => { paginaTareas.value = Math.min(Math.max(paginaTareasActual.value + d, 0), totalPaginasTareas.value - 1) }
+
+const pendientes = computed(() => tareasAuto.value.filter(t => !autoHecha(t)).length + notas.value.filter(n => !n.hecha).length)
+
+// ── Herramientas ──────────────────────────────────────────────────────────────
+// Mismo lenguaje visual que los contadores: icono blanco sobre color sólido de marca.
+const herramientas = [
+  {
+    grupo: 'Proyectos',
+    items: [
+      { titulo: 'Generar proyecto',        desc: 'Crea una propuesta a partir de un reto', ruta: '/proyectos/crear',  tile: 'bg-empresas', icon: 'sp_generar_proyecto' },
+      { titulo: 'Biblioteca de proyectos', desc: 'Consulta y gestiona tus proyectos',     ruta: '/proyectos',        tile: 'bg-empresas', icon: 'sp_biblioteca_proyectos' },
+    ],
+  },
+  {
+    grupo: 'Encuentros',
+    items: [
+      { titulo: 'Generar encuentro',        desc: 'Organiza un encuentro de trabajo',    ruta: '/encuentros/crear', tile: 'bg-centros', icon: 'sp_generar_encuentro' },
+      { titulo: 'Biblioteca de encuentros', desc: 'Consulta los encuentros registrados', ruta: '/encuentros',       tile: 'bg-centros', icon: 'sp_biblioteca_encuentros' },
+    ],
+  },
+  {
+    grupo: 'Equipos',
+    items: [
+      { titulo: 'Mis equipos', desc: 'Equipos de alumnado y su avance por fases', ruta: '/mis-equipos', tile: 'bg-azul-noche', icon: 'sp_mis_equipos' },
+    ],
+  },
+]
+
+const ICONOS = {
+  chispa:  'M13 10V3L4 14h7v7l9-11h-7z',
+  mas:     'M12 5v14M5 12h14',
+  libro:   'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z',
+  check:   'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+  capas:   'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  usuario: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0',
+  equipo:  'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+  // Iconos del SidePanel (mismos trazos) para que Herramientas coincida con el menú
+  sp_generar_proyecto:     'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM12 8v8M8 12h8',
+  sp_biblioteca_proyectos: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  sp_generar_encuentro:    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M10 3h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V4a1 1 0 011-1zM9 12l2 2 4-4',
+  sp_biblioteca_encuentros:'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2zM9 7h6M9 11h6',
+  sp_mis_equipos:          'M3 3v18h18M7 15l4-6 4 4 5-8',
 }
 
-function removeNota(id) {
-  const updated = notas.value.filter(n => n.id !== id)
-  notas.value   = updated
-  localStorage.setItem('docente_notas', JSON.stringify(updated))
-}
+// ── Varios ────────────────────────────────────────────────────────────────────
+const primerNombre = computed(() => (authStore.userName || '').split(' ')[0])
+const mostrarCatalogoBoe = ref(false)
+// Foto real del frontoffice (FRONTOFFICE/.../assets/8_dua.jpg): equipo con las manos juntas
+const banner = { imagen: bannerCasoReal, alt: 'Equipo de alumnado y profesorado de FP con las manos juntas' }
+// Foto real del frontoffice (FRONTOFFICE/.../assets/1_dua.jpeg): sesión de trabajo con alumnado y empresa
+const bienvenida = { imagen: bienvenidaCasoReal, alt: 'Sesión de trabajo de un reto con alumnado de FP y profesionales' }
+const irA = (ruta) => router.push(ruta)
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-16">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
+    <div class="@container/page mx-auto max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8">
 
-      <!-- ══ Cabecera bienvenida ══════════════════════════════════════════════════ -->
-      <div class="relative overflow-hidden bg-[#1F2937] rounded-2xl p-4 sm:p-5 mb-4
-                  transition-all duration-700"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
 
-        <div class="absolute top-0 right-0 w-48 h-48 bg-centros/10 rounded-full
-                    translate-x-1/3 -translate-y-1/3 blur-[60px] pointer-events-none"></div>
 
-        <div class="relative z-10 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-                 class="hidden sm:block h-24 w-24 object-contain shrink-0" />
-            <div>
-              <div class="inline-flex items-center gap-1.5 bg-centros/15 border border-centros/25
-                          rounded-full px-2.5 py-0.5 mb-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse shrink-0"></span>
-                <span class="text-primary-400 text-[9px] font-black uppercase tracking-widest">Perfil docente</span>
-              </div>
-              <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">
-                Bienvenido/a, <span class="text-primary-400">{{ primerNombre }}</span>
-              </h1>
-              <div v-if="userCentroNombre" class="flex items-center gap-1.5 mt-1">
-                <svg class="w-3.5 h-3.5 text-white/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                <span class="text-white/55 text-xs font-semibold">{{ userCentroNombre }}</span>
-              </div>
-              <p class="text-white/35 text-xs mt-0.5 font-medium">Panel de control · DuaLab</p>
+
+      <!-- Cuadrícula compacta en dos columnas independientes (cada una fluye sin huecos) y una fila final a todo
+           el ancho con el banner y los recursos. En pantallas estrechas, una sola columna en este orden. -->
+      <div class="grid grid-cols-1 gap-4 @5xl/page:grid-cols-[minmax(0,1fr)_300px]">
+
+        <!-- ══ Columna principal: bienvenida, resumen, gráfica + donut, proyectos + herramientas ══ -->
+        <div class="@container/main flex min-w-0 flex-col gap-4">
+          <!-- ══ Bienvenida (como idea_dashboard.png), sin recuadro: saludo y botones a la
+               izquierda; foto real con cintas de los colores del logo y nota manuscrita a la derecha ══ -->
+          <section class="@container relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-[#EDF3FA] @2xl/main:min-h-[230px]">
+            <!-- En ancho, solo la foto se funde suavemente hacia la izquierda; las cintas de color van
+                 encima sin difuminar, para que el azul y el naranja conserven todo su color -->
+            <div class="relative h-44 @2xl:absolute @2xl:inset-y-0 @2xl:right-0 @2xl:h-auto @2xl:w-[52%]">
+              <img :src="bienvenida.imagen" :alt="bienvenida.alt" class="absolute inset-0 h-full w-full object-cover object-[60%_50%] @2xl:[mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))] @2xl:[-webkit-mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))]" />
+              <svg aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
+                <!-- Copia de los halos del banner de "Aplicación moodboard a dashboard.png":
+                     izquierda = cinta azul que cae y se afila + cinta naranja encima que cubre la esquina inferior;
+                     derecha = cinta verde que baja desde arriba + gran ola turquesa que sube hasta la esquina -->
+                <defs>
+                  <linearGradient id="bv-azul" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2F7FD8" /><stop offset="100%" stop-color="#1E5FB8" /></linearGradient>
+                  <linearGradient id="bv-azul-claro" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#9BD3F7" /><stop offset="100%" stop-color="#4FA3E8" /></linearGradient>
+                  <linearGradient id="bv-naranja" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFB45C" /><stop offset="45%" stop-color="#FF8920" /><stop offset="100%" stop-color="#F57A0E" /></linearGradient>
+                  <linearGradient id="bv-melocoton" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FFC48A" stop-opacity="0.85" /><stop offset="100%" stop-color="#FFE6CC" stop-opacity="0.15" /></linearGradient>
+                  <linearGradient id="bv-verde" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3D8A22" /><stop offset="100%" stop-color="#6EC13F" /></linearGradient>
+                  <linearGradient id="bv-turquesa" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#4CC7D6" /><stop offset="100%" stop-color="#19A7A8" /></linearGradient>
+                  <linearGradient id="bv-cian" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#9BE7EF" stop-opacity="0.9" /><stop offset="100%" stop-color="#6FD6E3" stop-opacity="0.75" /></linearGradient>
+                </defs>
+                <!-- Izquierda: azul (debajo) en dos capas, se afila hacia la punta -->
+                <path d="M0,0 L40,0 C52,46 70,82 96,118 C60,112 26,108 6,103 C0,70 0,30 0,0 Z" fill="url(#bv-azul-claro)" opacity="0.9" />
+                <path d="M40,0 L76,0 C98,46 140,104 222,202 C160,168 120,140 96,118 C70,82 52,46 40,0 Z" fill="url(#bv-azul)" />
+                <!-- Izquierda: naranja ENCIMA de la azul, en la línea de las demás cintas; por la izquierda
+                     llega hasta la esquina inferior para que no asome la foto, con velo melocotón y brillo -->
+                <path d="M240,192 C330,208 435,228 540,256 L560,300 L300,300 C285,262 265,222 240,192 Z" fill="url(#bv-melocoton)" />
+                <path d="M0,72 C60,100 150,150 240,192 C275,212 305,238 332,262 L300,300 L0,300 Z" fill="url(#bv-naranja)" />
+                <path d="M110,185 C165,220 230,258 300,300 L262,300 C200,265 150,232 110,185 Z" fill="#FFFFFF" opacity="0.35" />
+                <!-- Derecha: verde desde arriba, franja clara + cuerpo oscuro, se afila hacia abajo a la izquierda -->
+                <path d="M836,0 L870,0 C852,80 822,150 780,206 C800,140 822,70 836,0 Z" fill="#8BD45F" opacity="0.9" />
+                <path d="M870,0 L1000,0 L1000,40 C958,100 880,170 780,206 C822,150 852,80 870,0 Z" fill="url(#bv-verde)" />
+                <!-- Derecha: ola turquesa que sube desde abajo, con capa cian encima y ola oscura debajo -->
+                <path d="M500,300 C620,252 760,200 900,112 C940,86 970,64 1000,46 L1000,68 C900,128 780,222 546,300 Z" fill="url(#bv-cian)" />
+                <path d="M546,300 C700,242 800,190 900,128 C940,102 975,82 1000,68 L1000,300 Z" fill="url(#bv-turquesa)" />
+                <path d="M600,300 C700,268 790,228 870,178" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2" vector-effect="non-scaling-stroke" />
+                <path d="M720,300 C830,270 925,222 1000,165 L1000,300 Z" fill="#138C9C" opacity="0.55" />
+              </svg>
+              <div class="absolute inset-x-0 bottom-0 flex h-1.5 @2xl:hidden"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></div>
             </div>
-          </div>
-
-          <div class="hidden sm:flex w-11 h-11 rounded-xl bg-centros/15 border border-centros/25
-                      items-center justify-center shrink-0">
-            <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 14l9-5-9-5-9 5 9 5z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ Contadores de proyectos ════════════════════════════════════════════════ -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 transition-all duration-700 delay-75"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-
-        <!-- Proyectos validados -->
-        <button @click="irAStartupFiltrado('proyecto')"
-                class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
-                       hover:border-centros/30 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoProyectos" class="text-2xl font-black text-centros tabular-nums leading-none mb-1">
-            {{ proyectosValidados.length }}
-          </div>
-          <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Validados</p>
-          <p class="text-[9px] font-black text-centros/60 uppercase tracking-widest mt-1
-                    group-hover:text-centros transition-colors">Ver todos →</p>
-        </button>
-
-        <!-- Pendientes de validar -->
-        <button @click="irAStartupFiltrado('propuesta')"
-                class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
-                       hover:border-amber-300/50 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoProyectos" class="text-2xl font-black text-amber-500 tabular-nums leading-none mb-1">
-            {{ proyectosPendientes.length }}
-          </div>
-          <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Pendientes</p>
-          <p class="text-[9px] font-black text-amber-400/60 uppercase tracking-widest mt-1
-                    group-hover:text-amber-500 transition-colors">Ver todos →</p>
-        </button>
-
-        <!-- Total proyectos -->
-        <button @click="irAStartupFiltrado('todos')"
-                class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
-                       hover:border-blue-300/50 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoProyectos" class="text-2xl font-black text-blue-500 tabular-nums leading-none mb-1">
-            {{ proyectos.length }}
-          </div>
-          <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Total proyectos</p>
-          <p class="text-[9px] font-black text-blue-400/60 uppercase tracking-widest mt-1
-                    group-hover:text-blue-500 transition-colors">Ver todos →</p>
-        </button>
-
-        <!-- Total de encuentros -->
-        <button @click="irA('/encuentros')"
-                class="group bg-white border border-gray-100 rounded-2xl px-4 py-3 text-left
-                       hover:border-purple-300/50 hover:shadow-sm transition-all duration-200">
-          <div v-if="!cargandoEncuentros" class="text-2xl font-black text-purple-500 tabular-nums leading-none mb-1">
-            {{ encuentros.length }}
-          </div>
-          <div v-else class="h-7 w-8 bg-gray-100 rounded-lg animate-pulse mb-1"></div>
-          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Encuentros</p>
-          <p class="text-[9px] font-black text-purple-400/60 uppercase tracking-widest mt-1
-                    group-hover:text-purple-500 transition-colors">Ver encuentros →</p>
-        </button>
-
-      </div>
-
-      <!-- ── Fila superior: izq (Calendario) | der (Mis encuentros · Agenda · Notas) ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start
-                  transition-all duration-700 delay-150"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-
-        <!-- ── Columna izquierda (Mis encuentros · Agenda · Notas → orden visual derecha) ── -->
-        <div class="flex flex-col gap-4 lg:order-2">
-
-        <!-- Mis encuentros -->
-        <section class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-            <div class="w-7 h-7 rounded-lg bg-blue-400/20 border border-blue-400/25
-                        flex items-center justify-center shrink-0">
-              <svg class="w-3.5 h-3.5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                     M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            <!-- Nota manuscrita, como en el ejemplo -->
+            <div aria-hidden="true" class="pointer-events-none absolute right-6 top-4 z-10 hidden -rotate-6 @3xl:block">
+              <p class="font-manuscrita text-2xl leading-6 text-white [text-shadow:0_1px_3px_rgba(23,40,62,0.75)]">Ideas de hoy<br />para el mundo<br />de mañana</p>
+              <svg class="ml-10 mt-1 h-8 w-14 -scale-x-100 text-alumnos drop-shadow" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 56 32">
+                <path d="M2,4 C10,22 30,28 50,20" /><path d="M42,14 L51,20 L42,26" />
               </svg>
             </div>
-            <h3 class="text-white font-black text-sm truncate min-w-0">Mis encuentros</h3>
-          </div>
-
-          <div v-if="cargandoEncuentros" class="p-6 flex justify-center">
-            <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-            </svg>
-          </div>
-
-          <div v-else-if="encuentros.length === 0" class="px-5 py-8 text-center">
-            <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100
-                        flex items-center justify-center mx-auto mb-3">
-              <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                     M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
+            <div class="relative z-10 p-5 @2xl:max-w-[46%]">
+              <h1 class="font-heading text-2xl font-bold tracking-tight text-azul-noche sm:text-3xl">¡Hola, {{ primerNombre }}!</h1>
+              <p class="mt-1 font-heading text-lg font-bold leading-snug text-azul-noche sm:text-xl">
+                Seguimos conectando talento<br class="hidden sm:block" /> con <span class="text-centros">oportunidades reales</span>
+              </p>
+              <p class="mt-2 text-sm text-gray-600">
+                Desde aquí puedes gestionar la Formación Dual<span v-if="authStore.userCentroNombre"> de {{ authStore.userCentroNombre }}</span>,
+                impulsar la colaboración con empresas y seguir el progreso de tu alumnado.
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button @click="irA('/proyectos/crear')"
+                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                  Nuevo proyecto
+                </button>
+                <button @click="irA('/encuentros/crear')"
+                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                  Nuevo encuentro
+                </button>
+              </div>
             </div>
-            <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay encuentros registrados.</p>
-            <button @click="irA('/encuentros/crear')"
-                    class="text-[10px] font-black uppercase tracking-widest text-centros
-                           hover:text-centros/70 transition-colors">
-              Registrar primer encuentro →
-            </button>
-          </div>
+          </section>
 
-          <template v-else>
-            <ul class="divide-y divide-gray-50">
-              <li v-for="s in ultimosEncuentros" :key="s.id"
-                  class="px-4 py-3 transition-all duration-150 group cursor-pointer"
-                  :class="isSessionHovered(s) ? 'bg-blue-50 ring-inset ring-1 ring-blue-100' : 'hover:bg-gray-50/60'"
-                  @mouseenter="setHoveredFromSession(s)"
-                  @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/encuentros', query: { id: s.id } })">
-                <div class="flex items-start gap-2">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black leading-snug truncate transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-700' : 'text-[#1F2937] group-hover:text-centros'">
-                      {{ s.microreto_titulo || '(sin título)' }}
-                    </p>
-                    <p class="text-[10px] font-bold mt-0.5 transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-500' : 'text-centros'">
-                      {{ formatFecha(s.fecha) }}
-                    </p>
-                    <div class="flex flex-wrap gap-1 mt-1">
-                      <span v-if="s.curso"
-                            class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                   bg-centros/10 text-centros">
-                        {{ s.curso }}
-                      </span>
-                      <span v-if="s.grupo"
-                            class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                   bg-primary-400/12 text-primary-700">
-                        Gr. {{ s.grupo }}
-                      </span>
-                      <span v-if="s.num_alumnos"
-                            class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                   bg-gray-100 text-gray-500">
-                        {{ s.num_alumnos }} al.
-                      </span>
-                    </div>
+          <!-- Resumen del curso (como "Resumen del centro" en idea_dashboard.png): icono a la izquierda,
+               título arriba y cifra debajo; sin porcentajes. Incluye el selector de curso. -->
+          <section class="card p-4" aria-labelledby="titulo-resumen">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 id="titulo-resumen" class="card-title">Resumen del curso</h2>
+              <label class="sr-only" for="curso-sel">Curso académico</label>
+              <select id="curso-sel" v-model.number="cursoSel"
+                      class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-centros/40">
+                <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ etiquetaCurso(c) }}</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3 @3xl/main:grid-cols-4">
+              <button v-for="k in kpis" :key="k.key" @click="irA(k.ruta)"
+                      class="@container min-w-0 rounded-xl p-2.5 text-left ring-1 ring-gray-200/70 transition hover:-translate-y-0.5 hover:shadow-md">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm @min-[12rem]:h-12 @min-[12rem]:w-12 @min-[12rem]:rounded-2xl" :class="k.tile">
+                    <svg v-if="k.icon === 'alumnos'" class="h-6 w-6 @min-[12rem]:h-7 @min-[12rem]:w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    <svg v-else-if="k.icon === 'empresas'" class="h-6 w-6 @min-[12rem]:h-7 @min-[12rem]:w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 9h2a2 2 0 012 2v10M2 21h20M8 7h4M8 11h4M8 15h4"/></svg>
+                    <svg v-else-if="k.icon === 'encuentro'" class="h-6 w-6 @min-[12rem]:h-7 @min-[12rem]:w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18M8 15h3"/></svg>
+                    <svg v-else class="h-6 w-6 @min-[12rem]:h-7 @min-[12rem]:w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                   </div>
-                  <svg class="w-3.5 h-3.5 shrink-0 mt-0.5 transition-colors"
-                       :class="isSessionHovered(s) ? 'text-blue-400' : 'text-gray-300 group-hover:text-centros'"
-                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  <div class="min-w-0">
+                    <p class="text-xs font-medium leading-snug text-gray-600 @min-[12rem]:text-sm">{{ k.label }}</p>
+                    <p class="mt-1 font-heading text-2xl font-bold leading-none @min-[12rem]:text-2xl" :class="cargando ? 'animate-pulse text-gray-300' : k.num">{{ cargando ? '—' : k.valor }}</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <!-- Gráfica (más ancha) | donut -->
+          <div class="grid grid-cols-1 gap-4 @3xl/main:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+            <article class="card @container flex h-full min-w-0 flex-col p-4">
+              <div class="mb-3">
+                <h2 class="card-title">Impacto acumulado del curso</h2>
+                <p class="text-sm text-gray-500">{{ etiquetaCurso(cursoSel) }} · evolución de septiembre a junio</p>
+              </div>
+
+              <div v-if="cargando" class="h-[190px] animate-pulse rounded-xl bg-gray-100" />
+              <div v-else-if="!hayImpacto" class="flex h-[190px] flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
+                Tu impacto empieza a contar con el primer encuentro del curso.
+                <button class="mt-2 font-semibold text-centros" @click="irA('/encuentros/crear')">Registrar un encuentro →</button>
+              </div>
+              <template v-else>
+                <div :ref="observarChart" class="relative w-full" @mouseleave="mesHoverImp = null">
+                  <svg :width="CH.w" :height="CH.h" :viewBox="`0 0 ${CH.w} ${CH.h}`" class="block" role="img"
+                       :aria-label="`Impacto acumulado del ${etiquetaCurso(cursoSel)}: ` + impacto.series.map(s => `${s.label} ${s.total}`).join(', ')">
+                    <defs>
+                      <linearGradient v-if="areaImpacto" id="grad-impacto" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" :stop-color="areaImpacto.color" stop-opacity="0.16" />
+                        <stop offset="100%" :stop-color="areaImpacto.color" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g v-for="t in ticksImp" :key="t">
+                      <line :x1="CH.l" :x2="CH.w - CH.r" :y1="iy(t)" :y2="iy(t)" stroke="#EEF0F3" stroke-width="1" />
+                      <text :x="CH.l - 8" :y="iy(t) + 4" text-anchor="end" font-size="11" fill="#9CA3AF">{{ t }}</text>
+                    </g>
+                    <template v-for="(m, i) in impacto.meses" :key="m">
+                      <text v-if="mostrarMesImp(i)" :x="ix(i)" :y="CH.h - 6" text-anchor="middle" font-size="11"
+                            :fill="i < impacto.n ? '#6B7280' : '#C4C9D1'">{{ m }}</text>
+                    </template>
+                    <line v-if="mesHoverImp !== null" :x1="ix(mesHoverImp)" :x2="ix(mesHoverImp)" :y1="CH.t" :y2="iy(0)" stroke="#9CA3AF" stroke-dasharray="3 3" />
+                    <path v-if="areaImpacto" :d="areaImpacto.d" fill="url(#grad-impacto)" />
+                    <g v-for="c in curvasImpacto" :key="c.key">
+                      <path :d="c.linea" fill="none" :stroke="c.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                      <!-- Un punto por mes, como el PNG; crece el del mes señalado -->
+                      <circle v-for="(pt, i) in c.pts" :key="i" :cx="pt[0]" :cy="pt[1]" :r="mesHoverImp === i ? 5 : 3.5"
+                              :fill="c.color" stroke="white" stroke-width="1.5" />
+                    </g>
+                    <rect v-for="(m, i) in impacto.meses.slice(0, impacto.n)" :key="'hit-' + m" :x="ix(i) - pasoImp / 2" y="0"
+                          :width="pasoImp" :height="CH.h" fill="transparent" @mouseenter="mesHoverImp = i" />
                   </svg>
-                </div>
-              </li>
-            </ul>
-            <div class="px-4 py-3 border-t border-gray-50 bg-blue-50/50">
-              <button @click="irA('/encuentros')"
-                      class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
-                             uppercase tracking-widest text-blue-500 hover:text-blue-600
-                             transition-colors py-0.5">
-                Ver todos los encuentros
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </div>
-          </template>
-        </section>
-
-        <!-- Alertas inteligentes -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <!-- Header -->
-          <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <div class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span class="text-sm font-semibold text-gray-700">Alertas</span>
-              <span v-if="alertas.length" class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">{{ alertas.length }}</span>
-            </div>
-          </div>
-
-          <!-- Sin alertas -->
-          <div v-if="alertas.length === 0 && !cargandoProyectos && !cargandoEncuentros"
-               class="flex flex-col items-center justify-center py-6 px-4 gap-2 text-center">
-            <div class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
-              <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p class="text-xs font-medium text-gray-500">Todo en orden</p>
-          </div>
-
-          <!-- Cargando -->
-          <div v-else-if="cargandoProyectos || cargandoEncuentros" class="px-5 py-4 space-y-2">
-            <div v-for="n in 2" :key="n" class="h-3 rounded bg-gray-100 animate-pulse" :class="n === 2 ? 'w-2/3' : 'w-full'" />
-          </div>
-
-          <!-- Lista de alertas -->
-          <ul v-else class="divide-y divide-gray-50">
-            <li v-for="(a, i) in alertas" :key="i"
-                class="flex items-start gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors cursor-pointer group"
-                @click="irA(a.ruta)">
-              <!-- Icono nivel -->
-              <div class="mt-0.5 shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
-                   :class="{
-                     'bg-amber-50': a.nivel === 'warning',
-                     'bg-blue-50':  a.nivel === 'info',
-                     'bg-green-50': a.nivel === 'success',
-                   }">
-                <!-- warning -->
-                <svg v-if="a.nivel === 'warning'" class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                </svg>
-                <!-- info -->
-                <svg v-else-if="a.nivel === 'info'" class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
-                </svg>
-                <!-- success -->
-                <svg v-else-if="a.nivel === 'success'" class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </div>
-
-              <p class="text-xs text-gray-600 leading-snug flex-1 pt-1">{{ a.texto }}</p>
-
-              <!-- Flecha hover -->
-              <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 mt-1 shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-              </svg>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Panel Notas -->
-        <div class="relative pt-5">
-          <div class="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
-            <div class="flex gap-3 mb-0">
-              <div class="w-[2px] h-5 bg-gradient-to-b from-gray-300 to-gray-500 rounded-full shadow-sm"></div>
-              <div class="w-[2px] h-5 bg-gradient-to-b from-gray-300 to-gray-500 rounded-full shadow-sm"></div>
-            </div>
-            <div class="w-10 h-[13px] bg-gradient-to-b from-gray-400 to-gray-600 rounded-[3px]
-                        shadow-lg -mt-px flex items-center justify-center">
-              <div class="w-5 h-[3px] bg-white/20 rounded-full"></div>
-            </div>
-          </div>
-          <div class="bg-[#FFFDE7] border border-amber-200/60 rounded-xl shadow-lg overflow-hidden flex flex-col"
-               style="background-image: repeating-linear-gradient(transparent, transparent 27px, #fde68a55 27px, #fde68a55 28px); background-position: 0 40px;">
-            <div class="px-5 pt-8 pb-2.5 border-b border-amber-200/50">
-              <h3 class="text-[10px] font-black uppercase tracking-widest text-amber-800/50 text-center">Mis notas</h3>
-            </div>
-            <div class="flex-1 px-4 py-3 space-y-0 overflow-y-auto max-h-[252px]">
-              <div v-if="notas.length === 0" class="text-center py-6">
-                <p class="text-[11px] text-amber-800/30 font-medium italic">Escribe tu primera nota…</p>
-              </div>
-              <div v-for="nota in notas" :key="nota.id"
-                   class="group flex items-start gap-2 border-b border-amber-200/40 py-2 last:border-0">
-                <span class="text-amber-400/60 text-[10px] font-black shrink-0 mt-0.5 select-none">—</span>
-                <p class="flex-1 text-xs text-amber-900/80 font-medium leading-snug">{{ nota.text }}</p>
-                <button @click="removeNota(nota.id)"
-                        class="opacity-0 group-hover:opacity-100 text-amber-300 hover:text-red-400
-                               transition-all text-sm font-black shrink-0 leading-none">×</button>
-              </div>
-            </div>
-            <div class="border-t border-amber-200/50 px-4 py-3 bg-amber-50/60">
-              <div class="flex items-center gap-2">
-                <input v-model="nuevaNota" type="text" placeholder="Nueva nota…" @keyup.enter="addNota"
-                       class="flex-1 text-xs font-medium text-amber-900/80 bg-transparent
-                              border-0 border-b border-amber-300/50 outline-none pb-1
-                              placeholder-amber-800/25 focus:border-amber-500 transition-colors"/>
-                <button @click="addNota"
-                        class="w-6 h-6 rounded-full bg-amber-400/30 hover:bg-amber-400/60
-                               text-amber-700 font-black text-sm flex items-center justify-center
-                               transition-colors shrink-0 leading-none">+</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        </div><!-- /columna izquierda -->
-
-        <!-- ── Columna derecha: Calendario + Acciones rápidas (→ orden visual izquierda) ── -->
-        <div class="flex flex-col gap-4 lg:order-1">
-
-        <!-- Calendario -->
-        <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          <div class="bg-[#374151] px-5 py-4 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-centros/20 border border-centros/25
-                          flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-              </div>
-              <h3 class="text-white font-black text-sm capitalize">{{ calendarMonthLabel }}</h3>
-            </div>
-            <div class="flex items-center gap-1">
-              <button @click="prevMonth"
-                      class="w-6 h-6 rounded-lg flex items-center justify-center
-                             text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
-                </svg>
-              </button>
-              <button @click="nextMonth"
-                      class="w-6 h-6 rounded-lg flex items-center justify-center
-                             text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="px-3 pt-3 pb-2">
-            <div class="grid grid-cols-7 mb-1">
-              <div v-for="d in ['L','M','X','J','V','S','D']" :key="d"
-                   class="text-center text-[9px] font-black uppercase tracking-widest text-gray-300 pb-1">
-                {{ d }}
-              </div>
-            </div>
-            <div class="grid grid-cols-7 gap-px">
-              <div v-for="(day, i) in calendarDays" :key="i"
-                   class="min-h-[52px] flex flex-col rounded-lg overflow-hidden transition-all duration-150"
-                   :class="day ? 'cursor-pointer' : ''"
-                   :style="hoveredDay === day ? dayAccentBg(day) : {}"
-                   @click="selectCalDay(day)"
-                   @mouseenter="hoveredDay = day || null"
-                   @mouseleave="hoveredDay = null">
-                <div v-if="day" class="px-1 pt-1">
-                  <span :class="[
-                    'w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold',
-                    isToday(day) ? 'bg-centros text-white' : '',
-                    isDaySelected(day) ? 'ring-2 ring-centros ring-offset-1' : '',
-                    !isToday(day) ? 'text-gray-600' : ''
-                  ]">{{ day }}</span>
-                </div>
-                <div v-if="day" class="flex-1 px-0.5 pb-0.5 space-y-px mt-0.5">
-                  <div v-for="(ev, ei) in dayEvents(day)" :key="'ev-'+ei"
-                       class="rounded px-1 py-px text-[8px] font-bold text-white leading-tight truncate"
-                       :style="{ backgroundColor: ev.color }">
-                    {{ ev.text }}
-                  </div>
-                  <div v-for="(s, si) in encuentrosDelDia(day)" :key="'s-'+si"
-                       class="rounded px-1 py-px text-[8px] font-bold text-white leading-tight truncate bg-blue-500">
-                    {{ s.microreto_titulo || 'Encuentro' }}
+                  <div v-if="mesHoverImp !== null"
+                       class="pointer-events-none absolute top-1 z-10 w-[230px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
+                       :style="{ left: `${tooltipLeftImp}px` }">
+                    <p class="mb-1 font-semibold">Hasta {{ impacto.meses[mesHoverImp] }}</p>
+                    <p v-for="c in seriesVisibles" :key="c.key" class="flex justify-between gap-3 text-gray-600">
+                      <span class="flex min-w-0 items-center gap-1.5"><span class="h-2 w-2 shrink-0 rounded-full" :style="{ background: c.color }" /><span class="truncate">{{ c.label }}</span></span>
+                      <strong class="shrink-0 text-azul-noche">{{ c.acum[mesHoverImp] }}</strong>
+                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="selectedDate" class="mx-3 mb-3 mt-1 p-3 rounded-xl bg-gray-50 border border-gray-100">
-            <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
-              Evento el día {{ selectedDate.day }}
-            </p>
-            <input v-model="newEventText" type="text" placeholder="Nombre del evento…"
-                   @keyup.enter="addEvento"
-                   class="w-full text-xs font-medium text-[#1F2937] bg-white border border-gray-200
-                          rounded-lg px-3 py-2 mb-2 outline-none focus:border-centros transition-colors"/>
-            <div class="flex items-center gap-2 mb-2">
-              <button v-for="c in eventColors" :key="c" @click="newEventColor = c"
-                      class="w-5 h-5 rounded-full border-2 transition-all"
-                      :style="{ backgroundColor: c }"
-                      :class="newEventColor === c ? 'border-[#1F2937] scale-110' : 'border-transparent'">
-              </button>
-            </div>
-            <div class="flex gap-2">
-              <button @click="addEvento"
-                      class="flex-1 text-[10px] font-black uppercase tracking-widest text-white
-                             bg-centros hover:bg-centros/90 rounded-lg py-1.5 transition-colors">
-                Añadir
-              </button>
-              <button @click="selectedDate = null"
-                      class="text-[10px] font-black uppercase tracking-widest text-gray-400
-                             hover:text-gray-600 px-3 transition-colors">
-                Cancelar
-              </button>
-            </div>
-          </div>
-          <!-- Agenda integrada -->
-          <div class="border-t border-gray-100 px-4 pt-3 pb-1">
-            <p class="text-[9px] font-black uppercase tracking-widest text-blue-400/80 mb-2 flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
-              Encuentros este mes
-            </p>
-            <div v-if="encuentrosDelMes.length === 0"
-                 class="text-[10px] text-gray-300 font-medium text-center py-1.5">
-              Sin encuentros este mes
-            </div>
-            <ul v-else class="space-y-0.5">
-              <li v-for="s in encuentrosDelMes" :key="s.id"
-                  class="flex items-start gap-2 rounded-lg px-2 -mx-2 py-1 transition-colors duration-150 cursor-pointer"
-                  :class="hoveredDay === _pf(s.fecha).getDate()
-                    ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'"
-                  @mouseenter="setHoveredFromSession(s)"
-                  @mouseleave="hoveredDay = null"
-                  @click="router.push({ path: '/encuentros', query: { id: s.id } })">
-                <div class="w-2 h-2 rounded shrink-0 mt-1 transition-colors duration-150"
-                     :class="hoveredDay === _pf(s.fecha).getDate()
-                       ? 'bg-blue-600' : 'bg-blue-500'"></div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-bold truncate transition-colors duration-150"
-                     :class="hoveredDay === _pf(s.fecha).getDate()
-                       ? 'text-blue-700' : 'text-[#1F2937]'">
-                    <span class="font-bold" :class="hoveredDay === _pf(s.fecha).getDate()
-                      ? 'text-blue-400' : 'text-gray-400'">
-                      {{ _pf(s.fecha).getDate() }} —
-                    </span>
-                    {{ s.microreto_titulo || 'Encuentro' }}
-                  </p>
-                  <p v-if="s.ciclo_formativo || s.grupo" class="text-[9px] text-gray-400 font-medium truncate">
-                    {{ [s.ciclo_formativo, s.grupo].filter(Boolean).join(' · ') }}
-                  </p>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div class="border-t border-gray-100 px-4 pt-3 pb-3">
-            <p class="text-[9px] font-black uppercase tracking-widest text-gray-300 mb-2 flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>
-              Otros eventos
-            </p>
-            <div v-if="eventosDelMes.length === 0"
-                 class="text-[10px] text-gray-300 font-medium text-center py-1.5">
-              Sin eventos · Toca un día para añadir
-            </div>
-            <ul v-else class="space-y-0.5">
-              <li v-for="(ev, i) in eventosDelMes" :key="i"
-                  class="flex items-center gap-2 group rounded-lg px-2 -mx-2 py-1 transition-all duration-150"
-                  :style="hoveredDay === ev.day
-                    ? { backgroundColor: hexToRgba(ev.color, 0.10), boxShadow: `0 0 0 1px ${hexToRgba(ev.color, 0.35)}` }
-                    : {}">
-                <div class="w-2 h-2 rounded shrink-0 transition-transform duration-150"
-                     :class="hoveredDay === ev.day ? 'scale-125' : ''"
-                     :style="{ backgroundColor: ev.color }"></div>
-                <span class="flex-1 text-xs font-medium truncate transition-colors duration-150"
-                      :class="hoveredDay === ev.day ? 'font-bold' : ''"
-                      :style="hoveredDay === ev.day ? { color: ev.color } : {}">
-                  <span class="font-bold"
-                        :style="hoveredDay === ev.day ? { color: hexToRgba(ev.color, 0.6) } : {}"
-                        :class="hoveredDay !== ev.day ? 'text-gray-400' : ''">{{ ev.day }} —</span>
-                  {{ ev.text }}
-                </span>
-                <button @click="removeEvento(eventos.indexOf(ev))"
-                        class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400
-                               transition-all text-xs font-black shrink-0">×</button>
-              </li>
-            </ul>
-          </div>
-        </div><!-- /calendario + agenda -->
-
-        <!-- Donut progreso proyectos -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
-          <p class="text-xs font-semibold text-gray-500 mb-4">Progreso de proyectos</p>
-
-          <!-- Skeleton -->
-          <div v-if="cargandoProyectos" class="flex items-center gap-5">
-            <div class="w-24 h-24 rounded-full bg-gray-100 animate-pulse shrink-0" />
-            <div class="flex-1 space-y-2">
-              <div v-for="n in 3" :key="n" class="h-3 rounded bg-gray-100 animate-pulse" :class="n === 3 ? 'w-2/3' : 'w-full'" />
-            </div>
-          </div>
-
-          <!-- Sin proyectos -->
-          <div v-else-if="!proyectos.length"
-               class="flex flex-col items-center justify-center py-2 gap-1 text-center">
-            <p class="text-xs text-gray-400">Aún no hay proyectos</p>
-          </div>
-
-          <!-- Donut + leyenda -->
-          <div v-else class="flex items-center gap-5">
-            <!-- SVG donut -->
-            <div class="relative shrink-0 w-24 h-24">
-              <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
-                <!-- track -->
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#F3F4F6" stroke-width="14" />
-                <!-- segmentos -->
-                <circle v-for="(seg, i) in donutSegmentos" :key="i"
-                  cx="50" cy="50" r="38" fill="none"
-                  :stroke="seg.color"
-                  stroke-width="13"
-                  :stroke-dasharray="`${seg.dash} ${DONUT_C - seg.dash}`"
-                  :transform="`rotate(${seg.rotacion}, 50, 50)`"
-                  stroke-linecap="butt"
-                />
-              </svg>
-              <!-- Total centrado -->
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-xl font-black text-gray-800 leading-none">{{ proyectos.length }}</span>
-                <span class="text-[9px] text-gray-400 font-medium mt-0.5">proyectos</span>
-              </div>
-            </div>
-
-            <!-- Leyenda -->
-            <ul class="flex-1 space-y-2 min-w-0">
-              <li v-for="seg in donutSegmentos" :key="seg.label"
-                  class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: seg.color }" />
-                <span class="text-xs text-gray-500 truncate flex-1">{{ seg.label }}</span>
-                <span class="text-xs font-bold text-gray-700 tabular-nums shrink-0">{{ seg.valor }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        </div><!-- /columna derecha -->
-
-      </div><!-- /fila superior -->
-
-      <!-- ── Mis proyectos (izq) · Recursos (der) ────────────────────────────── -->
-      <section class="mt-4 transition-all duration-700 delay-[200ms]"
-               :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_272px] gap-6 items-start">
-
-          <!-- ═ IZQUIERDA — Mis proyectos ══════════════════════════════════════ -->
-          <div>
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 shrink-0">Mis proyectos</span>
-              <div class="flex-1 h-px bg-gray-200"></div>
-            </div>
-
-            <!-- Cargando -->
-            <div v-if="cargandoProyectos"
-                 class="bg-white border border-gray-100 rounded-2xl p-6 flex justify-center">
-              <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-            </div>
-
-            <!-- Sin proyectos -->
-            <div v-else-if="!hayProyectos"
-                 class="bg-white border border-gray-100 rounded-2xl px-5 py-8 text-center">
-              <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100
-                          flex items-center justify-center mx-auto mb-3">
-                <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2
-                       m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>
-              </div>
-              <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay proyectos creados.</p>
-              <button @click="irA('/proyectos')"
-                      class="text-[10px] font-black uppercase tracking-widest text-orange-500
-                             hover:text-orange-400 transition-colors">
-                Ir a Startup Day →
-              </button>
-            </div>
-
-            <!-- Con proyectos -->
-            <div v-else class="flex flex-col gap-4">
-
-              <!-- Proyectos validados -->
-              <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-                  <div class="w-7 h-7 rounded-lg bg-centros/20 border border-centros/25
-                              flex items-center justify-center shrink-0">
-                    <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </div>
-                  <h3 class="text-white font-black text-sm">Proyectos validados</h3>
-                </div>
-
-                <div v-if="ultimosProyectosEnCurso.length === 0" class="px-5 py-8 text-center">
-                  <div class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100
-                              flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </div>
-                  <p class="text-xs text-gray-400 font-medium mb-3">Aún no hay proyectos validados.</p>
-                  <button @click="irA('/proyectos')"
-                          class="text-[10px] font-black uppercase tracking-widest text-centros
-                                 hover:text-centros/70 transition-colors">
-                    Ver proyectos →
-                  </button>
-                </div>
-
-                <template v-else>
-                  <ul class="divide-y divide-gray-50">
-                    <li v-for="(p, idx) in ultimosProyectosEnCurso" :key="p.id"
-                        class="px-4 py-3 hover:bg-gray-50/60 transition-colors group cursor-pointer"
-                        @click="irA('/proyectos/' + p.uuid)">
-                      <div class="flex items-start gap-3">
-                        <div class="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-gray-100 shadow-sm">
-                          <img :src="proyectoImgs[idx % proyectoImgs.length]"
-                               :alt="p.titulo" class="w-full h-full object-cover" loading="lazy" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-xs font-black text-[#1F2937] leading-snug truncate
-                                    group-hover:text-centros transition-colors">
-                            {{ p.titulo || '(sin título)' }}
-                          </p>
-                          <p v-if="p.empresa_nombre" class="text-[10px] text-centros font-bold mt-0.5 truncate">
-                            {{ p.empresa_nombre }}
-                          </p>
-                          <div class="flex flex-wrap gap-1 mt-1">
-                            <span v-if="p.ciclo_nombre"
-                                  class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                         bg-centros/10 text-centros">
-                              {{ p.ciclo_nombre }}
-                            </span>
-                            <span v-if="p.curso"
-                                  class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide
-                                         bg-gray-100 text-gray-500">
-                              {{ p.curso }}
-                            </span>
-                          </div>
-                        </div>
-                        <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-centros shrink-0 mt-0.5 transition-colors"
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                      </div>
-                    </li>
-                  </ul>
-                  <div class="px-4 py-3 border-t border-gray-50 bg-centros/5">
-                    <button @click="irAStartupFiltrado('proyecto')"
-                            class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
-                                   uppercase tracking-widest text-centros hover:text-primary-700
-                                   transition-colors py-0.5">
-                      Ver todos los proyectos validados
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                      </svg>
+                <!-- Leyenda como el PNG: bajo la gráfica y repartida a lo ancho; pulsar oculta/muestra la línea -->
+                <ul class="mt-3 flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 text-xs">
+                  <li v-for="c in impacto.series" :key="c.key">
+                    <button class="flex items-center gap-1.5 transition"
+                            :class="seriesOcultas.includes(c.key) ? 'text-gray-400 line-through' : 'text-gray-600 hover:text-azul-noche'"
+                            :aria-pressed="!seriesOcultas.includes(c.key)" :title="seriesOcultas.includes(c.key) ? 'Mostrar línea' : 'Ocultar línea'"
+                            @click="toggleSerie(c.key)">
+                      <span class="h-2.5 w-2.5 rounded-full" :style="{ background: seriesOcultas.includes(c.key) ? '#D1D5DB' : c.color }" />
+                      {{ c.label }}
                     </button>
+                  </li>
+                </ul>
+              </template>
+            </article>
+
+            <article class="card @container flex h-full min-w-0 flex-col p-4">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="card-title">Estado de los proyectos</h2>
+                <button class="link shrink-0" @click="irA('/proyectos')">Ver todos</button>
+              </div>
+              <div v-if="cargando" class="h-[200px] animate-pulse rounded-xl bg-gray-100" />
+              <div v-else class="flex flex-1 flex-col items-center justify-center gap-4 @min-[17rem]:flex-row">
+                <div class="relative h-36 w-36 shrink-0">
+                  <svg viewBox="0 0 140 140" class="h-full w-full -rotate-90" role="img" :aria-label="`${donut.total} proyectos por estado`">
+                    <circle cx="70" cy="70" :r="R" fill="none" stroke="#F3F4F6" stroke-width="18" />
+                    <circle v-for="s in donut.segmentos.filter(x => x.valor)" :key="s.label" cx="70" cy="70" :r="R" fill="none"
+                            :stroke="s.color" :stroke-width="donutHover === s.label ? 24 : 18"
+                            :stroke-dasharray="`${s.dash} ${CIRC}`" :stroke-dashoffset="s.offset"
+                            :opacity="donutHover && donutHover !== s.label ? 0.25 : 1"
+                            class="cursor-pointer transition-all duration-200"
+                            @mouseenter="donutHover = s.label" @mouseleave="donutHover = null" @click="irA(s.ruta)">
+                      <title>{{ s.label }}: {{ s.valor }} ({{ s.pct }}%)</title>
+                    </circle>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="font-heading text-2xl font-bold">{{ donutHover ? donut.segmentos.find(x => x.label === donutHover).valor : donut.total }}</span>
+                    <span class="max-w-[5.5rem] text-center text-[11px] leading-tight text-gray-500">{{ donutHover || 'proyectos' }}</span>
                   </div>
+                </div>
+                <!-- Leyenda a un lado (como el PNG) = recorrido del proyecto, en orden; cada paso abre la biblioteca filtrada -->
+                <ol class="relative w-full min-w-0">
+                  <span aria-hidden="true" class="absolute bottom-3 left-[11px] top-3 w-px bg-gray-200" />
+                  <li v-for="s in donut.segmentos" :key="s.label">
+                    <button class="relative flex w-full items-start gap-2.5 rounded-lg px-1.5 py-1 text-left transition"
+                            :class="[!s.valor && 'opacity-50', donutHover === s.label ? 'bg-gray-100' : 'hover:bg-gray-50']"
+                            @mouseenter="donutHover = s.label" @mouseleave="donutHover = null"
+                            @focus="donutHover = s.label" @blur="donutHover = null" @click="irA(s.ruta)">
+                      <span class="relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white transition-transform"
+                            :class="donutHover === s.label && 'scale-150'" :style="{ background: s.color }" />
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-xs font-medium text-gray-700">{{ s.label }}</span>
+                        <span class="block truncate text-[11px] text-gray-500">
+                          <strong class="text-azul-noche">{{ s.valor }}</strong> ({{ s.pct }}%)<template v-if="s.detalle"> · {{ s.detalle }}</template>
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                </ol>
+              </div>
+              <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-lg bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
+                      @click="irA('/proyectos/crear')">
+                Aún no hay proyectos en este curso · Crear propuesta →
+              </button>
+            </article>
+          </div>
+
+          <!-- Proyectos | herramientas -->
+          <div class="grid flex-1 grid-cols-1 gap-4 @3xl/main:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+            <article class="card @container flex h-full min-w-0 flex-col p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 class="card-title">Proyectos</h2>
+                <button class="link shrink-0" @click="verTodosProyectos">Ver todos</button>
+              </div>
+
+              <!-- Filtros de estado — los mismos que la biblioteca de proyectos -->
+              <div class="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Filtrar por estado">
+                <button v-for="f in FILTROS_PROY" :key="f.key" :aria-pressed="filtroProy === f.key"
+                        @click="filtroProy = f.key"
+                        class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition"
+                        :class="filtroProy === f.key
+                        ? 'border-centros bg-centros text-white'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-centros/40 hover:text-centros'">
+                  {{ f.label }}
+                  <span class="rounded-full px-1.5 text-[10px]"
+                        :class="filtroProy === f.key ? 'bg-white/20' : 'bg-gray-100 text-gray-500'">{{ conteoProy(f.key) }}</span>
+                </button>
+              </div>
+
+              <!-- Lista con alto fijo (5 filas): no cambia el tamaño de la tarjeta según cuántos proyectos haya -->
+              <div class="h-[324px]">
+                <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
+                <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
+                  {{ filtroProy === 'todos' ? 'Aún no hay proyectos en este curso.' : 'No hay proyectos con este estado en el curso seleccionado.' }}
+                  <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear propuesta →</button>
+                </div>
+                <ul v-else class="divide-y divide-gray-100">
+                  <li v-for="p in proyectosPagina" :key="p.id" class="h-16">
+                    <button class="flex h-full w-full items-center gap-3 rounded-lg text-left hover:bg-gray-50" @click="irA('/proyectos/' + p.uuid)">
+                      <img v-if="p.imagen_portada_url" :src="p.imagen_portada_url" alt="" class="h-10 w-12 shrink-0 rounded-lg object-cover" />
+                      <div v-else class="flex h-10 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-centros/15 to-administraciones/15 text-centros">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS.capas"/></svg>
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold">{{ p.titulo }}</p>
+                        <p class="truncate text-xs text-gray-500">{{ [p.empresa_nombre, p.ciclo_nombre, p.curso].filter(Boolean).join(' · ') }}</p>
+                        <!-- En tarjetas estrechas la etiqueta baja bajo el título para no taparlo -->
+                        <span class="mt-0.5 inline-block rounded-full border px-2 py-px text-[10px] font-bold @md:hidden" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
+                      </div>
+                      <span class="hidden shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold @md:inline-block" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <!-- Pie fijo: paginación (si hay más de una página) + acceso a la biblioteca -->
+              <div class="mt-auto flex h-10 items-center justify-between gap-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
+                <div class="flex items-center gap-2">
+                  <template v-if="totalPaginasProy > 1">
+                    <button class="cal-nav disabled:opacity-30" aria-label="Proyectos anteriores" :disabled="paginaProyActual === 0" @click="moverPaginaProy(-1)">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <span>{{ paginaProyActual + 1 }} / {{ totalPaginasProy }}</span>
+                    <button class="cal-nav disabled:opacity-30" aria-label="Proyectos siguientes" :disabled="paginaProyActual === totalPaginasProy - 1" @click="moverPaginaProy(1)">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                  </template>
+                  <span v-else-if="proyectosFiltrados.length">{{ proyectosFiltrados.length }} proyecto{{ proyectosFiltrados.length !== 1 ? 's' : '' }}</span>
+                </div>
+                <button class="font-semibold text-centros hover:underline" @click="verTodosProyectos">Ver en la biblioteca →</button>
+              </div>
+
+            </article>
+
+            <!-- Herramientas: junto a Proyectos, botones tipo icono de app; la explicación sale al pasar el cursor -->
+            <article class="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#F6F9FD] to-white p-4 shadow-sm ring-1 ring-gray-200/70">
+              <!-- Fondo casi blanco con un toque azul muy suave y una llave de marca de agua apenas visible;
+                   barra superior con los colores del logo -->
+              <svg aria-hidden="true" class="pointer-events-none absolute -bottom-4 -right-4 h-32 w-32 -rotate-12 text-centros/5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg>
+              <span aria-hidden="true" class="absolute inset-x-0 top-0 flex h-1"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></span>
+              <h2 class="card-title relative mb-3">Herramientas</h2>
+              <div class="relative grid flex-1 auto-rows-fr grid-cols-2 gap-2">
+                <template v-for="g in herramientas" :key="g.grupo">
+                  <button v-for="h in g.items" :key="h.titulo" @click="irA(h.ruta)" :title="h.desc" :aria-label="`${h.titulo}: ${h.desc}`"
+                          class="group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl bg-white p-2 text-center ring-1 ring-gray-200/70 transition hover:-translate-y-0.5 hover:shadow-md"
+                          :class="g.items.length === 1 && 'col-span-2 !flex-row !gap-2.5'">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105" :class="h.tile">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS[h.icon]"/></svg>
+                    </span>
+                    <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
+                  </button>
                 </template>
               </div>
-
-              <!-- Grid: Pendientes + En edición como tarjetas separadas -->
-              <div v-if="proyectosPendientes.length > 0 || proyectosEnEdicion.length > 0"
-                   class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                <!-- Pendientes -->
-                <div v-if="proyectosPendientes.length > 0"
-                     class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div class="px-4 py-2.5 bg-[#374151] flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-white/70">Pendientes de validar</span>
-                  </div>
-                  <ul class="space-y-2 px-4 py-3">
-                    <li v-for="p in proyectosPendientes.slice(0, 4)" :key="p.id"
-                        class="flex items-center gap-2.5 cursor-pointer group"
-                        @click="irA('/proyectos/' + p.uuid)">
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-[#1F2937] truncate group-hover:text-orange-600 transition-colors">
-                          {{ p.titulo || 'Sin título' }}
-                        </p>
-                        <p v-if="p.empresa_nombre" class="text-[10px] text-gray-400 font-medium truncate">
-                          {{ p.empresa_nombre }}
-                        </p>
-                      </div>
-                      <span class="text-[8px] font-black px-2 py-0.5 rounded-full
-                                   bg-orange-50 text-orange-600 border border-orange-200 shrink-0">···</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- En edición -->
-                <div v-if="proyectosEnEdicion.length > 0"
-                     class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div class="px-4 py-2.5 bg-[#374151] flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-white/70">En edición</span>
-                  </div>
-                  <ul class="space-y-2 px-4 py-3">
-                    <li v-for="p in proyectosEnEdicion.slice(0, 4)" :key="p.id"
-                        class="flex items-center gap-2.5 cursor-pointer group"
-                        @click="irA('/proyectos/' + p.uuid)">
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-[#1F2937] truncate group-hover:text-gray-600 transition-colors">
-                          {{ p.titulo || 'Sin título' }}
-                        </p>
-                        <p v-if="p.empresa_nombre" class="text-[10px] text-gray-400 font-medium truncate">
-                          {{ p.empresa_nombre }}
-                        </p>
-                      </div>
-                      <span class="text-[8px] font-black px-2 py-0.5 rounded-full
-                                   bg-gray-100 text-gray-500 border border-gray-200 shrink-0">✎</span>
-                    </li>
-                  </ul>
-                </div>
-
-              </div>
-
-              <!-- Ver todos -->
-              <div class="bg-white border border-gray-100 rounded-xl px-4 py-3
-                          bg-gradient-to-r from-centros/8 via-centros/4 to-transparent">
-                <button @click="irAStartupFiltrado('todos')"
-                        class="w-full flex items-center justify-center gap-1.5 text-[10px] font-black
-                               uppercase tracking-widest text-centros hover:text-primary-700
-                               transition-colors py-0.5">
-                  Ver todos los proyectos
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              </div>
-
-            </div>
-          </div><!-- /LEFT -->
-
-          <!-- ═ DERECHA — Recursos ══════════════════════════════════════════════ -->
-          <div>
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 shrink-0">Recursos</span>
-              <div class="flex-1 h-px bg-gray-200"></div>
-            </div>
-
-            <!-- Grid acciones rápidas -->
-            <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-              <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-                <div class="w-7 h-7 rounded-lg bg-centros/20 border border-centros/25
-                            flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                </div>
-                <h3 class="text-white font-black text-sm">Acciones rápidas</h3>
-              </div>
-              <div class="p-3 grid grid-cols-2 gap-2">
-                <button @click="irA('/retos/crear')"
-                  class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-centros/5 border border-centros/15
-                         hover:bg-centros/12 hover:border-centros/35 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-centros/15 border border-centros/20
-                              flex items-center justify-center shrink-0 group-hover:bg-centros/25 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                  </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-centros transition-colors leading-tight">Nuevo reto</span>
-                </button>
-                <button @click="irA('/proyectos/crear')"
-                  class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-orange-400/5 border border-orange-400/15
-                         hover:bg-orange-400/10 hover:border-orange-400/35 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-orange-100/70 border border-orange-200/60
-                              flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                  </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-orange-600 transition-colors leading-tight">Nuevo proyecto</span>
-                </button>
-                <button @click="irA('/retos')"
-                  class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-primary-400/5 border border-primary-400/20
-                         hover:bg-primary-400/12 hover:border-primary-400/40 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-primary-400/15 border border-primary-400/25
-                              flex items-center justify-center shrink-0 group-hover:bg-primary-400/25 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
-                    </svg>
-                  </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-primary-700 transition-colors leading-tight">Biblioteca</span>
-                </button>
-                <button @click="irA('/mi-usuario')"
-                  class="group flex items-center gap-2 p-3 rounded-xl text-left
-                         bg-gray-50 border border-gray-100
-                         hover:border-gray-300/60 hover:shadow-sm transition-all duration-200">
-                  <div class="w-7 h-7 rounded-lg bg-gray-100 border border-gray-200
-                              flex items-center justify-center shrink-0 group-hover:bg-gray-200 transition-colors">
-                    <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <circle cx="12" cy="8" r="4" stroke-width="2"/>
-                      <path stroke-width="2" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                    </svg>
-                  </div>
-                  <span class="text-xs font-black text-[#1F2937] group-hover:text-gray-600 transition-colors leading-tight">Mi cuenta</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Recursos docente -->
-            <div class="mt-4 bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-              <div class="bg-[#374151] px-4 py-3 flex items-center gap-3">
-                <div class="w-7 h-7 rounded-lg bg-indigo-400/20 border border-indigo-400/25
-                            flex items-center justify-center shrink-0">
-                  <svg class="w-3.5 h-3.5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2
-                         m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
-                </div>
-                <h3 class="text-white font-black text-sm">Recursos docente</h3>
-              </div>
-              <div class="p-3 flex flex-col gap-2">
-
-                <button @click="irA('/guia')"
-                  class="group flex items-center gap-3 p-3 rounded-xl text-left
-                         bg-blue-50/60 border border-blue-100
-                         hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-200">
-                  <div class="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200
-                              flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18
-                           7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13
-                           C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                    </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-[#1F2937] group-hover:text-blue-700 transition-colors leading-tight">Guía didáctica</p>
-                    <p class="text-[10px] text-gray-400 font-medium mt-0.5">Manual de uso DuaLab</p>
-                  </div>
-                  <svg class="w-3.5 h-3.5 text-blue-300 group-hover:text-blue-500 shrink-0 transition-colors"
-                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                </button>
-
-                <button @click="irA('/retos')"
-                  class="group flex items-center gap-3 p-3 rounded-xl text-left
-                         bg-primary-400/5 border border-primary-400/20
-                         hover:bg-primary-400/12 hover:border-primary-400/40 hover:shadow-sm transition-all duration-200">
-                  <div class="w-9 h-9 rounded-xl bg-primary-400/15 border border-primary-400/25
-                              flex items-center justify-center shrink-0 group-hover:bg-primary-400/25 transition-colors">
-                    <svg class="w-4 h-4 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
-                    </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-[#1F2937] group-hover:text-primary-700 transition-colors leading-tight">Recursos</p>
-                    <p class="text-[10px] text-gray-400 font-medium mt-0.5">Biblioteca de retos y materiales</p>
-                  </div>
-                  <svg class="w-3.5 h-3.5 text-primary-400/50 group-hover:text-primary-700 shrink-0 transition-colors"
-                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                </button>
-
-                <button @click="mostrarCatalogoBoe = true"
-                  class="group flex items-center gap-3 p-3 rounded-xl text-left
-                         bg-indigo-50/60 border border-indigo-100
-                         hover:bg-indigo-50 hover:border-indigo-200 hover:shadow-sm transition-all duration-200">
-                  <div class="w-9 h-9 rounded-xl bg-indigo-100 border border-indigo-200
-                              flex items-center justify-center shrink-0 group-hover:bg-indigo-200 transition-colors">
-                    <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414
-                           a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-[#1F2937] group-hover:text-indigo-700 transition-colors leading-tight">Ciclos BOE</p>
-                    <p class="text-[10px] text-gray-400 font-medium mt-0.5">Familias · Módulos · RA · CE</p>
-                  </div>
-                  <svg class="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-500 shrink-0 transition-colors"
-                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                </button>
-
-              </div>
-            </div>
-
-
-          </div><!-- /RIGHT -->
-
+            </article>
+          </div>
         </div>
 
-      </section>
-
-      <!-- ── Herramientas + Mi cuenta ────────────────────────────────────────── -->
-      <section class="mt-4 transition-all duration-700 delay-[300ms]"
-               :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-
-        <div class="flex items-center gap-3 mb-3">
-          <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 shrink-0">
-            Herramientas
-          </span>
-          <div class="flex-1 h-px bg-gray-200"></div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          <!-- Retos -->
-          <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div class="bg-[#374151] px-5 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-centros/20 border border-centros/25
-                          flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-              </div>
-              <h3 class="text-white font-black text-sm">Retos</h3>
+        <!-- ══ Columna lateral (compacta): encuentros + calendario, tareas, empresas, reto destacado ══ -->
+        <div class="flex min-w-0 flex-col gap-4">
+          <!-- Próximos encuentros (los 2 más cercanos) + calendario en la misma tarjeta, compacta -->
+          <article class="card flex min-w-0 flex-col p-4">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <h2 class="card-title">Próximos encuentros</h2>
+              <button class="link shrink-0" @click="irA('/encuentros')">Ver todos</button>
             </div>
-            <div class="p-3 space-y-2">
-              <button @click="irA('/retos/crear')"
-                class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-centros/5 border border-centros/15
-                       hover:bg-centros/12 hover:border-centros/35 hover:shadow-sm
-                       transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-centros/15 border border-centros/20
-                            flex items-center justify-center shrink-0
-                            group-hover:bg-centros/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
+
+            <!-- Hueco fijo para 2 encuentros: la tarjeta no cambia de alto -->
+            <div class="h-[88px]">
+              <div v-if="cargando" class="space-y-1.5"><div v-for="n in 2" :key="n" class="h-[41px] animate-pulse rounded-lg bg-gray-100" /></div>
+              <div v-else-if="!proximosEncuentros.length" class="flex h-full flex-col items-center justify-center text-center text-sm text-gray-500">
+                No tienes encuentros programados.
+                <button class="mt-1 font-semibold text-centros" @click="irA('/encuentros/crear')">Programar uno →</button>
+              </div>
+              <ul v-else class="space-y-1.5">
+                <li v-for="e in proximosEncuentros" :key="e.id"
+                    class="group flex h-[41px] items-stretch rounded-xl ring-1 transition"
+                    :class="encDestacado(e) ? 'bg-centros/8 ring-centros/40 shadow-sm' : 'ring-transparent hover:bg-gray-50'"
+                    @mouseenter="hoverEncId = e.id" @mouseleave="hoverEncId = null">
+                  <button class="flex min-w-0 flex-1 items-center gap-2.5 px-1 text-left"
+                          :aria-pressed="selEncId === e.id"
+                          @click="seleccionarEncuentro(e)" @focus="hoverEncId = e.id" @blur="hoverEncId = null">
+                    <span class="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg ring-1 transition"
+                          :class="encDestacado(e) ? 'bg-centros text-white ring-centros' : 'bg-centros/8 ring-centros/15'">
+                      <span class="font-heading text-sm font-bold leading-none">{{ fechaTile(e.fecha).dia }}</span>
+                      <span class="text-[9px] font-semibold leading-tight" :class="encDestacado(e) ? 'text-white/80' : 'text-gray-500'">{{ fechaTile(e.fecha).mes }}</span>
+                    </span>
+                    <span class="min-w-0">
+                      <span class="block truncate text-[13px] font-semibold leading-tight">{{ tituloEnc(e) }}</span>
+                      <span class="block truncate text-[11px] leading-tight text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo].filter(Boolean).join(' · ') }}</span>
+                    </span>
+                  </button>
+                  <button class="flex w-9 shrink-0 items-center justify-center rounded-r-xl text-gray-400 hover:text-centros"
+                          :aria-label="`Abrir ${tituloEnc(e)}`" @click="irA('/mis-equipos/' + e.id)">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+
+
+            <!-- Mini calendario (misma tarjeta, bajo los encuentros) -->
+            <div class="mt-3 border-t border-gray-100 pt-2">
+              <div class="mb-1 flex items-center justify-between">
+                <button class="cal-nav" aria-label="Mes anterior" @click="moverMes(-1)">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <p class="text-sm font-semibold capitalize">{{ calLabel }}</p>
+                <button class="cal-nav" aria-label="Mes siguiente" @click="moverMes(1)">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+              <div class="grid grid-cols-7 text-center text-[10px] font-semibold uppercase text-gray-400">
+                <span v-for="d in ['L', 'M', 'X', 'J', 'V', 'S', 'D']" :key="d" class="py-0.5">{{ d }}</span>
+              </div>
+              <div class="grid grid-cols-7">
+                <template v-for="(c, i) in calDias" :key="i">
+                  <span v-if="c.otroMes" class="flex h-5 items-center justify-center text-[11px] text-gray-300">{{ c.d }}</span>
+                  <button v-else
+                          class="relative mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] transition"
+                          :class="diaIluminado(c)
+                          ? 'bg-centros font-bold text-white shadow-md shadow-centros/30'
+                          : c.hoy
+                          ? 'bg-alumnos font-bold text-white'
+                          : c.encs.length
+                          ? 'font-bold text-centros hover:bg-centros/10'
+                          : 'cursor-default text-gray-600'"
+                          :disabled="!c.encs.length"
+                          :aria-label="c.encs.length ? `${c.d}: ${c.encs.length} encuentro${c.encs.length > 1 ? 's' : ''}` : String(c.d)"
+                          @click="clicDia(c)">
+                    {{ c.d }}
+                  </button>
+                </template>
+              </div>
+              <!-- Hueco fijo: muestra la leyenda o, si se pulsa un día, su detalle (no cambia el alto) -->
+              <div class="mt-1 h-8">
+                <div v-if="selDia" class="flex h-full items-center gap-2 rounded-lg bg-centros/5 px-2 text-xs">
+                  <span class="shrink-0 font-semibold capitalize text-centros">{{ fechaCorta(selDia) }}</span>
+                  <button class="min-w-0 flex-1 truncate text-left hover:text-centros" @click="irA('/mis-equipos/' + encuentrosSelDia[0].id)">
+                    {{ tituloEnc(encuentrosSelDia[0]) }}<template v-if="encuentrosSelDia.length > 1"> (+{{ encuentrosSelDia.length - 1 }})</template> →
+                  </button>
+                  <button class="shrink-0 text-gray-400 hover:text-gray-600" aria-label="Cerrar detalle del día" @click="selDia = null">×</button>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-[#1F2937] font-black text-sm leading-tight">Generador de retos</p>
-                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Crea retos con IA para tu alumnado</p>
+                <div v-else class="flex h-full flex-wrap items-center justify-center gap-x-4 text-[11px] text-gray-500">
+                  <span class="flex items-center gap-1.5"><span class="text-[11px] font-bold leading-none text-centros">14</span>Encuentro</span>
+                  <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-alumnos" />Hoy</span>
+                  <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-white ring-1 ring-gray-300" />Libre</span>
                 </div>
-                <svg class="w-4 h-4 text-centros/30 shrink-0 group-hover:text-centros/70
-                            group-hover:translate-x-0.5 transition-all duration-200"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                </svg>
+              </div>
+
+            </div>
+          </article>
+
+          <article class="card flex min-w-0 flex-col p-4">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h2 class="card-title text-base">Tareas pendientes</h2>
+              <div class="flex items-center gap-1">
+                <span v-if="pendientes" class="rounded-full bg-alumnos/15 px-2 py-0.5 text-xs font-bold text-alumnos-dark">{{ pendientes }}</span>
+                <!-- Aviso de que hay más tareas en las páginas siguientes -->
+                <button v-if="paginaTareasActual < totalPaginasTareas - 1"
+                        class="flex h-6 w-6 items-center justify-center rounded-full text-alumnos-dark hover:bg-alumnos/10"
+                        :aria-label="`Hay más tareas: ir a la página ${paginaTareasActual + 2}`" title="Hay más tareas en la página siguiente"
+                        @click="moverPaginaTareas(1)">
+                  <svg class="h-4 w-4 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+            <!-- Lista con alto fijo (3 filas) -->
+            <div class="h-[136px]">
+              <ul v-if="listaTareas.length" class="space-y-0.5">
+                <li v-for="item in tareasPagina" :key="item.key" class="group flex h-11 items-center gap-2.5 rounded-lg px-1.5 text-sm hover:bg-gray-50">
+                  <template v-if="item.tipo === 'auto'">
+                    <button role="switch" :aria-checked="item.hecha" :aria-label="`Marcar como hecha: ${item.t.texto}`"
+                            class="interruptor !mt-0" :class="item.hecha ? 'bg-empresas' : (item.t.nivel === 'alta' ? 'bg-alumnos/30' : 'bg-gray-200')"
+                            @click="toggleAuto(item.t)">
+                      <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
+                    </button>
+                    <button class="line-clamp-2 min-w-0 flex-1 text-left leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700 hover:text-centros'" @click="irA(item.t.ruta)">
+                      {{ item.t.texto }}
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button role="switch" :aria-checked="item.hecha" :aria-label="`Marcar como hecha: ${item.n.text}`"
+                            class="interruptor !mt-0" :class="item.hecha ? 'bg-empresas' : 'bg-gray-200'" @click="toggleNota(item.n.id)">
+                      <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
+                    </button>
+                    <span class="line-clamp-2 min-w-0 flex-1 break-words leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700'">{{ item.n.text }}</span>
+                    <button class="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                            :aria-label="`Borrar tarea: ${item.n.text}`" @click="borrarNota(item.n.id)">×</button>
+                  </template>
+                </li>
+              </ul>
+              <p v-else class="flex h-full items-center justify-center text-sm text-gray-500">{{ cargando ? 'Cargando…' : 'Todo al día 🎉' }}</p>
+            </div>
+            <!-- Pie fijo: paginación siempre en su sitio -->
+            <div class="mt-1 flex h-7 items-center justify-center gap-3 text-xs text-gray-500">
+              <button class="cal-nav disabled:opacity-30" aria-label="Tareas anteriores" :disabled="paginaTareasActual === 0" @click="moverPaginaTareas(-1)">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
               </button>
-
-              <button @click="irA('/retos')"
-                class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-primary-400/5 border border-primary-400/15
-                       hover:bg-primary-400/12 hover:border-primary-400/35 hover:shadow-sm
-                       transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-primary-400/15 border border-primary-400/20
-                            flex items-center justify-center shrink-0
-                            group-hover:bg-primary-400/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2z"/>
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-[#1F2937] font-black text-sm leading-tight">Biblioteca de retos</p>
-                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Consulta y comparte retos con QR</p>
-                </div>
-                <svg class="w-4 h-4 text-primary-400/40 shrink-0 group-hover:text-primary-700/70
-                            group-hover:translate-x-0.5 transition-all duration-200"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                </svg>
+              <span>{{ paginaTareasActual + 1 }} / {{ totalPaginasTareas }}</span>
+              <button class="cal-nav disabled:opacity-30" aria-label="Tareas siguientes" :disabled="paginaTareasActual === totalPaginasTareas - 1" @click="moverPaginaTareas(1)">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
               </button>
             </div>
-          </div>
+            <form class="mt-2 flex gap-2" @submit.prevent="addNota">
+              <input v-model="nuevaNota" maxlength="200" placeholder="Añadir tarea personal…"
+                     class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
+              <button class="shrink-0 rounded-lg bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15" :disabled="!nuevaNota.trim()">Añadir</button>
+            </form>
+          </article>
 
-          <!-- Taller de Ideas -->
-          <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div class="bg-[#374151] px-5 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/25
-                          flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-              </div>
-              <h3 class="text-white font-black text-sm">Taller de Ideas</h3>
+          <article class="card flex min-w-0 flex-col p-4">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <h2 class="card-title text-base">Empresas colaboradoras</h2>
+              <button class="link shrink-0" @click="irA('/empresas')">Ver todas</button>
             </div>
-            <div class="p-3 space-y-2">
-              <button @click="irA('/encuentros/crear')"
-                class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-amber-400/5 border border-amber-400/15
-                       hover:bg-amber-400/10 hover:border-amber-400/35 hover:shadow-sm
-                       transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-amber-400/15 border border-amber-400/20
-                            flex items-center justify-center shrink-0
-                            group-hover:bg-amber-400/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                         M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                  </svg>
+            <div v-if="cargando" class="space-y-3"><div v-for="n in 3" :key="n" class="h-12 animate-pulse rounded-lg bg-gray-100" /></div>
+            <p v-else-if="!empresasTop.length" class="mb-3 py-4 text-center text-sm text-gray-500">Ninguna empresa vinculada a proyectos este curso.</p>
+            <ul v-else class="mb-3 divide-y divide-gray-100">
+              <li v-for="(e, i) in empresasTop" :key="e.id" class="flex items-center gap-3 py-2">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-heading text-xs font-bold text-white" :class="AVATAR_COLORES[i % 4]">
+                  {{ iniciales(e.nombre) }}
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-semibold">{{ e.nombre }}</p>
+                  <p v-if="e.familia" class="truncate text-xs text-gray-500">{{ e.familia }}</p>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-[#1F2937] font-black text-sm leading-tight">Consultar / Crear encuentros</p>
-                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Registra encuentros de trabajo con retos</p>
-                </div>
-                <svg class="w-4 h-4 text-amber-400/30 shrink-0 group-hover:text-amber-500/70
-                            group-hover:translate-x-0.5 transition-all duration-200"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                </svg>
+                <span class="shrink-0 text-right text-xs leading-snug text-gray-500">
+                  {{ e.proyectos }} proyecto{{ e.proyectos > 1 ? 's' : '' }}<br />{{ e.validados }} validado{{ e.validados !== 1 ? 's' : '' }}
+                </span>
+              </li>
+            </ul>
+            <button class="flex items-center justify-between gap-2 rounded-xl bg-empresas/5 p-2.5 text-left text-sm ring-1 ring-empresas/15 transition hover:bg-empresas/10"
+                    @click="irA('/empresas')">
+              <span class="min-w-0"><span class="block font-semibold">Catálogo de empresas</span><span class="block text-xs text-gray-500">Encuentra empresas para tus próximos retos</span></span>
+              <span class="shrink-0 font-semibold text-empresas-dark">Ir →</span>
+            </button>
+          </article>
+
+          <!-- Reto destacado de la semana: tarjeta cuadrada bajo Empresas colaboradoras (ocupa el alto restante) -->
+          <article v-if="retoDestacado" class="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF1E2] via-[#FFF8F1] to-white p-4 shadow-sm ring-1 ring-alumnos/30">
+            <!-- Destacado con el color de retos (naranja) en lugar de la barra del logo: fondo cálido,
+                 borde naranja, pastilla y un rayo grande de marca de agua -->
+            <svg aria-hidden="true" class="pointer-events-none absolute -right-5 -top-3 h-28 w-28 rotate-12 text-alumnos/10" fill="currentColor" viewBox="0 0 24 24"><path :d="ICONOS.chispa" /></svg>
+            <div class="relative flex items-center gap-2.5">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-alumnos text-white shadow-md shadow-alumnos/30">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS.chispa"/></svg>
+              </span>
+              <span class="inline-flex items-center rounded-full bg-alumnos px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                Reto de la semana
+              </span>
+            </div>
+            <h3 class="relative mt-3 line-clamp-2 font-heading text-base font-bold leading-snug">{{ retoDestacado.titulo }}</h3>
+            <p v-if="typeof retoDestacado.pregunta_reto === 'string'" class="mt-1 line-clamp-2 text-xs text-gray-600">{{ retoDestacado.pregunta_reto }}</p>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-500">
+              <span v-if="retoDestacado.empresa_nombre" class="max-w-full truncate">{{ retoDestacado.empresa_nombre }}</span>
+              <span v-if="retoDestacado.familia" class="rounded-full bg-gray-100 px-2 py-0.5">{{ retoDestacado.familia }}</span>
+              <span v-if="retoDestacado.nivel_grupo" class="rounded-full border px-2 py-0.5 font-bold" :class="nivelClase(retoDestacado.nivel_grupo)">{{ retoDestacado.nivel_grupo }}</span>
+            </div>
+            <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
+              <button class="rounded-lg bg-alumnos px-3 py-2 text-xs font-semibold text-white hover:bg-alumnos/90" @click="abrirReto(retoDestacado)">Ver reto</button>
+              <button class="rounded-lg px-3 py-2 text-xs font-semibold text-alumnos-dark ring-1 ring-alumnos/30 hover:bg-alumnos/5" @click="irA('/retos')">Más retos</button>
+            </div>
+          </article>
+        </div>
+
+        <!-- ══ Fila final (todo el ancho): banner estirado | recursos (alineado con la columna lateral) ══ -->
+        <div class="@container/main grid min-w-0 grid-cols-1 gap-4 @5xl/page:col-span-2 @5xl/page:grid-cols-[minmax(0,1fr)_300px]">
+          <!-- Banner pequeño de detalle (como "Toda la gestión… en un mismo lugar" en idea_dashboard.png):
+               foto pegada al borde izquierdo que se funde hacia la derecha; texto y botón a su derecha -->
+          <section class="relative flex h-full min-h-[120px] min-w-0 items-stretch overflow-hidden rounded-2xl bg-gradient-to-r from-white to-[#F3F8FD] shadow-sm ring-1 ring-gray-200/70">
+            <!-- La foto se funde con el fondo hacia la derecha (máscara en degradado) -->
+            <div class="relative w-[42%] shrink-0 [mask-image:linear-gradient(to_right,black_45%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_45%,transparent)]">
+              <img :src="banner.imagen" :alt="banner.alt" class="absolute inset-0 h-full w-full object-cover object-[50%_60%]" />
+              <svg aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
+                <!-- Copia de los halos del banner de "Aplicación moodboard a dashboard.png":
+                     izquierda = cinta azul que cae y se afila + cinta naranja encima que cubre la esquina inferior;
+                     derecha = cinta verde que baja desde arriba + gran ola turquesa que sube hasta la esquina -->
+                <defs>
+                  <linearGradient id="bn-azul" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2F7FD8" /><stop offset="100%" stop-color="#1E5FB8" /></linearGradient>
+                  <linearGradient id="bn-azul-claro" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#9BD3F7" /><stop offset="100%" stop-color="#4FA3E8" /></linearGradient>
+                  <linearGradient id="bn-naranja" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFB45C" /><stop offset="45%" stop-color="#FF8920" /><stop offset="100%" stop-color="#F57A0E" /></linearGradient>
+                  <linearGradient id="bn-melocoton" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FFC48A" stop-opacity="0.85" /><stop offset="100%" stop-color="#FFE6CC" stop-opacity="0.15" /></linearGradient>
+                  <linearGradient id="bn-verde" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3D8A22" /><stop offset="100%" stop-color="#6EC13F" /></linearGradient>
+                  <linearGradient id="bn-turquesa" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#4CC7D6" /><stop offset="100%" stop-color="#19A7A8" /></linearGradient>
+                  <linearGradient id="bn-cian" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#9BE7EF" stop-opacity="0.9" /><stop offset="100%" stop-color="#6FD6E3" stop-opacity="0.75" /></linearGradient>
+                </defs>
+                <!-- Izquierda: azul (debajo) en dos capas, se afila hacia la punta -->
+                <path d="M0,0 L40,0 C52,46 70,82 96,118 C60,112 26,108 6,103 C0,70 0,30 0,0 Z" fill="url(#bn-azul-claro)" opacity="0.9" />
+                <path d="M40,0 L76,0 C98,46 140,104 222,202 C160,168 120,140 96,118 C70,82 52,46 40,0 Z" fill="url(#bn-azul)" />
+                <!-- Izquierda: naranja ENCIMA de la azul, en la línea de las demás cintas; por la izquierda
+                     llega hasta la esquina inferior para que no asome la foto, con velo melocotón y brillo -->
+                <path d="M240,192 C330,208 435,228 540,256 L560,300 L300,300 C285,262 265,222 240,192 Z" fill="url(#bn-melocoton)" />
+                <path d="M0,72 C60,100 150,150 240,192 C275,212 305,238 332,262 L300,300 L0,300 Z" fill="url(#bn-naranja)" />
+                <path d="M110,185 C165,220 230,258 300,300 L262,300 C200,265 150,232 110,185 Z" fill="#FFFFFF" opacity="0.35" />
+                <!-- Derecha: verde desde arriba, franja clara + cuerpo oscuro, se afila hacia abajo a la izquierda -->
+                <path d="M836,0 L870,0 C852,80 822,150 780,206 C800,140 822,70 836,0 Z" fill="#8BD45F" opacity="0.9" />
+                <path d="M870,0 L1000,0 L1000,40 C958,100 880,170 780,206 C822,150 852,80 870,0 Z" fill="url(#bn-verde)" />
+                <!-- Derecha: ola turquesa que sube desde abajo, con capa cian encima y ola oscura debajo -->
+                <path d="M500,300 C620,252 760,200 900,112 C940,86 970,64 1000,46 L1000,68 C900,128 780,222 546,300 Z" fill="url(#bn-cian)" />
+                <path d="M546,300 C700,242 800,190 900,128 C940,102 975,82 1000,68 L1000,300 Z" fill="url(#bn-turquesa)" />
+                <path d="M600,300 C700,268 790,228 870,178" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2" vector-effect="non-scaling-stroke" />
+                <path d="M720,300 C830,270 925,222 1000,165 L1000,300 Z" fill="#138C9C" opacity="0.55" />
+              </svg>
+            </div>
+            <div class="-ml-10 flex min-w-0 flex-1 flex-col justify-center py-3 pr-4">
+              <p class="font-heading text-base font-bold leading-snug text-azul-noche">
+                Formación, talento, empresa e innovación <span class="text-centros">conectados</span>
+              </p>
+              <p class="mt-1 line-clamp-2 text-sm text-gray-600">DuaLab impulsa la FP dual con retos reales y colaboración entre todos los actores.</p>
+              <button class="mt-2 self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-centros ring-1 ring-centros/40 hover:bg-centros/5" @click="irA('/noticias/dualab')">
+                Novedades de DuaLab →
               </button>
-
-              <button @click="irA('/proyectos')"
-                class="group w-full flex items-center gap-3 p-3.5 rounded-xl text-left
-                       bg-orange-400/5 border border-orange-400/15
-                       hover:bg-orange-400/10 hover:border-orange-400/35 hover:shadow-sm
-                       transition-all duration-200">
-                <div class="w-10 h-10 rounded-xl bg-orange-400/15 border border-orange-400/20
-                            flex items-center justify-center shrink-0
-                            group-hover:bg-orange-400/25 transition-colors duration-200">
-                  <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2
-                         m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-[#1F2937] font-black text-sm leading-tight">Ver proyectos</p>
-                  <p class="text-gray-400 text-xs mt-0.5 font-medium">Gestiona los proyectos del Taller de Ideas</p>
-                </div>
-                <svg class="w-4 h-4 text-orange-400/30 shrink-0 group-hover:text-orange-500/70
-                            group-hover:translate-x-0.5 transition-all duration-200"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-                </svg>
-              </button>
             </div>
-          </div>
+          </section>
 
+          <article class="card h-full min-w-0 p-3">
+            <h2 class="card-title mb-2 text-base">Recursos destacados</h2>
+            <ul class="space-y-1">
+              <li>
+                <button class="recurso !p-1.5" @click="mostrarCatalogoBoe = true">
+                  <span class="recurso-icon !h-8 !w-8 bg-indigo-50 text-indigo-600">BOE</span>
+                  <span class="min-w-0"><span class="block font-semibold">Ciclos BOE</span><span class="text-xs text-gray-500">Familias · Módulos · RA · CE</span></span>
+                </button>
+              </li>
+              <li>
+                <button class="recurso !p-1.5" @click="irA('/proyectos/terminados')">
+                  <span class="recurso-icon !h-8 !w-8 bg-sky-50 text-sky-700">✓</span>
+                  <span class="min-w-0"><span class="block font-semibold">Proyectos completados</span><span class="text-xs text-gray-500">Inspiración de otros equipos</span></span>
+                </button>
+              </li>
+            </ul>
+          </article>
         </div>
-      </section>
-
-      <!-- ── Noticias ──────────────────────────────────────────────────────────── -->
-      <div class="mt-4 space-y-5 transition-all duration-700 delay-[400ms]"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-
-        <!-- Novedades plataforma DuaLab — Pinterest -->
-        <div class="group cursor-pointer rounded-2xl p-3 -m-1 border border-indigo-100
-                    bg-indigo-50/40 hover:bg-indigo-50/70 transition-colors duration-200"
-             role="button" tabindex="0"
-             @click="abrirNoticias('plataforma')"
-             @keydown.enter="abrirNoticias('plataforma')"
-             @keydown.space.prevent="abrirNoticias('plataforma')">
-          <div class="flex items-center gap-3 mb-3 w-full text-left">
-            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-centros to-primary-400 shrink-0"></span>
-            <span class="text-[10px] font-black uppercase tracking-widest shrink-0
-                         text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">
-              Novedades plataforma DuaLab
-            </span>
-            <div class="flex-1 h-px bg-centros/20 group-hover:bg-centros/40 transition-colors duration-200"></div>
-            <svg class="w-3.5 h-3.5 text-centros/40 shrink-0 group-hover:text-centros
-                        group-hover:translate-x-0.5 transition-all duration-200"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-          <div class="columns-2 gap-3 space-y-3">
-            <div v-for="novedad in previewNovedadesPlataforma" :key="novedad.id"
-                 class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50">
-              <div class="relative overflow-hidden" :class="novedad.alturaClase">
-                <img :src="novedad.imagen" :alt="novedad.alt" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">{{ novedad.categoria }}</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    {{ novedad.titulo }}
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">{{ novedad.subtitulo }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Noticias DuaLab — Pinterest -->
-        <div class="group cursor-pointer rounded-2xl p-3 -m-1 border border-orange-100
-                    bg-orange-50/40 hover:bg-orange-50/70 transition-colors duration-200"
-             role="button" tabindex="0"
-             @click="abrirNoticias('dualab')"
-             @keydown.enter="abrirNoticias('dualab')"
-             @keydown.space.prevent="abrirNoticias('dualab')">
-          <div class="flex items-center gap-3 mb-3 w-full text-left">
-            <span class="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-centros to-primary-400 shrink-0"></span>
-            <span class="text-[10px] font-black uppercase tracking-widest shrink-0
-                         text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">
-              Noticias DuaLab
-            </span>
-            <div class="flex-1 h-px bg-centros/20 group-hover:bg-centros/40 transition-colors duration-200"></div>
-            <svg class="w-3.5 h-3.5 text-centros/40 shrink-0 group-hover:text-centros
-                        group-hover:translate-x-0.5 transition-all duration-200"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-          <div class="columns-2 gap-3 space-y-3">
-            <div v-for="noticia in previewNoticiasDualab" :key="noticia.id"
-                 class="break-inside-avoid rounded-2xl overflow-hidden shadow-sm border border-white/50">
-              <div class="relative overflow-hidden" :class="noticia.alturaClase">
-                <img :src="noticia.imagen" :alt="noticia.alt" class="w-full h-full object-cover" loading="lazy" />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent
-                            flex flex-col justify-end p-3">
-                  <span class="text-[8px] font-black uppercase tracking-widest text-white/75 mb-1">{{ noticia.categoria }}</span>
-                  <p class="text-white font-black text-xs leading-snug drop-shadow-sm">
-                    {{ noticia.titulo }}
-                  </p>
-                </div>
-              </div>
-              <div class="bg-white px-3 py-2">
-                <p class="text-[10px] text-gray-400 font-medium">{{ noticia.subtitulo }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
-
     </div>
   </div>
 
-  <!-- ── Modal catálogo BOE ─────────────────────────────────────────────────── -->
   <CatalogoBoeModal v-model:show="mostrarCatalogoBoe" />
 </template>
 
+<style>
+/* Fuente manuscrita para la nota "Ideas de hoy…" de la bienvenida (como idea_dashboard.png) */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap');
+</style>
+
+<style scoped>
+@reference "../style.css";
+
+.card         { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
+.card-title   { @apply font-heading text-lg font-bold text-azul-noche; }
+.link         { @apply text-sm font-semibold text-centros hover:underline; }
+.recurso      { @apply flex w-full items-center gap-3 rounded-lg p-2 text-left text-sm hover:bg-gray-50; }
+.recurso-icon { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold; }
+.interruptor  { @apply relative mt-0.5 inline-flex h-4 w-7.5 shrink-0 items-center rounded-full p-0.5 transition-colors; }
+.interruptor-bola { @apply h-3 w-3 rounded-full bg-white shadow transition-transform; }
+.font-manuscrita { font-family: 'Caveat', 'Segoe Script', cursive; font-weight: 600; }
+.cal-nav      { @apply flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-centros; }
+</style>

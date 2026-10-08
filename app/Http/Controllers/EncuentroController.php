@@ -16,6 +16,13 @@ use Illuminate\Http\Request;
 
 class EncuentroController extends Controller
 {
+    /**
+     * Techo de seguridad del listado (sin paginar): cada encuentro trae sus equipos y miembros,
+     * así que sin límite la respuesta crece sin control. Mismo criterio que MicroretoIAController::index.
+     * Pendiente: filtrar por curso académico en servidor (ver TAREAS_PENDIENTES.md).
+     */
+    private const MAX_LISTADO = 500;
+
     public function index(\Illuminate\Http\Request $request)
     {
         $user  = $request->user();
@@ -25,7 +32,7 @@ class EncuentroController extends Controller
             'microproyecto:id,uuid,titulo,microreto_id,estado',
             'microproyecto.microreto:id,titulo,empresa_nombre',
             'equipos.miembros',
-        ])->visiblesPara($user)->orderBy('created_at', 'desc');
+        ])->visiblesPara($user)->orderBy('created_at', 'desc')->take(self::MAX_LISTADO);
 
         // response()->json() evita el envoltorio {"data": [...]} que Laravel aplica
         // cuando se devuelve una Resource/colección directamente desde el controller —

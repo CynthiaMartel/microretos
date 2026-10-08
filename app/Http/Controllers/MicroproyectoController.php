@@ -8,10 +8,20 @@ use App\Models\Microproyecto;
 
 class MicroproyectoController extends Controller
 {
+    /**
+     * Techo de seguridad del listado (sin paginar): el frontend filtra en cliente, así que se
+     * cargan los más recientes con un máximo. Mismo criterio que MicroretoIAController::index.
+     * Pendiente: filtrar por curso académico en servidor (ver TAREAS_PENDIENTES.md).
+     */
+    private const MAX_LISTADO = 500;
+
     public function index(Request $request)
     {
         $user  = $request->user();
+        // withMin precarga el id del primer encuentro de cada proyecto en la misma consulta
+        // (antes formatProyecto lanzaba una consulta por proyecto: N+1).
         $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada'])
+            ->withMin('encuentros', 'id')
             ->orderByDesc('updated_at');
 
         if ($user->isSuperAdmin()) {
@@ -26,7 +36,7 @@ class MicroproyectoController extends Controller
             });
         }
 
-        $proyectos = $query->get()->map(fn($p) => $this->formatProyecto($p));
+        $proyectos = $query->take(self::MAX_LISTADO)->get()->map(fn($p) => $this->formatProyecto($p));
 
         return response()->json($proyectos);
     }
@@ -589,7 +599,10 @@ class MicroproyectoController extends Controller
             'familia_nombre'   => $p->familia?->nombre,
             'microreto_id'     => $p->microreto_id,
             'microreto_titulo' => $p->microreto?->titulo,
-            'encuentro_id'     => $p->encuentros()->value('id'),
+            // En el listado llega precargado (withMin); en show/store/update se consulta una sola vez.
+            'encuentro_id'     => array_key_exists('encuentros_min_id', $p->getAttributes())
+                ? $p->encuentros_min_id
+                : $p->encuentros()->min('id'),
             'datos_empresa'    => $p->datos_empresa,
             'datos_centro'     => $p->datos_centro,
             'equipo'           => $p->equipo,

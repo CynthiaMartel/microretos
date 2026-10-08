@@ -8,6 +8,7 @@ use App\Http\Requests\SimularInfoEmpresaRequest;
 use App\Models\CentroEducativo;
 use App\Models\Empresa;
 use App\Models\Familia;
+use App\Services\EmpresaFamiliaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -234,15 +235,8 @@ class DemoGenerarEmpresas extends Command
                 $empresa->es_catalogo = $catalogo; // no fillable: solo lo fija el backend
                 $empresa->save();
 
-                // Mismo patrón exacto que DatosFPController::guardarEmpresa: familia_id normalizada
-                // + campo legacy 'familia' (texto) en la tabla pivote.
-                DB::table('empresa_familia')->insert([
-                    'empresa_id' => $empresa->id,
-                    'familia'    => $familia->nombre,
-                    'familia_id' => $familia->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                // Mismo vínculo que DatosFPController::guardarEmpresa
+                app(EmpresaFamiliaService::class)->anadir($empresa->id, $familia);
 
                 $creadas++;
                 $this->info("  ✓ Empresa #{$empresa->id} creada: {$empresa->nombre_comercial} ({$empresa->tamano})");

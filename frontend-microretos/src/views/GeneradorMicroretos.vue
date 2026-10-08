@@ -622,6 +622,9 @@ const catalogoCargadoPara = ref(null);   // familia de la última carga (evita r
 const usandoCatalogoId = ref(null);
 const errorCatalogo = ref('');
 const avisoCatalogo = ref('');
+// El catálogo solo ofrece plantillas de familias con módulos y RA/CE (las demás no
+// permitirían completar el reto): el filtro tampoco muestra familias vacías.
+const familiasCatalogo = computed(() => todasLasFamilias.value.filter(f => f.con_datos_retos));
 
 const cargarCatalogo = async () => {
   const clave = familiaCatalogo.value || 'todas';
@@ -642,7 +645,7 @@ const cargarCatalogo = async () => {
 const abrirPanelCatalogo = () => {
   panelFicticiaIA.value = false;
   avisoCatalogo.value = '';
-  const delFiltro = todasLasFamilias.value.find(f => (f.nombre ?? f) === filtroFamiliaEmpresa.value);
+  const delFiltro = familiasCatalogo.value.find(f => f.nombre === filtroFamiliaEmpresa.value);
   familiaCatalogo.value = delFiltro?.id ?? '';
   panelCatalogo.value = true;
   cargarCatalogo();
@@ -1016,6 +1019,11 @@ async function cargarFamiliasEmpresa(idEmpresa) {
     if (String(seleccion.value.empresaId) !== String(idEmpresa)) return; // se cambió de empresa mientras cargaba
     familiasFiltradas.value = resFam.data;
     familiasEmpresaCargadas.value = true;
+    // Tras editar la empresa, la familia elegida puede haber dejado de estar vinculada
+    if (seleccion.value.familia && !resFam.data.includes(seleccion.value.familia)) {
+      seleccion.value.familia = familiaPreseleccionada.value = '';
+      motivoFamiliaPreseleccionada.value = '';
+    }
     if (seleccion.value.familia) return;
 
     // Ahorrar volver a elegir la familia cuando ya se puede deducir
@@ -1131,9 +1139,8 @@ const guardarInfoEmpresa = async () => {
     expectativasAlumno: seleccion.value.expectativasAlumno,
   };
   // La familia del paso 3 es la del reto, no la de la empresa: solo se manda al CREAR
-  // (primera familia de una empresa nueva). En una empresa ya existente, enviarla en el
-  // PUT sobrescribiría la única fila del pivot y borraría otras familias ya vinculadas
-  // (p.ej. Administración + Informática → se quedaría solo con la del reto actual).
+  // (primera familia de una empresa nueva). Las familias de una empresa existente se
+  // gestionan desde el modal de edición (InsertModifyEmpresa), no desde aquí.
   if (!seleccion.value.empresaId) payload.familia = seleccion.value.familia;
   // El diagnóstico de una empresa real solo lo guarda superadmin (EmpresaPolicy): para el
   // resto no se envía, así se pueden guardar los demás datos sin un 403 por la P5 local.
@@ -2030,7 +2037,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       </p>
                       <select v-model="familiaCatalogo" class="input-style !py-2 text-sm mb-3" aria-label="Filtrar el catálogo por familia profesional">
                         <option value="">Todas las familias</option>
-                        <option v-for="f in todasLasFamilias" :key="f.id ?? f" :value="f.id">{{ f.nombre ?? f }}</option>
+                        <option v-for="f in familiasCatalogo" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                       </select>
                       <p v-if="cargandoCatalogo" class="text-xs text-gray-400 italic">Cargando catálogo…</p>
                       <p v-else-if="!empresasCatalogo.length && !errorCatalogo" class="text-xs text-gray-400 italic">
@@ -2149,6 +2156,13 @@ async function guardarEstadoGen(nuevoEstado) {
                             </span>
                             <span v-if="emp.es_simulada" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-500">
                               Simulada
+                            </span>
+                            <!-- Una sola tarjeta por empresa: si trabaja con varias familias se indica aquí
+                                 y en el paso 3 se elige para cuál es el reto -->
+                            <span v-if="emp.familias?.length > 1"
+                              :title="emp.familias.map(f => f.nombre).join(' · ')"
+                              class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-centros/10 text-centros">
+                              {{ emp.familias.length }} familias
                             </span>
                           </button>
                         </div>

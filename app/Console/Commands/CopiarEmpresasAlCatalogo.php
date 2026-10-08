@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Empresa;
+use App\Services\EmpresaFamiliaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -65,14 +66,7 @@ class CopiarEmpresasAlCatalogo extends Command
                     'es_catalogo'      => true,
                 ])->save();
 
-                $filas = DB::table('empresa_familia')->where('empresa_id', $original->id)->get(['familia', 'familia_id']);
-                DB::table('empresa_familia')->insert($filas->map(fn ($f) => [
-                    'empresa_id' => $plantilla->id,
-                    'familia'    => $f->familia,
-                    'familia_id' => $f->familia_id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])->all());
+                app(EmpresaFamiliaService::class)->copiar($original->id, $plantilla->id);
 
                 // La original pasa a contar como la copia de su centro (ver cabecera).
                 $original->forceFill(['copiada_de_id' => $plantilla->id])->save();

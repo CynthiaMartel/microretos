@@ -288,6 +288,10 @@ const plantillasCatalogo = computed(() => {
     .sort((a, b) => (a.nombre_comercial || '').localeCompare(b.nombre_comercial || ''))
 })
 
+// Plantillas sin ninguna familia con módulos y RA/CE: los centros no las ven (no se podría
+// completar un reto con ellas). Aquí siguen visibles para poder editarlas o eliminarlas.
+const plantillasOcultas = computed(() => plantillasCatalogo.value.filter(e => e.disponible_para_retos === false).length)
+
 const empresasHuerfanas = computed(() => {
   const q = busqueda.value.toLowerCase().trim()
   return empresas.value.filter(e => {
@@ -326,6 +330,22 @@ const empresasFiltradas = computed(() => {
 })
 
 /**
+ * Familia bajo la que se lista una empresa en el acordeón. Una empresa con varias familias
+ * aparece UNA sola vez: bajo la familia filtrada si hay filtro, si no bajo la primera por
+ * orden alfabético; el resto se indica con un distintivo en su fila.
+ */
+const SIN_FAMILIA = '— Sin familia asignada —'
+function familiaUbicacion(e) {
+  const fams = e.familias_nombres || []
+  if (!fams.length) return SIN_FAMILIA
+  if (filtroFamilia.value && fams.includes(filtroFamilia.value)) return filtroFamilia.value
+  return [...fams].sort((a, b) => a.localeCompare(b))[0]
+}
+function otrasFamilias(e, familiaActual) {
+  return (e.familias_nombres || []).filter(f => f !== familiaActual)
+}
+
+/**
  * Estructura principal del acordeón.
  * { [centroNombre]: { id, familias: { [familiaName]: { ciclos: [], empresas: [] } } } }
  *
@@ -357,12 +377,10 @@ const datosPorCentro = computed(() => {
     if (e.es_catalogo) continue // las plantillas del catálogo tienen su propia sección
     const centroNombre = e.centro_educativo || '— Sin centro asignado —'
     if (!mapa[centroNombre]) mapa[centroNombre] = { id: null, familias: {} }
-    const familias = e.familias_nombres?.length ? e.familias_nombres : ['— Sin familia asignada —']
-    for (const fam of familias) {
-      if (!mapa[centroNombre].familias[fam])
-        mapa[centroNombre].familias[fam] = { ciclos: [], empresas: [] }
-      mapa[centroNombre].familias[fam].empresas.push(e)
-    }
+    const fam = familiaUbicacion(e)
+    if (!mapa[centroNombre].familias[fam])
+      mapa[centroNombre].familias[fam] = { ciclos: [], empresas: [] }
+    mapa[centroNombre].familias[fam].empresas.push(e)
   }
 
   // 3. Con búsqueda o filtro de familia activo, ocultar centros sin empresas coincidentes
@@ -508,14 +526,9 @@ watch(busqueda, (q) => {
     nuevosResaltados.add(centroNombre)
     centrosExpandidos.value.add(centroNombre)
 
-    const fams = empresa.familias_nombres?.length
-      ? empresa.familias_nombres
-      : ['— Sin familia asignada —']
-    for (const fam of fams) {
-      const key = familiaKey(centroNombre, fam)
-      nuevasFamilias.add(key)
-      familiasExpandidas.value.add(key)
-    }
+    const key = familiaKey(centroNombre, familiaUbicacion(empresa))
+    nuevasFamilias.add(key)
+    familiasExpandidas.value.add(key)
   }
 
   centrosResaltados.value  = nuevosResaltados
@@ -1311,6 +1324,13 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                        bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full shrink-0">
                             {{ empresa.tamano }}
                           </span>
+                          <!-- Varias familias: la empresa se lista una sola vez; aquí se ven las demás -->
+                          <span v-if="otrasFamilias(empresa, familia).length"
+                                :title="'También vinculada a: ' + otrasFamilias(empresa, familia).join(' · ')"
+                                class="text-[10px] font-bold bg-administraciones/10 text-administraciones
+                                       px-2 py-0.5 rounded-full shrink-0">
+                            + {{ otrasFamilias(empresa, familia).join(' · ') }}
+                          </span>
                           <div class="relative inline-block shrink-0" @click.stop>
                             <button
                               @click="estadoEditandoId = null; estadoDropdownAbierto = estadoDropdownAbierto === empresa.id ? null : empresa.id"
@@ -1721,6 +1741,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 {{ plantillasCatalogo.length }} {{ plantillasCatalogo.length === 1 ? 'plantilla' : 'plantillas' }}
                 ficticias compartidas con todos los centros · Solo lectura para los centros: las usan a través de una copia
               </p>
+              <p v-if="plantillasOcultas" class="text-xs text-amber-700 font-bold mt-1">
+                {{ plantillasOcultas }} {{ plantillasOcultas === 1 ? 'oculta' : 'ocultas' }} a los centros: su familia aún no tiene módulos ni RA/CE para generar retos
+              </p>
             </div>
           </div>
           <div>
@@ -1730,6 +1753,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-bold text-sm text-[#1F2937] break-words">{{ empresa.nombre_comercial }}</span>
                   <span class="text-[10px] font-black uppercase tracking-wider bg-[#1F2937] text-white px-2 py-0.5 rounded-full shrink-0">Plantilla</span>
+                  <span v-if="empresa.disponible_para_retos === false"
+                        title="Ninguna de sus familias tiene módulos ni RA/CE: los centros no la ven en el catálogo"
+                        class="text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Oculta · sin módulos ni RA/CE</span>
                   <span v-if="empresa.sector" class="text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">{{ empresa.sector }}</span>
                   <span v-if="empresa.tamano" class="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full shrink-0">{{ empresa.tamano }}</span>
                 </div>

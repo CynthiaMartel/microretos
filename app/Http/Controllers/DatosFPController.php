@@ -20,6 +20,7 @@ use App\Http\Requests\UpdateEmpresaRequest;
 use App\Http\Requests\UpdateDiagnosticoEmpresaRequest;
 use App\Http\Resources\EmpresaResource;
 use App\Http\Resources\EmpresaDashboardResource;
+use App\Services\EmpresaFamiliaService;
 
 class DatosFPController extends Controller
 {
@@ -42,7 +43,9 @@ class DatosFPController extends Controller
         // tienen el mismo nombre JSON → la relación machaca el string y rompe el frontend.
         // El string legacy es suficiente para el selector de centros.
         $user  = $request->user();
-        $query = Empresa::with('familias:id,nombre')->orderBy('nombre_comercial');
+        // Plantillas del catálogo sin datos para generar retos: fuera (solo las ve superadmin,
+        // que no tiene filtro de centro). Se gestionan desde /empresas/dashboard.
+        $query = Empresa::with('familias:id,nombre')->sinCatalogoInutilizable()->orderBy('nombre_comercial');
 
         if ($user->isDocente() || $user->isAdmin()) {
             $query->delCentroDe($user);
@@ -81,7 +84,7 @@ class DatosFPController extends Controller
         // Devolvemos siempre strings (nombres) para mantener compatibilidad con el frontend.
         // El frontend usa el nombre directamente en la URL /familias/{nombre}/ciclos.
         if ($empresa->familias->isNotEmpty()) {
-            return response()->json($empresa->familias->pluck('nombre'));
+            return response()->json($empresa->familias->pluck('nombre')->unique()->values());
         }
 
         // Fallback legacy: columna 'familia' string todavía sin normalizar
@@ -89,6 +92,7 @@ class DatosFPController extends Controller
             DB::table('empresa_familia')
                 ->where('empresa_id', $idEmpresa)
                 ->whereNotNull('familia')
+                ->distinct()
                 ->pluck('familia')
         );
     }
@@ -99,14 +103,18 @@ class DatosFPController extends Controller
 
     public function getFamilias()
     {
+        $conDatos = Familia::conDatosParaRetos()->pluck('id')->flip();
+
         $familias = Familia::select('id', 'nombre', 'imagen_url')
             ->withCount('ciclos')
             ->orderBy('nombre')
             ->get()
-            ->map(function ($familia) {
+            ->map(function ($familia) use ($conDatos) {
                 if ($familia->imagen_url) {
                     $familia->imagen_url = asset($familia->imagen_url);
                 }
+                // Tiene módulos y RA/CE: se puede generar un reto para ella
+                $familia->con_datos_retos = $conDatos->has($familia->id);
                 return $familia;
             });
 
@@ -612,23 +620,6 @@ class DatosFPController extends Controller
         return $columnas;
     }
 
-    /** Vincula la familia a la empresa: FK normalizada + string legacy. */
-    private function guardarFamiliaEmpresa(int $empresaId, string $familia, bool $reemplazar): void
-    {
-        $familiaId = Familia::where('nombre', $familia)->value('id');
-        $valores = [
-            'familia'    => $familia,     // legacy
-            'familia_id' => $familiaId,   // normalizado
-            'updated_at' => now(),
-        ];
-
-        if ($reemplazar) {
-            DB::table('empresa_familia')->updateOrInsert(['empresa_id' => $empresaId], $valores);
-        } else {
-            DB::table('empresa_familia')->insert($valores + ['empresa_id' => $empresaId, 'created_at' => now()]);
-        }
-    }
-
     /** Vincula los ciclos seleccionados al centro de la empresa. */
     private function vincularCiclosCentro(?int $centroId, ?string $centroNombre, array $ciclosIds): void
     {
@@ -644,7 +635,7 @@ class DatosFPController extends Controller
         DB::table('centro_ciclo')->insertOrIgnore($rows);
     }
 
-    public function guardarEmpresa(StoreEmpresaRequest $request)
+    public function guardarEmpresa(StoreEmpresaRequest $request, EmpresaFamiliaService $familias)
     {
         $auth      = $request->user();
         $validated = $request->validated();
@@ -662,15 +653,18 @@ class DatosFPController extends Controller
             $centroId = $centro->id;
         }
 
-        $empresa = Empresa::create($this->columnasEmpresa($validated) + [
-            'centro_educativo' => $centroEducativoNombre, // legacy
-            'centro_id'        => $centroId,
-            'es_simulada'      => (bool) ($validated['esSimulada'] ?? false),
-        ]);
+        $empresa = DB::transaction(function () use ($validated, $centroEducativoNombre, $centroId, $familias) {
+            $empresa = Empresa::create($this->columnasEmpresa($validated) + [
+                'centro_educativo' => $centroEducativoNombre, // legacy
+                'centro_id'        => $centroId,
+                'es_simulada'      => (bool) ($validated['esSimulada'] ?? false),
+            ]);
 
-        if (!empty($validated['familia'])) {
-            $this->guardarFamiliaEmpresa($empresa->id, $validated['familia'], reemplazar: false);
-        }
+            // Una sola empresa con todas sus familias (nunca una empresa por familia)
+            $familias->anadirPorNombre($empresa->id, $validated['familias'] ?? [$validated['familia']]);
+
+            return $empresa;
+        });
 
         $this->vincularCiclosCentro($centroId, $centroEducativoNombre, $validated['ciclosIds'] ?? []);
 
@@ -689,6 +683,8 @@ class DatosFPController extends Controller
     public function getDashboardEmpresas()
     {
         $empresas = Empresa::with('familias:id,nombre')
+            // Marca qué plantillas del catálogo pueden usar los centros (ver Empresa::scopeCatalogoUsable)
+            ->withExists(['familias as disponible_para_retos' => fn ($q) => $q->conDatosParaRetos()])
             ->orderBy('nombre_comercial')
             ->take(self::MAX_EMPRESAS_LISTADO)
             ->get();
@@ -714,7 +710,7 @@ class DatosFPController extends Controller
         return response()->json(['message' => 'Empresa movida a la papelera']);
     }
 
-    public function actualizarEmpresa(UpdateEmpresaRequest $request, $id)
+    public function actualizarEmpresa(UpdateEmpresaRequest $request, EmpresaFamiliaService $familias, $id)
     {
         /** @var Empresa|null $empresa  {id} es un único id, nunca un array */
         $empresa = Empresa::find($id);
@@ -782,11 +778,16 @@ class DatosFPController extends Controller
             $updateData['centro_id']        = $centroId;
         }
 
-        $empresa->update($updateData);
+        DB::transaction(function () use ($empresa, $updateData, $validated, $familias) {
+            $empresa->update($updateData);
 
-        if (!empty($validated['familia'])) {
-            $this->guardarFamiliaEmpresa($empresa->id, $validated['familia'], reemplazar: true);
-        }
+            // 'familias' = conjunto completo (modal de edición); 'familia' suelta solo añade
+            if (array_key_exists('familias', $validated)) {
+                $familias->sincronizarPorNombre($empresa->id, $validated['familias']);
+            } elseif (!empty($validated['familia'])) {
+                $familias->anadirPorNombre($empresa->id, [$validated['familia']]);
+            }
+        });
 
         $this->vincularCiclosCentro($centroId, $centroEducativoNombre, $validated['ciclosIds'] ?? []);
 

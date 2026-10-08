@@ -281,14 +281,7 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             ]);
             $empresa->es_catalogo = $centro === null; // no fillable: solo lo fija el backend
             $empresa->save();
-            // Mismo vínculo que DatosFPController::guardarFamiliaEmpresa (FK + string legacy).
-            DB::table('empresa_familia')->insert([
-                'empresa_id' => $empresa->id,
-                'familia'    => $familia->nombre,
-                'familia_id' => $familia->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            app(EmpresaFamiliaService::class)->anadir($empresa->id, $familia);
             return $empresa->load('familias:id,nombre');
         });
     }

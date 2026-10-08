@@ -5,6 +5,76 @@
 
 ---
 
+## ⚠ IMPORTANTE — entrega 2026-10-10 (se trabaja el 2026-10-09)
+
+Tres bloques derivados del nuevo panel docente (`/panel-docente`, `InicioDocente.vue`). El panel ya
+filtra por curso académico en cliente; estas tareas lo llevan al backend y al resto de vistas.
+
+**Regla común de curso académico:** septiembre → agosto. Un proyecto pertenece al curso de **su
+encuentro**; si no tiene, al de su `created_at` (misma regla que ya usa el panel, ver `fechaProyecto`
+en `InicioDocente.vue`).
+
+**Ya hecho (2026-10-08), como paso previo:** `MicroproyectoController::index` precarga el id del
+primer encuentro con `withMin` (antes, una consulta por proyecto: 373 proyectos → 6 consultas en
+total) y tanto `MicroproyectoController::index` como `EncuentroController::index` tienen un techo de
+500 registros. Es una medida provisional hasta que exista el filtro por curso de I3.
+
+### I1 · Datos de la demo coherentes entre cursos
+
+**Contexto.** En la BD local (recuento del 2026-10-08): los encuentros de 2025/26 empiezan en
+diciembre (sep–nov vacíos); 6 encuentros de julio sin `num_alumnos`; todos los proyectos están
+creados en julio o el 15/09/2026 y 251 de 369 no tienen encuentro, así que 2026/27 acumula casi
+todos los proyectos en curso y 2025/26 casi solo los completados. Las gráficas del panel salen
+muy dispares de un curso a otro.
+
+**Qué hacer.** Comando artisan reproducible (en la línea de `DemoGenerarEmpresas`), **por defecto
+en `--dry-run`** (solo muestra los cambios) y con `--apply` para escribir:
+1. Repartir las fechas de los encuentros de 2025/26 entre septiembre y junio.
+2. Dar a los proyectos sin encuentro un `created_at` coherente con su estado (completados en el
+   curso anterior, borradores recientes).
+3. Rellenar `num_alumnos` vacíos con valores realistas.
+
+**Ojo:** ejecutarlo con `--apply` modifica la BD → solo con confirmación explícita de Cynthia.
+
+**Done cuando:** el panel muestra para 2025/26 actividad de septiembre a junio, y 2026/27 un
+reparto razonable de estados; el comando es idempotente y el `--dry-run` no escribe nada.
+
+### I2 · Endpoint ligero del panel + resumen de curso para superadmin
+
+**Contexto.** El panel calcula todo en el navegador a partir de `/encuentros`, `/startup/proyectos`
+y `/microretos`, que devuelven fichas completas. Además, la jefatura necesita un resumen por curso.
+
+**Qué hacer.**
+1. `App\Services\ResumenCursoService`: calcula contadores, estados del donut, serie mensual del
+   impacto acumulado, proyectos y empresas de un curso (para un docente, un centro o global).
+2. `GET /api/panel-docente/resumen?curso=2026` (FormRequest con `curso` validado, Resource propio,
+   `throttle`, caché en `file` por usuario y curso) → el panel deja de descargar los listados completos.
+3. Resumen congelado: tabla `resumenes_curso` (centro_id, curso_academico, métricas JSON,
+   cerrado_en), comando `cursos:cerrar {curso}` programado el 1 de septiembre y vista de
+   superadmin con el resumen por centro y exportación. Acceso con Policy (solo superadmin).
+
+**Done cuando:** el panel usa el endpoint (mismas cifras que hoy), el resumen congelado coincide
+con lo que mostraba el panel ese curso, y un docente/admin recibe 403 en la vista de superadmin.
+
+### I3 · Curso académico en todas las vistas
+
+**Contexto.** En Proyectos, Proyectos completados, Mis equipos y Biblioteca, el filtro "Curso"
+significa **nivel (1º/2º)**, no curso académico → choque de nombres con el selector del panel.
+
+**Qué hacer.**
+1. Backend: columna `curso_academico` en `encuentros` y `microproyectos` (migración nueva +
+   relleno de los existentes con la regla común — **escritura en BD: confirmar antes**), asignada
+   automáticamente al crear; índice; los `index()` aceptan `?curso_academico=` validado por
+   FormRequest (por defecto, el curso actual). Sustituye al techo provisional de 500.
+2. Frontend: store Pinia con el curso seleccionado (preferencia en `localStorage`, no sensible) y
+   selector global usado por el panel, Proyectos, Proyectos completados, Encuentros, Mis equipos y
+   estadísticas de empresas. Renombrar el filtro actual "Curso" → **"Nivel"**.
+
+**Done cuando:** cambiar de curso en cualquier vista filtra todas de forma coherente, cada vista
+pide al backend solo su curso, y "Nivel" y "Curso académico" ya no se confunden.
+
+---
+
 ## T1 · Script para rellenar la P5 de las empresas reales
 
 **Contexto.** La P5 del diagnóstico («Si tuvieras a un alumno aquí, ¿qué esperas que realice?»,

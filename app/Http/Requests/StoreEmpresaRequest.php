@@ -63,11 +63,13 @@ class StoreEmpresaRequest extends FormRequest
             'expectativasAlumno' => 'nullable|string|max:800',
             'esSimulada'       => 'nullable|boolean',
             'estadoContacto'   => 'nullable|string|in:' . implode(',', self::ESTADOS_CONTACTO),
-            // Obligatoria en el alta: toda empresa nueva nace con al menos una familia vinculada
-            // (igual que exige el modal InsertModifyEmpresa). En UpdateEmpresaRequest sigue
-            // siendo opcional — cambiarla ahí reemplazaría la única fila legacy del pivot y
-            // borraría otras familias ya vinculadas a la empresa.
-            'familia'          => 'required|string|max:255|exists:familias,nombre,deleted_at,NULL',
+            // Toda empresa nueva nace con al menos una familia vinculada. 'familias' (lista
+            // completa, por nombre) es lo que envía el modal InsertModifyEmpresa: en la edición
+            // reemplaza el conjunto entero. 'familia' (una sola) se mantiene para el Generador
+            // de Retos, y en la edición solo añade esa familia sin quitar las demás.
+            'familia'          => 'required_without:familias|string|max:255|exists:familias,nombre,deleted_at,NULL',
+            'familias'         => 'required_without:familia|array|min:1|max:30',
+            'familias.*'       => 'string|distinct|max:255|exists:familias,nombre,deleted_at,NULL',
             'ciclosIds'        => 'nullable|array|max:100',
             'ciclosIds.*'      => 'integer|distinct|exists:ciclos_formativos,id,deleted_at,NULL',
         ];

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
  */
 class EmpresaCatalogoService
 {
+    public function __construct(private EmpresaFamiliaService $familias) {}
+
     /**
      * Copia de la plantilla para el centro. Si el centro ya tenía una, se reutiliza en vez
      * de crear otra (devuelve [empresa, true si es nueva]).
@@ -38,15 +40,8 @@ class EmpresaCatalogoService
                 'copiada_de_id'    => $plantilla->id,
             ])->save();
 
-            // Mismas familias que la plantilla (FK + string legacy del pivot).
-            $filas = DB::table('empresa_familia')->where('empresa_id', $plantilla->id)->get(['familia', 'familia_id']);
-            DB::table('empresa_familia')->insert($filas->map(fn ($f) => [
-                'empresa_id' => $copia->id,
-                'familia'    => $f->familia,
-                'familia_id' => $f->familia_id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->all());
+            // Mismas familias que la plantilla
+            $this->familias->copiar($plantilla->id, $copia->id);
 
             return $copia;
         });

@@ -15,6 +15,7 @@
 import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import api from '../api.js'
 import CentroEducativoModal from './CentroEducativoModal.vue'
+import SelectorFamiliasEmpresa from './SelectorFamiliasEmpresa.vue'
 import { useAuthStore } from '../stores/auth'
 
 // Real ↔ ficticia de una empresa ya creada: solo superadmin (DuaLab). El backend lo
@@ -86,10 +87,11 @@ const nuevaLoading            = ref(false)
 const nuevaErrors             = reactive({})
 const nuevaForm               = reactive({
   nombre_comercial: '', razon_social: '', cif: '', sector: '', tamano: '',
-  web: '', centro_educativo: '', familia: '', persona_contacto: '',
+  web: '', centro_educativo: '', persona_contacto: '',
   telefono: '', email_general: '', direccion: '', municipio: '',
   provincia: '', codigo_postal: '', actividad: '',
   es_simulada: false, estado_contacto: '',
+  familias: [],   // una empresa puede trabajar con varias familias profesionales
 })
 
 watch(() => props.mostrarNuevaEmpresa, (v) => {
@@ -97,6 +99,7 @@ watch(() => props.mostrarNuevaEmpresa, (v) => {
     cargarCentros()
     Object.keys(nuevaErrors).forEach(k => delete nuevaErrors[k])
     Object.keys(nuevaForm).forEach(k => (nuevaForm[k] = ''))
+    nuevaForm.familias = []
     nuevaForm.nombre_comercial = props.nombreBuscado || ''
     nuevaForm.es_simulada = false
     nuevaConfirmando.value = false
@@ -116,19 +119,19 @@ watch(() => nuevaForm.centro_educativo, (val) => {
   if (val) {
     limpiarDestacado('centro')
   }
-  // Resetear familia si ya no pertenece al centro seleccionado
-  if (nuevaForm.familia && familiasFiltradas.value.length &&
-      !familiasFiltradas.value.some(f => (f.nombre ?? f) === nuevaForm.familia)) {
-    nuevaForm.familia = ''
+  // Quitar las familias que ya no imparte el centro seleccionado
+  if (nuevaForm.familias.length && familiasFiltradas.value.length) {
+    const delCentro = new Set(familiasFiltradas.value.map(f => f.nombre ?? f))
+    nuevaForm.familias = nuevaForm.familias.filter(n => delCentro.has(n))
   }
   // Guiar al siguiente paso natural: tras elegir centro, toca elegir la familia profesional.
-  if (val && !nuevaForm.familia) {
+  if (val && !nuevaForm.familias.length) {
     destacarCampo(familiaSelectRef, 'familia', 'Sigue por aquí')
   }
 })
 
-watch(() => nuevaForm.familia, (val) => {
-  if (val) {
+watch(() => nuevaForm.familias.length, (n) => {
+  if (n) {
     delete nuevaErrors.familia
     limpiarDestacado('familia')
   }
@@ -204,7 +207,7 @@ function validarNueva() {
   if (!nuevaForm.nombre_comercial) { nuevaErrors.nombre_comercial = 'Obligatorio'; ok = false }
   if (!nuevaForm.sector)           { nuevaErrors.sector           = 'Obligatorio'; ok = false }
   if (!nuevaForm.tamano)           { nuevaErrors.tamano           = 'Obligatorio'; ok = false }
-  if (!nuevaForm.familia)          { nuevaErrors.familia          = 'Obligatorio'; ok = false }
+  if (!nuevaForm.familias.length)  { nuevaErrors.familia          = 'Elige al menos una familia'; ok = false }
   if (!nuevaForm.centro_educativo) { nuevaErrors.centro_educativo = 'Obligatorio'; ok = false }
   if (!ok) tabNueva.value = 'basico'
   return ok
@@ -231,7 +234,7 @@ async function guardarNueva() {
       web:             nuevaForm.web              || null,
       centroEducativo: nuevaForm.centro_educativo || null,
       ciclosIds: [],
-      familia:         nuevaForm.familia,
+      familias:        nuevaForm.familias,
       personaContacto: nuevaForm.persona_contacto || null,
       telefono:        nuevaForm.telefono         || null,
       emailGeneral:    nuevaForm.email_general    || null,
@@ -285,16 +288,19 @@ const editarForm               = reactive({
   web: '', centro_educativo: '', persona_contacto: '', telefono: '',
   email_general: '', direccion: '', municipio: '', provincia: '',
   codigo_postal: '', actividad: '', estado_contacto: '', es_simulada: false,
-  familia: '',
+  familias: [],
 })
+// Familias con las que se abrió el modal: si no tenía ninguna (empresa legacy), se puede
+// guardar el resto de datos sin obligar a asignarle una.
+const familiasOriginalesEditar = ref([])
 
-// En edición se mantiene visible la familia actual aunque el centro ya no la imparta,
-// para no perderla en silencio al abrir el modal.
+// En edición se mantienen visibles las familias actuales aunque el centro ya no las
+// imparta, para no perderlas en silencio al abrir el modal.
 const familiasFiltradasEditar = computed(() => {
   const lista = familiasDelCentro(editarForm.centro_educativo)
-  const actual = editarForm.familia
-  if (actual && !lista.some(f => (f.nombre ?? f) === actual)) return [actual, ...lista]
-  return lista
+  const enLista = new Set(lista.map(f => f.nombre ?? f))
+  const fuera = editarForm.familias.filter(n => !enLista.has(n))
+  return [...fuera, ...lista]
 })
 
 watch(() => props.mostrarEditarEmpresa, (v) => {
@@ -321,7 +327,9 @@ watch(() => props.mostrarEditarEmpresa, (v) => {
     editarForm.estado_contacto  = e.estado_contacto  || ''
     editarForm.es_simulada      = !!e.es_simulada
     // /empresas devuelve familias [{id, nombre}]; /empresas/dashboard además familias_nombres
-    editarForm.familia          = e.familias?.[0]?.nombre ?? e.familias_nombres?.[0] ?? ''
+    const actuales = e.familias?.length ? e.familias.map(f => f.nombre) : (e.familias_nombres ?? [])
+    editarForm.familias         = [...new Set(actuales.filter(Boolean))]
+    familiasOriginalesEditar.value = [...editarForm.familias]
     tabEditar.value = 'basico'
   }
 })
@@ -341,6 +349,11 @@ async function guardarEdicion() {
     tabEditar.value = 'basico'
     return
   }
+  if (!editarForm.familias.length && familiasOriginalesEditar.value.length) {
+    editarErrors.familia = 'Deja al menos una familia profesional'
+    tabEditar.value = 'basico'
+    return
+  }
   editarLoading.value = true
   try {
     const { data } = await api.put(`/empresas/${props.empresaAEditar.id}`, {
@@ -351,7 +364,8 @@ async function guardarEdicion() {
       tamano:          editarForm.tamano           || null,
       web:             editarForm.web              || null,
       centroEducativo: editarForm.centro_educativo || null,
-      familia:         editarForm.familia          || null,
+      // Conjunto completo: el backend añade y quita según esta lista
+      ...(editarForm.familias.length ? { familias: editarForm.familias } : {}),
       ciclosIds:       [],
       personaContacto: editarForm.persona_contacto || null,
       telefono:        editarForm.telefono         || null,
@@ -364,7 +378,7 @@ async function guardarEdicion() {
       esSimulada:      editarForm.es_simulada,
       estadoContacto:  editarForm.estado_contacto  || null,
     })
-    // El backend devuelve la empresa completa con el JOIN de familia
+    // El backend devuelve la empresa completa con sus familias
     emit('empresa-actualizada', data.empresa)
     emit('update:mostrarEditarEmpresa', false)
   } catch (e) {
@@ -643,13 +657,13 @@ defineExpose({ abrirTrasLogin })
                       <svg class="w-4 h-4 text-amber-500 -mt-0.5 animate-bounce" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-6-6h12l-6 6z"/></svg>
                     </div>
                   </Transition>
-                  <label class="ime-label">Familia Profesional *</label>
-                  <select ref="familiaSelectRef" v-model="nuevaForm.familia" class="ime-input"
-                          :class="[{'ime-input-err': nuevaErrors.familia}, campoDestacado === 'familia' ? 'ring-4 ring-amber-400/60 ring-offset-2' : '']"
-                          :disabled="!nuevaForm.centro_educativo">
-                    <option value="">{{ nuevaForm.centro_educativo ? 'Selecciona familia...' : 'Primero elige un centro' }}</option>
-                    <option v-for="f in familiasFiltradas" :key="f.id ?? f" :value="f.nombre ?? f">{{ f.nombre ?? f }}</option>
-                  </select>
+                  <label class="ime-label">Familias Profesionales *</label>
+                  <div ref="familiaSelectRef" tabindex="-1" class="outline-none rounded-2xl"
+                       :class="campoDestacado === 'familia' ? 'ring-4 ring-amber-400/60 ring-offset-2' : ''">
+                    <SelectorFamiliasEmpresa v-model="nuevaForm.familias" :opciones="familiasFiltradas"
+                      :disabled="!nuevaForm.centro_educativo" :error="!!nuevaErrors.familia"
+                      :texto-vacio="nuevaForm.centro_educativo ? 'Este centro no tiene familias' : 'Primero elige un centro'" />
+                  </div>
                   <p v-if="nuevaErrors.familia" class="ime-err">{{ nuevaErrors.familia }}</p>
                 </div>
               </div>
@@ -963,11 +977,9 @@ defineExpose({ abrirTrasLogin })
                   <p v-if="editarErrors.centro_educativo" class="ime-err">{{ editarErrors.centro_educativo }}</p>
                 </div>
                 <div>
-                  <label class="ime-label">Familia Profesional</label>
-                  <select v-model="editarForm.familia" class="ime-input" :class="{'ime-input-err': editarErrors.familia}">
-                    <option value="">Selecciona familia...</option>
-                    <option v-for="f in familiasFiltradasEditar" :key="f.id ?? f" :value="f.nombre ?? f">{{ f.nombre ?? f }}</option>
-                  </select>
+                  <label class="ime-label">Familias Profesionales</label>
+                  <SelectorFamiliasEmpresa v-model="editarForm.familias" :opciones="familiasFiltradasEditar"
+                    :error="!!editarErrors.familia" />
                   <p v-if="editarErrors.familia" class="ime-err">{{ editarErrors.familia }}</p>
                 </div>
               </div>

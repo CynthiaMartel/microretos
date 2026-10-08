@@ -24,4 +24,11 @@ class Familia extends Model
     {
         return $this->hasMany(CicloFormativo::class, 'familia_id');
     }
+
+    // Familias con lo mínimo para generar un reto: algún ciclo con módulos que tengan
+    // RA y criterios de evaluación (es lo que el generador envía a la IA).
+    public function scopeConDatosParaRetos($query)
+    {
+        return $query->whereHas('ciclos.modulos.ras.criteriosEvaluacion');
+    }
 }

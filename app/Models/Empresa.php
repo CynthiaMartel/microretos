@@ -90,6 +90,22 @@ class Empresa extends Model
         });
     }
 
+    // Plantillas del catálogo DuaLab que los centros pueden usar: al menos una de sus familias
+    // tiene módulos y RA/CE. Las demás no permitirían completar un reto y no se ofrecen.
+    public function scopeCatalogoUsable($query)
+    {
+        return $query->where('es_catalogo', true)
+            ->whereHas('familias', fn ($q) => $q->conDatosParaRetos());
+    }
+
+    // Excluye las plantillas del catálogo que no se pueden usar (ver scopeCatalogoUsable);
+    // las empresas normales no se ven afectadas.
+    public function scopeSinCatalogoInutilizable($query)
+    {
+        return $query->where(fn ($q) => $q->where('es_catalogo', false)
+            ->orWhereHas('familias', fn ($f) => $f->conDatosParaRetos()));
+    }
+
     /** @return BelongsTo<Empresa, $this> Plantilla del catálogo de la que es copia (T2) */
     public function copiadaDe(): BelongsTo
     {

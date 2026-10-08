@@ -100,12 +100,15 @@ class EmpresaFicticiaController extends Controller
         return response()->json(null, 204);
     }
 
-    /** GET /empresas/catalogo — plantillas del catálogo DuaLab (lectura, todos los roles docentes). */
+    /**
+     * GET /empresas/catalogo — plantillas del catálogo DuaLab (lectura, todos los roles docentes).
+     * Solo las usables: con alguna familia que tenga módulos y RA/CE para generar retos.
+     */
     public function catalogo(Request $request): AnonymousResourceCollection
     {
         $familiaId = (int) $request->query('familia_id', 0) ?: null;
 
-        $query = Empresa::where('es_catalogo', true)
+        $query = Empresa::catalogoUsable()
             ->with('familias:id,nombre')
             ->orderBy('nombre_comercial');
         if ($familiaId) {
@@ -126,6 +129,11 @@ class EmpresaFicticiaController extends Controller
         $plantilla = Empresa::where('es_catalogo', true)->find($id);
         if (!$plantilla) {
             return response()->json(['error' => 'Empresa del catálogo no encontrada'], 404);
+        }
+        // No se listan, pero se comprueba igualmente: con una petición directa no debe
+        // poder copiarse una plantilla con la que no se podría completar ningún reto.
+        if (!Empresa::catalogoUsable()->whereKey($plantilla->id)->exists()) {
+            return response()->json(['error' => 'Esta empresa del catálogo aún no está disponible: su familia profesional no tiene módulos ni RA/CE para generar retos.'], 422);
         }
 
         $centro = $this->centroDestino($user, $request->validated('centro'));
