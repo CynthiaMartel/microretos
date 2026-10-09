@@ -1,24 +1,24 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { useComoFunciona } from '../composables/useComoFunciona.js'
+import { useCredits } from '../composables/useCredits.js'
+import { GRUPOS_NAV, SECCIONES, ICONOS_NAV } from '../config/navegacion.js'
+import ConceptoClave from './ConceptoClave.vue'
+import FlujoDiagrama from './FlujoDiagrama.vue'
 import {
   LightBulbIcon,
   XMarkIcon,
-  SparklesIcon,
-  BookOpenIcon,
-  RocketLaunchIcon,
-  RectangleStackIcon,
-  CalendarIcon,
-  QrCodeIcon,
   UserGroupIcon,
-  ArrowUturnRightIcon,
-  ChartBarIcon,
   AcademicCapIcon,
   BuildingOfficeIcon,
   ShieldCheckIcon,
-  ArrowLongDownIcon,
 } from '@heroicons/vue/24/outline'
 
+const router = useRouter()
+const authStore = useAuthStore()
+const { abrirCreditos } = useCredits()
 const { comoFuncionaAbierto: abierto, abrirComoFunciona: abrir, cerrarComoFunciona: cerrar } = useComoFunciona()
 const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
 const onKeydown = (e) => { if (e.key === 'Escape') cerrar() }
@@ -26,53 +26,54 @@ const onKeydown = (e) => { if (e.key === 'Escape') cerrar() }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-// Colores por rol — solo Docente y Alumnado/Equipo actúan dentro del flujo.
-// Empresa y Admin se explican aparte, en la sección de roles.
-const ROL = {
-  docente:  { bg: 'bg-centros/10', border: 'border-centros/25', text: 'text-centros' },
-  alumnado: { bg: 'bg-alumnos/10', border: 'border-alumnos/25', text: 'text-alumnos-dark' },
-}
-
 const roles = [
-  { label: 'Docente',            icon: AcademicCapIcon,    ...ROL.docente,
-    desc: 'Crea retos y proyectos, los comparte con el alumnado y hace seguimiento del progreso.' },
-  { label: 'Alumnado / Equipo',  icon: UserGroupIcon,       ...ROL.alumnado,
-    desc: 'Accede sin necesidad de cuenta y resuelve retos, avanza en el proyecto por fases.' },
-  { label: 'Empresa',            icon: BuildingOfficeIcon,  bg: 'bg-empresas/10',  border: 'border-empresas/25',  text: 'text-empresas',
-    desc: 'Valida la entrega del equipo desde un enlace público, sin necesidad de cuenta. El alumnado resuelve sus necesidades a partir de un reto.' },
-  { label: 'Admin',               icon: ShieldCheckIcon,     bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600',
+  { label: 'Docente',          icon: AcademicCapIcon,    bg: 'bg-centros/10',  border: 'border-centros/25',  text: 'text-centros',
+    desc: 'Crea retos y proyectos, organiza encuentros con su alumnado y sigue y evalúa a sus grupos.' },
+  { label: 'Alumnado / Grupo', icon: UserGroupIcon,      bg: 'bg-alumnos/10',  border: 'border-alumnos/25',  text: 'text-alumnos-dark',
+    desc: 'Entra sin cuenta con el QR o el código del encuentro y avanza el proyecto por fases en el workspace de su grupo.' },
+  { label: 'Empresa',          icon: BuildingOfficeIcon, bg: 'bg-empresas/10', border: 'border-empresas/25', text: 'text-empresas',
+    desc: 'Aporta la necesidad real de la que nace el reto y valida la propuesta del docente desde su enlace.' },
+  { label: 'Admin',            icon: ShieldCheckIcon,    bg: 'bg-violet-50',   border: 'border-violet-200',  text: 'text-violet-600',
     desc: 'Gestiona centros, ciclos formativos y usuarios de forma transversal.' },
 ]
 
-// Nombres y descripciones tal y como aparecen literalmente en la navegación del SidePanel.
-const pasosRetos = [
-  { icon: SparklesIcon,  rol: 'docente',  titulo: 'Generador Retos',
-    desc: 'Genera retos con IA a partir de una empresa y los criterios del ciclo.' },
-  { icon: BookOpenIcon,  rol: 'docente',  titulo: 'Biblioteca Retos',
-    desc: 'Consulta todos los retos guardados y comparte el QR con el alumnado.' },
+// Conceptos clave: mismos textos que las secciones hub (config/navegacion.js), para que
+// el modal y el panel no se desincronicen
+const fasesRetosProyectos = SECCIONES['retos-proyectos'].flujo.fases
+const conceptos = [
+  ...fasesRetosProyectos.map(f => f.concepto).filter(Boolean),
+  ...(SECCIONES.encuentros.conceptos ?? []),
 ]
 
-const pasosProyecto = [
-  { icon: RocketLaunchIcon,     rol: 'docente', titulo: 'Generar Proyecto',
-    desc: 'Crea una nueva propuesta para el Taller de Ideas.' },
-  { icon: RectangleStackIcon,   rol: 'docente', titulo: 'Biblioteca Proyectos',
-    desc: 'Crea y gestiona propuestas y proyectos del Taller de Ideas.' },
-]
+// Recorrido completo: el flujo de la sección Recursos
+const recorrido = SECCIONES.recursos.flujo
 
-const pasosEncuentro = [
-  { icon: CalendarIcon,         rol: 'docente',  titulo: 'Generar encuentros',
-    desc: 'Crea encuentros de trabajo con retos.' },
-  { icon: BookOpenIcon,         rol: 'docente',  titulo: 'Biblioteca de encuentros',
-    desc: 'Consulta todos los encuentros registrados.' },
-  { icon: QrCodeIcon,           rol: 'docente',  titulo: 'Dar acceso al encuentro',
-    desc: 'Elige un encuentro y proyecta su QR y código para el alumnado.' },
-  { icon: UserGroupIcon,        rol: 'alumnado', titulo: 'Alumnado: unirse a equipo',
-    desc: 'Primera vez: elige tu clase y tu equipo.' },
-  { icon: ArrowUturnRightIcon,  rol: 'alumnado', titulo: 'Alumnado: retomar workspace',
-    desc: 'Mete tu código para ver tu flujo de trabajo.' },
-  { icon: ChartBarIcon,         rol: 'docente',  titulo: 'Seguimiento de mis equipos',
-    desc: 'Seguimiento del avance de todos tus grupos y sus equipos.' },
-]
+// Mapa del panel lateral: las mismas entradas que ve el rol en el SidePanel, con las
+// herramientas que agrupa cada sección hub
+const TILE = { docente: 'bg-centros', alumnos: 'bg-alumnos', empresas: 'bg-empresas' }
+const visible = (c) => !c.routeName || authStore.canAccess(c.routeName)
+const herramientasDe = (key) => {
+  const s = SECCIONES[key]
+  if (!s) return []
+  return [...(s.pasoAtras?.cards ?? []), ...s.cards]
+    .filter(c => visible(c) && c.accion !== 'comoFunciona')
+}
+const gruposPanel = computed(() =>
+  GRUPOS_NAV
+    .map(g => ({
+      ...g,
+      items: g.items
+        .filter(i => !i.proximamente && authStore.canAccess(i.routeName))
+        .map(i => ({ ...i, tile: TILE[i.color] ?? 'bg-centros', herramientas: herramientasDe(i.key) })),
+    }))
+    .filter(g => g.items.length))
+
+const ir = (destino) => {
+  if (destino.proximamente) return
+  cerrar()
+  if (destino.accion === 'creditos') return abrirCreditos()
+  router.push(destino.ruta)
+}
 </script>
 
 <template>
@@ -139,161 +140,107 @@ const pasosEncuentro = [
             </div>
 
             <!-- Cuerpo (scrollable) -->
-            <div class="flex-1 overflow-y-auto px-6 sm:px-10 py-8">
+            <div class="flex-1 overflow-y-auto px-6 sm:px-10 py-8 space-y-10">
 
               <!-- Intro -->
-              <p class="text-gray-500 text-sm leading-relaxed mb-8 max-w-3xl">
+              <p class="text-gray-500 text-sm leading-relaxed max-w-3xl">
                 DuaLab es la plataforma que conecta centros educativos de FP con empresas para
                 generar retos de aprendizaje real, alineados con los módulos y resultados de
                 aprendizaje del ciclo.
               </p>
 
-              <!-- Sección de roles -->
-              <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
-                Quién participa
-              </p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-                <div
-                  v-for="r in roles" :key="r.label"
-                  class="flex items-start gap-3 p-3 rounded-2xl border"
-                  :class="[r.bg, r.border]"
-                >
-                  <div class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                    :class="[r.bg, r.border, 'border']">
-                    <component :is="r.icon" class="w-4 h-4" :class="r.text" />
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-xs font-black" :class="r.text">{{ r.label }}</p>
-                    <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">{{ r.desc }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Tres bloques de flujo -->
-              <!-- lg:contents en cada bloque "desenvuelve" sus 3 partes (título/definición/pasos) para que
-                   se coloquen como filas explícitas de esta misma grid — así las 3 columnas quedan a la
-                   misma altura fila a fila, aunque el texto de la definición tenga longitudes distintas. -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-                <!-- Bloque: Retos -->
-                <div class="lg:contents">
-                  <div class="lg:col-start-1 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
-                      Retos
-                    </p>
-                    <h3 class="text-lg font-black text-azul-noche mb-2">Generador y biblioteca</h3>
-                  </div>
-
-                  <div class="lg:col-start-1 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-centros/20 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-centros">?</span>
+              <!-- Quién participa -->
+              <section>
+                <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                  Quién participa
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div
+                    v-for="r in roles" :key="r.label"
+                    class="flex items-start gap-3 p-3 rounded-2xl border"
+                    :class="[r.bg, r.border]"
+                  >
+                    <div class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border"
+                      :class="[r.bg, r.border]">
+                      <component :is="r.icon" class="w-4 h-4" :class="r.text" />
                     </div>
-                    <p class="text-sm text-gray-900 leading-relaxed">
-                      Un <span class="font-black text-centros">RETO</span> es la necesidad real de una
-                      empresa, transformada (con ayuda de la IA) en una
-                      <span class="font-black text-centros">pregunta</span> que el alumnado deberá responder.
-                    </p>
-                  </div>
-
-                  <div class="lg:col-start-1 lg:row-start-3">
-                    <template v-for="(paso, i) in pasosRetos" :key="'r-'+i">
-                      <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
-                        <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
-                          :class="[ROL[paso.rol].bg, ROL[paso.rol].border]">
-                          <component :is="paso.icon" class="w-5 h-5" :class="ROL[paso.rol].text" />
-                        </div>
-                        <div class="min-w-0">
-                          <p class="font-bold text-sm text-[#1F2937]">{{ paso.titulo }}</p>
-                          <p class="text-xs text-gray-500 mt-1 leading-relaxed">{{ paso.desc }}</p>
-                        </div>
-                      </div>
-                      <div v-if="i < pasosRetos.length - 1" class="flex justify-center py-1">
-                        <ArrowLongDownIcon class="w-5 h-5 text-gray-300" />
-                      </div>
-                    </template>
-                  </div>
-                </div>
-
-                <!-- Bloque: Taller de Ideas -->
-                <div class="lg:contents">
-                  <div class="lg:col-start-2 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-centros mb-1">
-                      Taller de Ideas
-                    </p>
-                    <h3 class="text-lg font-black text-azul-noche mb-2">Propuestas y proyectos</h3>
-                  </div>
-
-                  <div class="lg:col-start-2 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-centros/10 border-2 border-centros/30 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-centros/20 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-centros">?</span>
+                    <div class="min-w-0">
+                      <p class="text-xs font-black" :class="r.text">{{ r.label }}</p>
+                      <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">{{ r.desc }}</p>
                     </div>
-                    <p class="text-sm text-gray-900 leading-relaxed">
-                      Una <span class="font-black text-centros">PROPUESTA</span> es la concreción
-                      curricular del reto que hace el docente. Al validarla la empresa y el propio docente,
-                      pasa a ser <span class="font-black text-centros">PROYECTO</span>: la respuesta que
-                      elaborará el alumnado, con sus fases, entregables y evaluación.
-                    </p>
-                  </div>
-
-                  <div class="lg:col-start-2 lg:row-start-3">
-                    <template v-for="(paso, i) in pasosProyecto" :key="'tp-'+i">
-                      <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
-                        <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
-                          :class="[ROL[paso.rol].bg, ROL[paso.rol].border]">
-                          <component :is="paso.icon" class="w-5 h-5" :class="ROL[paso.rol].text" />
-                        </div>
-                        <div class="min-w-0">
-                          <p class="font-bold text-sm text-[#1F2937]">{{ paso.titulo }}</p>
-                          <p class="text-xs text-gray-500 mt-1 leading-relaxed">{{ paso.desc }}</p>
-                        </div>
-                      </div>
-                      <div v-if="i < pasosProyecto.length - 1" class="flex justify-center py-1">
-                        <ArrowLongDownIcon class="w-5 h-5 text-gray-300" />
-                      </div>
-                    </template>
                   </div>
                 </div>
+              </section>
 
-                <!-- Bloque: Encuentro con alumnado -->
-                <div class="lg:contents">
-                  <div class="lg:col-start-3 lg:row-start-1">
-                    <p class="text-[11px] font-black uppercase tracking-widest text-alumnos-dark mb-1">
-                      Encuentro con alumnado
-                    </p>
-                    <h3 class="text-lg font-black text-azul-noche mb-2">Acceso y seguimiento</h3>
-                  </div>
+              <!-- Conceptos clave: reto, propuesta/proyecto, encuentro -->
+              <section>
+                <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
+                  Las piezas de DuaLab
+                </p>
+                <div class="grid gap-3 lg:grid-cols-3">
+                  <ConceptoClave v-for="(c, i) in conceptos" :key="i" :color="c.color" :segmentos="c.segmentos" />
+                </div>
+              </section>
 
-                  <div class="lg:col-start-3 lg:row-start-2 flex items-start gap-3 rounded-2xl bg-alumnos/10 border-2 border-alumnos/30 p-4 mb-5 lg:mb-0 shadow-sm">
-                    <div class="shrink-0 w-7 h-7 rounded-lg bg-alumnos/20 flex items-center justify-center mt-0.5">
-                      <span class="text-xs font-black text-alumnos-dark">?</span>
+              <!-- Recorrido completo (mismo flujo que la sección Recursos) -->
+              <section>
+                <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                  {{ recorrido.titulo }}
+                </p>
+                <p class="text-sm text-gray-500 mb-5">Del reto de la empresa al diagnóstico final de cada grupo.</p>
+                <FlujoDiagrama :fases="recorrido.fases" class="text-azul-noche" />
+              </section>
+
+              <!-- Dónde está cada cosa: mismas entradas que el panel lateral -->
+              <section>
+                <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                  Dónde está cada cosa
+                </p>
+                <p class="text-sm text-gray-500 mb-5">
+                  Cada entrada del panel lateral abre una sección con sus herramientas. Pulsa cualquiera para ir directamente.
+                </p>
+
+                <div class="space-y-6">
+                  <div v-for="(g, gi) in gruposPanel" :key="g.titulo ?? gi">
+                    <p v-if="g.titulo" class="text-xs font-bold text-azul-noche mb-2">{{ g.titulo }}</p>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <article
+                        v-for="item in g.items" :key="item.key"
+                        class="flex flex-col rounded-2xl bg-white p-4 ring-1 ring-gray-200/70"
+                      >
+                        <button type="button" class="group flex items-start gap-3 text-left" @click="ir(item)">
+                          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105"
+                                :class="item.tile">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                              <path :d="ICONOS_NAV[item.icon]" />
+                            </svg>
+                          </span>
+                          <span class="min-w-0">
+                            <span class="block text-sm font-bold text-azul-noche group-hover:text-centros">{{ item.label }}</span>
+                            <span class="mt-0.5 block text-xs leading-snug text-gray-500">{{ item.tip }}</span>
+                          </span>
+                        </button>
+
+                        <!-- Herramientas que agrupa la sección -->
+                        <div v-if="item.herramientas.length" class="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
+                          <button
+                            v-for="h in item.herramientas" :key="h.titulo" type="button"
+                            :disabled="h.proximamente"
+                            :title="h.desc"
+                            class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                            :class="h.proximamente
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-centros/5 text-centros ring-1 ring-centros/20 hover:bg-centros/10'"
+                            @click="ir(h)"
+                          >
+                            {{ h.titulo }}<span v-if="h.proximamente"> · próximamente</span>
+                          </button>
+                        </div>
+                      </article>
                     </div>
-                    <p class="text-sm text-gray-900 leading-relaxed">
-                      Un <span class="font-black text-alumnos-dark">ENCUENTRO</span> es el
-                      <span class="font-black text-alumnos-dark">cuándo</span>: la fecha y los equipos con los
-                      que ese proyecto se trabaja en el aula. A partir de ahí, cada equipo avanza el
-                      proyecto por fases en su <span class="font-black text-alumnos-dark">workspace</span>.
-                    </p>
-                  </div>
-
-                  <div class="lg:col-start-3 lg:row-start-3">
-                    <template v-for="(paso, i) in pasosEncuentro" :key="'e-'+i">
-                      <div class="flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100">
-                        <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border"
-                          :class="[ROL[paso.rol].bg, ROL[paso.rol].border]">
-                          <component :is="paso.icon" class="w-5 h-5" :class="ROL[paso.rol].text" />
-                        </div>
-                        <div class="min-w-0">
-                          <p class="font-bold text-sm text-[#1F2937]">{{ paso.titulo }}</p>
-                          <p class="text-xs text-gray-500 mt-1 leading-relaxed">{{ paso.desc }}</p>
-                        </div>
-                      </div>
-                      <div v-if="i < pasosEncuentro.length - 1" class="flex justify-center py-1">
-                        <ArrowLongDownIcon class="w-5 h-5 text-gray-300" />
-                      </div>
-                    </template>
                   </div>
                 </div>
-              </div>
+              </section>
             </div>
 
             <!-- Pie -->

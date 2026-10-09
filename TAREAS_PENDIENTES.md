@@ -19,7 +19,15 @@ primer encuentro con `withMin` (antes, una consulta por proyecto: 373 proyectos 
 total) y tanto `MicroproyectoController::index` como `EncuentroController::index` tienen un techo de
 500 registros. Es una medida provisional hasta que exista el filtro por curso de I3.
 
-### I1 · Datos de la demo coherentes entre cursos
+### I1 · Datos de la demo coherentes entre cursos — ✅ HECHO EN LOCAL (2026-10-09), falta producción
+
+**Estado.** Copia previa en `storage/app/backups/microretos_antes_reubicar_curso_20261009_135718.sql`.
+Aplicados en local `php artisan demo:reubicar-curso --commit` (4.700 registros de demo: 2025/26 completo,
+2026/27 en arranque; duración de encuentros con `Microproyecto::fechaFinSugerida`) y
+`php artisan demo:encuentros-futuros --commit` (4 encuentros futuros). Solo datos de DuaLab (centro 10)
+y catálogo; nada del IES Ana Luisa, usuarios ni enlaces de retos. **Producción:** desplegar los dos
+comandos, copia de seguridad en Hostinger, dry-run, `--commit` y `cache:clear`.
+
 
 **Contexto.** En la BD local (recuento del 2026-10-08): los encuentros de 2025/26 empiezan en
 diciembre (sep–nov vacíos); 6 encuentros de julio sin `num_alumnos`; todos los proyectos están
@@ -56,7 +64,13 @@ y `/microretos`, que devuelven fichas completas. Además, la jefatura necesita u
 **Done cuando:** el panel usa el endpoint (mismas cifras que hoy), el resumen congelado coincide
 con lo que mostraba el panel ese curso, y un docente/admin recibe 403 en la vista de superadmin.
 
-### I3 · Curso académico en todas las vistas
+### I3 · Curso académico en todas las vistas — 🟡 FRONTEND HECHO (2026-10-09), falta backend
+
+**Estado.** Store `stores/cursoAcademico.js` + `components/SelectorCurso.vue` (por defecto 2025/26, opción
+"Todos los cursos" en bibliotecas) en el panel, Biblioteca de proyectos, Proyectos completados,
+Encuentros, Biblioteca de retos y Mis equipos; el filtro "Curso" (1º/2º) ya se llama "Nivel". El listado
+de proyectos devuelve `encuentro_fecha`. **Falta** el punto 1 (columna `curso_academico` + filtro en servidor).
+
 
 **Contexto.** En Proyectos, Proyectos completados, Mis equipos y Biblioteca, el filtro "Curso"
 significa **nivel (1º/2º)**, no curso académico → choque de nombres con el selector del panel.

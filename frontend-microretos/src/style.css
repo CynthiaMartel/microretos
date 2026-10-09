@@ -128,3 +128,20 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #3072AA; 
 }
+/* ---------------------------------------------------
+   Overlays de modales (fixed inset-0 … items-center)
+   Casi todos los modales centran su panel con flex. Si el panel es más alto que la
+   pantalla (móvil, portátil pequeño, mucho contenido), el centrado lo desborda por
+   arriba y por abajo, la página de detrás no se mueve y no hay forma de llegar al
+   principio o al final: el scroll "se queda pillado". Aquí, para todos a la vez:
+   · el overlay hace scroll propio (y no lo encadena a la página de detrás);
+   · "safe center" centra solo mientras cabe; si no cabe, alinea arriba y se desplaza.
+--------------------------------------------------- */
+.fixed.inset-0.items-center,
+.fixed.inset-0.items-start {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.fixed.inset-0.items-center {
+  align-items: safe center;
+}

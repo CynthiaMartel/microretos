@@ -10,24 +10,30 @@ export const ROLE_EMPRESA    = 3
 export const ROLE_ADMIN      = 4
 
 // Rutas permitidas por rol (nombre de ruta de Vue Router).
-// 'mis-equipos'/'mis-equipos-detalle': antes 'mis-grupos'/'mis-grupos-detalle' — renombradas
-// porque "grupo" ya significa otra cosa en el dominio (Encuentro.grupo = clase/curso, ej. "2ºB").
+// 'mis-grupos'/'mis-grupos-detalle': se llamaron 'mis-grupos'/'mis-grupos-detalle' una temporada;
+// volvieron a "grupos" al pasar el docente a ver los equipos como "grupos" (ver router/index.js).
 export const ROLE_ROUTES = {
   [ROLE_SUPERADMIN]: ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'encuentros-registrados', 'mis-equipos-detalle', 'mis-equipos',
+                      'encuentros-registrados', 'mis-grupos-detalle', 'mis-grupos',
                       'pantalla-acceso', 'pantalla-acceso-lista', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'base-datos', 'papelera',
-                      'empresas', 'gestion-usuarios', 'inicio-docente', 'mi-usuario'],
+                      'empresas', 'gestion-usuarios', 'inicio-docente', 'mi-usuario', 'seccion',
+                      'calendario', 'notificaciones', 'propuestas-empresas', 'biblioteca-diagnosticos',
+                      'alumnado-listado'],
   [ROLE_ADMIN]:      ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'encuentros-registrados', 'mis-equipos-detalle', 'mis-equipos',
+                      'encuentros-registrados', 'mis-grupos-detalle', 'mis-grupos',
                       'pantalla-acceso', 'pantalla-acceso-lista', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'gestion-usuarios',
-                      'inicio-docente', 'mi-usuario', 'empresas'],
+                      'inicio-docente', 'mi-usuario', 'empresas', 'seccion',
+                      'calendario', 'notificaciones', 'propuestas-empresas', 'biblioteca-diagnosticos',
+                      'alumnado-listado'],
   [ROLE_DOCENTE]:    ['microretos', 'biblioteca', 'detalle-microreto', 'dashboard-docente',
-                      'encuentros-registrados', 'mis-equipos-detalle', 'mis-equipos',
+                      'encuentros-registrados', 'mis-grupos-detalle', 'mis-grupos',
                       'pantalla-acceso', 'pantalla-acceso-lista', 'startup-day', 'startup-day-crear',
                       'startup-day-editar', 'startup-day-detalle', 'empresas', 'inicio-docente',
-                      'mi-usuario'],
+                      'mi-usuario', 'seccion',
+                      'calendario', 'notificaciones', 'propuestas-empresas', 'biblioteca-diagnosticos',
+                      'alumnado-listado'],
   [ROLE_EMPRESA]:    ['biblioteca', 'detalle-microreto',
                       'startup-day', 'startup-day-detalle', 'mi-usuario'],
 }

@@ -1,20 +1,22 @@
-<!-- Ruta: /mis-equipos (name: mis-equipos). Antes /mis-grupos, y antes /dashboard/mis-grupos — ver
-     router/index.js. El componente sigue llamándose MisGrupos.vue (no renombrado a propósito, para
-     no ampliar el diff): la ruta pasó a "equipos" porque "grupo" ya significa la clase/curso del
-     encuentro (Encuentro.grupo, ej. "2ºB"), y esta vista sigue el progreso de los EQUIPOS de
-     alumnado — el endpoint de backend GET /encuentros/mis-grupos tampoco se ha tocado. -->
+<!-- Ruta: /mis-grupos (name: mis-grupos). Antes /mis-grupos, y antes /dashboard/mis-grupos — ver
+     router/index.js. En las vistas del docente los equipos de alumnado se llaman "grupos" y la letra
+     del encuentro (Encuentro.grupo) se muestra como "Clase"; los datos vienen de GET /encuentros/mis-grupos. -->
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../api.js'
+import { getMisGrupos } from '../services/encuentroService.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
 import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
+import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
+import SelectorCurso from '../components/SelectorCurso.vue'
+import ConceptoClave from '../components/ConceptoClave.vue'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import { ICONOS_NAV } from '../config/navegacion.js'
+import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 const router = useRouter()
 
-const isLoaded = ref(false)
-onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
 
 const cargando = ref(true)
 const error    = ref('')
@@ -46,7 +48,7 @@ async function cargar() {
   cargando.value = true
   error.value = ''
   try {
-    const res = await api.get('/encuentros/mis-grupos')
+    const res = await getMisGrupos()
     grupos.value = res.data
   } catch (e) {
     error.value = 'Error al cargar tus grupos.'
@@ -115,12 +117,17 @@ function resumenGrupo(g) {
 // Lleva al detalle del encuentro directamente a la sección de diagnóstico de ese equipo
 // (MisGruposDetalle lee ?equipo=&ver=diagnostico al cargar).
 function irADiagnostico(g, equipo) {
-  router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id }, query: { equipo: equipo.id, ver: 'diagnostico' } })
+  router.push({ name: 'mis-grupos-detalle', params: { id: g.encuentro.id }, query: { equipo: equipo.id, ver: 'diagnostico' } })
 }
 
 // Grupos con al menos un equipo que no ha avanzado (para destacarlos como alerta)
+// Curso académico compartido (store): por la fecha del encuentro de cada grupo
+const cursoStore     = useCursoAcademicoStore()
+const gruposCurso    = computed(() => grupos.value.filter(g => cursoStore.coincide(cursoDeEncuentro(g.encuentro))))
+const cursosConDatos = computed(() => [...new Set(grupos.value.map(g => cursoDeEncuentro(g.encuentro)))])
+
 const gruposConAlerta = computed(() =>
-  grupos.value.filter(g => g.equipos.some(e => e.fase_actual === 0 && e.fases_completas === 0))
+  gruposCurso.value.filter(g => g.equipos.some(e => e.fase_actual === 0 && e.fases_completas === 0))
 )
 
 // Un grupo (encuentro) se considera "completado" solo si TODOS sus equipos han
@@ -152,10 +159,10 @@ const filtroFamilia = ref('')
 const filtroEstado  = ref('') // '' | 'progreso' | 'completado'
 
 const cursosDisponibles = computed(() =>
-  [...new Set(grupos.value.map(g => g.encuentro.curso).filter(Boolean))].sort()
+  [...new Set(gruposCurso.value.map(g => g.encuentro.curso).filter(Boolean))].sort()
 )
 const familiasDisponibles = computed(() =>
-  [...new Set(grupos.value.flatMap(g => g.equipos.map(e => e.proyecto?.familia)).filter(Boolean))].sort()
+  [...new Set(gruposCurso.value.map(familiaDe))].sort((a, b) => (a === SIN_FAMILIA) - (b === SIN_FAMILIA) || a.localeCompare(b, 'es'))
 )
 
 const hayFiltrosActivos = computed(() => !!(busqueda.value || filtroCurso.value || filtroFamilia.value || filtroEstado.value))
@@ -168,26 +175,120 @@ function limpiarFiltros() {
 
 const gruposFiltrados = computed(() => {
   const q = busqueda.value.toLowerCase().trim()
-  return grupos.value.filter(g => {
+  return gruposCurso.value.filter(g => {
     if (filtroCurso.value   && g.encuentro.curso !== filtroCurso.value) return false
-    if (filtroFamilia.value && !g.equipos.some(e => e.proyecto?.familia === filtroFamilia.value)) return false
+    if (filtroFamilia.value && familiaDe(g) !== filtroFamilia.value) return false
     if (filtroEstado.value  && !g.equipos.some(equipoCumpleEstado)) return false
     if (!q) return true
     const enTexto = [g.encuentro.grupo, g.encuentro.ciclo_formativo]
       .filter(Boolean)
       .some(t => t.toLowerCase().includes(q))
     const enEquipos = g.equipos.some(e =>
-      [e.nombre, e.proyecto?.titulo, e.proyecto?.familia].filter(Boolean).some(t => t.toLowerCase().includes(q))
+      [nombreGrupo(e), e.proyecto?.titulo, e.proyecto?.familia].filter(Boolean).some(t => t.toLowerCase().includes(q))
     )
     return enTexto || enEquipos
   })
 })
 
+// ── Agrupación por familia → módulo ─────────────────────────────────────────
+// Los encuentros se localizan entrando por cards: familia profesional (solo si el docente
+// tiene encuentros de más de una) → módulo → lista de encuentros. Familia y módulos salen
+// del proyecto del encuentro; si el encuentro no trae familia, la de su primer equipo.
+// Un encuentro cuyo proyecto trabaja varios módulos va a la card "Multimódulo".
+const SIN_FAMILIA = 'Sin familia'
+const MULTIMODULO = 'Multimódulo'
+const SIN_MODULO  = 'Sin módulo'
+
+const familiaDe = (g) => g.encuentro.familia_nombre || g.equipos.find(e => e.proyecto?.familia)?.proyecto.familia || SIN_FAMILIA
+const modulosDe = (g) => g.encuentro.modulos ?? []
+const moduloDe  = (g) => {
+  const m = modulosDe(g)
+  return m.length > 1 ? MULTIMODULO : (m[0] || SIN_MODULO)
+}
+
+// Agrupa conservando el orden: alfabético, con los cajones genéricos al final
+function agrupar(lista, claveDe, alFinal = []) {
+  const mapa = new Map()
+  lista.forEach(g => {
+    const k = claveDe(g)
+    if (!mapa.has(k)) mapa.set(k, [])
+    mapa.get(k).push(g)
+  })
+  const peso = (k) => alFinal.indexOf(k) + 1
+  return [...mapa.entries()]
+    .map(([nombre, grupos]) => ({ nombre, grupos }))
+    .sort((a, b) => peso(a.nombre) - peso(b.nombre) || a.nombre.localeCompare(b.nombre, 'es'))
+}
+
+// La capa de familias solo aparece si el docente tiene encuentros de más de una familia
+// (sobre todo el curso, no sobre el recorte filtrado, para que no aparezca y desaparezca al buscar)
+const variasFamilias = computed(() => new Set(gruposCurso.value.map(familiaDe)).size > 1)
+
+const familiaSel = ref(null)
+const moduloSel  = ref(null)
+
+// Elegir una familia en el filtro equivale a entrar en su card (y quitarlo, a volver)
+watch(filtroFamilia, (f) => { familiaSel.value = f || null; moduloSel.value = null })
+
+// Con texto de búsqueda se salta la navegación por cards: resultados directos
+const buscando = computed(() => !!busqueda.value.trim())
+
+const familias = computed(() => agrupar(gruposFiltrados.value, familiaDe, [SIN_FAMILIA]))
+const gruposDeFamilia = computed(() =>
+  variasFamilias.value ? gruposFiltrados.value.filter(g => familiaDe(g) === familiaSel.value) : gruposFiltrados.value
+)
+const modulos = computed(() => agrupar(gruposDeFamilia.value, moduloDe, [MULTIMODULO, SIN_MODULO]))
+
+// 'familias' | 'modulos' | 'encuentros'
+const nivel = computed(() => {
+  if (buscando.value) return 'encuentros'
+  if (variasFamilias.value && !familiaSel.value) return 'familias'
+  return moduloSel.value ? 'encuentros' : 'modulos'
+})
+
+const gruposLista = computed(() =>
+  buscando.value ? gruposFiltrados.value : gruposDeFamilia.value.filter(g => moduloDe(g) === moduloSel.value)
+)
+
+function abrirFamilia(nombre) { familiaSel.value = nombre; moduloSel.value = null }
+function abrirModulo(nombre)  { moduloSel.value = nombre }
+function irAFamilias()        { familiaSel.value = null; moduloSel.value = null }
+
+// Si los filtros dejan vacía la familia o el módulo abiertos, volver al nivel de arriba
+watch(familias, (lista) => {
+  if (familiaSel.value && !lista.some(f => f.nombre === familiaSel.value)) irAFamilias()
+})
+watch(modulos, (lista) => {
+  if (moduloSel.value && !lista.some(m => m.nombre === moduloSel.value)) moduloSel.value = null
+})
+
+// Resumen de una card (familia o módulo): encuentros, equipos por estado y avance medio
+function resumenCard(lista) {
+  const eqs = lista.flatMap(equiposDeGrupo)
+  return {
+    encuentros:  lista.length,
+    equipos:     eqs.length,
+    completados: eqs.filter(e => estadoEquipo(e) === 'completado').length,
+    enCurso:     eqs.filter(e => estadoEquipo(e) === 'en_curso').length,
+    sinIniciar:  eqs.filter(e => estadoEquipo(e) === 'sin_iniciar').length,
+    progreso:    eqs.length ? Math.round(eqs.reduce((t, e) => t + progresoPct(e), 0) / eqs.length) : 0,
+  }
+}
+
+// Módulos que reúne la card "Multimódulo" (para saber qué hay dentro sin abrirla)
+const modulosIncluidos = (lista) => [...new Set(lista.flatMap(modulosDe))]
+
+const estiloModulo = (nombre) =>
+  nombre === MULTIMODULO ? { icon: 'capas', tile: 'bg-administraciones' }
+  : nombre === SIN_MODULO ? { icon: 'libro', tile: 'bg-gray-400' }
+  : { icon: 'libro', tile: 'bg-alumnos' }
+
 // Separación explícita en dos secciones — no solo un contador, la lista también
 // se agrupa visualmente por estado. gruposOrdenados concatena ambas para recorrerlas
 // en un único v-for y pintar la cabecera de sección solo al cambiar de grupo.
-const gruposEnProgreso  = computed(() => gruposFiltrados.value.filter(g => !grupoCompletado(g)))
-const gruposCompletados = computed(() => gruposFiltrados.value.filter(g => grupoCompletado(g)))
+// Sobre gruposLista: los encuentros del módulo abierto (o los resultados de búsqueda).
+const gruposEnProgreso  = computed(() => gruposLista.value.filter(g => !grupoCompletado(g)))
+const gruposCompletados = computed(() => gruposLista.value.filter(g => grupoCompletado(g)))
 const gruposOrdenados   = computed(() => [...gruposEnProgreso.value, ...gruposCompletados.value])
 
 // Contadores — sobre lo que hay visible tras aplicar búsqueda/filtros (y la pestaña
@@ -225,39 +326,21 @@ onMounted(cargar)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] pt-16">
+  <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
 
-    <!-- HEADER -->
-    <header class="pt-6 md:pt-8 pb-2 text-center flex flex-col items-center px-4">
-      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
-        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
-        </span>
-      </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Seguimiento de <span class="text-centros">Equipos</span>
-      </h1>
-      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Revisa el avance de todos tus equipos activos, encuentro a encuentro.
-      </p>
-    </header>
+    <!-- Cabecera como el resto de vistas del panel docente (degradado + cinta de colores) -->
+    <div class="max-w-5xl mx-auto px-4 pt-5">
+      <CabeceraSeccion titulo="Seguimiento de" destacado="grupos"
+                       subtitulo="Revisa el avance de todos tus grupos activos, encuentro a encuentro." />
+    </div>
 
-    <!-- top-16 (no top-0): la TopBar global es fixed h-16 con z-50 — con top-0 esta
-         cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
-    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-      <button @click="router.back()"
-              class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
-        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-bold text-[#121212]">Todos tus equipos activos</p>
-      </div>
+    <div class="max-w-5xl mx-auto px-4 mt-4 mb-2">
+      <ConceptoClave color="centros" :segmentos="[
+        { t: 'Seguir a tus ' }, { t: 'GRUPOS', b: true },
+        { t: ' es ver, encuentro a encuentro, en qué ' }, { t: 'fase', b: true },
+        { t: ' está cada grupo de alumnado, revisar lo que entrega en su workspace y ' }, { t: 'validar sus fases', b: true },
+        { t: ' hasta el diagnóstico final.' },
+      ]" />
     </div>
 
     <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
@@ -272,7 +355,7 @@ onMounted(cargar)
 
       <template v-else>
         <div v-if="!grupos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-          <p class="text-gray-400 text-sm">Todavía no tienes encuentros con equipos creados.</p>
+          <p class="text-gray-400 text-sm">Todavía no tienes encuentros con grupos creados.</p>
         </div>
 
         <template v-else>
@@ -281,11 +364,11 @@ onMounted(cargar)
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div class="text-center">
                 <p class="text-2xl font-black text-[#121212]">{{ gruposFiltrados.length }}</p>
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Grupos</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Encuentros</p>
               </div>
               <div class="text-center">
                 <p class="text-2xl font-black text-centros">{{ totalEquipos }}</p>
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Equipos</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Grupos</p>
               </div>
               <div class="text-center">
                 <p class="text-2xl font-black text-blue-600">{{ equiposEnProgreso }}</p>
@@ -306,7 +389,7 @@ onMounted(cargar)
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
               <input v-model="busqueda" type="text"
-                     placeholder="Buscar por grupo, proyecto, ciclo o equipo..."
+                     placeholder="Buscar por clase, proyecto, ciclo o grupo..."
                      class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium
                             text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-centros
                             focus:ring-2 focus:ring-centros/10 outline-none transition-all"/>
@@ -319,6 +402,7 @@ onMounted(cargar)
               </button>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" class="mr-1" />
               <div class="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
                 <button @click="filtroEstado = ''"
                         :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors',
@@ -339,8 +423,8 @@ onMounted(cargar)
               <select v-model="filtroCurso" :disabled="!cursosDisponibles.length"
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
                              focus:bg-white focus:border-centros outline-none transition-all disabled:opacity-50">
-                <option value="">Todos los cursos</option>
-                <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ formatCurso(c) }} curso</option>
+                <option value="">Todos los niveles</option>
+                <option v-for="c in cursosDisponibles" :key="c" :value="c">Nivel {{ formatCurso(c) }}</option>
               </select>
               <select v-model="filtroFamilia" :disabled="!familiasDisponibles.length"
                       class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
@@ -357,20 +441,123 @@ onMounted(cargar)
         </template>
 
         <p v-if="gruposConAlerta.length" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2">
-          {{ gruposConAlerta.length }} grupo(s) con equipos que todavía no han empezado (Fase 0 sin completar).
+          {{ gruposConAlerta.length }} encuentro(s) con grupos que todavía no han empezado (Fase 0 sin completar).
         </p>
 
         <div v-if="grupos.length && !gruposFiltrados.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-          <p class="text-gray-400 text-sm">Ningún grupo coincide con los filtros aplicados.</p>
+          <p class="text-gray-400 text-sm">Ningún encuentro coincide con los filtros aplicados.</p>
         </div>
 
-        <!-- Encabezado de la lista: cada tarjeta abre el detalle del trabajo real que el
-             equipo ha hecho en su workspace (F0-F4), no es solo un listado de nombres. -->
-        <p v-if="gruposFiltrados.length" class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
-          Trabajo en el workspace de los equipos
-        </p>
+        <template v-if="gruposFiltrados.length">
+          <!-- Migas: dónde estás dentro de familia → módulo (no se muestran en el primer nivel) -->
+          <nav v-if="!buscando && nivel !== (variasFamilias ? 'familias' : 'modulos')"
+               class="flex flex-wrap items-center gap-1.5 pt-1 text-xs font-bold text-gray-400" aria-label="Agrupación">
+            <button v-if="variasFamilias" type="button" class="hover:text-centros" @click="irAFamilias">Todas las familias</button>
+            <template v-if="variasFamilias && familiaSel">
+              <span aria-hidden="true">›</span>
+              <button v-if="moduloSel" type="button" class="hover:text-centros" @click="moduloSel = null">{{ familiaSel }}</button>
+              <span v-else class="text-azul-noche">{{ familiaSel }}</span>
+            </template>
+            <template v-if="!variasFamilias">
+              <button type="button" class="hover:text-centros" @click="moduloSel = null">Todos los módulos</button>
+            </template>
+            <template v-if="moduloSel">
+              <span aria-hidden="true">›</span>
+              <span class="text-azul-noche">{{ moduloSel }}</span>
+            </template>
+          </nav>
 
-        <template v-for="(g, idx) in gruposOrdenados" :key="g.encuentro.id">
+          <p v-else-if="buscando" class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
+            Resultados de la búsqueda
+          </p>
+
+          <!-- Nivel 1: familias profesionales (solo con encuentros de más de una familia) -->
+          <template v-if="nivel === 'familias'">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">Tus encuentros por familia profesional</p>
+            <!-- auto-rows-fr + pie con mt-auto: todas las cards miden lo mismo y la barra de avance queda
+                 a la misma altura. El título reserva siempre 2 líneas (min-h-[2.75em] = 2 × leading-snug)
+                 para que el contador "N encuentros · N grupos" no suba o baje según el largo del nombre. -->
+            <div class="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <button v-for="f in familias" :key="f.nombre" type="button" @click="abrirFamilia(f.nombre)"
+                      class="group flex min-w-0 flex-col gap-3 rounded-3xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <span class="flex items-start gap-3">
+                  <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm"
+                        :class="f.nombre === SIN_FAMILIA ? 'bg-gray-400' : 'bg-centros'">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="ICONOS_NAV.alumnado" /></svg>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block min-h-[2.75em] font-black leading-snug text-[#121212] line-clamp-2 break-words" :title="f.nombre">{{ f.nombre }}</span>
+                    <span class="block text-xs text-gray-400">
+                      {{ resumenCard(f.grupos).encuentros }} encuentro{{ resumenCard(f.grupos).encuentros === 1 ? '' : 's' }}
+                      · {{ resumenCard(f.grupos).equipos }} grupo{{ resumenCard(f.grupos).equipos === 1 ? '' : 's' }}
+                      · {{ agrupar(f.grupos, moduloDe).length }} módulo{{ agrupar(f.grupos, moduloDe).length === 1 ? '' : 's' }}
+                    </span>
+                  </span>
+                  <svg class="h-4 w-4 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-centros" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </span>
+                <!-- Chips + barra juntos al pie: alineados entre cards aunque cambie el texto de arriba -->
+                <span class="mt-auto flex flex-col gap-3">
+                <span class="flex flex-wrap gap-1.5">
+                  <span v-if="resumenCard(f.grupos).enCurso" class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700">{{ resumenCard(f.grupos).enCurso }} en curso</span>
+                  <span v-if="resumenCard(f.grupos).completados" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">✓ {{ resumenCard(f.grupos).completados }} completado{{ resumenCard(f.grupos).completados === 1 ? '' : 's' }}</span>
+                  <span v-if="resumenCard(f.grupos).sinIniciar" class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black text-gray-500">{{ resumenCard(f.grupos).sinIniciar }} sin iniciar</span>
+                </span>
+                <span class="block h-1.5 shrink-0 overflow-hidden rounded-full bg-gray-100" :title="`Avance medio ${resumenCard(f.grupos).progreso}%`">
+                  <span class="block h-full rounded-full bg-centros" :style="{ width: resumenCard(f.grupos).progreso + '%' }" />
+                </span>
+                </span>
+              </button>
+            </div>
+          </template>
+
+          <!-- Nivel 2: módulos (de la familia abierta, o de todo si solo hay una familia) -->
+          <template v-else-if="nivel === 'modulos'">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
+              {{ variasFamilias ? `Módulos de ${familiaSel}` : 'Tus encuentros por módulo' }}
+            </p>
+            <!-- Mismo criterio que las cards de familia: misma altura y barra alineada abajo -->
+            <div class="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <button v-for="m in modulos" :key="m.nombre" type="button" @click="abrirModulo(m.nombre)"
+                      class="group flex min-w-0 flex-col gap-3 rounded-3xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <span class="flex items-start gap-3">
+                  <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm" :class="estiloModulo(m.nombre).tile">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="ICONOS_NAV[estiloModulo(m.nombre).icon]" /></svg>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block min-h-[2.75em] font-black leading-snug text-[#121212] line-clamp-2 break-words" :title="m.nombre">{{ m.nombre }}</span>
+                    <span class="block text-xs text-gray-400">
+                      {{ resumenCard(m.grupos).encuentros }} encuentro{{ resumenCard(m.grupos).encuentros === 1 ? '' : 's' }}
+                      · {{ resumenCard(m.grupos).equipos }} grupo{{ resumenCard(m.grupos).equipos === 1 ? '' : 's' }}
+                    </span>
+                  </span>
+                  <svg class="h-4 w-4 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-centros" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </span>
+                <span v-if="m.nombre === MULTIMODULO" class="line-clamp-2 text-[11px] leading-snug text-gray-500">
+                  Combina: {{ modulosIncluidos(m.grupos).join(' · ') }}
+                </span>
+                <!-- Chips + barra juntos al pie: alineados entre cards aunque cambie el texto de arriba -->
+                <span class="mt-auto flex flex-col gap-3">
+                <span class="flex flex-wrap gap-1.5">
+                  <span v-if="resumenCard(m.grupos).enCurso" class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700">{{ resumenCard(m.grupos).enCurso }} en curso</span>
+                  <span v-if="resumenCard(m.grupos).completados" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">✓ {{ resumenCard(m.grupos).completados }} completado{{ resumenCard(m.grupos).completados === 1 ? '' : 's' }}</span>
+                  <span v-if="resumenCard(m.grupos).sinIniciar" class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black text-gray-500">{{ resumenCard(m.grupos).sinIniciar }} sin iniciar</span>
+                </span>
+                <span class="block h-1.5 shrink-0 overflow-hidden rounded-full bg-gray-100" :title="`Avance medio ${resumenCard(m.grupos).progreso}%`">
+                  <span class="block h-full rounded-full bg-centros" :style="{ width: resumenCard(m.grupos).progreso + '%' }" />
+                </span>
+                </span>
+              </button>
+            </div>
+          </template>
+
+          <!-- Nivel 3: encuentros del módulo abierto. Cada tarjeta abre el detalle del trabajo
+               real que el equipo ha hecho en su workspace (F0-F4), no es solo un listado. -->
+          <p v-else class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
+            Trabajo en el workspace de los grupos
+          </p>
+        </template>
+
+        <template v-for="(g, idx) in (nivel === 'encuentros' ? gruposOrdenados : [])" :key="g.encuentro.id">
           <!-- Cabecera de sección — separación explícita entre "en progreso" y "completados",
                no solo un contador arriba. Se pinta una sola vez, al cambiar de grupo. -->
           <p v-if="!filtroEstado && (idx === 0 || grupoCompletado(gruposOrdenados[idx - 1]) !== grupoCompletado(g))"
@@ -384,10 +571,16 @@ onMounted(cargar)
                   class="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left">
             <div class="flex-1 min-w-0">
               <p class="font-black text-[#121212]">
-                {{ g.encuentro.proyecto_titulo || g.equipos[0]?.proyecto?.titulo || g.encuentro.grupo || 'Sin nombre' }}
+                {{ g.encuentro.proyecto_titulo || g.equipos[0]?.proyecto?.titulo || (g.encuentro.grupo && `Clase ${g.encuentro.grupo}`) || 'Sin nombre' }}
                 <span v-if="g.encuentro.fecha" class="font-bold text-gray-400">· {{ formatoFecha(g.encuentro.fecha) }}</span>
               </p>
-              <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ equiposDeGrupo(g).length }} equipo(s)</p>
+              <p class="text-xs text-gray-400">{{ g.encuentro.ciclo_formativo }} · {{ equiposDeGrupo(g).length }} grupo(s)</p>
+              <!-- Módulos del encuentro (y su familia en los resultados de búsqueda, que mezclan) -->
+              <div v-if="modulosDe(g).length || buscando" class="flex flex-wrap items-center gap-1 mt-1">
+                <span v-if="buscando && variasFamilias" class="px-2 py-0.5 rounded-full bg-centros/10 text-centros text-[10px] font-bold">{{ familiaDe(g) }}</span>
+                <span v-for="m in modulosDe(g)" :key="m"
+                      class="px-2 py-0.5 rounded-full bg-alumnos/10 text-alumnos-dark text-[10px] font-bold">{{ m }}</span>
+              </div>
               <!-- Estado de sus equipos sin tener que desplegar -->
               <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
                 <span v-if="resumenGrupo(g).completados"
@@ -415,13 +608,13 @@ onMounted(cargar)
             </div>
             <!-- Acceso principal al trabajo real de los equipos: color de marca sólido para que
                  no se confunda con el desplegable (que solo muestra un resumen). -->
-            <button @click.stop="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
+            <button @click.stop="router.push({ name: 'mis-grupos-detalle', params: { id: g.encuentro.id } })"
                     class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-centros text-white shadow-md shadow-centros/20
                            hover:bg-centros/90 hover:shadow-lg transition-all text-[10px] font-black uppercase tracking-wider">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
-              Detalle equipos →
+              Detalle grupos →
             </button>
             <svg :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', encuentrosAbiertos.has(g.encuentro.id) ? 'rotate-180' : '']"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,7 +640,7 @@ onMounted(cargar)
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <p class="font-bold text-sm text-[#121212]">{{ equipo.nombre }}</p>
+                    <p class="font-bold text-sm text-[#121212]">{{ nombreGrupo(equipo) }}</p>
                     <span :class="['px-2 py-0.5 rounded-full text-[10px] font-black', estadoBadge(equipo).cls]">
                       {{ estadoBadge(equipo).label }}
                     </span>
@@ -485,11 +678,11 @@ onMounted(cargar)
                   <div class="flex items-start gap-3 flex-1 min-w-0">
                     <span class="shrink-0 w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-base">📊</span>
                     <div class="min-w-0">
-                      <p class="text-sm font-black text-emerald-800">Aquí puedes ver el diagnóstico del equipo</p>
+                      <p class="text-sm font-black text-emerald-800">Aquí puedes ver el diagnóstico del grupo</p>
                       <p class="text-[11px] text-emerald-700/80 leading-snug">
                         {{ equipo.diagnostico_final
                             ? 'La IA ya lo ha redactado a partir de lo trabajado. Puedes revisarlo, editarlo o descargarlo en PDF.'
-                            : 'El equipo ha completado las 5 fases. Genera su diagnóstico final con IA a partir de lo trabajado.' }}
+                            : 'El grupo ha completado las 5 fases. Genera su diagnóstico final con IA a partir de lo trabajado.' }}
                       </p>
                     </div>
                   </div>
@@ -507,7 +700,7 @@ onMounted(cargar)
                 <div class="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
                   <span class="text-sm leading-none shrink-0">ℹ️</span>
                   <p class="text-[11px] text-blue-700 leading-snug">
-                    <span class="font-black">Resumen.</span> Haz clic en "Ver detalle de equipos" para más información.
+                    <span class="font-black">Resumen.</span> Haz clic en "Ver detalle de grupos" para más información.
                   </p>
                 </div>
 
@@ -522,9 +715,9 @@ onMounted(cargar)
                 </div>
 
                 <div v-if="equipo.codigo_acceso" class="flex flex-wrap items-center gap-1.5">
-                  <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Código de acceso del equipo</span>
+                  <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Código de acceso del grupo</span>
                   <span @click.stop="copiarCodigo(equipo.codigo_acceso)"
-                        :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del equipo'"
+                        :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del grupo'"
                         class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-centros/10 border border-centros/20 cursor-pointer">
                     <span class="w-1 h-1 rounded-full bg-centros shrink-0"></span>
                     <span class="text-[10px] font-black tracking-wider text-centros">{{ equipo.codigo_acceso }}</span>
@@ -535,14 +728,14 @@ onMounted(cargar)
                   {{ equipo.reflexiones.length }} reflexión(es) registrada(s)
                 </p>
 
-                <button @click="router.push({ name: 'mis-equipos-detalle', params: { id: g.encuentro.id } })"
+                <button @click="router.push({ name: 'mis-grupos-detalle', params: { id: g.encuentro.id } })"
                         class="w-full inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-centros text-white shadow-md shadow-centros/20
                                hover:bg-centros/90 hover:shadow-lg transition-all text-xs font-black uppercase tracking-wider">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
-                  Ver detalle de equipos →
+                  Ver detalle de grupos →
                 </button>
               </div>
             </div>

@@ -52,7 +52,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
                    bg-[#0f1720]/90 backdrop-blur-sm border-t border-white/8
                    flex items-center justify-between
                    px-5 py-2 text-[11px] text-white/35 select-none">
-      <span>Web app desarrollada íntegramente por alumnado de prácticas de empresa</span>
+      <span>Web app desarrollada por alumnado de prácticas de empresa</span>
       <button @click="abrir"
         class="text-primary-700/70 hover:text-primary-700 transition-colors font-semibold tracking-wide">
         Acerca de
@@ -73,7 +73,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
             <div>
               <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
               <h2 class="text-2xl font-black tracking-tight text-azul-noche">Equipo de desarrollo</h2>
-              <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada íntegramente por alumnado de prácticas de empresa</p>
+              <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada por alumnado de prácticas de empresa</p>
             </div>
             <button @click="cerrar" class="text-gray-300 hover:text-gray-500 transition-colors mt-1 p-1">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

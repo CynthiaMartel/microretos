@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEncuentroLoteRequest;
 use App\Http\Requests\StoreEncuentroRequest;
 use App\Http\Requests\UpdateEncuentroRequest;
+use App\Http\Resources\EncuentroSeguimientoResource;
+use App\Http\Resources\EquipoProgresoResource;
 use App\Http\Resources\EncuentroResource;
 use App\Models\Equipo;
 use App\Models\EquipoMiembro;
@@ -23,14 +25,21 @@ class EncuentroController extends Controller
      */
     private const MAX_LISTADO = 500;
 
+    /**
+     * Techo de misGrupos(): cada encuentro arrastra equipos, miembros, fases, reflexiones y
+     * prototipos, así que el límite es más bajo que el del listado simple. Alimenta Mis equipos
+     * y la Biblioteca de diagnósticos (los más recientes primero).
+     */
+    private const MAX_MIS_GRUPOS = 150;
+
     public function index(\Illuminate\Http\Request $request)
     {
         $user  = $request->user();
         $query = Encuentro::with([
             'docente:id,name',
             'colaboradores:id,name',
-            'microproyecto:id,uuid,titulo,microreto_id,estado',
-            'microproyecto.microreto:id,titulo,empresa_nombre',
+            'microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
+            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre',
             'equipos.miembros',
         ])->visiblesPara($user)->orderBy('created_at', 'desc')->take(self::MAX_LISTADO);
 
@@ -58,7 +67,7 @@ class EncuentroController extends Controller
         }
 
         $encuentro = Encuentro::create($validated);
-        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
 
         return response()->json(new EncuentroResource($encuentro), 201);
     }
@@ -70,7 +79,7 @@ class EncuentroController extends Controller
             ->firstOrFail();
 
         $encuentro->update($request->validated());
-        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado', 'microproyecto.microreto:id,titulo,empresa_nombre']);
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
 
         return response()->json(new EncuentroResource($encuentro));
     }
@@ -106,8 +115,8 @@ class EncuentroController extends Controller
         $encuentro = Encuentro::with([
             'docente:id,name',
             'colaboradores:id,name',
-            'microproyecto:id,uuid,titulo,microreto_id,estado',
-            'microproyecto.microreto:id,titulo,empresa_nombre',
+            'microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
+            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre',
         ])
             ->where('id', $id)
             ->visiblesPara($request->user())
@@ -147,7 +156,7 @@ class EncuentroController extends Controller
         // mismo reto) — solo se tocan los equipos de ESTE encuentro, nunca los de otro.
         if ($this->encuentroTieneProgreso($encuentro)) {
             return response()->json([
-                'error' => 'Alguno de los equipos de este encuentro ya tiene progreso (fases completadas, tareas, reflexiones o prototipos). Generar un código nuevo borraría ese trabajo. Usa "Reestructurar equipo" si quieres cambiar el reparto sin perderlo.',
+                'error' => 'Alguno de los grupos de este encuentro ya tiene progreso (fases completadas, tareas, reflexiones o prototipos). Generar un código nuevo borraría ese trabajo. Usa "Editar grupo" si quieres cambiar el reparto sin perderlo.',
             ], 422);
         }
 
@@ -254,8 +263,9 @@ class EncuentroController extends Controller
 
         if ($bloqueados->isNotEmpty()) {
             return response()->json([
-                'error' => 'No se puede reducir el número de equipos: '
-                    . $bloqueados->pluck('nombre')->implode(', ')
+                // Mensaje para el docente: "Equipo N" (nombre por defecto en BD) se muestra como "Grupo N"
+                'error' => 'No se puede reducir el número de grupos: '
+                    . $bloqueados->pluck('nombre')->map(fn ($n) => preg_replace('/^equipo\s+(\d+)$/i', 'Grupo $1', trim((string) $n)))->implode(', ')
                     . ' ya tiene progreso real (fases completadas, tareas, reflexiones o prototipos).',
             ], 422);
         }
@@ -363,7 +373,7 @@ class EncuentroController extends Controller
      * GET /api/encuentros/{id}/workspace
      * Dashboard docente: progreso de todos los equipos del encuentro. El nombre de este
      * endpoint es independiente de la ruta del SPA que lo consume — esa ruta se llama
-     * /mis-grupos/:id (antes /workspace/:id); no renombrar este endpoint junto a aquella.
+     * /mis-grupos/:id (antes /mis-equipos/:id y /workspace/:id); no renombrar este endpoint junto a aquella.
      *
      * Los equipos se obtienen vía encuentro->equipos (FK real equipos.encuentro_id), no vía
      * encuentro->microproyecto->equipos — varios encuentros pueden compartir microproyecto
@@ -414,32 +424,16 @@ class EncuentroController extends Controller
     {
         $user  = $request->user();
         $query = Encuentro::with([
-            'microproyecto',
+            'microproyecto.familia',
             'equipos.microproyecto.familia',
             'equipos.miembros',
             'equipos.fases',
             'equipos.reflexiones',
             'equipos.prototipos',
-        ])->whereHas('equipos')->visiblesPara($user)->orderBy('created_at', 'desc');
+        ])->whereHas('equipos')->visiblesPara($user)->orderBy('created_at', 'desc')->take(self::MAX_MIS_GRUPOS);
 
-        $grupos = $query->get()->map(function ($encuentro) {
-            return [
-                'encuentro' => [
-                    'id'               => $encuentro->id,
-                    'grupo'            => $encuentro->grupo,
-                    'ciclo_formativo'  => $encuentro->ciclo_formativo,
-                    'curso'            => $encuentro->curso,
-                    'centro_educativo' => $encuentro->centro_educativo,
-                    'fecha'            => $encuentro->fecha,
-                    'codigo_clase'     => $encuentro->codigo_clase,
-                    'codigo_ia'        => $encuentro->codigo_ia,
-                    'proyecto_titulo'  => $encuentro->microproyecto?->titulo,
-                ],
-                'equipos' => $this->formatEquiposConProgreso($encuentro->equipos),
-            ];
-        });
-
-        return response()->json($grupos->values());
+        // response()->json() sobre la colección: mismo array plano de siempre, sin envoltorio "data"
+        return response()->json(EncuentroSeguimientoResource::collection($query->get()));
     }
 
     /**
@@ -477,66 +471,10 @@ class EncuentroController extends Controller
         ] : null;
     }
 
+    // Delegado en EquipoProgresoResource (misma forma que consumen workspace() y la ficha del proyecto)
     private function formatEquiposConProgreso($equipos)
     {
-        return $equipos->map(function ($equipo) {
-            $fasesCompletas = $equipo->fases->filter(fn($f) => $f->completada)->count();
-
-            $fases = collect(range(0, 4))->map(function ($n) use ($equipo) {
-                $fase = $equipo->fases->firstWhere('numero_fase', $n);
-                return [
-                    'numero_fase'           => $n,
-                    'completada'            => $fase?->completada ?? false,
-                    'validado_docente'      => $fase?->validado_docente ?? false,
-                    'nota_docente'          => $fase?->nota_docente,
-                    'observaciones_docente' => $fase?->observaciones_docente,
-                    'datos'                 => $fase?->datos,
-                    'fecha_completada'      => $fase?->fecha_completada,
-                ];
-            });
-
-            return [
-                'id'              => $equipo->id,
-                'nombre'          => $equipo->nombre,
-                'proyecto'        => $this->formatProyecto($equipo->microproyecto),
-                'codigo_acceso'   => $equipo->codigo_acceso,
-                'token'           => $equipo->token,
-                'fase_actual'     => $equipo->fase_actual,
-                'fases_completas' => $fasesCompletas,
-                'diagnostico_final'       => $equipo->diagnostico_final,
-                'diagnostico_generado_en' => $equipo->diagnostico_generado_en,
-                'miembros'        => $equipo->miembros->map(fn($m) => [
-                    'id'         => $m->id,
-                    'nombre'     => $m->nombre,
-                    'alias'      => $m->alias,
-                    'rol'        => $m->rol,
-                    'fortalezas' => $m->fortalezas,
-                    'dafo'       => $m->dafo,
-                ]),
-                'fases'       => $fases,
-                // Archivos de F3 "Entrega de la solución" tal cual se suben desde el
-                // workspace del alumnado (equipo_prototipos, contexto='entregable') —
-                // para que la ficha del proyecto muestre el mismo adjunto clicable
-                // (icono según mime + nombre real), no solo la URL suelta que ya vive
-                // en fases[3].datos.url_entregable.
-                'archivos_entregable' => $equipo->prototipos
-                    ->where('contexto', 'entregable')
-                    ->map(fn ($p) => [
-                        'id'       => $p->id,
-                        'filename' => $p->filename,
-                        'url'      => $p->url,
-                        'mime'     => $p->mime,
-                        'size'     => $p->size,
-                    ])->values(),
-                'reflexiones' => $equipo->reflexiones->map(fn($r) => [
-                    'id'           => $r->id,
-                    'tipo'         => $r->tipo,
-                    'autor_nombre' => $r->autor_nombre,
-                    'respuestas'   => $r->respuestas,
-                    'created_at'   => $r->created_at,
-                ]),
-            ];
-        });
+        return EquipoProgresoResource::collection($equipos)->resolve();
     }
 
     private function generarCodigoClase(): string

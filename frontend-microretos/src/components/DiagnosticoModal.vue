@@ -11,6 +11,7 @@ import ProyectoFichaModal from './ProyectoFichaModal.vue'
 import { useDiagnosticoPdfExport } from '../composables/useDiagnosticoPdfExport.js'
 import { FASES_PROYECTO } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
+import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 const props = defineProps({
   equipo:    { type: Object, default: null },
@@ -92,7 +93,7 @@ function labelFase(numero) {
                 <span class="w-2 h-2 rounded-full bg-administraciones" />
                 <span class="text-[10px] font-black uppercase tracking-widest text-administraciones">Diagnóstico final</span>
               </div>
-              <p class="font-black text-[#1F2937] text-sm truncate">{{ equipo?.nombre }}</p>
+              <p class="font-black text-[#1F2937] text-sm truncate">{{ equipo && nombreGrupo(equipo) }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button @click="descargar"
@@ -125,7 +126,7 @@ function labelFase(numero) {
                   {{ formatCurso(encuentro.curso) }} curso
                 </span>
                 <span v-if="encuentro?.grupo" class="px-2.5 py-1 rounded-full bg-gray-900 text-white text-[10px] font-black">
-                  Grupo {{ encuentro.grupo }}
+                  Clase {{ encuentro.grupo }}
                 </span>
                 <span v-if="encuentro?.ciclo_formativo" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
                   {{ encuentro.ciclo_formativo }}

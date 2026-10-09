@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter, useRoute } from 'vue-router';
 import api from '../api.js';
 import EliminarProyectoModal from '../components/EliminarProyectoModal.vue';
@@ -7,6 +8,8 @@ import ProyectoCard from '../components/ProyectoCard.vue';
 import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFlotante.vue';
 import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
 import { useAuthStore } from '../stores/auth.js';
+import { useCursoAcademicoStore, cursoDeProyecto } from '../stores/cursoAcademico.js';
+import SelectorCurso from '../components/SelectorCurso.vue';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
 import { useFiltrosProyectos } from '../composables/useFiltrosProyectos.js';
 
@@ -58,7 +61,10 @@ function seleccionarOpcionBienvenida(opcion) {
   }
 }
 
-const completados = computed(() => proyectos.value.filter(p => p.estado === 'completado'));
+// Curso académico compartido (store): solo los completados del curso elegido
+const cursoStore     = useCursoAcademicoStore();
+const cursosConDatos = computed(() => [...new Set(proyectos.value.map(cursoDeProyecto))]);
+const completados = computed(() => proyectos.value.filter(p => p.estado === 'completado' && cursoStore.coincide(cursoDeProyecto(p))));
 
 // Filtros por familia/ciclo/curso — chips planos (sin capa de familias: esta
 // vista ya cuelga de un clic extra desde /proyectos, así que se evita otro).
@@ -128,34 +134,17 @@ function mostrarSnack(mensaje, accion = null) {
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <!-- HEADER -->
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div
-          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span>
-            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Proyectos</span>
-          </span>
-        </div>
-        <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Proyectos <span :class="theme.text">Completados</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Consulta el histórico de proyectos ya finalizados y revisa el trabajo entregado por cada equipo.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Proyectos" destacado="Completados" :color="theme.text"
+                       subtitulo="Consulta el histórico de proyectos ya finalizados y revisa el trabajo entregado por cada grupo."
+                       class="mb-8" />
 
       <!-- Acciones -->
       <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <RecordatorioPropuestaFlotante />
+            <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
           </div>
           <div class="mt-3 flex flex-wrap gap-2">
             <!-- Botón ¿Qué necesitas? — mismo patrón que /proyectos y /encuentros. -->
@@ -270,7 +259,7 @@ function mostrarSnack(mensaje, accion = null) {
         </div>
 
         <div v-if="filtroFamilia && cursosDisponibles.length > 0" class="flex flex-wrap items-center gap-2">
-          <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Curso</span>
+          <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Nivel</span>
           <button v-for="cu in cursosDisponibles" :key="cu"
                   @click="seleccionarCurso(cu)"
                   :class="[
@@ -310,7 +299,7 @@ function mostrarSnack(mensaje, accion = null) {
       </div>
 
       <!-- Grid de tarjetas -->
-      <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div v-else class="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ProyectoCard
           v-for="p in proyectosFiltrados" :key="p.uuid"
           :proyecto="p"

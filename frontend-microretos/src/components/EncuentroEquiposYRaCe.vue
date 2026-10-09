@@ -13,7 +13,7 @@ defineEmits(['toggle-modulo'])
   <!-- Equipos y alumnado -->
   <div v-if="numEquipos" class="space-y-2">
     <p class="text-[9px] font-black uppercase tracking-wider text-gray-400">
-      Equipos <span class="text-gray-300">·</span> {{ numEquipos }}
+      Grupos <span class="text-gray-300">·</span> {{ numEquipos }}
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <div v-for="n in numEquipos" :key="n"
@@ -22,7 +22,7 @@ defineEmits(['toggle-modulo'])
           <span class="w-5 h-5 rounded-full bg-centros/10 text-centros font-black text-[9px]
                        flex items-center justify-center shrink-0">{{ n }}</span>
           <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">
-            Equipo {{ n }}
+            Grupo {{ n }}
           </p>
         </div>
         <div v-if="alumnadosDelEquipo(n).length" class="flex flex-wrap gap-1">

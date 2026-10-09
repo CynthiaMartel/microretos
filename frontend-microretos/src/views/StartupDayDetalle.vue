@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter } from 'vue-router';
 import api from '../api.js';
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js';
@@ -224,25 +225,11 @@ async function completar() {
                 opacity-5 blur-[120px] rounded-full pointer-events-none z-0"
          :class="theme.bg" />
 
-    <!-- HEADER -->
-    <header class="relative z-10 mb-6 md:mb-8 text-center flex flex-col items-center">
-      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
-        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-          Dua<span class="text-centros-light">Lab</span>
-          <span class="not-italic text-[10px] sm:text-sm md:text-base ml-1 text-centros-light">Proyecto</span>
-        </span>
-      </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Ficha de <span :class="theme.text">Proyecto</span>
-      </h1>
-      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Consulta el detalle completo, el estado de validación y el progreso del equipo.
-      </p>
-    </header>
+    <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+    <div class="relative z-10 mx-auto mb-6 max-w-4xl">
+      <CabeceraSeccion titulo="Ficha de" destacado="Proyecto" :color="theme.text"
+                       subtitulo="Consulta el detalle completo, el estado de validación y el progreso del grupo." />
+    </div>
 
     <div class="relative z-10 max-w-4xl mx-auto"
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
@@ -269,7 +256,7 @@ async function completar() {
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div class="flex flex-wrap items-center gap-2">
             <!-- router.back() y no push a la lista: esta ficha se abre desde varios sitios
-                 (lista de proyectos, wizard, "Ver proyecto" en mis-equipos/:id...) — forzar
+                 (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) — forzar
                  siempre la lista rompía el "atrás" cuando se llegaba desde otro lado. -->
             <button @click="router.back()"
                     class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
@@ -674,7 +661,7 @@ async function completar() {
 
           <!-- Equipo -->
           <div v-if="proyecto.equipo?.alumnos?.length" class="card-section sm:col-span-2">
-            <p class="section-label">Equipo ({{ proyecto.equipo.alumnos.length }} personas)</p>
+            <p class="section-label">Grupo ({{ proyecto.equipo.alumnos.length }} personas)</p>
             <div class="flex flex-wrap gap-1.5">
               <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
                     class="text-xs bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
@@ -1069,7 +1056,7 @@ async function completar() {
                   <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-0.5">
                     {{ key === 'reto_comprensible'   ? '¿El reto es comprensible y realista?'
                      : key === 'objetivos_alineados' ? '¿Los objetivos se alinean con la empresa?'
-                     : key === 'equipo_adecuado'     ? '¿El perfil del equipo es adecuado?'
+                     : key === 'equipo_adecuado'     ? '¿El perfil del grupo es adecuado?'
                      : key === 'viabilidad'           ? '¿El proyecto es viable en la empresa?'
                      : key.replace(/_/g, ' ') }}
                   </p>

@@ -1,6 +1,7 @@
 <!-- Ruta: /retos/crear (name: microretos). Antes vivía en /microretos — ver router/index.js. -->
 <script setup>
 import { ref, unref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import { getFamilias, getCiclosDeFamilia, getModulosDeCiclo } from '../services/datosFPService.js';
 import { getEmpresas, getFamiliasDeEmpresa, crearEmpresa, actualizarEmpresa, actualizarEstadoEmpresa, actualizarDiagnosticoEmpresa, getCatalogoEmpresas, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, verPropuestaFicticiaIA, usarEmpresaCatalogo } from '../services/empresaService.js';
@@ -1730,26 +1731,10 @@ async function guardarEstadoGen(nuevoEstado) {
 
   <div class="max-w-6xl mx-auto">
 
-      <header class="mb-4 md:mb-5 text-center flex flex-col items-center">
-        <div class="inline-flex items-center gap-2 sm:gap-3 mb-3 bg-[#1F2937] py-1.5 sm:py-2 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-             :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-10 sm:h-12 md:h-14 w-auto object-contain relative z-10" />
-          <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
-          </span>
-        </div>
-
-        <h1 class="text-2xl md:text-3xl font-black tracking-tight mb-1 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Factoría de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Retos</span>
-        </h1>
-
-        <p class="text-gray-500 max-w-2xl mx-auto text-xs md:text-sm leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial.
-        </p>
-
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Factoría de" destacado="Retos" color="text-centros"
+                       subtitulo="Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial."
+                       class="mb-4 md:mb-5" />
 
       <div class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">

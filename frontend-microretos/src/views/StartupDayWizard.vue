@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter } from 'vue-router';
 import api from '../api.js';
 import { useUIState } from '../composables/useUIState.js';
@@ -1164,11 +1165,11 @@ const guiaWizard = [
   },
   {
     titulo: 'Paso 4 · El reto',
-    texto: 'Define el núcleo de la propuesta: la fundamentación (contexto de partida, justificación pedagógica e innovación) y el diseño del reto (descripción de la problemática, pregunta reto en formato "¿Cómo podríamos…?", restricciones que condicionan la solución y los entregables que el equipo debe producir). Cuanto más concreto, más fácil será la evaluación final.',
+    texto: 'Define el núcleo de la propuesta: la fundamentación (contexto de partida, justificación pedagógica e innovación) y el diseño del reto (descripción de la problemática, pregunta reto en formato "¿Cómo podríamos…?", restricciones que condicionan la solución y los entregables que el grupo debe producir). Cuanto más concreto, más fácil será la evaluación final.',
   },
   {
     titulo: 'Paso 5 · Diseño de la propuesta',
-    texto: 'Revisa las 5 fases del proyecto (las mismas que el equipo recorrerá en su workspace cuando la propuesta se convierta en proyecto) con su duración orientativa, describe la metodología que seguirá el equipo y esboza el cronograma con los hitos clave. Termina con un resumen ejecutivo de 3-4 líneas que la empresa verá al abrir el enlace de validación.',
+    texto: 'Revisa las 5 fases del proyecto (las mismas que el grupo recorrerá en su workspace cuando la propuesta se convierta en proyecto) con su duración orientativa, describe la metodología que seguirá el grupo y esboza el cronograma con los hitos clave. Termina con un resumen ejecutivo de 3-4 líneas que la empresa verá al abrir el enlace de validación.',
   },
   {
     titulo: 'Paso 6 · Objetivos y KPIs',
@@ -1194,24 +1195,11 @@ onUnmounted(() => { tourActivo.value = false; });
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-175 h-100
                 bg-primary-400 opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
-    <!-- HEADER -->
-    <header class="pt-6 md:pt-8 text-center flex flex-col items-center px-4">
-      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
-        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
-        </span>
-      </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Taller de <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">Ideas</span>
-      </h1>
-      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium mb-2 transition-all duration-1000 delay-300 ease-out transform"
-         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Convierte una propuesta en un proyecto StartUp Day completo, paso a paso.
-      </p>
-    </header>
+    <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
+      <CabeceraSeccion titulo="Taller de" destacado="Ideas" color="text-centros"
+                       subtitulo="Convierte una propuesta en un proyecto StartUp Day completo, paso a paso." />
+    </div>
 
     <!-- Barra de progreso superior -->
     <div class="sticky top-16 z-20 bg-[#F8FAFC]/95 backdrop-blur border-b border-gray-100 shadow-sm">
@@ -1689,7 +1677,7 @@ onUnmounted(() => { tourActivo.value = false; });
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               <p class="text-xs text-gray-500 leading-relaxed">
-                El número de equipos y el alumnado se configura en el
+                El número de grupos y el alumnado se configura en el
                 <strong class="text-[#1F2937]">registro de sesión</strong>
                 del dashboard. Desde
                 <strong class="text-[#1F2937]">Sesiones registradas</strong>
@@ -2336,7 +2324,7 @@ onUnmounted(() => { tourActivo.value = false; });
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Diseño del reto</p>
               <div><label class="field-label">Descripción del reto *</label>
                 <textarea v-model="form.diseno_reto.descripcion" rows="3" class="field-input resize-none" required
-                          placeholder="Describe el reto al que se enfrenta el equipo…" /></div>
+                          placeholder="Describe el reto al que se enfrenta el grupo…" /></div>
               <div><label class="field-label">Pregunta reto</label>
                 <input v-model="form.diseno_reto.pregunta_reto" type="text" class="field-input"
                        placeholder="¿Cómo podríamos…?" /></div>
@@ -2345,7 +2333,7 @@ onUnmounted(() => { tourActivo.value = false; });
                           placeholder="Presupuesto, plazos, materiales disponibles…" /></div>
               <div><label class="field-label">Entregables esperados</label>
                 <textarea v-model="form.diseno_reto.entregables" rows="2" class="field-input resize-none"
-                          placeholder="¿Qué debe entregar el equipo al final de la propuesta?" /></div>
+                          placeholder="¿Qué debe entregar el grupo al final de la propuesta?" /></div>
             </div>
           </div>
 
@@ -2369,7 +2357,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
               <div>
                 <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Fases de la propuesta</p>
-                <p class="text-xs text-gray-400 mt-1">Son las mismas 5 fases que el equipo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
+                <p class="text-xs text-gray-400 mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
               </div>
               <div class="space-y-2">
                 <div v-for="f in FASES_PROYECTO" :key="f.num"
@@ -2468,7 +2456,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div>
                   <label class="field-label">Metodología</label>
                   <textarea v-model="form.diseno_microproyecto.metodologia" rows="6" class="field-input resize-none"
-                            placeholder="Describe cómo se organizará el trabajo del equipo…" />
+                            placeholder="Describe cómo se organizará el trabajo del grupo…" />
                 </div>
                 <div>
                   <label class="field-label">Resumen ejecutivo</label>

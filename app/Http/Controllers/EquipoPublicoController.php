@@ -25,6 +25,7 @@ use App\Models\EquipoReflexion;
 use App\Models\Encuentro;
 use App\Models\MicroproyectoRecurso;
 use App\Services\MicroretoFichaService;
+use App\Services\NotificacionDocenteService;
 
 class EquipoPublicoController extends Controller
 {
@@ -206,10 +207,20 @@ class EquipoPublicoController extends Controller
 
         $equipo = Equipo::where('token', $token)->firstOrFail();
 
+        // El endpoint es idempotente: solo se avisa al docente la primera vez que se completa
+        $yaCompletada = EquipoFase::where('equipo_id', $equipo->id)
+            ->where('numero_fase', $numeroFase)
+            ->where('completada', true)
+            ->exists();
+
         EquipoFase::updateOrCreate(
             ['equipo_id' => $equipo->id, 'numero_fase' => $numeroFase],
             ['completada' => true, 'fecha_completada' => now()]
         );
+
+        if (!$yaCompletada) {
+            app(NotificacionDocenteService::class)->equipoCompletoFase($equipo, $numeroFase);
+        }
 
         // Al pasar de Análisis (F1) a Diseño de solución y desarrollo (F2), se precarga
         // la secuencia genérica de tareas de la ficha del reto (solo si el equipo

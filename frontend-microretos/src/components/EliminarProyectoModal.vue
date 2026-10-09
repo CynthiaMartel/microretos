@@ -123,7 +123,7 @@ async function confirmarEliminacion() {
                   </div>
                   <div class="flex-1">
                     <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de propuestas y proyectos</p>
-                    <p class="text-xs text-red-500 mt-0.5">El equipo no podrá acceder a ella mientras esté en la papelera.</p>
+                    <p class="text-xs text-red-500 mt-0.5">El grupo no podrá acceder a ella mientras esté en la papelera.</p>
                   </div>
                 </div>
 

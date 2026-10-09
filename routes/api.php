@@ -16,6 +16,10 @@ use App\Http\Controllers\PapeleraController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\EquipoPublicoController;
 use App\Http\Controllers\EquipoGestionController;
+use App\Http\Controllers\DocenteNotaController;
+use App\Http\Controllers\DocenteTareaController;
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\AlumnadoController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
 use App\Http\Controllers\PublicMicroproyectoCatalogoController;
 
@@ -203,6 +207,31 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Solo docente (+ admin): generación IA, microretos, sesiones, uploads, startup ──
     Route::middleware('docente')->group(function () {
+
+        // Notificaciones in-app y notas personales (vistas Notificaciones y Calendario).
+        // Siempre sobre el usuario autenticado; el contador se consulta al navegar.
+        // Rutas fijas antes que las paramétricas.
+        Route::middleware('throttle:60,1')->group(function () {
+            Route::get('/notificaciones',                [NotificacionController::class, 'index']);
+            Route::get('/notificaciones/no-leidas',      [NotificacionController::class, 'contadorNoLeidas']);
+            Route::post('/notificaciones/leer-todas',    [NotificacionController::class, 'marcarTodasLeidas']);
+            Route::patch('/notificaciones/{id}/leida',   [NotificacionController::class, 'marcarLeida'])
+                ->whereUuid('id');
+
+            Route::get('/notas',            [DocenteNotaController::class, 'index']);
+            Route::post('/notas',           [DocenteNotaController::class, 'store']);
+            Route::patch('/notas/{nota}',   [DocenteNotaController::class, 'update'])->whereNumber('nota');
+            Route::delete('/notas/{nota}',  [DocenteNotaController::class, 'destroy'])->whereNumber('nota');
+
+            Route::get('/tareas',             [DocenteTareaController::class, 'index']);
+            Route::post('/tareas',            [DocenteTareaController::class, 'store']);
+            Route::patch('/tareas/{tarea}',   [DocenteTareaController::class, 'update'])->whereNumber('tarea');
+            Route::delete('/tareas/{tarea}',  [DocenteTareaController::class, 'destroy'])->whereNumber('tarea');
+        });
+
+        // Listado de alumnado participante (por encuentros visibles para el usuario).
+        // Respuesta pesada (equipos, fases, tareas…): throttle propio más bajo.
+        Route::get('/alumnado', [AlumnadoController::class, 'index'])->middleware('throttle:30,1');
 
         // Generación IA: throttle estricto (5/min por usuario)
         Route::middleware('throttle:5,1')->group(function () {

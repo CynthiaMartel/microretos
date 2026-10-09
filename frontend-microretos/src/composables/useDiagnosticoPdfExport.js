@@ -4,6 +4,7 @@ import {
   slugify, crearDocumento, addFooters, makeBaseRenderer,
 } from './pdfHelpers.js';
 import { formatCurso } from '../utils/formatCurso.js';
+import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 // Nivel alcanzado evaluado por el docente para un RA concreto (F4), si existe —
 // busca por coincidencia exacta de texto del RA, igual que initEvaluacionForm()
@@ -37,13 +38,13 @@ function makeRenderer(doc) {
     doc.setFillColor(...GREEN);
     doc.rect(0, 0, PAGE_W, 8, 'F');
     setFont(6, 'bold', [255, 255, 255]);
-    doc.text('DUALAB · DIAGNÓSTICO FINAL DE EQUIPO', MARGIN, 5.5);
+    doc.text('DUALAB · DIAGNÓSTICO FINAL DE GRUPO', MARGIN, 5.5);
 
     s.y = 14;
 
     // Título
     setFont(18, 'bold', DARK);
-    const titleLines = doc.splitTextToSize(equipo.nombre || 'Equipo', CONTENT_W);
+    const titleLines = doc.splitTextToSize(nombreGrupo(equipo), CONTENT_W);
     doc.text(titleLines, MARGIN, s.y);
     s.y += titleLines.length * 7 + 2;
 
@@ -57,7 +58,7 @@ function makeRenderer(doc) {
     // Badges de contexto (curso, grupo, ciclo, centro, familia)
     let bx = MARGIN;
     if (encuentro?.curso)            bx += drawBadge(`${formatCurso(encuentro.curso)} curso`, [209, 250, 229], GREEN, bx, s.y);
-    if (encuentro?.grupo)            bx += drawBadge(`Grupo ${encuentro.grupo}`,   DARK,            [255, 255, 255], bx, s.y);
+    if (encuentro?.grupo)            bx += drawBadge(`Clase ${encuentro.grupo}`,   DARK,            [255, 255, 255], bx, s.y);
     if (encuentro?.ciclo_formativo)  bx += drawBadge(encuentro.ciclo_formativo,    [243, 244, 246], GRAY, bx, s.y);
     if (proyecto.familia)            drawBadge(proyecto.familia, [243, 244, 246], GRAY, bx, s.y);
     s.y += 10;
@@ -75,7 +76,7 @@ function makeRenderer(doc) {
 
     // ── EQUIPO ───────────────────────────────────────────────────────────────
     if (equipo.miembros?.length) {
-      addSectionTitle(`Equipo (${equipo.miembros.length} personas)`, DARK);
+      addSectionTitle(`Grupo (${equipo.miembros.length} personas)`, DARK);
       equipo.miembros.forEach(m => {
         checkBreak(6);
         setFont(8.5, 'normal', LGRAY);
@@ -233,7 +234,7 @@ export function useDiagnosticoPdfExport() {
     const { renderDiagnostico } = makeRenderer(doc);
     renderDiagnostico({ equipo, encuentro });
     addFooters(doc);
-    doc.save(`diagnostico-${slugify(equipo.nombre)}.pdf`);
+    doc.save(`diagnostico-${slugify(nombreGrupo(equipo))}.pdf`);
   };
 
   return { descargarPDF };

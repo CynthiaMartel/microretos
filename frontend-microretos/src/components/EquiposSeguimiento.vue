@@ -40,7 +40,7 @@ watch(() => props.proyectoUuid, async (uuid) => {
     equipos.value = res.data.equipos || []
   } catch (e) {
     console.error('Error cargando seguimiento de equipos:', e)
-    error.value = 'No se pudo cargar el seguimiento de equipos.'
+    error.value = 'No se pudo cargar el seguimiento de grupos.'
   } finally {
     cargando.value = false
   }
@@ -60,7 +60,7 @@ watch(() => props.proyectoUuid, async (uuid) => {
     <template v-else>
       <!-- Sin equipos -->
       <div v-if="!equipos.length" class="rounded-2xl bg-gray-50 border border-gray-100 p-6 text-center">
-        <p class="text-gray-400 text-sm">Todavía no hay equipos que hayan trabajado este proyecto.</p>
+        <p class="text-gray-400 text-sm">Todavía no hay grupos que hayan trabajado este proyecto.</p>
       </div>
 
       <template v-else>
@@ -68,7 +68,7 @@ watch(() => props.proyectoUuid, async (uuid) => {
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div class="text-center bg-gray-50 rounded-xl py-2.5">
             <p class="text-lg font-black text-[#121212]">{{ totalEquipos }}</p>
-            <p class="text-[9px] text-gray-400 uppercase tracking-wider">Equipos</p>
+            <p class="text-[9px] text-gray-400 uppercase tracking-wider">Grupos</p>
           </div>
           <div class="text-center bg-gray-50 rounded-xl py-2.5">
             <p class="text-lg font-black text-violet-600">{{ progresoMedio }}%</p>

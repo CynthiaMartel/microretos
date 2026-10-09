@@ -12,6 +12,7 @@
 <script setup>
 import { computed } from 'vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
+import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 const props = defineProps({
   equipo: { type: Object, required: true },
@@ -66,7 +67,7 @@ function progresoPct() {
 // empezado: con "Sin iniciar" no hay ninguna fase en curso que resaltar.
 const ESTADO_FASE_LABEL = {
   validada:   'Validada por docente',
-  completada: 'Completada por el equipo',
+  completada: 'Completada por el grupo',
   actual:     'En curso',
   pendiente:  'Pendiente',
 }
@@ -190,7 +191,7 @@ function formatItemFase(item) {
 
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <p class="font-black text-[#121212]">{{ equipo.nombre }}</p>
+          <p class="font-black text-[#121212]">{{ nombreGrupo(equipo) }}</p>
           <span :class="['px-2 py-0.5 rounded-full text-[10px] font-black', estadoBadge().cls]">
             {{ estadoBadge().label }}
           </span>
@@ -490,7 +491,7 @@ function formatItemFase(item) {
             </template>
           </p>
         </div>
-        <p v-else class="text-xs text-gray-400 italic">Todavía no se ha generado el diagnóstico final de este equipo.</p>
+        <p v-else class="text-xs text-gray-400 italic">Todavía no se ha generado el diagnóstico final de este grupo.</p>
         </slot>
 
         <slot name="diagnostico-acciones" :equipo="equipo" />

@@ -94,7 +94,7 @@ async function guardar() {
       equipos: res.data.equipos,
     })
   } catch (e) {
-    error.value = e.response?.data?.error || 'Error al reestructurar los equipos.'
+    error.value = e.response?.data?.error || 'Error al reestructurar los grupos.'
   } finally {
     guardando.value = false
   }
@@ -116,7 +116,7 @@ async function guardar() {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="req-title">Editar equipo</h2>
+                <h2 class="req-title">Editar grupo</h2>
                 <p class="req-sub">
                   Cambia el reparto de alumnado sin perder el progreso ya hecho — se actualiza,
                   no se borra y recrea.
@@ -125,20 +125,20 @@ async function guardar() {
             </div>
 
             <div class="mt-4 px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500">
-              Si algún equipo tiene progreso real (fases completadas, tareas, reflexiones o
-              prototipos) y reduces el número de equipos hasta eliminarlo, se bloqueará el
+              Si algún grupo tiene progreso real (fases completadas, tareas, reflexiones o
+              prototipos) y reduces el número de grupos hasta eliminarlo, se bloqueará el
               guardado explicando cuál.
             </div>
 
             <div class="mt-2 px-4 py-2.5 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-700 flex items-start gap-2">
               <span class="shrink-0">🔒</span>
               <span>Creamos un alias automático para cada alumno/a (protección de datos) — el
-              nombre real que escribas aquí no se muestra fuera del equipo ni del panel docente.</span>
+              nombre real que escribas aquí no se muestra fuera del grupo ni del panel docente.</span>
             </div>
 
             <!-- Número de equipos -->
             <div class="mt-5">
-              <label class="req-label">Número de equipos</label>
+              <label class="req-label">Número de grupos</label>
               <div class="flex items-center gap-2 mt-1">
                 <button type="button" @click="numEquipos = Math.max(1, numEquipos - 1)"
                         class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 text-gray-600
@@ -152,14 +152,14 @@ async function guardar() {
 
             <!-- Alumnado por equipos -->
             <div class="mt-5 space-y-3">
-              <label class="req-label">Alumnado por equipos</label>
+              <label class="req-label">Alumnado por grupos</label>
 
               <div class="flex flex-wrap gap-2">
                 <input v-model="nuevoNombre" type="text" placeholder="Nombre del alumno/a"
                        class="req-input flex-1 min-w-32 !text-sm"
                        @keyup.enter="addAlumno" />
                 <select v-model="nuevoEquipo" class="req-input !w-auto pr-8 cursor-pointer !text-sm">
-                  <option v-for="n in numEquipos" :key="n" :value="n">Equipo {{ n }}</option>
+                  <option v-for="n in numEquipos" :key="n" :value="n">Grupo {{ n }}</option>
                 </select>
                 <button type="button" @click="addAlumno"
                         class="shrink-0 px-3 py-2 bg-violet-500 text-white rounded-xl
@@ -175,7 +175,7 @@ async function guardar() {
                     <span class="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center
                                  text-[9px] font-black text-violet-600 flex-shrink-0">{{ n }}</span>
                     <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 flex-1 truncate">
-                      Equipo {{ n }}
+                      Grupo {{ n }}
                     </p>
                     <span class="text-[9px] text-gray-400 flex-shrink-0">{{ alumnadosDeEquipo(n).length }}</span>
                   </div>
@@ -210,7 +210,7 @@ async function guardar() {
               <div v-if="alumnadosSinEquipo.length"
                    class="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
                 <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">
-                  Sin equipo asignado
+                  Sin grupo asignado
                 </p>
                 <div class="space-y-1.5">
                   <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">

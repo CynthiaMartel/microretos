@@ -1,12 +1,14 @@
 <!-- Ruta: /encuentros/crear (name: dashboard-docente). El nombre del archivo quedó del naming antiguo (/dashboard) tras el rename de URLs — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
 import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import EliminarEncuentroModal from '../components/EliminarEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
+import ResumenEncuentrosPanel from '../components/ResumenEncuentrosPanel.vue'
 import TourPromptModal from '../components/TourPromptModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import { generarAliasAleatorio } from '../utils/alias.js'
@@ -326,35 +328,6 @@ function onEncuentroEliminado({ id, titulo }) {
   )
 }
 
-// ─── Filtros y paginación del panel de encuentros ────────────────────────────
-const filtroSes        = ref({ fecha: '', titulo: '', curso: '', grupo: '' })
-const paginaEncuentros  = ref(1)
-const ENCUENTROS_POR_PAGINA = 5
-
-const encuentrosFiltrados = computed(() => {
-  let lista = [...encuentros.value]
-  if (filtroSes.value.fecha)
-    lista = lista.filter(s => s.fecha === filtroSes.value.fecha)
-  if (filtroSes.value.titulo.trim()) {
-    const q = filtroSes.value.titulo.trim().toLowerCase()
-    lista = lista.filter(s => (s.proyecto_titulo || '').toLowerCase().includes(q))
-  }
-  if (filtroSes.value.curso) lista = lista.filter(s => s.curso === filtroSes.value.curso)
-  if (filtroSes.value.grupo) lista = lista.filter(s => s.grupo === filtroSes.value.grupo)
-  return lista.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
-})
-
-const encuentrosVisibles = computed(() => {
-  const start = (paginaEncuentros.value - 1) * ENCUENTROS_POR_PAGINA
-  return encuentrosFiltrados.value.slice(start, start + ENCUENTROS_POR_PAGINA)
-})
-
-const totalPaginasSes = computed(() =>
-  Math.ceil(encuentrosFiltrados.value.length / ENCUENTROS_POR_PAGINA)
-)
-
-watch(filtroSes, () => { paginaEncuentros.value = 1 }, { deep: true })
-
 // ─── Tour guía paso a paso ────────────────────────────────────────────────────
 const modoGuia       = ref(false)
 const pasoGuia       = ref(1)
@@ -366,8 +339,8 @@ function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const guiaPasosData = [
   { ref: 'refCampoFecha',    seccion: 'datos', texto: 'Indica la fecha en la que se realizó el encuentro.' },
   { ref: 'refCampoCentro',   seccion: 'datos', texto: 'Indica el centro educativo.' },
-  { ref: 'refCampoAlumnado', seccion: 'datos', texto: 'Indica la información del alumnado: curso, grupo y número de alumnos.' },
-  { ref: 'refCampoEquipos',  seccion: 'datos', texto: 'Configura los equipos y añade el alumnado asignado a cada uno.' },
+  { ref: 'refCampoAlumnado', seccion: 'datos', texto: 'Indica la información del alumnado: curso, clase y número de alumnos.' },
+  { ref: 'refCampoEquipos',  seccion: 'datos', texto: 'Configura los grupos y añade el alumnado asignado a cada uno.' },
   { ref: 'refCampoNotas',    seccion: 'datos', texto: 'Indica cualquier nota relevante sobre el encuentro.' },
   { ref: 'refBtnGuardar',    seccion: 'datos', texto: 'Pulsa guardar encuentro para registrar la información.' },
   { ref: 'refEncuentros',    seccion: 'encuentros', texto: 'Quedará disponible para crear el proyecto y comenzar el taller de ideas, o consultar esta info más adelante.' },
@@ -553,10 +526,10 @@ const requisitosFaltantes = computed(() => {
   }
   if (!form.value.fecha) faltantes.push('Establece la fecha de trabajo.')
   if (!form.value.curso) faltantes.push('Indica el curso del encuentro.')
-  if (!form.value.grupo) faltantes.push('Indica el grupo del encuentro.')
-  if ((form.value.num_equipos || 0) < 1) faltantes.push('Indica el número de equipos.')
-  if (form.value.alumnados.length === 0) faltantes.push('Reparte el alumnado en los equipos.')
-  else if (alumnadosSinEquipo.value.length > 0) faltantes.push('Hay alumnado sin equipo asignado.')
+  if (!form.value.grupo) faltantes.push('Indica la clase del encuentro.')
+  if ((form.value.num_equipos || 0) < 1) faltantes.push('Indica el número de grupos.')
+  if (form.value.alumnados.length === 0) faltantes.push('Reparte el alumnado en los grupos.')
+  else if (alumnadosSinEquipo.value.length > 0) faltantes.push('Hay alumnado sin grupo asignado.')
   return faltantes
 })
 
@@ -641,25 +614,10 @@ function formatFecha(isoDate) {
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- HEADER -->
-      <header class="mb-6 md:mb-8 text-center flex flex-col items-center">
-        <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 md:mb-5 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-             :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
-          <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
-          </span>
-        </div>
-
-        <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">DuaLab</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Registra y consulta tus encuentros de trabajo con retos.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Encuentros" destacado="DuaLab" color="text-centros"
+                       subtitulo="Registra y consulta tus encuentros de trabajo con retos."
+                       class="mb-6 md:mb-8" />
 
       <!-- Acciones -->
       <div class="mb-8">
@@ -727,7 +685,7 @@ function formatFecha(isoDate) {
                     <span class="text-[10px] font-black uppercase tracking-widest text-centros">Nuevo encuentro</span>
                   </div>
                   <h2 class="text-xl font-black text-azul-noche tracking-tight leading-tight">Creación de encuentro</h2>
-                  <p class="text-xs text-gray-500 mt-0.5 font-medium">Selecciona un reto y registra los datos del grupo</p>
+                  <p class="text-xs text-gray-500 mt-0.5 font-medium">Selecciona un reto y registra los datos de la clase</p>
                 </div>
               </div>
             </div>
@@ -1029,7 +987,7 @@ function formatFecha(isoDate) {
                     </div>
                   </div>
                   <div>
-                    <label class="field-label">Grupo <span class="text-red-400">*</span></label>
+                    <label class="field-label">Clase <span class="text-red-400">*</span></label>
                     <div class="flex gap-1.5 mt-1 flex-wrap">
                       <button v-for="g in ['A', 'B', 'C', 'D']" :key="g"
                               @click="form.grupo = g"
@@ -1051,7 +1009,7 @@ function formatFecha(isoDate) {
 
                 <!-- Número de equipos -->
                 <div>
-                  <label class="field-label">Número de equipos <span class="text-red-400">*</span></label>
+                  <label class="field-label">Número de grupos <span class="text-red-400">*</span></label>
                   <div class="flex items-center gap-2 mt-1">
                     <button @click="form.num_equipos = Math.max(1, (form.num_equipos || 3) - 1)"
                             :disabled="!fechaEstablecida"
@@ -1064,12 +1022,12 @@ function formatFecha(isoDate) {
                             class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200
                                    text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">+</button>
-                    <span class="text-[10px] text-gray-400 font-medium ml-1">equipos · se crearán al generar el código</span>
+                    <span class="text-[10px] text-gray-400 font-medium ml-1">grupos · se crearán al generar el código</span>
                   </div>
                 </div>
 
                 <p v-if="!fechaEstablecida" class="text-xs text-amber-500 font-medium">
-                  Establece la fecha de trabajo para repartir el alumnado en equipos.
+                  Establece la fecha de trabajo para repartir el alumnado en grupos.
                 </p>
 
                 <!-- Alumnado por equipos — siempre visible -->
@@ -1077,7 +1035,7 @@ function formatFecha(isoDate) {
                      :class="{ 'tour-active': tourTargetActivo === 'refCampoEquipos' }">
 
                   <label class="field-label">
-                    Alumnado por equipos <span class="text-red-400">*</span>
+                    Alumnado por grupos <span class="text-red-400">*</span>
                     <span v-if="limiteAlumnados" class="ml-2 text-xs font-semibold"
                           :class="limiteAlcanzado ? 'text-red-400' : 'text-gray-400'">
                       {{ form.alumnados.length }}/{{ limiteAlumnados }}
@@ -1102,7 +1060,7 @@ function formatFecha(isoDate) {
                             class="field-input !w-auto pr-8 cursor-pointer !text-sm"
                             :disabled="!fechaEstablecida">
                       <option v-for="n in (form.num_equipos || 3)" :key="n" :value="n">
-                        Equipo {{ n }}
+                        Grupo {{ n }}
                       </option>
                     </select>
                     <button @click="addAlumnadoEncuentro"
@@ -1129,7 +1087,7 @@ function formatFecha(isoDate) {
                                 : 'bg-centros/10 text-centros'">{{ n }}</span>
                         <p class="text-[10px] font-black uppercase tracking-widest flex-1 truncate"
                            :class="Number(nuevoAlumnadoEquipo) === n ? 'text-centros' : 'text-gray-500'">
-                          Equipo {{ n }}
+                          Grupo {{ n }}
                         </p>
                         <span v-if="Number(nuevoAlumnadoEquipo) === n"
                               class="text-[8px] font-black uppercase tracking-widest text-centros
@@ -1165,7 +1123,7 @@ function formatFecha(isoDate) {
                   <div v-if="alumnadosSinEquipo.length"
                        class="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
                     <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">
-                      Sin equipo asignado
+                      Sin grupo asignado
                     </p>
                     <div class="space-y-1.5">
                       <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">
@@ -1274,225 +1232,8 @@ function formatFecha(isoDate) {
                class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden sticky top-[4.5rem]"
                :class="{ 'tour-active': tourTargetActivo === 'refEncuentros' }">
 
-            <!-- Cabecera — banner azul -->
-            <div class="relative overflow-hidden border-b border-blue-100
-                        bg-gradient-to-br from-blue-50 via-blue-50/60 to-indigo-50/40 px-5 py-4">
-              <!-- Fondo decorativo -->
-              <div class="absolute -right-4 -top-4 w-20 h-20 rounded-full
-                          bg-blue-100 blur-2xl pointer-events-none" />
-              <div class="relative flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-blue-500 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                             M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-0.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">Historial</span>
-                  </div>
-                  <h2 class="text-base font-black text-azul-noche tracking-tight leading-tight truncate">
-                    Resumen de encuentros
-                  </h2>
-                </div>
-                <span class="flex-shrink-0 text-[10px] font-black bg-blue-100 text-blue-600
-                             px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  {{ encuentros.length }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Acciones rápidas -->
-            <div class="px-5 py-3 border-b border-gray-100">
-              <!-- Botón Ver encuentros — prominente -->
-              <button @click="router.push('/encuentros')"
-                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-                             bg-centros text-white
-                             text-[10px] font-black uppercase tracking-widest
-                             hover:bg-centros/90 transition-all shadow-sm mb-2">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-                </svg>
-                Ver todos los encuentros
-              </button>
-              <!-- name 'mis-equipos' (antes 'mis-grupos') — ver router/index.js -->
-              <button @click="router.push({ name: 'mis-equipos' })"
-                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-                             bg-violet-50 border border-violet-200 text-violet-700
-                             text-[10px] font-black uppercase tracking-widest
-                             hover:bg-violet-100 transition-all mb-2">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2v1h12v-1z"/>
-                </svg>
-                Mis grupos — seguimiento equipos
-              </button>
-              <button @click="router.push({ name: 'startup-day-crear' })"
-                      class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
-                             bg-primary-400/10 border border-primary-400/20 text-primary-700
-                             text-[9px] font-black uppercase tracking-widest
-                             hover:bg-primary-400/20 transition-all">
-                <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Nueva propuesta
-              </button>
-            </div>
-
-            <!-- Filtros compactos -->
-            <div v-if="encuentros.length > 0" class="px-4 py-3 border-b border-gray-50 space-y-2">
-              <!-- Búsqueda por título -->
-              <div class="relative">
-                <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none"
-                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <input v-model="filtroSes.titulo" type="text" placeholder="Buscar encuentro..."
-                       class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-7 pr-3 py-1.5
-                              text-xs font-medium text-gray-700 placeholder-gray-300
-                              focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
-              </div>
-              <!-- Fecha -->
-              <input v-model="filtroSes.fecha" type="date"
-                     class="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5
-                            text-xs font-medium text-gray-600
-                            focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
-              <!-- Curso + Grupo -->
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <p class="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-1">Curso</p>
-                  <div class="flex gap-1">
-                    <button v-for="c in ['', '1º', '2º']" :key="'fc'+c"
-                            @click="filtroSes.curso = c"
-                            class="flex-1 py-1 rounded-lg text-[8px] font-black uppercase border transition-all"
-                            :class="filtroSes.curso === c
-                              ? 'bg-centros border-centros text-white'
-                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-centros/40'">
-                      {{ c === '' ? '·' : c }}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p class="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-1">Grupo</p>
-                  <div class="flex gap-0.5">
-                    <button v-for="g in ['', 'A', 'B', 'C', 'D']" :key="'fg'+g"
-                            @click="filtroSes.grupo = g"
-                            class="flex-1 py-1 rounded-md text-[7px] font-black uppercase border transition-all"
-                            :class="filtroSes.grupo === g
-                              ? 'bg-primary-400 border-primary-400 text-white'
-                              : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-primary-400/40'">
-                      {{ g === '' ? '·' : g }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <!-- Limpiar filtros -->
-              <div v-if="filtroSes.titulo || filtroSes.fecha || filtroSes.curso || filtroSes.grupo"
-                   class="flex justify-end">
-                <button @click="filtroSes = { fecha: '', titulo: '', curso: '', grupo: '' }"
-                        class="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-red-400 transition-colors">
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-
-            <!-- Cargando encuentros -->
-            <div v-if="cargandoEncuentros" class="px-5 py-10 flex justify-center">
-              <svg class="animate-spin w-5 h-5 text-centros" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-            </div>
-
-            <!-- Estado vacío -->
-            <div v-else-if="encuentros.length === 0" class="px-5 py-10 text-center">
-              <div class="w-12 h-12 rounded-full bg-gray-50 border border-gray-100
-                          flex items-center justify-center mx-auto mb-3">
-                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                </svg>
-              </div>
-              <p class="text-xs text-gray-400 font-medium leading-relaxed">
-                Aún no hay encuentros.<br>¡Registra el primero!
-              </p>
-            </div>
-
-            <!-- Sin resultados tras filtrar -->
-            <div v-else-if="!cargandoEncuentros && encuentrosFiltrados.length === 0" class="px-5 py-8 text-center">
-              <p class="text-xs text-gray-400 font-medium">Sin resultados para esos filtros.</p>
-            </div>
-
-            <!-- Lista de encuentros (miniaturas) -->
-            <ul v-else-if="!cargandoEncuentros" class="divide-y divide-gray-50">
-              <li v-for="s in encuentrosVisibles" :key="s.id"
-                  class="px-4 py-3 hover:bg-gray-50/60 transition-colors group cursor-pointer"
-                  @click="verEncuentro(s)">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-[#1F2937] leading-snug truncate
-                              group-hover:text-centros transition-colors">
-                      {{ s.proyecto_titulo || '(sin título)' }}
-                    </p>
-                    <p class="text-[10px] text-centros font-bold mt-0.5">
-                      {{ formatFecha(s.fecha) }}
-                    </p>
-                    <div class="flex flex-wrap gap-1 mt-1">
-                      <span v-if="s.curso"       class="tag tag-green">{{ s.curso }}</span>
-                      <span v-if="s.grupo"       class="tag tag-lime">Gr. {{ s.grupo }}</span>
-                      <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} al.</span>
-                      <span v-if="s.num_equipos" class="tag tag-gray">{{ s.num_equipos }} eq.</span>
-                    </div>
-                    <div v-if="s.num_equipos" class="space-y-0.5 mt-1">
-                      <p v-for="n in s.num_equipos" :key="n"
-                         class="text-[9px] text-gray-400 truncate">
-                        <span class="font-black text-centros">Eq.{{ n }}</span>
-                        {{ alumnadosDeEquipoEn(s, n).join(', ') || 'Sin alumnos' }}
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex flex-col items-end gap-1 flex-shrink-0">
-                    <button @click.stop="abrirModalEliminar(s)"
-                            class="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
-                            title="Eliminar">
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </li>
-            </ul>
-
-            <!-- Paginación -->
-            <div v-if="totalPaginasSes > 1"
-                 class="px-4 py-3 border-t border-gray-50 flex items-center justify-between gap-2">
-              <button @click="paginaEncuentros--"
-                      :disabled="paginaEncuentros === 1"
-                      class="p-1.5 rounded-lg border border-gray-200 text-gray-400
-                             hover:border-centros hover:text-centros
-                             disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-              </button>
-              <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                {{ paginaEncuentros }} / {{ totalPaginasSes }}
-              </span>
-              <button @click="paginaEncuentros++"
-                      :disabled="paginaEncuentros === totalPaginasSes"
-                      class="p-1.5 rounded-lg border border-gray-200 text-gray-400
-                             hover:border-centros hover:text-centros
-                             disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </div>
-
+            <ResumenEncuentrosPanel :encuentros="encuentros" :cargando="cargandoEncuentros"
+                                    @ver="verEncuentro" @eliminar="abrirModalEliminar" />
           </div>
         </div>
 
@@ -1547,7 +1288,7 @@ function formatFecha(isoDate) {
             <div class="flex flex-wrap gap-1.5 mt-3">
               <span v-if="encuentroAbierto.fecha"           class="tag tag-gray">{{ formatFecha(encuentroAbierto.fecha) }}</span>
               <span v-if="encuentroAbierto.curso"           class="tag tag-green">{{ encuentroAbierto.curso }}</span>
-              <span v-if="encuentroAbierto.grupo"           class="tag tag-lime">Grupo {{ encuentroAbierto.grupo }}</span>
+              <span v-if="encuentroAbierto.grupo"           class="tag tag-lime">Clase {{ encuentroAbierto.grupo }}</span>
               <span v-if="encuentroAbierto.num_alumnos"     class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
           </div>

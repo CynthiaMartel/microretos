@@ -1,12 +1,15 @@
 <!-- Ruta: /retos (name: biblioteca). Antes vivía en /biblioteca — ver router/index.js. -->
 <script setup>
 import { formatearFecha } from '../utils/fechas.js';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js';
 import LoginModal from '../components/LoginModal.vue';
 import EliminarMicrorretoModal from '../components/EliminarMicrorretoModal.vue';
+import { useCursoAcademicoStore, cursoDeReto } from '../stores/cursoAcademico.js';
+import SelectorCurso from '../components/SelectorCurso.vue';
 import { usePdfExport } from '../composables/usePdfExport.js';
 import { iconoFamilia, colorFamilia } from '../utils/familiaIconos.js';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
@@ -117,19 +120,25 @@ const esCentroRestringido = computed(() => authStore.isDocente || authStore.isAd
 const centrosDisponibles = computed(() => centros.value.map(c => c.nombre).sort());
 
 // Total de microretos del centro seleccionado (para mostrar en el botón de descarga)
+// Curso académico compartido (store): conteos, filtros, listado y PDFs salen de esta lista.
+// Las bajas siguen trabajando sobre `microretos` (la lista completa).
+const cursoStore      = useCursoAcademicoStore();
+const microretosCurso = computed(() => microretos.value.filter(r => cursoStore.coincide(cursoDeReto(r))));
+const cursosConDatos  = computed(() => [...new Set(microretos.value.map(cursoDeReto))]);
+
 const countCentroActual = computed(() => {
-  if (!filtroCentro.value) return microretos.value.length;
-  return microretos.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value).length;
+  if (!filtroCentro.value) return microretosCurso.value.length;
+  return microretosCurso.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value).length;
 });
 
 const ciclosDisponibles = computed(() => {
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   return [...new Set(d.map(m => m.ciclo).filter(Boolean))].sort();
 });
 
 const cursosDisponibles = computed(() => {
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   // 'ambos_cursos' se muestra aparte (botón fijo), no mezclado en el orden numérico 1º/2º.
   return [...new Set(d.map(m => m.curso).filter(v => v != null && v !== 'ambos_cursos'))].sort((a, b) => a - b);
@@ -137,7 +146,7 @@ const cursosDisponibles = computed(() => {
 
 // Un reto "ambos cursos" vale para 1º y 2º a la vez (cruza módulos de los dos años).
 const hayRetosAmbosCursos = computed(() => {
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   return d.some(m => m.curso === 'ambos_cursos');
 });
@@ -146,7 +155,7 @@ const hayRetosAmbosCursos = computed(() => {
 const conteoNiveles = computed(() => {
   const r = { Bajo: 0, Medio: 0, Alto: 0, total: 0 };
   if (!familiaSeleccionada.value) return r;
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   d.forEach(m => { r.total++; if (m.nivel_grupo && m.nivel_grupo in r) r[m.nivel_grupo]++; });
   return r;
@@ -156,7 +165,7 @@ const conteoNiveles = computed(() => {
 const conteoEmpresaTipo = computed(() => {
   const r = { real: 0, ficticia: 0, total: 0 };
   if (!familiaSeleccionada.value) return r;
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   d.forEach(m => {
     r.total++;
@@ -169,7 +178,7 @@ const conteoEmpresaTipo = computed(() => {
 const conteoInfoSimulada = computed(() => {
   const r = { real: 0, simulada: 0, total: 0 };
   if (!familiaSeleccionada.value) return r;
-  let d = microretos.value.filter(m => m.familia === familiaSeleccionada.value);
+  let d = microretosCurso.value.filter(m => m.familia === familiaSeleccionada.value);
   if (filtroCentro.value) d = d.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   d.forEach(m => {
     r.total++;
@@ -180,7 +189,7 @@ const conteoInfoSimulada = computed(() => {
 
 const microretosFiltrados = computed(() => {
   const q = busqueda.value.toLowerCase().trim();
-  return microretos.value.filter(reto => {
+  return microretosCurso.value.filter(reto => {
     const centro = reto.centro_educativo || reto.centro;
     const infoOk = filtroInfoSimulada.value === ''
       ? true
@@ -216,8 +225,8 @@ const hayFiltrosActivos = computed(() =>
 const conteoPorFamilia = computed(() => {
   const mapa = {};
   const d = filtroCentro.value
-    ? microretos.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value)
-    : microretos.value;
+    ? microretosCurso.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value)
+    : microretosCurso.value;
   d.forEach(m => { if (m.familia) mapa[m.familia] = (mapa[m.familia] || 0) + 1; });
   return mapa;
 });
@@ -369,8 +378,8 @@ const _lanzarGeneracion = (fn) => {
 // Nivel 1: descarga TODOS los microretos del centro seleccionado
 const descargarGrupoCentro = () => {
   const retos = filtroCentro.value
-    ? microretos.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value)
-    : microretos.value;
+    ? microretosCurso.value.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value)
+    : microretosCurso.value;
   if (!retos.length) return;
   _lanzarGeneracion(() => {
     const titulo    = filtroCentro.value || 'Todos los centros';
@@ -381,7 +390,7 @@ const descargarGrupoCentro = () => {
 
 // Nivel 2: descarga todos los microretos de una familia en el centro seleccionado
 const descargarGrupoFamilia = (familiaName) => {
-  let retos = microretos.value.filter(m => m.familia === familiaName);
+  let retos = microretosCurso.value.filter(m => m.familia === familiaName);
   if (filtroCentro.value)
     retos = retos.filter(m => (m.centro_educativo || m.centro) === filtroCentro.value);
   if (!retos.length) return;
@@ -474,29 +483,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
     <div class="max-w-7xl mx-auto relative z-10">
 
-      <!-- HEADER -->
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div
-          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span>
-            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Retos</span>
-          </span>
-        </div>
-        <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Explorador de
-          <span :class="theme.text">Retos</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Encuentra, filtra y reutiliza los desafíos generados por la Inteligencia Artificial para tus alumnos.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Explorador de" destacado="Retos" :color="theme.text"
+                       subtitulo="Encuentra, filtra y reutiliza los desafíos generados por la Inteligencia Artificial para tus alumnos."
+                       class="mb-8" />
 
       <!-- CARGANDO -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-20">
@@ -528,6 +518,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 </span>
               </label>
               <div class="flex flex-wrap items-center gap-2 flex-1">
+                <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" class="mr-2" />
                 <!-- Superadmin y empresa: selector completo de centros -->
                 <template v-if="!esCentroRestringido">
                   <button
@@ -595,7 +586,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               Selecciona una familia profesional para explorar sus micro-retos
             </p>
 
-            <div v-if="familiasVisibles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="familiasVisibles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr gap-6">
               <div
                 v-for="familia in familiasVisibles"
                 :key="familia.nombre"
@@ -1071,10 +1062,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
                 <div>
                   <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1 mb-2 flex items-center gap-1.5">
-                    Curso
+                    Nivel
                     <span class="tooltip-wrap">
                       <svg class="w-3 h-3 text-gray-400 cursor-help flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
-                      <span class="tooltip-text">Filtra por el año del ciclo: 1º (primer año) o 2º (segundo año).</span>
+                      <span class="tooltip-text">Filtra por el nivel del ciclo: 1º (primer año) o 2º (segundo año). El curso académico se elige arriba.</span>
                     </span>
                   </label>
                   <div class="flex gap-2">
@@ -1150,7 +1141,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
                   <span v-if="filtroCurso"
                     class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                    Curso {{ filtroCurso }}º
+                    Nivel {{ filtroCurso }}º
                     <button @click="filtroCurso = ''" class="ml-0.5 text-gray-400 hover:text-gray-700 transition-colors">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
@@ -1194,7 +1185,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             </section>
 
             <!-- ── GRID DE MICRORETOS ───────────────────────────── -->
-            <div v-if="microretosFiltrados.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="microretosFiltrados.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr gap-6">
               <div v-for="reto in microretosFiltrados" :key="reto.id"
                 class="bg-white rounded-[1.5rem] border border-gray-100 hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] shadow-sm transition-all duration-300 flex flex-col group overflow-hidden transform hover:-translate-y-1"
                 :class="paletteExtra[theme.key].hoverBorder40">

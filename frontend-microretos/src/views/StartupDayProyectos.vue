@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router';
 import api from '../api.js';
 import BienvenidaStartupDayModal from '../components/BienvenidaStartupDayModal.vue';
@@ -8,6 +9,8 @@ import ProyectoCard from '../components/ProyectoCard.vue';
 import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFlotante.vue';
 import { useUIState } from '../composables/useUIState.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useCursoAcademicoStore, cursoDeProyecto } from '../stores/cursoAcademico.js';
+import SelectorCurso from '../components/SelectorCurso.vue';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
 import { useFiltrosProyectos, SIN_FAMILIA } from '../composables/useFiltrosProyectos.js';
 import FamiliaProyectosCard from '../components/FamiliaProyectosCard.vue';
@@ -173,8 +176,14 @@ onBeforeRouteUpdate(async () => {
 });
 
 // Los proyectos "completado" tienen su propia vista (Proyectos Completados) — aquí no se listan.
-const proyectosVisibles = computed(() => proyectos.value.filter(p => p.estado !== 'completado'));
-const totalCompletados   = computed(() => proyectos.value.filter(p => p.estado === 'completado').length);
+// Curso académico compartido (store): todo lo que se lista y cuenta sale de esta lista.
+// Las altas/bajas siguen trabajando sobre `proyectos` (la lista completa).
+const cursoStore     = useCursoAcademicoStore();
+const proyectosCurso = computed(() => proyectos.value.filter(p => cursoStore.coincide(cursoDeProyecto(p))));
+const cursosConDatos = computed(() => [...new Set(proyectos.value.map(cursoDeProyecto))]);
+
+const proyectosVisibles = computed(() => proyectosCurso.value.filter(p => p.estado !== 'completado'));
+const totalCompletados   = computed(() => proyectosCurso.value.filter(p => p.estado === 'completado').length);
 
 // Filtros por familia/ciclo/curso — mismo patrón que la Biblioteca de Retos.
 // Base = TODOS los proyectos (incluidos completados): las cards de familia y
@@ -184,7 +193,7 @@ const {
   familiasDisponibles, countSinFamilia, ciclosDisponibles, cursosDisponibles,
   coincideFamilia, seleccionarFamilia, seleccionarCiclo, seleccionarCurso,
   volverAFamilias, limpiarFiltrosDetalle, hayFiltrosDetalleActivos, aplicarFiltros,
-} = useFiltrosProyectos(proyectos);
+} = useFiltrosProyectos(proyectosCurso);
 
 // 'familias' (capa 1) → 'detalle' (una familia, o "todos" en proceso vía deep-link,
 // con chips de estado — excluye completados) → 'todos' (todo mezclado sin filtrar
@@ -223,10 +232,10 @@ const familiaCards = computed(() => {
     return { key, nombre, total, segments: segmentosPorEstado(lista), countCompletados, countEnProceso: total - countCompletados };
   };
   const cards = familiasDisponibles.value.map(f =>
-    construirCard(f.nombre, f.nombre, proyectos.value.filter(p => p.familia_nombre === f.nombre), f.count)
+    construirCard(f.nombre, f.nombre, proyectosCurso.value.filter(p => p.familia_nombre === f.nombre), f.count)
   );
   if (countSinFamilia.value > 0) {
-    cards.push(construirCard(SIN_FAMILIA, 'Sin familia asignada', proyectos.value.filter(p => !p.familia_nombre), countSinFamilia.value));
+    cards.push(construirCard(SIN_FAMILIA, 'Sin familia asignada', proyectosCurso.value.filter(p => !p.familia_nombre), countSinFamilia.value));
   }
   return cards;
 });
@@ -238,10 +247,10 @@ const filtroCicloTodos = ref('');
 const filtroCursoTodos = ref('');
 
 const ciclosDisponiblesTodos = computed(() =>
-  [...new Set(proyectos.value.map(p => p.ciclo_nombre).filter(Boolean))].sort()
+  [...new Set(proyectosCurso.value.map(p => p.ciclo_nombre).filter(Boolean))].sort()
 );
 const cursosDisponiblesTodos = computed(() =>
-  [...new Set(proyectos.value.map(p => p.curso).filter(v => v != null))].sort((a, b) => String(a).localeCompare(String(b)))
+  [...new Set(proyectosCurso.value.map(p => p.curso).filter(v => v != null))].sort((a, b) => String(a).localeCompare(String(b)))
 );
 
 function seleccionarCicloTodos(c) {
@@ -262,7 +271,7 @@ function limpiarFiltrosTodos() {
 }
 
 const proyectosTodosFiltrados = computed(() => {
-  let lista = proyectos.value;
+  let lista = proyectosCurso.value;
   if (filtroCicloTodos.value) lista = lista.filter(p => p.ciclo_nombre === filtroCicloTodos.value);
   if (filtroCursoTodos.value) lista = lista.filter(p => String(p.curso) === String(filtroCursoTodos.value));
   if (busqueda.value.trim()) {
@@ -303,7 +312,7 @@ const conteosPorEstado = computed(() => ({
 // Contextual al filtro de familia activo en la capa "detalle" — el botón "Ver
 // completados" de esa capa lleva el mismo recorte a /proyectos/terminados.
 const totalCompletadosFamiliaActual = computed(() =>
-  proyectos.value.filter(coincideFamilia).filter(p => p.estado === 'completado').length
+  proyectosCurso.value.filter(coincideFamilia).filter(p => p.estado === 'completado').length
 );
 
 const proyectosFiltrados = computed(() => {
@@ -410,27 +419,10 @@ function mostrarSnack(mensaje, accion = null) {
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <!-- Logo DuaLab Proyectos — visible en las 3 capas, igual que en Proyectos Completados -->
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div
-          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span>
-            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Proyectos</span>
-          </span>
-        </div>
-        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Biblioteca de <span :class="theme.text">Proyectos</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Biblioteca de" destacado="Proyectos" :color="theme.text"
+                       subtitulo="Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa."
+                       class="mb-8" />
 
       <!-- Cabecera -->
       <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -505,24 +497,27 @@ function mostrarSnack(mensaje, accion = null) {
         </div>
 
         <!-- Nuevo microproyecto -->
-        <button
-          v-if="!authStore.isEmpresa"
-          ref="refBtnNuevo"
-          @click="router.push({ name: 'startup-day-crear' })"
-          :class="[{
-            'tour-active': pasoRefActivo === 'refBtnNuevo',
-            'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'btn-nuevo'
-          }, theme.bg, theme.bgHover]"
-          class="btn-nueva-propuesta inline-flex items-center gap-2 px-5 py-2.5
-                 text-white rounded-full
-                 text-xs font-black uppercase tracking-widest shadow-sm
-                 transition-all active:scale-95 shrink-0"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-          </svg>
-          Nueva propuesta
-        </button>
+        <div class="flex flex-wrap items-center gap-3 md:ml-auto">
+          <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+          <button
+            v-if="!authStore.isEmpresa"
+            ref="refBtnNuevo"
+            @click="router.push({ name: 'startup-day-crear' })"
+            :class="[{
+              'tour-active': pasoRefActivo === 'refBtnNuevo',
+              'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'btn-nuevo'
+            }, theme.bg, theme.bgHover]"
+            class="btn-nueva-propuesta inline-flex items-center gap-2 px-5 py-2.5
+                   text-white rounded-full
+                   text-xs font-black uppercase tracking-widest shadow-sm
+                   transition-all active:scale-95 shrink-0"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nueva propuesta
+          </button>
+        </div>
       </header>
 
       <!-- Cargando -->
@@ -683,7 +678,7 @@ function mostrarSnack(mensaje, accion = null) {
             </div>
 
             <div v-if="cursosDisponibles.length > 0" class="flex flex-wrap items-center gap-2">
-              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Curso</span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Nivel</span>
               <button v-for="cu in cursosDisponibles" :key="cu"
                       @click="seleccionarCurso(cu)"
                       :class="[
@@ -735,7 +730,7 @@ function mostrarSnack(mensaje, accion = null) {
             </div>
 
             <!-- Grid de tarjetas -->
-            <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div v-else class="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ProyectoCard
                 v-for="p in proyectosFiltrados" :key="p.uuid"
                 :proyecto="p"
@@ -793,7 +788,7 @@ function mostrarSnack(mensaje, accion = null) {
               <button @click="ordenTodos = 'curso'"
                       :class="['px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all',
                         ordenTodos === 'curso' ? 'bg-[#1F2937] text-white border-[#1F2937]' : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]]">
-                Curso
+                Nivel
               </button>
             </div>
           </div>
@@ -820,7 +815,7 @@ function mostrarSnack(mensaje, accion = null) {
               </button>
             </div>
             <div v-if="cursosDisponiblesTodos.length > 0" class="flex flex-wrap items-center gap-2">
-              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Curso</span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 mr-1">Nivel</span>
               <button v-for="cu in cursosDisponiblesTodos" :key="cu"
                       @click="seleccionarCursoTodos(cu)"
                       :class="[
@@ -858,7 +853,7 @@ function mostrarSnack(mensaje, accion = null) {
           </div>
 
           <!-- Grid de tarjetas -->
-          <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-else class="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <ProyectoCard
               v-for="p in proyectosTodosFiltrados" :key="p.uuid"
               :proyecto="p"

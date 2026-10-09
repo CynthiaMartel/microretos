@@ -669,6 +669,8 @@ async function addTareaGenerica() {
     const res = await api.post(`/equipo/${token}/tareas`, { ...nuevaTareaGenerica.value, tipo: 'proceso' })
     workspace.value.tareas.push(res.data)
     nuevaTareaGenerica.value = { descripcion: '', responsable: '', estado: 'pendiente' }
+  } catch (e) {
+    mostrarError(e.response?.data?.errors?.responsable?.[0] || 'No se pudo añadir la tarea.')
   } finally { cargandoTareaGenerica.value = false }
 }
 
@@ -731,10 +733,17 @@ async function cambiarEstadoTarea(tarea, estado) {
   tarea.estado = estado
 }
 
-async function actualizarResponsableTarea(tarea, responsable) {
+// Recibe el <select> para devolverlo al valor guardado si el backend rechaza el cambio
+async function actualizarResponsableTarea(tarea, select) {
+  const responsable = select.value
   if ((tarea.responsable ?? '') === responsable) return
-  await api.put(`/equipo/${token}/tareas/${tarea.id}`, { responsable })
-  tarea.responsable = responsable
+  try {
+    await api.put(`/equipo/${token}/tareas/${tarea.id}`, { responsable })
+    tarea.responsable = responsable
+  } catch (e) {
+    select.value = tarea.responsable ?? ''
+    mostrarError(e.response?.data?.errors?.responsable?.[0] || 'No se pudo cambiar el responsable.')
+  }
 }
 
 async function eliminarTarea(tarea) {
@@ -894,6 +903,8 @@ async function enviarReflexion(tipo) {
     reflexionEnviada.value = true
     modoReflexion.value = ''
     mostrarOk('Reflexión guardada correctamente.')
+  } catch (e) {
+    mostrarError(e.response?.data?.errors?.autor_nombre?.[0] || 'No se pudo guardar la reflexión.')
   } finally {
     guardandoReflexion.value = false
   }
@@ -1624,7 +1635,7 @@ watch(workspace, (val) => {
                               🔒 Obligatoria
                             </span>
                           </p>
-                          <select :value="t.responsable ?? ''" @change="actualizarResponsableTarea(t, $event.target.value)"
+                          <select :value="t.responsable ?? ''" @change="actualizarResponsableTarea(t, $event.target)"
                                  class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
                                         border-gray-200 focus:outline-none focus:border-amber-400 px-0 py-0.5 cursor-pointer">
                             <option value="">+ responsable</option>
@@ -2094,9 +2105,14 @@ watch(workspace, (val) => {
 
                 <div v-if="modoReflexion === 'individual'">
                   <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">Tu nombre <span class="text-red-400">*</span></label>
-                  <input v-model="nombreAlumno" type="text" placeholder="Escribe tu nombre"
-                         class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
-                                focus:outline-none focus:border-green-400 bg-gray-50"/>
+                  <!-- Desplegable con los miembros del equipo (no texto libre): el backend
+                       solo acepta como autor a un miembro del propio equipo -->
+                  <select v-model="nombreAlumno"
+                          class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+                                 focus:outline-none focus:border-green-400 bg-gray-50 cursor-pointer">
+                    <option value="">Elige tu nombre…</option>
+                    <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                  </select>
                 </div>
 
                 <div class="space-y-4">

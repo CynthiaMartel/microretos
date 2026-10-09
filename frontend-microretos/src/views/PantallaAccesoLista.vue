@@ -1,6 +1,7 @@
 <!-- Ruta: /pantalla-acceso (name: pantalla-acceso-lista). Antes vivía en /dashboard/pantalla-acceso — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
 
@@ -57,24 +58,11 @@ onMounted(cargar)
 <template>
   <div class="min-h-screen bg-[#F8FAFC] pt-16">
 
-    <!-- HEADER -->
-    <header class="pt-6 md:pt-8 pb-2 text-center flex flex-col items-center px-4">
-      <div class="inline-flex items-center gap-2 sm:gap-3 mb-4 bg-[#1F2937] py-2 sm:py-2.5 pr-4 sm:pr-6 pl-3 sm:pl-4 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-           :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-        <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-12 sm:h-16 md:h-20 w-auto object-contain relative z-10" />
-        <span class="font-black text-lg sm:text-2xl md:text-3xl tracking-tighter uppercase text-white italic relative z-20">
-          Dua<span class="text-centros-light">Lab</span><span class="text-primary-400 not-italic text-[10px] sm:text-sm md:text-base ml-1">Studio Tool</span>
-        </span>
-      </div>
-      <h1 class="text-2xl md:text-4xl font-black tracking-tight mb-1.5 md:mb-2 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Pantalla de <span class="text-centros">Acceso</span>
-      </h1>
-      <p class="text-gray-500 max-w-2xl mx-auto text-sm md:text-base leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-         :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-        Elige el encuentro que quieres proyectar en clase para que el alumnado escanee su QR y código.
-      </p>
-    </header>
+    <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
+      <CabeceraSeccion titulo="Pantalla de" destacado="Acceso" color="text-alumnos"
+                       subtitulo="Elige el encuentro que quieres proyectar en clase para que el alumnado escanee su QR y código." />
+    </div>
 
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <button @click="router.back()"
@@ -100,7 +88,7 @@ onMounted(cargar)
 
       <template v-else>
         <div v-if="!encuentrosConEquipos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-          <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene equipos creados todavía.</p>
+          <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene grupos creados todavía.</p>
           <button @click="router.push('/encuentros')"
                   class="px-4 py-2 rounded-xl bg-centros text-white text-xs font-black uppercase tracking-wider">
             Ir a Crear/Ver Encuentros
@@ -112,12 +100,12 @@ onMounted(cargar)
                 class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4
                        flex items-center gap-4 hover:border-centros/40 transition-all text-left">
           <div class="flex-1 min-w-0">
-            <p class="font-black text-[#121212] truncate">{{ e.proyecto_titulo || e.grupo || 'Sin nombre' }}</p>
+            <p class="font-black text-[#121212] truncate">{{ e.proyecto_titulo || (e.grupo && `Clase ${e.grupo}`) || 'Sin nombre' }}</p>
             <p class="text-xs text-gray-400 mt-0.5">
               <span v-if="e.fecha">{{ formatFecha(e.fecha) }} · </span>{{ e.ciclo_formativo }} · código {{ e.codigo_clase }}
             </p>
             <p class="text-xs text-gray-500 mt-1 truncate">
-              {{ (e.equipos || []).length }} equipo{{ (e.equipos || []).length === 1 ? '' : 's' }}<span v-if="resumenMiembros(e)"> · {{ resumenMiembros(e) }}</span>
+              {{ (e.equipos || []).length }} grupo{{ (e.equipos || []).length === 1 ? '' : 's' }}<span v-if="resumenMiembros(e)"> · {{ resumenMiembros(e) }}</span>
             </p>
           </div>
           <span class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-wider">

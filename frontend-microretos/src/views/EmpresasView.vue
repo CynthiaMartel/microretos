@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import AccesoEmpresasModal from '../components/AccesoEmpresasModal.vue'
@@ -736,28 +737,10 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
       style="transition: opacity 0.4s ease, transform 0.4s ease"
     >
 
-      <!-- HEADER -->
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div
-          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span>
-            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-empresas-light">Empresas</span>
-          </span>
-        </div>
-        <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Directorio de <span class="text-empresas">Empresas</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Consulta y contacta con las empresas registradas en la base de datos de DuaLab.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Directorio de" destacado="Empresas" color="text-empresas"
+                       subtitulo="Consulta y contacta con las empresas registradas en la base de datos de DuaLab."
+                       class="mb-8" />
 
       <!-- Stats chips -->
       <div v-if="!cargando && empresas.length"

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateMicroproyectoRequest;
+use App\Http\Requests\ValidarPropuestaEmpresaRequest;
 use Illuminate\Http\Request;
 use App\Models\Microproyecto;
+use App\Services\NotificacionDocenteService;
 
 class MicroproyectoController extends Controller
 {
@@ -22,6 +24,7 @@ class MicroproyectoController extends Controller
         // (antes formatProyecto lanzaba una consulta por proyecto: N+1).
         $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada'])
             ->withMin('encuentros', 'id')
+            ->withMin('encuentros', 'fecha')
             ->orderByDesc('updated_at');
 
         if ($user->isSuperAdmin()) {
@@ -120,6 +123,7 @@ class MicroproyectoController extends Controller
                     : (string) ($data[$campo] ?? '');
 
                 if ($anterior !== $nuevo) {
+                    $validacionReiniciada = true;
                     $data['empresa_validado']   = false;
                     $data['docente_validado']   = false;
                     $data['validacion_empresa'] = null;
@@ -132,6 +136,10 @@ class MicroproyectoController extends Controller
         }
 
         $proyecto->update($data);
+
+        if (!empty($validacionReiniciada)) {
+            app(NotificacionDocenteService::class)->proyectoPendienteValidacion($proyecto, $request->user());
+        }
 
         if ($encuentroId) {
             \App\Models\Encuentro::where('id', $encuentroId)
@@ -227,17 +235,13 @@ class MicroproyectoController extends Controller
         ]);
     }
 
-    public function validarEmpresa(Request $request, $token)
+    public function validarEmpresa(ValidarPropuestaEmpresaRequest $request, $token)
     {
         $proyecto = Microproyecto::where('token_empresa', $token)
             ->whereIn('estado', ['propuesta', 'validado'])
             ->firstOrFail();
 
-        $data = $request->validate([
-            'decision'   => 'required|in:validar,no_validar_aun',
-            'respuestas' => 'required|array',
-            'comentarios'=> 'nullable|string|max:2000',
-        ]);
+        $data = $request->validated();
 
         if ($data['decision'] === 'validar') {
             // La empresa valida: guardar respuestas, marcar validado, avanzar estado
@@ -256,6 +260,8 @@ class MicroproyectoController extends Controller
                 'empresa_no_valida_aun' => true,
             ]);
         }
+
+        app(NotificacionDocenteService::class)->empresaRespondio($proyecto, $data['decision'] === 'validar');
 
         return response()->json(['ok' => true, 'decision' => $data['decision']]);
     }
@@ -603,6 +609,11 @@ class MicroproyectoController extends Controller
             'encuentro_id'     => array_key_exists('encuentros_min_id', $p->getAttributes())
                 ? $p->encuentros_min_id
                 : $p->encuentros()->min('id'),
+            // Fecha del primer encuentro: el frontend asigna el proyecto al curso académico de esta
+            // fecha (o, si no tiene encuentro, al de created_at). Precargada en el listado (withMin).
+            'encuentro_fecha'  => array_key_exists('encuentros_min_fecha', $p->getAttributes())
+                ? ($p->encuentros_min_fecha ? substr((string) $p->encuentros_min_fecha, 0, 10) : null)
+                : (($f = $p->encuentros()->min('fecha')) ? substr((string) $f, 0, 10) : null),
             'datos_empresa'    => $p->datos_empresa,
             'datos_centro'     => $p->datos_centro,
             'equipo'           => $p->equipo,

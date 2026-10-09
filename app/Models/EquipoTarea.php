@@ -13,6 +13,8 @@ class EquipoTarea extends Model
     protected $casts = [
         'orden'       => 'integer',
         'obligatoria' => 'boolean',
+        // Nombre del alumno responsable: cifrado igual que equipo_miembros.nombre
+        'responsable' => 'encrypted',
     ];
 
     public function equipo()

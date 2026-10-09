@@ -30,6 +30,7 @@ class EncuentroResource extends JsonResource
             'equipos'            => $this->whenLoaded('equipos', fn() => $this->equipos->map(fn($e) => [
                 'id'            => $e->id,
                 'numero_equipo' => $e->numero_equipo,
+                'nombre'        => $e->nombre,
                 'fase_actual'   => $e->fase_actual,
                 // El equipo confirmó nombres en su F0 (paso explícito) — el frontend usa esto
                 // para bloquear el nombre en "Editar equipo".
@@ -47,6 +48,9 @@ class EncuentroResource extends JsonResource
             'proyecto_titulo'    => $this->microproyecto?->titulo,
             'microreto_id'       => $this->microproyecto?->microreto_id,
             'microreto_titulo'   => $this->microproyecto?->microreto?->titulo,
+            // Contexto curricular del proyecto (cards de la biblioteca de encuentros)
+            'familia_nombre'     => $this->microproyecto?->familia?->nombre,
+            'modulos'            => $this->microproyecto?->nombresModulos() ?? [],
             'es_propietario'     => $esPropietario,
             'puede_editar'       => $puedeEditar,
             'propietario_nombre' => $this->docente?->name,

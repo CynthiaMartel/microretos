@@ -1,6 +1,7 @@
 <!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
@@ -11,9 +12,42 @@ import CompartirEncuentroModal from '../components/CompartirEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
 import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
 import GenerarCodigoBoton from '../components/GenerarCodigoBoton.vue'
+import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
+import SelectorCurso from '../components/SelectorCurso.vue'
 import api from '../api.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
+import ConceptoClave from '../components/ConceptoClave.vue'
+import { FASES_PROYECTO } from '../config/fasesProyecto.js'
+import { formatCurso } from '../utils/formatCurso.js'
+import { nombreGrupo } from '../utils/nombreGrupo.js'
+
+// Qué es un encuentro — mismo texto que ComoFuncionaModal.vue
+const CONCEPTO_ENCUENTRO = [
+  { t: 'Un ' }, { t: 'ENCUENTRO', b: true }, { t: ' es el ' }, { t: 'cuándo', b: true },
+  { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
+  { t: 'workspace', b: true }, { t: '.' },
+]
+
+// Grupos (equipos de alumnado) de un encuentro para la card. Usa los equipos reales si
+// vienen cargados; si no (encuentros antiguos), el reparto plano de `alumnados`.
+const FASE_LABEL = Object.fromEntries(FASES_PROYECTO.map(f => [f.num, f.label]))
+function gruposDe(s) {
+  if (s.equipos?.length) {
+    return [...s.equipos]
+      .sort((a, b) => (a.numero_equipo ?? 0) - (b.numero_equipo ?? 0))
+      .map(e => ({
+        clave:   e.id,
+        nombre:  nombreGrupo(e),
+        alumnos: e.miembros?.length || 0,
+        fase:    FASE_LABEL[e.fase_actual] ?? null,
+      }))
+  }
+  const porNum = new Map()
+  ;(s.alumnados || []).forEach(a => { if (a.equipo_num) porNum.set(a.equipo_num, (porNum.get(a.equipo_num) || 0) + 1) })
+  return [...porNum.entries()].sort((a, b) => a[0] - b[0])
+    .map(([n, alumnos]) => ({ clave: 'n' + n, nombre: `Grupo ${n}`, alumnos, fase: null }))
+}
 
 const router  = useRouter()
 const route   = useRoute()
@@ -103,14 +137,19 @@ const filtros = ref({
   centro:  '',
 })
 
+// Curso académico compartido (store): filtros, listado y estadísticas salen de esta lista
+const cursoStore      = useCursoAcademicoStore()
+const encuentrosCurso = computed(() => encuentros.value.filter(e => cursoStore.coincide(cursoDeEncuentro(e))))
+const cursosConDatos  = computed(() => [...new Set(encuentros.value.map(cursoDeEncuentro))])
+
 const encuentrosUnicos = computed(() => {
-  const centros = [...new Set(encuentros.value.map(s => s.centro_educativo).filter(Boolean))].sort()
-  const ciclos  = [...new Set(encuentros.value.map(s => s.ciclo_formativo).filter(Boolean))].sort()
+  const centros = [...new Set(encuentrosCurso.value.map(s => s.centro_educativo).filter(Boolean))].sort()
+  const ciclos  = [...new Set(encuentrosCurso.value.map(s => s.ciclo_formativo).filter(Boolean))].sort()
   return { centros, ciclos }
 })
 
 const encuentrosFiltrados = computed(() => {
-  let lista = [...encuentros.value].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
+  let lista = [...encuentrosCurso.value].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
 
   if (filtros.value.titulo.trim()) {
     const q = filtros.value.titulo.trim().toLowerCase()
@@ -215,7 +254,7 @@ function onEquipoReestructurado({ id, num_equipos, alumnados, equipos }) {
     encuentroAbierto.value = { ...encuentroAbierto.value, num_equipos, alumnados, equipos }
   }
   reestructurando.value = null
-  mostrarSnack('Reparto de equipos actualizado.')
+  mostrarSnack('Reparto de grupos actualizado.')
 }
 
 // El docente puede regenerar el alias de un miembro sin pasar por "Guardar reparto"
@@ -333,10 +372,10 @@ async function copiarCodigo(codigo) {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 const stats = computed(() => {
-  const microretos = new Set(encuentros.value.map(s => s.microreto_id).filter(Boolean))
-  const centros    = new Set(encuentros.value.map(s => s.centro_educativo).filter(Boolean))
+  const microretos = new Set(encuentrosCurso.value.map(s => s.microreto_id).filter(Boolean))
+  const centros    = new Set(encuentrosCurso.value.map(s => s.centro_educativo).filter(Boolean))
   return {
-    total:      encuentros.value.length,
+    total:      encuentrosCurso.value.length,
     microretos: microretos.size,
     centros:    centros.size,
   }
@@ -362,28 +401,13 @@ function formatFecha(isoDate) {
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- HEADER -->
-      <header class="mb-10 text-center flex flex-col items-center">
-        <div
-          class="inline-flex items-center mb-8 bg-[#1F2937] py-3 sm:py-4 pr-6 sm:pr-10 pl-4 sm:pl-6 rounded-[3rem] shadow-lg border border-[#333333] transition-all duration-1000 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab"
-            class="h-20 sm:h-32 md:h-40 w-auto object-contain relative z-10 mr-2 sm:mr-3 md:mr-5" />
-          <span class="font-black text-2xl sm:text-4xl md:text-5xl tracking-tighter uppercase text-white italic relative z-20">
-            Dua<span class="text-centros-light">Lab</span>
-            <span class="not-italic text-sm sm:text-lg md:text-xl ml-1 text-centros-light">Encuentros</span>
-          </span>
-        </div>
-        <h1
-          class="text-4xl md:text-5xl font-black tracking-tight mb-4 text-azul-noche transition-all duration-1000 delay-150 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Encuentros <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">registrados</span>
-        </h1>
-        <p class="text-gray-500 max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-medium transition-all duration-1000 delay-300 ease-out transform"
-          :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
-          Consulta y filtra todo el historial de encuentros de trabajo con retos.
-        </p>
-      </header>
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
+      <CabeceraSeccion titulo="Encuentros" destacado="registrados" color="text-alumnos"
+                       subtitulo="Consulta y filtra todo el historial de encuentros de trabajo con retos."
+                       class="mb-6" />
+
+      <!-- Qué es un encuentro (mismo texto que ComoFuncionaModal.vue) -->
+      <ConceptoClave color="alumnos" class="mb-8" :segmentos="CONCEPTO_ENCUENTRO" />
 
       <!-- ─── Acciones ─────────────────────────────────────────────────────── -->
       <div class="mb-8">
@@ -472,7 +496,10 @@ function formatFecha(isoDate) {
       <!-- ─── Filtros ──────────────────────────────────────────────────────── -->
       <div class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-          <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Filtrar encuentros</p>
+          <div class="flex flex-wrap items-center gap-4">
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Filtrar encuentros</p>
+            <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+          </div>
           <button v-if="hayFiltrosActivos"
                   @click="limpiarFiltros"
                   class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-400 transition-colors">
@@ -525,9 +552,9 @@ function formatFecha(isoDate) {
                    class="field-input" />
           </div>
 
-          <!-- Curso -->
+          <!-- Nivel (1º/2º) — el curso académico se elige arriba -->
           <div>
-            <label class="field-label">Curso</label>
+            <label class="field-label">Nivel</label>
             <div class="flex gap-2 mt-1">
               <button v-for="c in ['', '1º', '2º']" :key="c"
                       @click="filtros.curso = c"
@@ -540,9 +567,9 @@ function formatFecha(isoDate) {
             </div>
           </div>
 
-          <!-- Grupo -->
+          <!-- Clase (campo grupo: A, B, C, D) -->
           <div>
-            <label class="field-label">Grupo</label>
+            <label class="field-label">Clase</label>
             <div class="flex gap-1.5 mt-1">
               <button v-for="g in ['', 'A', 'B', 'C', 'D']" :key="g"
                       @click="filtros.grupo = g"
@@ -642,16 +669,31 @@ function formatFecha(isoDate) {
           <!-- Encuentros del centro -->
           <div v-if="centrosExpandidos.has(centro)"
                class="border-t border-gray-100 px-5 py-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- auto-rows-fr + card en columna flex: todas las cards del centro miden lo mismo
+                 aunque cambie el largo de familia, módulos, título o el nº de grupos; cada texto
+                 reserva sus líneas y las acciones quedan siempre abajo -->
+            <div class="grid grid-cols-1 md:grid-cols-2 auto-rows-fr gap-4">
               <div v-for="s in encuentrosAgrupados[centro]" :key="s.id"
-                   class="bg-[#F8FAFC] rounded-[1.25rem] border border-gray-100
+                   class="flex flex-col min-w-0 bg-[#F8FAFC] rounded-[1.25rem] border border-gray-100
                           hover:border-centros/30 hover:shadow-sm transition-all group cursor-pointer"
                    @click="verEncuentro(s)">
 
-                <!-- Card header -->
+                <!-- Card header: familia y módulo en grande (dónde estamos), después el proyecto y la fecha -->
                 <div class="px-5 pt-5 pb-4 border-b border-gray-100">
-                  <p class="min-h-[2.5rem] text-sm font-black text-[#1F2937] leading-snug line-clamp-2
-                            group-hover:text-centros transition-colors">
+                  <p class="text-[9px] font-black uppercase tracking-[0.18em] text-gray-400">Familia profesional</p>
+                  <p class="text-lg font-black uppercase leading-tight text-centros line-clamp-2 min-h-[2lh] break-words"
+                     :title="s.familia_nombre">
+                    {{ s.familia_nombre || 'Sin familia asignada' }}
+                  </p>
+                  <!-- Siempre presente (aunque no haya módulos) para no descuadrar la card -->
+                  <p class="mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400">
+                    {{ s.modulos?.length > 1 ? 'Módulos' : 'Módulo' }}
+                  </p>
+                  <p class="text-base font-bold leading-snug line-clamp-2 min-h-[2lh] break-words"
+                     :class="s.modulos?.length ? 'text-azul-noche' : 'text-gray-300'"
+                     :title="s.modulos?.join(' · ')">{{ s.modulos?.length ? s.modulos.join(' · ') : 'Sin módulo asignado' }}</p>
+                  <p class="mt-3 text-sm font-semibold text-gray-600 leading-snug line-clamp-2 min-h-[2lh] break-words
+                            group-hover:text-centros transition-colors" :title="s.proyecto_titulo">
                     {{ s.proyecto_titulo || '(sin título)' }}
                   </p>
                   <p class="text-[10px] font-bold text-centros mt-1">
@@ -670,13 +712,28 @@ function formatFecha(isoDate) {
                   </p>
                 </div>
 
-                <!-- Card body -->
-                <div class="px-5 py-4 space-y-2">
+                <!-- Card body (crece para igualar la altura de la fila) -->
+                <div class="flex-1 px-5 py-4 space-y-2">
                   <div class="flex flex-wrap gap-1.5">
-                    <span v-if="s.curso"       class="tag tag-green">{{ s.curso }}</span>
-                    <span v-if="s.grupo"       class="tag tag-lime">Grupo {{ s.grupo }}</span>
+                    <span v-if="s.curso"       class="tag tag-green">{{ formatCurso(s.curso) }} curso</span>
+                    <span v-if="s.grupo"       class="tag tag-lime">Clase {{ s.grupo }}</span>
                     <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} alumnos</span>
-                    <span v-if="s.num_equipos" class="tag tag-gray">{{ s.num_equipos }} equipos</span>
+                  </div>
+                  <!-- Grupos de alumnado del encuentro: nombre, nº de alumnos y fase actual -->
+                  <div v-if="gruposDe(s).length" class="pt-1">
+                    <p class="text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 mb-1">
+                      {{ gruposDe(s).length }} {{ gruposDe(s).length === 1 ? 'grupo' : 'grupos' }}
+                    </p>
+                    <ul class="space-y-1">
+                      <li v-for="g in gruposDe(s)" :key="g.clave"
+                          class="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 border border-gray-100">
+                        <span class="text-[11px] font-black text-azul-noche truncate">{{ g.nombre }}</span>
+                        <span v-if="g.alumnos" class="text-[10px] text-gray-400 shrink-0">{{ g.alumnos }} alumnos</span>
+                        <span v-if="g.fase" class="ml-auto shrink-0 rounded-full bg-alumnos/10 px-2 py-0.5 text-[9px] font-bold text-alumnos-dark truncate max-w-[55%]">
+                          {{ g.fase }}
+                        </span>
+                      </li>
+                    </ul>
                   </div>
                   <div class="space-y-1">
                     <p v-if="s.ciclo_formativo" class="text-[10px] text-gray-500 flex items-center gap-1.5">
@@ -686,7 +743,7 @@ function formatFecha(isoDate) {
                       </svg>
                       <span class="truncate">{{ s.ciclo_formativo }}</span>
                     </p>
-                    <p v-if="s.notas" class="text-[10px] text-gray-400 leading-relaxed line-clamp-2 italic">
+                    <p v-if="s.notas" class="text-[10px] text-gray-400 leading-relaxed line-clamp-2 italic break-words" :title="s.notas">
                       "{{ s.notas }}"
                     </p>
                   </div>
@@ -711,7 +768,7 @@ function formatFecha(isoDate) {
                 </div>
 
                 <!-- Acciones -->
-                <div @click.stop class="px-5 py-3 border-t border-gray-100 flex flex-wrap gap-1.5">
+                <div @click.stop class="mt-auto px-5 py-3 border-t border-gray-100 flex flex-wrap gap-1.5">
                   <button v-if="s.puede_editar"
                           @click.stop="abrirReestructurar(s)"
                           class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
@@ -721,7 +778,7 @@ function formatFecha(isoDate) {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
-                    Editar equipo
+                    Editar grupo
                   </button>
                   <button v-if="s.es_propietario"
                           @click.stop="abrirCompartir(s)"
@@ -816,7 +873,7 @@ function formatFecha(isoDate) {
             <div class="flex flex-wrap gap-1.5 mt-3">
               <span v-if="encuentroAbierto.curso"       class="tag tag-green">{{ encuentroAbierto.curso }}</span>
               <span v-if="encuentroAbierto.fecha"       class="tag tag-gray">{{ formatFecha(encuentroAbierto.fecha) }}</span>
-              <span v-if="encuentroAbierto.grupo"       class="tag tag-lime">Grupo {{ encuentroAbierto.grupo }}</span>
+              <span v-if="encuentroAbierto.grupo"       class="tag tag-lime">Clase {{ encuentroAbierto.grupo }}</span>
               <span v-if="encuentroAbierto.num_alumnos" class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
             <button @click="irAAccesoAlumnado"
@@ -912,7 +969,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.puede_editar"
                       @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
-                      title="Vuelve a generar equipos desde cero — bloqueado si ya hay progreso real"
+                      title="Vuelve a generar grupos desde cero — bloqueado si ya hay progreso real"
                       class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              hover:bg-gray-200 transition-all disabled:opacity-50">
@@ -928,7 +985,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Editar equipo
+                Editar grupo
               </button>
             </div>
             <div v-if="!encuentroAbierto.codigo_clase && encuentroAbierto.puede_editar">
@@ -955,7 +1012,7 @@ function formatFecha(isoDate) {
               ✨ Desbloqueo IA del workspace
             </p>
             <p class="text-[11px] text-gray-400 mb-3 leading-relaxed">
-              Los botones "Sugerir con IA" del workspace de equipo permanecen bloqueados hasta que
+              Los botones "Sugerir con IA" del workspace de los grupos permanecen bloqueados hasta que
               introducen este código. Compártelo cuando quieras habilitarlos.
             </p>
             <div v-if="encuentroAbierto.codigo_ia"
@@ -973,7 +1030,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.puede_editar"
                       @click="crearCodigoIa(encuentroAbierto)" :disabled="creandoCodigoIa[encuentroAbierto.id]"
-                      title="Genera un código nuevo — los equipos que ya lo desbloquearon siguen desbloqueados"
+                      title="Genera un código nuevo — los grupos que ya lo desbloquearon siguen desbloqueados"
                       class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              hover:bg-gray-200 transition-all disabled:opacity-50">
@@ -1015,7 +1072,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                Editar equipo
+                Editar grupo
               </button>
               <button v-if="encuentroAbierto.es_propietario"
                       @click="abrirCompartir(encuentroAbierto)"
@@ -1068,7 +1125,7 @@ function formatFecha(isoDate) {
             <!-- Acciones principales -->
             <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
               <button v-if="encuentroAbierto.microproyecto_uuid"
-                      @click="router.push({ name: 'mis-equipos-detalle', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
+                      @click="router.push({ name: 'mis-grupos-detalle', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-200
                              bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-widest
                              hover:bg-blue-100 transition-all">

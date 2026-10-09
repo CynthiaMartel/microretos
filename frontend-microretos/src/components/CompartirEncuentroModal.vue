@@ -141,7 +141,7 @@ async function quitarColaborador(colaborador) {
                   </select>
                   <label class="cem-checkbox-row">
                     <input type="checkbox" v-model="puedeEditarNuevo" class="cem-checkbox" />
-                    <span>Puede editar (reestructurar equipos, generar códigos, eliminar)</span>
+                    <span>Puede editar (reestructurar grupos, generar códigos, eliminar)</span>
                   </label>
                   <button type="button" @click="anadirColaborador" :disabled="!candidatoId || enviando"
                           class="cem-btn-primary w-full">

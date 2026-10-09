@@ -40,7 +40,7 @@ class ReestructurarEquiposRequest extends FormRequest
             'alumnados.*.nombre'     => 'required|string|max:100',
             'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
                 if ($numEquipos > 0 && $value > $numEquipos) {
-                    $fail("El equipo asignado ({$value}) supera el número de equipos ({$numEquipos}).");
+                    $fail("El grupo asignado ({$value}) supera el número de grupos ({$numEquipos}).");
                 }
             }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
@@ -50,10 +50,10 @@ class ReestructurarEquiposRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'num_equipos.required'      => 'Indica el número de equipos.',
-            'alumnados.required'        => 'Reparte el alumnado en equipos antes de guardar.',
-            'alumnados.min'             => 'Reparte el alumnado en equipos antes de guardar.',
-            'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un equipo asignado.',
+            'num_equipos.required'      => 'Indica el número de grupos.',
+            'alumnados.required'        => 'Reparte el alumnado en grupos antes de guardar.',
+            'alumnados.min'             => 'Reparte el alumnado en grupos antes de guardar.',
+            'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un grupo asignado.',
         ];
     }
 }

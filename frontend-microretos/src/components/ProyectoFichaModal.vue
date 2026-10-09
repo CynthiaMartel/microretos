@@ -407,7 +407,7 @@ function irAPaginaCompleta() {
                   </div>
 
                   <div v-if="proyecto.equipo?.alumnos?.length" class="card-section sm:col-span-2">
-                    <p class="section-label">Equipo ({{ proyecto.equipo.alumnos.length }} personas)</p>
+                    <p class="section-label">Grupo ({{ proyecto.equipo.alumnos.length }} personas)</p>
                     <div class="flex flex-wrap gap-1.5">
                       <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
                             class="text-xs bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
@@ -722,7 +722,7 @@ function irAPaginaCompleta() {
                           <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-0.5">
                             {{ key === 'reto_comprensible'   ? '¿El reto es comprensible y realista?'
                              : key === 'objetivos_alineados' ? '¿Los objetivos se alinean con la empresa?'
-                             : key === 'equipo_adecuado'     ? '¿El perfil del equipo es adecuado?'
+                             : key === 'equipo_adecuado'     ? '¿El perfil del grupo es adecuado?'
                              : key === 'viabilidad'           ? '¿El proyecto es viable en la empresa?'
                              : key.replace(/_/g, ' ') }}
                           </p>

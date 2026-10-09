@@ -75,7 +75,7 @@ class StoreEncuentroRequest extends FormRequest
             'alumnados.*.nombre'     => 'required|string|max:100',
             'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
                 if ($numEquipos > 0 && $value > $numEquipos) {
-                    $fail("El equipo asignado ({$value}) supera el número de equipos del encuentro ({$numEquipos}).");
+                    $fail("El grupo asignado ({$value}) supera el número de grupos del encuentro ({$numEquipos}).");
                 }
             }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
@@ -88,11 +88,11 @@ class StoreEncuentroRequest extends FormRequest
         return [
             'microproyecto_id.required' => 'Debes asociar un proyecto al encuentro antes de guardarlo.',
             'curso.required'            => 'Indica el curso del encuentro.',
-            'grupo.required'            => 'Indica el grupo del encuentro.',
-            'num_equipos.required'      => 'Indica el número de equipos del encuentro.',
-            'alumnados.required'        => 'Reparte el alumnado en equipos antes de guardar el encuentro.',
-            'alumnados.min'             => 'Reparte el alumnado en equipos antes de guardar el encuentro.',
-            'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un equipo asignado.',
+            'grupo.required'            => 'Indica la clase del encuentro.',
+            'num_equipos.required'      => 'Indica el número de grupos del encuentro.',
+            'alumnados.required'        => 'Reparte el alumnado en grupos antes de guardar el encuentro.',
+            'alumnados.min'             => 'Reparte el alumnado en grupos antes de guardar el encuentro.',
+            'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un grupo asignado.',
         ];
     }
 }

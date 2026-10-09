@@ -12,6 +12,8 @@ class EquipoReflexion extends Model
 
     protected $casts = [
         'respuestas' => 'array',
+        // Nombre del alumno (reflexión individual): cifrado igual que equipo_miembros.nombre
+        'autor_nombre' => 'encrypted',
     ];
 
     public function equipo()

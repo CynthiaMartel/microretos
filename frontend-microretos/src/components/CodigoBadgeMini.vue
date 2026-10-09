@@ -20,7 +20,7 @@ const copyBtnClass = computed(() => esIa.value
   : 'hover:bg-centros/10 text-centros/50 hover:text-centros')
 
 const HINT_DEFECTO = {
-  clase: 'Código de acceso al workspace del alumnado — proyéctalo en pantalla para que el equipo lo escriba y entre',
+  clase: 'Código de acceso al workspace del alumnado — proyéctalo en pantalla para que el grupo lo escriba y entre',
   ia:    'Código para desbloquear la ayuda de la IA — compártelo con el alumnado cuando quieras habilitarla',
 }
 const hintTexto = computed(() => props.hint || HINT_DEFECTO[props.variant] || HINT_DEFECTO.clase)

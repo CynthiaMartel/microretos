@@ -196,7 +196,9 @@ const extenderDesdeToast = async () => {
 
   <TopBar v-if="!isPublicRetoRoute" />
   <SidePanel v-if="showSidePanel" />
-  <div :class="showSidePanel ? 'lg:pl-72' : ''" class="relative" style="z-index: 1;">
+  <!-- pb-12: hueco para el pie fijo de AppCredit (fixed bottom-0), que si no tapa el final
+       de todas las vistas y parece que el scroll "se queda pillado" sin llegar abajo -->
+  <div :class="showSidePanel ? 'lg:pl-72' : ''" class="relative pb-12" style="z-index: 1;">
     <RouterView />
   </div>
   <AppCredit />

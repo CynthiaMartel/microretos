@@ -1,9 +1,7 @@
-<!-- Ruta: /mis-equipos/:id (name: mis-equipos-detalle). Antes /mis-grupos/:id, y antes /workspace/:id
-     — "workspace" ya es el sitio de trabajo del alumnado (EquipoWorkspace.vue). El path pasó de
-     "grupos" a "equipos" porque "grupo" ya significa la clase/curso del encuentro (Encuentro.grupo,
-     ej. "2ºB"), y esta pantalla es el detalle de progreso de los EQUIPOS de ese encuentro/grupo.
-     El componente sigue llamándose MisGruposDetalle.vue (no renombrado, para no ampliar el diff).
-     Ver router/index.js. -->
+<!-- Ruta: /mis-grupos/:id (name: mis-grupos-detalle). Antes /mis-grupos/:id y /workspace/:id
+     — "workspace" ya es el sitio de trabajo del alumnado (EquipoWorkspace.vue). Vuelve a "grupos"
+     porque en las vistas del docente los equipos de alumnado se llaman "grupos" y la letra del
+     encuentro (Encuentro.grupo) se muestra como "Clase". Ver router/index.js. -->
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -229,7 +227,7 @@ async function generarDiagnostico(equipo) {
   // Si el docente lo había retocado a mano, avisar expresamente de que esos cambios se pierden.
   const aviso = equipo.diagnostico_final?.editado_docente
     ? 'Este diagnóstico tiene cambios manuales del docente. Si la IA lo regenera, esos cambios se perderán. ¿Continuar?'
-    : 'Ya existe un diagnóstico final para este equipo. ¿Quieres que la IA lo genere de nuevo? Se sustituirá el actual.'
+    : 'Ya existe un diagnóstico final para este grupo. ¿Quieres que la IA lo genere de nuevo? Se sustituirá el actual.'
   if (equipo.diagnostico_final && !confirm(aviso)) {
     return
   }
@@ -305,7 +303,7 @@ function progresoPct(equipo) {
   return progresoPonderado(equipo.fases)
 }
 
-// Llegada desde /mis-equipos con ?equipo=&ver=diagnostico (aviso "Aquí puedes ver el
+// Llegada desde /mis-grupos con ?equipo=&ver=diagnostico (aviso "Aquí puedes ver el
 // diagnóstico del equipo"): tras cargar, abrir ese equipo y llevar el scroll a su diagnóstico.
 onMounted(async () => {
   await cargar()
@@ -327,13 +325,13 @@ onMounted(async () => {
         </svg>
       </button>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-centros">Detalle de equipos</p>
+        <p class="text-xs font-black uppercase tracking-widest text-centros">Detalle de grupos</p>
         <p class="text-sm font-bold text-[#121212] truncate">
-          {{ proyecto?.titulo || encuentro?.grupo || encuentro?.ciclo_formativo || 'Cargando…' }}
+          {{ proyecto?.titulo || (encuentro?.grupo && `Clase ${encuentro.grupo}`) || encuentro?.ciclo_formativo || 'Cargando…' }}
         </p>
       </div>
-      <!-- name 'mis-equipos' (antes 'mis-grupos') — ver router/index.js -->
-      <button @click="router.push({ name: 'mis-equipos' })"
+      <!-- name 'mis-grupos' (antes 'mis-equipos') — ver router/index.js -->
+      <button @click="router.push({ name: 'mis-grupos' })"
               class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700
                      hover:bg-violet-100 transition-colors text-xs font-black uppercase tracking-wider">
         Mis grupos
@@ -368,7 +366,7 @@ onMounted(async () => {
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div class="text-center">
                 <p class="text-2xl font-black text-[#121212]">{{ totalEquipos }}</p>
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Equipos</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Grupos</p>
               </div>
               <div class="text-center">
                 <p class="text-2xl font-black text-blue-600">{{ equiposEnCurso }}</p>
@@ -392,7 +390,7 @@ onMounted(async () => {
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
               <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Encuentro</p>
-              <p class="text-lg font-black text-[#121212]">{{ encuentro.grupo || '—' }}</p>
+              <p class="text-lg font-black text-[#121212]">{{ encuentro.grupo ? `Clase ${encuentro.grupo}` : '—' }}</p>
               <p class="text-sm text-gray-500">{{ encuentro.ciclo_formativo }}</p>
               <div class="flex flex-wrap gap-2 pt-1">
                 <span v-if="encuentro.centro_educativo"
@@ -444,7 +442,7 @@ onMounted(async () => {
         <!-- Sección: Equipos -->
         <section class="space-y-3 pt-6 border-t border-gray-100">
           <div class="flex items-center justify-between gap-3 flex-wrap">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Equipos</p>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Grupos</p>
             <!-- Leyenda del stepper de fases de cada tarjeta (EquipoResolucionCard) -->
             <div v-if="equipos.length" class="flex items-center gap-3 flex-wrap text-[10px] font-semibold text-gray-500">
               <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-200" />En curso</span>
@@ -457,7 +455,7 @@ onMounted(async () => {
           <!-- Sin equipos -->
           <div v-if="!equipos.length"
                class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-            <p class="text-gray-400 text-sm">No hay equipos creados en este encuentro todavía.</p>
+            <p class="text-gray-400 text-sm">No hay grupos creados en este encuentro todavía.</p>
           </div>
 
           <EquipoResolucionCard
@@ -636,7 +634,7 @@ onMounted(async () => {
                 </button>
               </div>
               <p v-if="!diagnosticoForms[eq.id]" class="text-[10px] text-gray-400">
-                La IA redacta el diagnóstico a partir de las fases, la evaluación RA/CE y las reflexiones del equipo.
+                La IA redacta el diagnóstico a partir de las fases, la evaluación RA/CE y las reflexiones del grupo.
                 Revísalo antes de compartirlo; puedes corregirlo a mano.
               </p>
             </template>

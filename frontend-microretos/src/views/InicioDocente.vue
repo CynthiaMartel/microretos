@@ -10,7 +10,10 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { useCursoAcademicoStore, CURSO_POR_DEFECTO } from '../stores/cursoAcademico.js'
 import api from '../api.js'
+import { useTareasPersonales } from '../composables/useTareasPersonales.js'
+import { ICONOS_NAV, SECCIONES, GRUPOS_NAV } from '../config/navegacion.js'
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
 import bannerCasoReal from '../assets/banner_caso_real.jpg'
 import bienvenidaCasoReal from '../assets/bienvenida_caso_real.jpg'
@@ -50,10 +53,16 @@ const cursoDe = (d) => d ? (d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear(
 const etiquetaCurso = (y) => `Curso ${y}/${y + 1}`
 
 const cursoActual = cursoDe(hoy)
-const cursoSel    = ref(cursoActual)
+// Curso compartido con las bibliotecas (store): por defecto 2025/26. El panel siempre muestra
+// un curso concreto; si en una biblioteca se eligió "Todos los cursos", aquí se ve el de por defecto.
+const cursoStore  = useCursoAcademicoStore()
+const cursoSel    = computed({
+  get: () => cursoStore.curso ?? CURSO_POR_DEFECTO,
+  set: (v) => { cursoStore.curso = Number(v) },
+})
 
 const cursosDisponibles = computed(() => {
-  const set = new Set([cursoActual])
+  const set = new Set([cursoActual, CURSO_POR_DEFECTO])
   encuentros.value.forEach(e => { const c = cursoDe(_pf(e.fecha)); if (c) set.add(c) })
   proyectos.value.forEach(p => { const c = cursoDe(fechaProyecto(p)); if (c) set.add(c) })
   return [...set].sort((a, b) => b - a)
@@ -63,14 +72,14 @@ const cursosDisponibles = computed(() => {
 // Así contadores, gráfica, donut y lista asignan cada proyecto al MISMO curso (antes la
 // gráfica iba por encuentro y el donut por created_at, y no cuadraban).
 const fechaEncuentroPorId = computed(() => new Map(encuentros.value.map(e => [e.id, e.fecha])))
-const fechaProyecto = (p) => _pf(fechaEncuentroPorId.value.get(p.encuentro_id) || p.created_at)
+const fechaProyecto = (p) => _pf(p.encuentro_fecha || fechaEncuentroPorId.value.get(p.encuentro_id) || p.created_at)
 
 const encCurso   = computed(() => encuentros.value.filter(e => cursoDe(_pf(e.fecha)) === cursoSel.value))
 const proCurso   = computed(() => proyectos.value.filter(p => cursoDe(fechaProyecto(p)) === cursoSel.value))
 
 // ── Contadores ────────────────────────────────────────────────────────────────
 const kpis = computed(() => [
-  { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/mis-equipos' },
+  { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/mis-grupos' },
   { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/empresas' },
   { key: 'encuentros', valor: encCurso.value.length,                                                 label: 'Encuentros realizados',  tile: 'bg-centros',          num: 'text-centros',          icon: 'encuentro', ruta: '/encuentros' },
   { key: 'validados',  valor: proCurso.value.filter(p => ['validado', 'completado'].includes(p.estado)).length, label: 'Proyectos validados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
@@ -91,10 +100,11 @@ const MESES = ['Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'J
 const mesIdx = (d) => (d.getMonth() + 4) % 12 // septiembre = 0
 
 const INDICADORES = [
-  { key: 'alumnos',     label: 'Alumnos en proyectos completados', color: '#FF8920' },
-  { key: 'completados', label: 'Proyectos completados',            color: '#19A7A8' },
-  { key: 'empresas',    label: 'Empresas colaboradoras',           color: '#509928' },
-  { key: 'encuentros',  label: 'Encuentros realizados',            color: '#3072AA' },
+  // corto = texto de la leyenda (las 4 en una sola línea); label = texto completo (tooltip y detalle del mes)
+  { key: 'alumnos',     label: 'Alumnos en proyectos completados', corto: 'Alumnado',              color: '#FF8920' },
+  { key: 'completados', label: 'Proyectos completados',            corto: 'Proyectos completados', color: '#19A7A8' },
+  { key: 'empresas',    label: 'Empresas colaboradoras',           corto: 'Empresas',              color: '#509928' },
+  { key: 'encuentros',  label: 'Encuentros realizados',            corto: 'Encuentros',            color: '#3072AA' },
 ]
 
 const impacto = computed(() => {
@@ -259,7 +269,8 @@ const abrirReto = (r) => router.push({ name: 'detalle-microreto', params: { id: 
 // ilumina los encuentros de la lista que caen ese día y muestra el detalle.
 const proximosEncuentros = computed(() =>
   encuentros.value
-    .filter(e => e.fecha && (e.fecha_fin || e.fecha) >= hoyISO)
+    // Próximos = los que EMPIEZAN a partir de hoy (un encuentro dura semanas: los que ya están en marcha no son «próximos»)
+    .filter(e => e.fecha && e.fecha >= hoyISO)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
     .slice(0, 2)
 )
@@ -280,7 +291,7 @@ function seleccionarEncuentro(e) {
 }
 
 const encDestacado = (e) =>
-  encActivo.value?.id === e.id || (selDia.value && cubreDia(e, selDia.value))
+  encActivo.value?.id === e.id || (selDia.value && e.fecha === selDia.value)
 
 // Mes visible: el del encuentro activo si lo hay; si no, el que haya navegado el usuario
 const calMes = ref(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
@@ -310,7 +321,9 @@ const calDias = computed(() => {
     const diaISO = iso(y, m, d)
     celdas.push({
       d, iso: diaISO,
-      encs: encuentros.value.filter(e => cubreDia(e, diaISO)),
+      // Se marca el día en que EMPIEZA cada encuentro (duran semanas; pintar el rango llenaría el mes).
+      // Al seleccionar un encuentro sí se ilumina toda su duración (diaIluminado).
+      encs: encuentros.value.filter(e => e.fecha === diaISO),
       hoy: diaISO === hoyISO,
     })
   }
@@ -329,7 +342,7 @@ function clicDia(c) {
 }
 
 const encuentrosSelDia = computed(() =>
-  selDia.value ? encuentros.value.filter(e => cubreDia(e, selDia.value)) : []
+  selDia.value ? encuentros.value.filter(e => e.fecha === selDia.value) : []
 )
 
 const tituloEnc = (e) => e.proyecto_titulo || e.microreto_titulo || 'Encuentro'
@@ -418,7 +431,8 @@ const empresasTop = computed(() => {
 const iniciales = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
 // ── Tareas pendientes = avisos automáticos + notas personales ────────────────
-// Las notas comparten la clave de localStorage del panel actual ('docente_notas'),
+// Las tareas personales ("notas" en este archivo) viven en BD: useTareasPersonales,
+// compartido con la vista Calendario. Antes estaban en localStorage ('docente_notas').
 // así que lo que se apunte aquí aparece también allí y viceversa.
 const tareasAuto = computed(() => {
   if (cargando.value) return []
@@ -449,21 +463,13 @@ function toggleAuto(t) {
   guardarJSON('docente_tareas_hechas', autoHechas.value)
 }
 
-// Notas personales: { id, text, hecha? } — "hecha" es un campo nuevo; el panel actual lo ignora
-const notas     = ref(leerJSON('docente_notas', []))
+// Tareas personales: { id, text, hecha } (mismo formato que usa la plantilla)
+const { tareas: notas, addTarea, toggleTarea: toggleNota, borrarTarea: borrarNota } = useTareasPersonales()
 const nuevaNota = ref('')
-function guardarNotas(lista) {
-  notas.value = lista
-  guardarJSON('docente_notas', lista)
-}
 function addNota() {
-  const texto = nuevaNota.value.trim()
-  if (!texto) return
-  guardarNotas([...notas.value, { id: Date.now(), text: texto }])
+  addTarea(nuevaNota.value)
   nuevaNota.value = ''
 }
-const toggleNota = (id) => guardarNotas(notas.value.map(n => n.id === id ? { ...n, hecha: !n.hecha } : n))
-const borrarNota = (id) => guardarNotas(notas.value.filter(n => n.id !== id))
 // Una sola lista de 3 por página: primero las automáticas pendientes, luego tus notas
 // pendientes y al final las hechas (tachadas). Así las automáticas siempre salen arriba.
 // Igual que Proyectos: la lista reserva siempre 3 filas y el pie siempre ocupa su sitio,
@@ -485,28 +491,16 @@ const pendientes = computed(() => tareasAuto.value.filter(t => !autoHecha(t)).le
 
 // ── Herramientas ──────────────────────────────────────────────────────────────
 // Mismo lenguaje visual que los contadores: icono blanco sobre color sólido de marca.
+// Herramientas: títulos, iconos y colores salen de config/navegacion.js (la misma fuente que el
+// SidePanel y las secciones /seccion/:seccion), para que el panel coincida siempre con el menú.
+const tarjetaNav = (seccion, ruta) => SECCIONES[seccion]?.cards?.find(c => c.ruta === ruta)
+const itemMisEquipos = GRUPOS_NAV.flatMap(g => g.items).find(i => i.key === 'mis-grupos')
 const herramientas = [
-  {
-    grupo: 'Proyectos',
-    items: [
-      { titulo: 'Generar proyecto',        desc: 'Crea una propuesta a partir de un reto', ruta: '/proyectos/crear',  tile: 'bg-empresas', icon: 'sp_generar_proyecto' },
-      { titulo: 'Biblioteca de proyectos', desc: 'Consulta y gestiona tus proyectos',     ruta: '/proyectos',        tile: 'bg-empresas', icon: 'sp_biblioteca_proyectos' },
-    ],
-  },
-  {
-    grupo: 'Encuentros',
-    items: [
-      { titulo: 'Generar encuentro',        desc: 'Organiza un encuentro de trabajo',    ruta: '/encuentros/crear', tile: 'bg-centros', icon: 'sp_generar_encuentro' },
-      { titulo: 'Biblioteca de encuentros', desc: 'Consulta los encuentros registrados', ruta: '/encuentros',       tile: 'bg-centros', icon: 'sp_biblioteca_encuentros' },
-    ],
-  },
-  {
-    grupo: 'Equipos',
-    items: [
-      { titulo: 'Mis equipos', desc: 'Equipos de alumnado y su avance por fases', ruta: '/mis-equipos', tile: 'bg-azul-noche', icon: 'sp_mis_equipos' },
-    ],
-  },
-]
+  { grupo: 'Proyectos',  items: [tarjetaNav('retos-proyectos', '/proyectos/crear'), tarjetaNav('retos-proyectos', '/proyectos')] },
+  { grupo: 'Encuentros', items: [tarjetaNav('encuentros', '/encuentros/crear'), tarjetaNav('encuentros', '/encuentros')] },
+  { grupo: 'Equipos',    items: [itemMisEquipos && { titulo: itemMisEquipos.label, desc: itemMisEquipos.tip, ruta: itemMisEquipos.ruta,
+                                                     icon: itemMisEquipos.icon, tile: 'bg-alumnos' }] },
+].map(g => ({ ...g, items: g.items.filter(Boolean) })).filter(g => g.items.length)
 
 const ICONOS = {
   chispa:  'M13 10V3L4 14h7v7l9-11h-7z',
@@ -516,12 +510,6 @@ const ICONOS = {
   capas:   'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   usuario: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0',
   equipo:  'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
-  // Iconos del SidePanel (mismos trazos) para que Herramientas coincida con el menú
-  sp_generar_proyecto:     'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM12 8v8M8 12h8',
-  sp_biblioteca_proyectos: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  sp_generar_encuentro:    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M10 3h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V4a1 1 0 011-1zM9 12l2 2 4-4',
-  sp_biblioteca_encuentros:'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 22v-15A2.5 2.5 0 016.5 2zM9 7h6M9 11h6',
-  sp_mis_equipos:          'M3 3v18h18M7 15l4-6 4 4 5-8',
 }
 
 // ── Varios ────────────────────────────────────────────────────────────────────
@@ -541,19 +529,26 @@ const irA = (ruta) => router.push(ruta)
 
 
 
+      <!-- Responsive por tramos (container queries):
+           · Escritorio (contenido de página ≥ 768px, ventana ≳ 1120px con el SidePanel): dos columnas, la
+             lateral entre 260 y 300px. Cada pareja (gráfica|donut, proyectos|herramientas) decide por su
+             propio ancho (@lg/fila = 512px), así que zoom o barra de scroll no la descolocan.
+           · Tablet y móvil: una columna. Las columnas pasan a display:contents y las tarjetas se ordenan
+             por prioridad con order-* (bienvenida, resumen, gráficas, encuentros, tareas, proyectos,
+             empresas, reto, banner); las parejas siguen lado a lado si caben. -->
       <!-- Cuadrícula compacta en dos columnas independientes (cada una fluye sin huecos) y una fila final a todo
            el ancho con el banner y los recursos. En pantallas estrechas, una sola columna en este orden. -->
-      <div class="grid grid-cols-1 gap-4 @5xl/page:grid-cols-[minmax(0,1fr)_300px]">
+      <div class="grid grid-cols-1 gap-4 @3xl/page:grid-cols-[minmax(0,1fr)_clamp(260px,27%,300px)]">
 
         <!-- ══ Columna principal: bienvenida, resumen, gráfica + donut, proyectos + herramientas ══ -->
-        <div class="@container/main flex min-w-0 flex-col gap-4">
+        <div class="contents @3xl/page:flex @3xl/page:min-w-0 @3xl/page:flex-col @3xl/page:gap-4">
           <!-- ══ Bienvenida (como idea_dashboard.png), sin recuadro: saludo y botones a la
                izquierda; foto real con cintas de los colores del logo y nota manuscrita a la derecha ══ -->
-          <section class="@container relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-[#EDF3FA] @2xl/main:min-h-[230px]">
-            <!-- En ancho, solo la foto se funde suavemente hacia la izquierda; las cintas de color van
-                 encima sin difuminar, para que el azul y el naranja conserven todo su color -->
-            <div class="relative h-44 @2xl:absolute @2xl:inset-y-0 @2xl:right-0 @2xl:h-auto @2xl:w-[52%]">
-              <img :src="bienvenida.imagen" :alt="bienvenida.alt" class="absolute inset-0 h-full w-full object-cover object-[60%_50%] @2xl:[mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))] @2xl:[-webkit-mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))]" />
+          <section class="@container relative order-1 @3xl/page:order-none overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-transparent @3xl/page:min-h-[230px]">
+            <!-- En ancho: la foto se funde suavemente hacia la izquierda (las cintas no, para conservar su color)
+                 y todo el bloque (foto + cintas) se desvanece en el borde derecho para integrarse con la página -->
+            <div class="relative h-36 sm:h-44 @lg:absolute @lg:inset-y-0 @lg:right-0 @lg:h-auto @lg:w-[52%] @lg:[mask-image:linear-gradient(to_right,black_82%,transparent)] @lg:[-webkit-mask-image:linear-gradient(to_right,black_82%,transparent)]">
+              <img :src="bienvenida.imagen" :alt="bienvenida.alt" class="absolute inset-0 h-full w-full object-cover object-[60%_50%] @lg:[mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))] @lg:[-webkit-mask-image:linear-gradient(to_left,black_35%,rgba(0,0,0,0.3))]" />
               <svg aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
                 <!-- Copia de los halos del banner de "Aplicación moodboard a dashboard.png":
                      izquierda = cinta azul que cae y se afila + cinta naranja encima que cubre la esquina inferior;
@@ -584,16 +579,16 @@ const irA = (ruta) => router.push(ruta)
                 <path d="M600,300 C700,268 790,228 870,178" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2" vector-effect="non-scaling-stroke" />
                 <path d="M720,300 C830,270 925,222 1000,165 L1000,300 Z" fill="#138C9C" opacity="0.55" />
               </svg>
-              <div class="absolute inset-x-0 bottom-0 flex h-1.5 @2xl:hidden"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></div>
+              <div class="absolute inset-x-0 bottom-0 flex h-1.5 @lg:hidden"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></div>
             </div>
             <!-- Nota manuscrita, como en el ejemplo -->
-            <div aria-hidden="true" class="pointer-events-none absolute right-6 top-4 z-10 hidden -rotate-6 @3xl:block">
+            <div aria-hidden="true" class="pointer-events-none absolute right-6 top-4 z-10 hidden -rotate-6 @lg:block">
               <p class="font-manuscrita text-2xl leading-6 text-white [text-shadow:0_1px_3px_rgba(23,40,62,0.75)]">Ideas de hoy<br />para el mundo<br />de mañana</p>
               <svg class="ml-10 mt-1 h-8 w-14 -scale-x-100 text-alumnos drop-shadow" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 56 32">
                 <path d="M2,4 C10,22 30,28 50,20" /><path d="M42,14 L51,20 L42,26" />
               </svg>
             </div>
-            <div class="relative z-10 p-5 @2xl:max-w-[46%]">
+            <div class="relative z-10 p-5 @lg:max-w-[46%]">
               <h1 class="font-heading text-2xl font-bold tracking-tight text-azul-noche sm:text-3xl">¡Hola, {{ primerNombre }}!</h1>
               <p class="mt-1 font-heading text-lg font-bold leading-snug text-azul-noche sm:text-xl">
                 Seguimos conectando talento<br class="hidden sm:block" /> con <span class="text-centros">oportunidades reales</span>
@@ -619,7 +614,7 @@ const irA = (ruta) => router.push(ruta)
 
           <!-- Resumen del curso (como "Resumen del centro" en idea_dashboard.png): icono a la izquierda,
                título arriba y cifra debajo; sin porcentajes. Incluye el selector de curso. -->
-          <section class="card p-4" aria-labelledby="titulo-resumen">
+          <section class="card @container/resumen order-2 p-4 @3xl/page:order-none" aria-labelledby="titulo-resumen">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 id="titulo-resumen" class="card-title">Resumen del curso</h2>
               <label class="sr-only" for="curso-sel">Curso académico</label>
@@ -628,7 +623,7 @@ const irA = (ruta) => router.push(ruta)
                 <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ etiquetaCurso(c) }}</option>
               </select>
             </div>
-            <div class="grid grid-cols-2 gap-3 @3xl/main:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 @md/resumen:grid-cols-4">
               <button v-for="k in kpis" :key="k.key" @click="irA(k.ruta)"
                       class="@container min-w-0 rounded-xl p-2.5 text-left ring-1 ring-gray-200/70 transition hover:-translate-y-0.5 hover:shadow-md">
                 <div class="flex items-center gap-3">
@@ -648,216 +643,221 @@ const irA = (ruta) => router.push(ruta)
           </section>
 
           <!-- Gráfica (más ancha) | donut -->
-          <div class="grid grid-cols-1 gap-4 @3xl/main:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-            <article class="card @container flex h-full min-w-0 flex-col p-4">
-              <div class="mb-3">
-                <h2 class="card-title">Impacto acumulado del curso</h2>
-                <p class="text-sm text-gray-500">{{ etiquetaCurso(cursoSel) }} · evolución de septiembre a junio</p>
-              </div>
-
-              <div v-if="cargando" class="h-[190px] animate-pulse rounded-xl bg-gray-100" />
-              <div v-else-if="!hayImpacto" class="flex h-[190px] flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
-                Tu impacto empieza a contar con el primer encuentro del curso.
-                <button class="mt-2 font-semibold text-centros" @click="irA('/encuentros/crear')">Registrar un encuentro →</button>
-              </div>
-              <template v-else>
-                <div :ref="observarChart" class="relative w-full" @mouseleave="mesHoverImp = null">
-                  <svg :width="CH.w" :height="CH.h" :viewBox="`0 0 ${CH.w} ${CH.h}`" class="block" role="img"
-                       :aria-label="`Impacto acumulado del ${etiquetaCurso(cursoSel)}: ` + impacto.series.map(s => `${s.label} ${s.total}`).join(', ')">
-                    <defs>
-                      <linearGradient v-if="areaImpacto" id="grad-impacto" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" :stop-color="areaImpacto.color" stop-opacity="0.16" />
-                        <stop offset="100%" :stop-color="areaImpacto.color" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <g v-for="t in ticksImp" :key="t">
-                      <line :x1="CH.l" :x2="CH.w - CH.r" :y1="iy(t)" :y2="iy(t)" stroke="#EEF0F3" stroke-width="1" />
-                      <text :x="CH.l - 8" :y="iy(t) + 4" text-anchor="end" font-size="11" fill="#9CA3AF">{{ t }}</text>
-                    </g>
-                    <template v-for="(m, i) in impacto.meses" :key="m">
-                      <text v-if="mostrarMesImp(i)" :x="ix(i)" :y="CH.h - 6" text-anchor="middle" font-size="11"
-                            :fill="i < impacto.n ? '#6B7280' : '#C4C9D1'">{{ m }}</text>
-                    </template>
-                    <line v-if="mesHoverImp !== null" :x1="ix(mesHoverImp)" :x2="ix(mesHoverImp)" :y1="CH.t" :y2="iy(0)" stroke="#9CA3AF" stroke-dasharray="3 3" />
-                    <path v-if="areaImpacto" :d="areaImpacto.d" fill="url(#grad-impacto)" />
-                    <g v-for="c in curvasImpacto" :key="c.key">
-                      <path :d="c.linea" fill="none" :stroke="c.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-                      <!-- Un punto por mes, como el PNG; crece el del mes señalado -->
-                      <circle v-for="(pt, i) in c.pts" :key="i" :cx="pt[0]" :cy="pt[1]" :r="mesHoverImp === i ? 5 : 3.5"
-                              :fill="c.color" stroke="white" stroke-width="1.5" />
-                    </g>
-                    <rect v-for="(m, i) in impacto.meses.slice(0, impacto.n)" :key="'hit-' + m" :x="ix(i) - pasoImp / 2" y="0"
-                          :width="pasoImp" :height="CH.h" fill="transparent" @mouseenter="mesHoverImp = i" />
-                  </svg>
-                  <div v-if="mesHoverImp !== null"
-                       class="pointer-events-none absolute top-1 z-10 w-[230px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
-                       :style="{ left: `${tooltipLeftImp}px` }">
-                    <p class="mb-1 font-semibold">Hasta {{ impacto.meses[mesHoverImp] }}</p>
-                    <p v-for="c in seriesVisibles" :key="c.key" class="flex justify-between gap-3 text-gray-600">
-                      <span class="flex min-w-0 items-center gap-1.5"><span class="h-2 w-2 shrink-0 rounded-full" :style="{ background: c.color }" /><span class="truncate">{{ c.label }}</span></span>
-                      <strong class="shrink-0 text-azul-noche">{{ c.acum[mesHoverImp] }}</strong>
-                    </p>
-                  </div>
+          <div class="@container/fila order-3 @3xl/page:order-none">
+            <div class="grid grid-cols-1 gap-4 @lg/fila:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+              <article class="card @container flex h-full min-w-0 flex-col p-4">
+                <div class="mb-3">
+                  <h2 class="card-title">Impacto acumulado del curso</h2>
+                  <p class="text-sm text-gray-500">{{ etiquetaCurso(cursoSel) }} · evolución de septiembre a junio</p>
                 </div>
-                <!-- Leyenda como el PNG: bajo la gráfica y repartida a lo ancho; pulsar oculta/muestra la línea -->
-                <ul class="mt-3 flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 text-xs">
-                  <li v-for="c in impacto.series" :key="c.key">
-                    <button class="flex items-center gap-1.5 transition"
-                            :class="seriesOcultas.includes(c.key) ? 'text-gray-400 line-through' : 'text-gray-600 hover:text-azul-noche'"
-                            :aria-pressed="!seriesOcultas.includes(c.key)" :title="seriesOcultas.includes(c.key) ? 'Mostrar línea' : 'Ocultar línea'"
-                            @click="toggleSerie(c.key)">
-                      <span class="h-2.5 w-2.5 rounded-full" :style="{ background: seriesOcultas.includes(c.key) ? '#D1D5DB' : c.color }" />
-                      {{ c.label }}
-                    </button>
-                  </li>
-                </ul>
-              </template>
-            </article>
 
-            <article class="card @container flex h-full min-w-0 flex-col p-4">
-              <div class="mb-4 flex items-center justify-between gap-3">
-                <h2 class="card-title">Estado de los proyectos</h2>
-                <button class="link shrink-0" @click="irA('/proyectos')">Ver todos</button>
-              </div>
-              <div v-if="cargando" class="h-[200px] animate-pulse rounded-xl bg-gray-100" />
-              <div v-else class="flex flex-1 flex-col items-center justify-center gap-4 @min-[17rem]:flex-row">
-                <div class="relative h-36 w-36 shrink-0">
-                  <svg viewBox="0 0 140 140" class="h-full w-full -rotate-90" role="img" :aria-label="`${donut.total} proyectos por estado`">
-                    <circle cx="70" cy="70" :r="R" fill="none" stroke="#F3F4F6" stroke-width="18" />
-                    <circle v-for="s in donut.segmentos.filter(x => x.valor)" :key="s.label" cx="70" cy="70" :r="R" fill="none"
-                            :stroke="s.color" :stroke-width="donutHover === s.label ? 24 : 18"
-                            :stroke-dasharray="`${s.dash} ${CIRC}`" :stroke-dashoffset="s.offset"
-                            :opacity="donutHover && donutHover !== s.label ? 0.25 : 1"
-                            class="cursor-pointer transition-all duration-200"
-                            @mouseenter="donutHover = s.label" @mouseleave="donutHover = null" @click="irA(s.ruta)">
-                      <title>{{ s.label }}: {{ s.valor }} ({{ s.pct }}%)</title>
-                    </circle>
-                  </svg>
-                  <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <span class="font-heading text-2xl font-bold">{{ donutHover ? donut.segmentos.find(x => x.label === donutHover).valor : donut.total }}</span>
-                    <span class="max-w-[5.5rem] text-center text-[11px] leading-tight text-gray-500">{{ donutHover || 'proyectos' }}</span>
-                  </div>
+                <div v-if="cargando" class="h-[190px] animate-pulse rounded-xl bg-gray-100" />
+                <div v-else-if="!hayImpacto" class="flex h-[190px] flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
+                  Tu impacto empieza a contar con el primer encuentro del curso.
+                  <button class="mt-2 font-semibold text-centros" @click="irA('/encuentros/crear')">Registrar un encuentro →</button>
                 </div>
-                <!-- Leyenda a un lado (como el PNG) = recorrido del proyecto, en orden; cada paso abre la biblioteca filtrada -->
-                <ol class="relative w-full min-w-0">
-                  <span aria-hidden="true" class="absolute bottom-3 left-[11px] top-3 w-px bg-gray-200" />
-                  <li v-for="s in donut.segmentos" :key="s.label">
-                    <button class="relative flex w-full items-start gap-2.5 rounded-lg px-1.5 py-1 text-left transition"
-                            :class="[!s.valor && 'opacity-50', donutHover === s.label ? 'bg-gray-100' : 'hover:bg-gray-50']"
-                            @mouseenter="donutHover = s.label" @mouseleave="donutHover = null"
-                            @focus="donutHover = s.label" @blur="donutHover = null" @click="irA(s.ruta)">
-                      <span class="relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white transition-transform"
-                            :class="donutHover === s.label && 'scale-150'" :style="{ background: s.color }" />
-                      <span class="min-w-0 flex-1">
-                        <span class="block truncate text-xs font-medium text-gray-700">{{ s.label }}</span>
-                        <span class="block truncate text-[11px] text-gray-500">
-                          <strong class="text-azul-noche">{{ s.valor }}</strong> ({{ s.pct }}%)<template v-if="s.detalle"> · {{ s.detalle }}</template>
+                <template v-else>
+                  <div :ref="observarChart" class="relative w-full" @mouseleave="mesHoverImp = null">
+                    <svg :width="CH.w" :height="CH.h" :viewBox="`0 0 ${CH.w} ${CH.h}`" class="block" role="img"
+                         :aria-label="`Impacto acumulado del ${etiquetaCurso(cursoSel)}: ` + impacto.series.map(s => `${s.label} ${s.total}`).join(', ')">
+                      <defs>
+                        <linearGradient v-if="areaImpacto" id="grad-impacto" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" :stop-color="areaImpacto.color" stop-opacity="0.16" />
+                          <stop offset="100%" :stop-color="areaImpacto.color" stop-opacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <g v-for="t in ticksImp" :key="t">
+                        <line :x1="CH.l" :x2="CH.w - CH.r" :y1="iy(t)" :y2="iy(t)" stroke="#EEF0F3" stroke-width="1" />
+                        <text :x="CH.l - 8" :y="iy(t) + 4" text-anchor="end" font-size="11" fill="#9CA3AF">{{ t }}</text>
+                      </g>
+                      <template v-for="(m, i) in impacto.meses" :key="m">
+                        <text v-if="mostrarMesImp(i)" :x="ix(i)" :y="CH.h - 6" text-anchor="middle" font-size="11"
+                              :fill="i < impacto.n ? '#6B7280' : '#C4C9D1'">{{ m }}</text>
+                      </template>
+                      <line v-if="mesHoverImp !== null" :x1="ix(mesHoverImp)" :x2="ix(mesHoverImp)" :y1="CH.t" :y2="iy(0)" stroke="#9CA3AF" stroke-dasharray="3 3" />
+                      <path v-if="areaImpacto" :d="areaImpacto.d" fill="url(#grad-impacto)" />
+                      <g v-for="c in curvasImpacto" :key="c.key">
+                        <path :d="c.linea" fill="none" :stroke="c.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                        <!-- Un punto por mes, como el PNG; crece el del mes señalado -->
+                        <circle v-for="(pt, i) in c.pts" :key="i" :cx="pt[0]" :cy="pt[1]" :r="mesHoverImp === i ? 5 : 3.5"
+                                :fill="c.color" stroke="white" stroke-width="1.5" />
+                      </g>
+                      <rect v-for="(m, i) in impacto.meses.slice(0, impacto.n)" :key="'hit-' + m" :x="ix(i) - pasoImp / 2" y="0"
+                            :width="pasoImp" :height="CH.h" fill="transparent" @mouseenter="mesHoverImp = i" />
+                    </svg>
+                    <div v-if="mesHoverImp !== null"
+                         class="pointer-events-none absolute top-1 z-10 w-[230px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
+                         :style="{ left: `${tooltipLeftImp}px` }">
+                      <p class="mb-1 font-semibold">Hasta {{ impacto.meses[mesHoverImp] }}</p>
+                      <p v-for="c in seriesVisibles" :key="c.key" class="flex justify-between gap-3 text-gray-600">
+                        <span class="flex min-w-0 items-center gap-1.5"><span class="h-2 w-2 shrink-0 rounded-full" :style="{ background: c.color }" /><span class="truncate">{{ c.label }}</span></span>
+                        <strong class="shrink-0 text-azul-noche">{{ c.acum[mesHoverImp] }}</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <!-- Leyenda bajo la gráfica: las 4 en una sola línea alineadas a la izquierda (etiqueta corta; la completa en el tooltip);
+                       pulsar oculta/muestra la línea -->
+                  <ul class="mt-3 flex flex-nowrap items-center justify-start gap-x-4 overflow-x-auto px-1 pb-1 text-xs">
+                    <li v-for="c in impacto.series" :key="c.key" class="shrink-0">
+                      <button class="flex items-center gap-1.5 whitespace-nowrap transition"
+                              :class="seriesOcultas.includes(c.key) ? 'text-gray-400 line-through' : 'text-gray-600 hover:text-azul-noche'"
+                              :aria-pressed="!seriesOcultas.includes(c.key)" :title="`${c.label} · ${seriesOcultas.includes(c.key) ? 'Mostrar línea' : 'Ocultar línea'}`"
+                              @click="toggleSerie(c.key)">
+                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: seriesOcultas.includes(c.key) ? '#D1D5DB' : c.color }" />
+                        {{ c.corto }}
+                      </button>
+                    </li>
+                  </ul>
+                </template>
+              </article>
+
+              <article class="card @container flex h-full min-w-0 flex-col p-4">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <h2 class="card-title">Estado de los proyectos</h2>
+                  <button class="link shrink-0" @click="irA('/proyectos')">Ver todos</button>
+                </div>
+                <div v-if="cargando" class="h-[200px] animate-pulse rounded-xl bg-gray-100" />
+                <div v-else class="flex flex-1 flex-col items-center justify-center gap-3 @min-[13rem]:flex-row @min-[19rem]:gap-4">
+                  <div class="relative h-24 w-24 shrink-0 @min-[16rem]:h-28 @min-[16rem]:w-28 @min-[19rem]:h-36 @min-[19rem]:w-36">
+                    <svg viewBox="0 0 140 140" class="h-full w-full -rotate-90" role="img" :aria-label="`${donut.total} proyectos por estado`">
+                      <circle cx="70" cy="70" :r="R" fill="none" stroke="#F3F4F6" stroke-width="18" />
+                      <circle v-for="s in donut.segmentos.filter(x => x.valor)" :key="s.label" cx="70" cy="70" :r="R" fill="none"
+                              :stroke="s.color" :stroke-width="donutHover === s.label ? 24 : 18"
+                              :stroke-dasharray="`${s.dash} ${CIRC}`" :stroke-dashoffset="s.offset"
+                              :opacity="donutHover && donutHover !== s.label ? 0.25 : 1"
+                              class="cursor-pointer transition-all duration-200"
+                              @mouseenter="donutHover = s.label" @mouseleave="donutHover = null" @click="irA(s.ruta)">
+                        <title>{{ s.label }}: {{ s.valor }} ({{ s.pct }}%)</title>
+                      </circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                      <span class="font-heading text-2xl font-bold">{{ donutHover ? donut.segmentos.find(x => x.label === donutHover).valor : donut.total }}</span>
+                      <span class="max-w-[5.5rem] text-center text-[11px] leading-tight text-gray-500">{{ donutHover || 'proyectos' }}</span>
+                    </div>
+                  </div>
+                  <!-- Leyenda a un lado (como el PNG) = recorrido del proyecto, en orden; cada paso abre la biblioteca filtrada -->
+                  <ol class="relative w-full min-w-0">
+                    <span aria-hidden="true" class="absolute bottom-3 left-[11px] top-3 w-px bg-gray-200" />
+                    <li v-for="s in donut.segmentos" :key="s.label">
+                      <button class="relative flex w-full items-start gap-2.5 rounded-lg px-1.5 py-1 text-left transition"
+                              :class="[!s.valor && 'opacity-50', donutHover === s.label ? 'bg-gray-100' : 'hover:bg-gray-50']"
+                              @mouseenter="donutHover = s.label" @mouseleave="donutHover = null"
+                              @focus="donutHover = s.label" @blur="donutHover = null" @click="irA(s.ruta)">
+                        <span class="relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-white transition-transform"
+                              :class="donutHover === s.label && 'scale-150'" :style="{ background: s.color }" />
+                        <span class="min-w-0 flex-1">
+                          <span class="block truncate text-xs font-medium text-gray-700">{{ s.label }}</span>
+                          <span class="block truncate text-[11px] text-gray-500">
+                            <strong class="text-azul-noche">{{ s.valor }}</strong> ({{ s.pct }}%)<template v-if="s.detalle"> · {{ s.detalle }}</template>
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  </li>
-                </ol>
-              </div>
-              <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-lg bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
-                      @click="irA('/proyectos/crear')">
-                Aún no hay proyectos en este curso · Crear propuesta →
-              </button>
-            </article>
+                      </button>
+                    </li>
+                  </ol>
+                </div>
+                <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-lg bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
+                        @click="irA('/proyectos/crear')">
+                  Aún no hay proyectos en este curso · Crear propuesta →
+                </button>
+              </article>
+            </div>
           </div>
 
           <!-- Proyectos | herramientas -->
-          <div class="grid flex-1 grid-cols-1 gap-4 @3xl/main:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-            <article class="card @container flex h-full min-w-0 flex-col p-4">
-              <div class="mb-3 flex items-center justify-between gap-3">
-                <h2 class="card-title">Proyectos</h2>
-                <button class="link shrink-0" @click="verTodosProyectos">Ver todos</button>
-              </div>
-
-              <!-- Filtros de estado — los mismos que la biblioteca de proyectos -->
-              <div class="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Filtrar por estado">
-                <button v-for="f in FILTROS_PROY" :key="f.key" :aria-pressed="filtroProy === f.key"
-                        @click="filtroProy = f.key"
-                        class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition"
-                        :class="filtroProy === f.key
-                        ? 'border-centros bg-centros text-white'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-centros/40 hover:text-centros'">
-                  {{ f.label }}
-                  <span class="rounded-full px-1.5 text-[10px]"
-                        :class="filtroProy === f.key ? 'bg-white/20' : 'bg-gray-100 text-gray-500'">{{ conteoProy(f.key) }}</span>
-                </button>
-              </div>
-
-              <!-- Lista con alto fijo (5 filas): no cambia el tamaño de la tarjeta según cuántos proyectos haya -->
-              <div class="h-[324px]">
-                <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
-                <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
-                  {{ filtroProy === 'todos' ? 'Aún no hay proyectos en este curso.' : 'No hay proyectos con este estado en el curso seleccionado.' }}
-                  <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear propuesta →</button>
+          <div class="@container/fila order-6 @3xl/page:order-none @3xl/page:flex-1">
+            <div class="grid h-full grid-cols-1 gap-4 @lg/fila:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+              <article class="card @container flex h-full min-w-0 flex-col p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <h2 class="card-title">Proyectos</h2>
+                  <button class="link shrink-0" @click="verTodosProyectos">Ver todos</button>
                 </div>
-                <ul v-else class="divide-y divide-gray-100">
-                  <li v-for="p in proyectosPagina" :key="p.id" class="h-16">
-                    <button class="flex h-full w-full items-center gap-3 rounded-lg text-left hover:bg-gray-50" @click="irA('/proyectos/' + p.uuid)">
-                      <img v-if="p.imagen_portada_url" :src="p.imagen_portada_url" alt="" class="h-10 w-12 shrink-0 rounded-lg object-cover" />
-                      <div v-else class="flex h-10 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-centros/15 to-administraciones/15 text-centros">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS.capas"/></svg>
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold">{{ p.titulo }}</p>
-                        <p class="truncate text-xs text-gray-500">{{ [p.empresa_nombre, p.ciclo_nombre, p.curso].filter(Boolean).join(' · ') }}</p>
-                        <!-- En tarjetas estrechas la etiqueta baja bajo el título para no taparlo -->
-                        <span class="mt-0.5 inline-block rounded-full border px-2 py-px text-[10px] font-bold @md:hidden" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
-                      </div>
-                      <span class="hidden shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold @md:inline-block" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
-                    </button>
-                  </li>
-                </ul>
-              </div>
-              <!-- Pie fijo: paginación (si hay más de una página) + acceso a la biblioteca -->
-              <div class="mt-auto flex h-10 items-center justify-between gap-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
-                <div class="flex items-center gap-2">
-                  <template v-if="totalPaginasProy > 1">
-                    <button class="cal-nav disabled:opacity-30" aria-label="Proyectos anteriores" :disabled="paginaProyActual === 0" @click="moverPaginaProy(-1)">
-                      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                    </button>
-                    <span>{{ paginaProyActual + 1 }} / {{ totalPaginasProy }}</span>
-                    <button class="cal-nav disabled:opacity-30" aria-label="Proyectos siguientes" :disabled="paginaProyActual === totalPaginasProy - 1" @click="moverPaginaProy(1)">
-                      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+
+                <!-- Filtros de estado — los mismos que la biblioteca de proyectos -->
+                <div class="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Filtrar por estado">
+                  <button v-for="f in FILTROS_PROY" :key="f.key" :aria-pressed="filtroProy === f.key"
+                          @click="filtroProy = f.key"
+                          class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition"
+                          :class="filtroProy === f.key
+                          ? 'border-centros bg-centros text-white'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-centros/40 hover:text-centros'">
+                    {{ f.label }}
+                    <span class="rounded-full px-1.5 text-[10px]"
+                          :class="filtroProy === f.key ? 'bg-white/20' : 'bg-gray-100 text-gray-500'">{{ conteoProy(f.key) }}</span>
+                  </button>
+                </div>
+
+                <!-- Lista con alto fijo (5 filas): no cambia el tamaño de la tarjeta según cuántos proyectos haya -->
+                <div class="h-[324px]">
+                  <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
+                  <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
+                    {{ filtroProy === 'todos' ? 'Aún no hay proyectos en este curso.' : 'No hay proyectos con este estado en el curso seleccionado.' }}
+                    <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear propuesta →</button>
+                  </div>
+                  <ul v-else class="divide-y divide-gray-100">
+                    <li v-for="p in proyectosPagina" :key="p.id" class="h-16">
+                      <button class="flex h-full w-full items-center gap-3 rounded-lg text-left hover:bg-gray-50" @click="irA('/proyectos/' + p.uuid)">
+                        <img v-if="p.imagen_portada_url" :src="p.imagen_portada_url" alt="" class="h-10 w-12 shrink-0 rounded-lg object-cover" />
+                        <div v-else class="flex h-10 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-centros/15 to-administraciones/15 text-centros">
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS.capas"/></svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <p class="truncate text-sm font-semibold">{{ p.titulo }}</p>
+                          <p class="truncate text-xs text-gray-500">{{ [p.empresa_nombre, p.ciclo_nombre, p.curso].filter(Boolean).join(' · ') }}</p>
+                          <!-- En tarjetas estrechas la etiqueta baja bajo el título para no taparlo -->
+                          <span class="mt-0.5 inline-block rounded-full border px-2 py-px text-[10px] font-bold @md:hidden" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
+                        </div>
+                        <span class="hidden shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold @md:inline-block" :class="colorProyecto(p)">{{ etiquetaProyecto(p) }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+                <!-- Pie fijo: paginación (si hay más de una página) + acceso a la biblioteca -->
+                <div class="mt-auto flex h-10 items-center justify-between gap-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
+                  <div class="flex items-center gap-2">
+                    <template v-if="totalPaginasProy > 1">
+                      <button class="cal-nav disabled:opacity-30" aria-label="Proyectos anteriores" :disabled="paginaProyActual === 0" @click="moverPaginaProy(-1)">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                      </button>
+                      <span>{{ paginaProyActual + 1 }} / {{ totalPaginasProy }}</span>
+                      <button class="cal-nav disabled:opacity-30" aria-label="Proyectos siguientes" :disabled="paginaProyActual === totalPaginasProy - 1" @click="moverPaginaProy(1)">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                      </button>
+                    </template>
+                    <span v-else-if="proyectosFiltrados.length">{{ proyectosFiltrados.length }} proyecto{{ proyectosFiltrados.length !== 1 ? 's' : '' }}</span>
+                  </div>
+                  <button class="font-semibold text-centros hover:underline" @click="verTodosProyectos">Ver en la biblioteca →</button>
+                </div>
+
+              </article>
+
+              <!-- Herramientas: junto a Proyectos, botones tipo icono de app; la explicación sale al pasar el cursor -->
+              <article class="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#F6F9FD] to-white p-4 shadow-sm ring-1 ring-gray-200/70">
+                <!-- Fondo casi blanco con un toque azul muy suave y una llave de marca de agua apenas visible;
+                     barra superior con los colores del logo -->
+                <svg aria-hidden="true" class="pointer-events-none absolute -bottom-4 -right-4 h-32 w-32 -rotate-12 text-centros/5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg>
+                <span aria-hidden="true" class="absolute inset-x-0 top-0 flex h-1"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></span>
+                <h2 class="card-title relative mb-3">Herramientas</h2>
+                <div class="relative grid flex-1 auto-rows-fr grid-cols-2 gap-2">
+                  <template v-for="g in herramientas" :key="g.grupo">
+                    <button v-for="h in g.items" :key="h.titulo" @click="irA(h.ruta)" :title="h.desc" :aria-label="`${h.titulo}: ${h.desc}`"
+                            class="group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl bg-white p-2 text-center ring-1 ring-gray-200/70 transition hover:-translate-y-0.5 hover:shadow-md"
+                            :class="g.items.length === 1 && 'col-span-2 !flex-row !gap-2.5'">
+                      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105" :class="h.tile">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS_NAV[h.icon] || ICONOS[h.icon]"/></svg>
+                      </span>
+                      <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
                     </button>
                   </template>
-                  <span v-else-if="proyectosFiltrados.length">{{ proyectosFiltrados.length }} proyecto{{ proyectosFiltrados.length !== 1 ? 's' : '' }}</span>
                 </div>
-                <button class="font-semibold text-centros hover:underline" @click="verTodosProyectos">Ver en la biblioteca →</button>
-              </div>
-
-            </article>
-
-            <!-- Herramientas: junto a Proyectos, botones tipo icono de app; la explicación sale al pasar el cursor -->
-            <article class="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#F6F9FD] to-white p-4 shadow-sm ring-1 ring-gray-200/70">
-              <!-- Fondo casi blanco con un toque azul muy suave y una llave de marca de agua apenas visible;
-                   barra superior con los colores del logo -->
-              <svg aria-hidden="true" class="pointer-events-none absolute -bottom-4 -right-4 h-32 w-32 -rotate-12 text-centros/5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg>
-              <span aria-hidden="true" class="absolute inset-x-0 top-0 flex h-1"><span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" /></span>
-              <h2 class="card-title relative mb-3">Herramientas</h2>
-              <div class="relative grid flex-1 auto-rows-fr grid-cols-2 gap-2">
-                <template v-for="g in herramientas" :key="g.grupo">
-                  <button v-for="h in g.items" :key="h.titulo" @click="irA(h.ruta)" :title="h.desc" :aria-label="`${h.titulo}: ${h.desc}`"
-                          class="group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl bg-white p-2 text-center ring-1 ring-gray-200/70 transition hover:-translate-y-0.5 hover:shadow-md"
-                          :class="g.items.length === 1 && 'col-span-2 !flex-row !gap-2.5'">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105" :class="h.tile">
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS[h.icon]"/></svg>
-                    </span>
-                    <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
-                  </button>
-                </template>
-              </div>
-            </article>
+              </article>
+            </div>
           </div>
         </div>
 
         <!-- ══ Columna lateral (compacta): encuentros + calendario, tareas, empresas, reto destacado ══ -->
-        <div class="flex min-w-0 flex-col gap-4">
+        <div class="contents @3xl/page:flex @3xl/page:min-w-0 @3xl/page:flex-col @3xl/page:gap-4">
           <!-- Próximos encuentros (los 2 más cercanos) + calendario en la misma tarjeta, compacta -->
-          <article class="card flex min-w-0 flex-col p-4">
+          <article class="order-4 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
               <h2 class="card-title">Próximos encuentros</h2>
               <button class="link shrink-0" @click="irA('/encuentros')">Ver todos</button>
@@ -885,11 +885,11 @@ const irA = (ruta) => router.push(ruta)
                     </span>
                     <span class="min-w-0">
                       <span class="block truncate text-[13px] font-semibold leading-tight">{{ tituloEnc(e) }}</span>
-                      <span class="block truncate text-[11px] leading-tight text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo].filter(Boolean).join(' · ') }}</span>
+                      <span class="block truncate text-[11px] leading-tight text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo && `Clase ${e.grupo}`].filter(Boolean).join(' · ') }}</span>
                     </span>
                   </button>
                   <button class="flex w-9 shrink-0 items-center justify-center rounded-r-xl text-gray-400 hover:text-centros"
-                          :aria-label="`Abrir ${tituloEnc(e)}`" @click="irA('/mis-equipos/' + e.id)">
+                          :aria-label="`Abrir ${tituloEnc(e)}`" @click="irA('/mis-grupos/' + e.id)">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </button>
                 </li>
@@ -935,7 +935,7 @@ const irA = (ruta) => router.push(ruta)
               <div class="mt-1 h-8">
                 <div v-if="selDia" class="flex h-full items-center gap-2 rounded-lg bg-centros/5 px-2 text-xs">
                   <span class="shrink-0 font-semibold capitalize text-centros">{{ fechaCorta(selDia) }}</span>
-                  <button class="min-w-0 flex-1 truncate text-left hover:text-centros" @click="irA('/mis-equipos/' + encuentrosSelDia[0].id)">
+                  <button class="min-w-0 flex-1 truncate text-left hover:text-centros" @click="irA('/mis-grupos/' + encuentrosSelDia[0].id)">
                     {{ tituloEnc(encuentrosSelDia[0]) }}<template v-if="encuentrosSelDia.length > 1"> (+{{ encuentrosSelDia.length - 1 }})</template> →
                   </button>
                   <button class="shrink-0 text-gray-400 hover:text-gray-600" aria-label="Cerrar detalle del día" @click="selDia = null">×</button>
@@ -950,7 +950,7 @@ const irA = (ruta) => router.push(ruta)
             </div>
           </article>
 
-          <article class="card flex min-w-0 flex-col p-4">
+          <article class="order-5 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-2">
               <h2 class="card-title text-base">Tareas pendientes</h2>
               <div class="flex items-center gap-1">
@@ -1008,7 +1008,7 @@ const irA = (ruta) => router.push(ruta)
             </form>
           </article>
 
-          <article class="card flex min-w-0 flex-col p-4">
+          <article class="order-7 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
               <h2 class="card-title text-base">Empresas colaboradoras</h2>
               <button class="link shrink-0" @click="irA('/empresas')">Ver todas</button>
@@ -1037,7 +1037,7 @@ const irA = (ruta) => router.push(ruta)
           </article>
 
           <!-- Reto destacado de la semana: tarjeta cuadrada bajo Empresas colaboradoras (ocupa el alto restante) -->
-          <article v-if="retoDestacado" class="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF1E2] via-[#FFF8F1] to-white p-4 shadow-sm ring-1 ring-alumnos/30">
+          <article v-if="retoDestacado" class="relative order-8 flex min-w-0 flex-col @3xl/page:order-none @3xl/page:max-h-[340px] @3xl/page:flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF1E2] via-[#FFF8F1] to-white p-4 shadow-sm ring-1 ring-alumnos/30">
             <!-- Destacado con el color de retos (naranja) en lugar de la barra del logo: fondo cálido,
                  borde naranja, pastilla y un rayo grande de marca de agua -->
             <svg aria-hidden="true" class="pointer-events-none absolute -right-5 -top-3 h-28 w-28 rotate-12 text-alumnos/10" fill="currentColor" viewBox="0 0 24 24"><path :d="ICONOS.chispa" /></svg>
@@ -1064,10 +1064,10 @@ const irA = (ruta) => router.push(ruta)
         </div>
 
         <!-- ══ Fila final (todo el ancho): banner estirado | recursos (alineado con la columna lateral) ══ -->
-        <div class="@container/main grid min-w-0 grid-cols-1 gap-4 @5xl/page:col-span-2 @5xl/page:grid-cols-[minmax(0,1fr)_300px]">
+        <div class="order-9 grid min-w-0 grid-cols-1 gap-4 @3xl/page:order-none @3xl/page:col-span-2 @3xl/page:grid-cols-[minmax(0,1fr)_clamp(260px,27%,300px)]">
           <!-- Banner pequeño de detalle (como "Toda la gestión… en un mismo lugar" en idea_dashboard.png):
                foto pegada al borde izquierdo que se funde hacia la derecha; texto y botón a su derecha -->
-          <section class="relative flex h-full min-h-[120px] min-w-0 items-stretch overflow-hidden rounded-2xl bg-gradient-to-r from-white to-[#F3F8FD] shadow-sm ring-1 ring-gray-200/70">
+          <section class="relative order-2 flex h-full min-h-[120px] min-w-0 items-stretch overflow-hidden rounded-2xl @3xl/page:order-none bg-gradient-to-r from-white to-[#F3F8FD] shadow-sm ring-1 ring-gray-200/70">
             <!-- La foto se funde con el fondo hacia la derecha (máscara en degradado) -->
             <div class="relative w-[42%] shrink-0 [mask-image:linear-gradient(to_right,black_45%,transparent)] [-webkit-mask-image:linear-gradient(to_right,black_45%,transparent)]">
               <img :src="banner.imagen" :alt="banner.alt" class="absolute inset-0 h-full w-full object-cover object-[50%_60%]" />
@@ -1113,7 +1113,7 @@ const irA = (ruta) => router.push(ruta)
             </div>
           </section>
 
-          <article class="card h-full min-w-0 p-3">
+          <article class="card order-1 h-full min-w-0 p-3 @3xl/page:order-none">
             <h2 class="card-title mb-2 text-base">Recursos destacados</h2>
             <ul class="space-y-1">
               <li>
@@ -1125,7 +1125,7 @@ const irA = (ruta) => router.push(ruta)
               <li>
                 <button class="recurso !p-1.5" @click="irA('/proyectos/terminados')">
                   <span class="recurso-icon !h-8 !w-8 bg-sky-50 text-sky-700">✓</span>
-                  <span class="min-w-0"><span class="block font-semibold">Proyectos completados</span><span class="text-xs text-gray-500">Inspiración de otros equipos</span></span>
+                  <span class="min-w-0"><span class="block font-semibold">Proyectos completados</span><span class="text-xs text-gray-500">Inspiración de otros grupos</span></span>
                 </button>
               </li>
             </ul>

@@ -26,6 +26,13 @@ import PantallaAcceso from '../views/PantallaAcceso.vue'
 import PantallaAccesoLista from '../views/PantallaAccesoLista.vue'
 import MisGrupos from '../views/MisGrupos.vue'
 import EntrarWorkspace from '../views/EntrarWorkspace.vue'
+import SeccionHub from '../views/SeccionHub.vue'
+import CalendarioDocente from '../views/CalendarioDocente.vue'
+import NotificacionesDocente from '../views/NotificacionesDocente.vue'
+import PropuestasEmpresas from '../views/PropuestasEmpresas.vue'
+import BibliotecaDiagnosticos from '../views/BibliotecaDiagnosticos.vue'
+import AlumnadoListado from '../views/AlumnadoListado.vue'
+import { SECCIONES } from '../config/navegacion.js'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, useAuthStore } from '../stores/auth.js'
 
 const SA = ROLE_SUPERADMIN  // 1
@@ -94,6 +101,13 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA] }
     },
     {
+      // Seguimiento del envío de propuestas: no pide la contraseña del directorio
+      path: '/empresas/propuestas',
+      name: 'propuestas-empresas',
+      component: PropuestasEmpresas,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
       path: '/empresas',
       name: 'empresas',
       component: EmpresasView,
@@ -114,28 +128,25 @@ const router = createRouter({
     // Compatibilidad: enlaces antiguos con el nombre "sesiones"
     { path: '/sesiones', redirect: to => ({ path: '/encuentros', query: to.query }) },
     {
-      // "equipos", no "grupos": "grupo" ya se usa en el dominio para la clase/curso del
-      // encuentro (campo Encuentro.grupo, ej. "2ºB"); esta pantalla sigue el progreso de
-      // los EQUIPOS de alumnado (modelo Equipo), de ahí el path y el name en plural "equipos".
-      // El componente sigue llamándose MisGrupos.vue (no renombrado a propósito, ver el
-      // comentario en ese archivo) — solo cambia la URL/nombre de ruta expuestos.
-      path: '/mis-equipos',
-      name: 'mis-equipos',
+      // Antes /mis-equipos (y antes de eso /mis-grupos y /dashboard/mis-grupos). Vuelve a
+      // "grupos" porque en las vistas del docente los equipos de alumnado se llaman "grupos"
+      // y la letra del encuentro (Encuentro.grupo, ej. "B") se muestra como "Clase".
+      path: '/mis-grupos',
+      name: 'mis-grupos',
       component: MisGrupos,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
-      // Antes /workspace/:id (name: workspace-docente), y antes de eso /mis-grupos/:id —
-      // mismo motivo de renombrado que la ruta de arriba (equipos, no grupos).
-      path: '/mis-equipos/:id',
-      name: 'mis-equipos-detalle',
+      // Antes /mis-equipos/:id y /workspace/:id — mismo motivo que la ruta de arriba.
+      path: '/mis-grupos/:id',
+      name: 'mis-grupos-detalle',
       component: MisGruposDetalle,
       meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
-    // Compatibilidad: enlaces antiguos con el prefijo /workspace y /mis-grupos
-    { path: '/workspace/:id', redirect: to => ({ path: `/mis-equipos/${to.params.id}`, query: to.query }) },
-    { path: '/mis-grupos', redirect: to => ({ path: '/mis-equipos', query: to.query }) },
-    { path: '/mis-grupos/:id', redirect: to => ({ path: `/mis-equipos/${to.params.id}`, query: to.query }) },
+    // Compatibilidad: enlaces antiguos (favoritos y notificaciones ya guardadas en BD con /mis-equipos)
+    { path: '/mis-equipos', redirect: to => ({ path: '/mis-grupos', query: to.query }) },
+    { path: '/mis-equipos/:id', redirect: to => ({ path: `/mis-grupos/${to.params.id}`, query: to.query }) },
+    { path: '/workspace/:id', redirect: to => ({ path: `/mis-grupos/${to.params.id}`, query: to.query }) },
     {
       // Vista pública para alumnado — acceso mediante token temporal (QR)
       path: '/reto/:token',
@@ -232,6 +243,39 @@ const router = createRouter({
     },
     // Compatibilidad: enlaces antiguos con el nombre "inicio-docente"
     { path: '/inicio-docente', redirect: to => ({ path: '/panel-docente', query: to.query }) },
+    {
+      // Secciones del panel lateral (Retos y proyectos, Encuentros, Alumnado…): cards de
+      // entrada a las herramientas de cada área — ver config/navegacion.js
+      path: '/seccion/:seccion',
+      name: 'seccion',
+      component: SeccionHub,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] },
+      beforeEnter: to => (SECCIONES[to.params.seccion] ? true : { path: '/panel-docente' })
+    },
+    {
+      path: '/calendario',
+      name: 'calendario',
+      component: CalendarioDocente,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
+      path: '/notificaciones',
+      name: 'notificaciones',
+      component: NotificacionesDocente,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
+      path: '/evaluacion/diagnosticos',
+      name: 'biblioteca-diagnosticos',
+      component: BibliotecaDiagnosticos,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
+    {
+      path: '/alumnado/listado',
+      name: 'alumnado-listado',
+      component: AlumnadoListado,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+    },
     {
       path: '/noticias/:tipo',
       name: 'noticias-listado',

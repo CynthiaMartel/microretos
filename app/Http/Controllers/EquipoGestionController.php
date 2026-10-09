@@ -115,7 +115,7 @@ class EquipoGestionController extends Controller
 
         $fasesCompletas = $equipo->fases->filter(fn($f) => $f->completada)->count();
         if ($fasesCompletas < 5) {
-            return response()->json(['error' => 'El equipo debe completar las 5 fases antes de generar el diagnóstico final.'], 422);
+            return response()->json(['error' => 'El grupo debe completar las 5 fases antes de generar el diagnóstico final.'], 422);
         }
 
         $contexto = DiagnosticoFinalService::contexto($equipo);
@@ -172,7 +172,7 @@ class EquipoGestionController extends Controller
         $equipo = $this->equipoDeMiEncuentro($request, $equipoId);
 
         if (empty($equipo->diagnostico_final)) {
-            return response()->json(['error' => 'Este equipo todavía no tiene diagnóstico final que editar.'], 422);
+            return response()->json(['error' => 'Este grupo todavía no tiene diagnóstico final que editar.'], 422);
         }
 
         $data = $request->validated();

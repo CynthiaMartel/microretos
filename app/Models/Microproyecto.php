@@ -87,9 +87,10 @@ class Microproyecto extends Model
         return $this->hasMany(Encuentro::class);
     }
 
+    // FK explícita: sin ella Laravel infiere 'docente_id' (por el nombre del método), que no existe
     public function docente()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
 
     // El proyecto es visible si: eres el docente que lo creó, o tienes acceso (propio o
@@ -136,6 +137,20 @@ class Microproyecto extends Model
     public function totalClasesEstimadas(): int
     {
         return count($this->diseno_microproyecto['clases'] ?? []);
+    }
+
+    // Nombres de los módulos que trabaja el proyecto: los elegidos en el asistente
+    // (modulos_seleccionados: [{id, nombre}]) o, en proyectos antiguos sin ellos, los
+    // que aparecen en la evaluación oficial (RA/CE por módulo). Lo usan los Resources
+    // de encuentros para mostrar y agrupar por módulo.
+    public function nombresModulos(): array
+    {
+        $nombres = collect($this->modulos_seleccionados ?? [])->pluck('nombre');
+        if ($nombres->filter()->isEmpty()) {
+            $nombres = collect($this->evaluacion_oficial ?? [])->pluck('modulo');
+        }
+
+        return $nombres->filter()->map(fn ($n) => trim((string) $n))->unique()->values()->all();
     }
 
     // Fecha fin sugerida/mínima a partir de una fecha de inicio, según el total de

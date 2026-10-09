@@ -6,6 +6,7 @@ use App\Http\Requests\StoreEncuentroColaboradorRequest;
 use App\Http\Requests\UpdateEncuentroColaboradorRequest;
 use App\Models\Encuentro;
 use App\Models\User;
+use App\Services\NotificacionDocenteService;
 use Illuminate\Http\Request;
 
 class EncuentroColaboradorController extends Controller
@@ -60,9 +61,19 @@ class EncuentroColaboradorController extends Controller
         $encuentro = $this->encuentroGestionablePor($request, $id);
         $validated = $request->validated();
 
-        $encuentro->colaboradores()->syncWithoutDetaching([
+        $cambios = $encuentro->colaboradores()->syncWithoutDetaching([
             $validated['user_id'] => ['puede_editar' => $validated['puede_editar'] ?? false],
         ]);
+
+        // Solo se avisa a quien entra nuevo (no al reenviar a alguien que ya estaba)
+        if (in_array((int) $validated['user_id'], array_map('intval', $cambios['attached']), true)) {
+            app(NotificacionDocenteService::class)->invitacionEncuentro(
+                $encuentro,
+                User::findOrFail($validated['user_id']),
+                $request->user(),
+                (bool) ($validated['puede_editar'] ?? false),
+            );
+        }
 
         return response()->json(
             $encuentro->colaboradores()->get(['users.id', 'users.name'])->map(fn($u) => [

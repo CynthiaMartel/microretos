@@ -37,7 +37,8 @@ class Encuentro extends Model
         'num_alumnos'      => 'integer',
         'num_equipos'      => 'integer',
         'microproyecto_id' => 'integer',
-        'alumnados'        => 'array',
+        // Nombres del alumnado: cifrados igual que equipo_miembros.nombre (datos personales)
+        'alumnados'        => 'encrypted:array',
     ];
 
     /** @return BelongsTo<User, $this> */
