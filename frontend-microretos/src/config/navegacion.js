@@ -128,12 +128,13 @@ export const SECCIONES = {
     // `conector`: texto sobre la línea que sale del paso hacia el siguiente; el último
     // paso de una fase usa el `conector` de la fase (paso a la fase siguiente).
     // `concepto` (opcional): qué es lo que se trabaja en la fase, mismos textos que
-    // ComoFuncionaModal.vue; se pinta con ConceptoClave sobre los pasos de la fase.
+    // ComoFuncionaModal.vue. El nombre de la fase se destaca y, al pulsarlo, abre un toast
+    // con la definición (ConceptoClave); `pregunta` es el texto del tooltip al pasar el cursor.
     flujo: {
       titulo: 'Mira cómo funciona',
       fases: [
         { nombre: 'Retos', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Elige el reto',
-          concepto: { color: 'centros', segmentos: [
+          concepto: { color: 'centros', pregunta: '¿Qué es un reto?', segmentos: [
             { t: 'Un ' }, { t: 'RETO', b: true }, { t: ' es la necesidad real de una empresa, transformada (con ayuda de la IA) en una ' },
             { t: 'pregunta', b: true }, { t: ' que el alumnado deberá responder.' },
           ] },
@@ -144,7 +145,7 @@ export const SECCIONES = {
               desc: 'Aquí están los retos ya disponibles y los que guardes tú: elige el que quieras trabajar.' },
           ] },
         { nombre: 'Proyectos', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: null,
-          concepto: { color: 'empresas', segmentos: [
+          concepto: { color: 'empresas', pregunta: '¿Qué es un proyecto?', segmentos: [
             { t: 'Una ' }, { t: 'PROPUESTA', b: true }, { t: ' es la concreción curricular del reto que hace el docente. Al validarla la empresa y el propio docente, pasa a ser ' },
             { t: 'PROYECTO', b: true }, { t: ': la respuesta que elaborará el alumnado, con sus fases, entregables y evaluación.' },
           ] },

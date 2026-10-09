@@ -1,9 +1,11 @@
 <!-- Flujo explicativo por fases (config/navegacion.js → SECCIONES[x].flujo). Es una explicación,
      no navegación: pasos numerados sobre una línea discontinua, sin cards ni hover.
      En móvil la línea es vertical (timeline); desde lg, horizontal con las fases en fila.
+     Si una fase tiene `concepto`, su nombre se destaca: al pasar el cursor muestra la pregunta
+     ("¿Qué es un reto?") y al pulsarlo abre un toast con la definición (ConceptoClave).
      Lo usan SeccionHub.vue y ComoFuncionaModal.vue. -->
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import ConceptoClave from './ConceptoClave.vue'
 
 const props = defineProps({
@@ -22,24 +24,50 @@ const totalPasos = computed(() => fases.value.reduce((t, f) => t + f.pasos.lengt
 // Texto de la línea que sale de un paso: el suyo, o el de la fase si es su último paso
 const conectorDe = (fase, fi, pi) =>
   pi < fase.pasos.length - 1 ? fase.pasos[pi].conector : (fi < fases.value.length - 1 ? fase.conector : null)
+
+// ── Toast con la definición del concepto ──────────────────────────────────────
+const TOAST_MS = 10000
+const conceptoAbierto = ref(null)
+let temporizador = null
+
+function cerrarConcepto() {
+  clearTimeout(temporizador)
+  conceptoAbierto.value = null
+  document.removeEventListener('keydown', onTecla)
+}
+function onTecla(e) { if (e.key === 'Escape') cerrarConcepto() }
+function abrirConcepto(concepto) {
+  clearTimeout(temporizador)
+  conceptoAbierto.value = concepto
+  temporizador = setTimeout(cerrarConcepto, TOAST_MS)
+  document.addEventListener('keydown', onTecla)
+}
+onBeforeUnmount(cerrarConcepto)
 </script>
 
 <template>
   <!-- En horizontal, cada fase ocupa en proporción a sus pasos (fr = nº de pasos) y comparte
-       filas (subgrid) para que los conceptos de distinta altura no desalineen la línea de pasos -->
-  <div class="flex flex-col px-1 sm:px-2 lg:grid lg:grid-rows-[auto_auto_auto]"
+       filas (subgrid) para que las etiquetas de distinta altura no desalineen la línea de pasos -->
+  <div class="flex flex-col px-1 sm:px-2 lg:grid lg:grid-rows-[auto_auto]"
        :style="{ gridTemplateColumns: fases.map(f => `${f.pasos.length}fr`).join(' ') }">
-    <div v-for="(fase, fi) in fases" :key="fase.nombre" class="lg:row-span-3 lg:grid lg:grid-rows-subgrid">
+    <div v-for="(fase, fi) in fases" :key="fase.nombre" class="lg:row-span-2 lg:grid lg:grid-rows-subgrid">
       <!-- Etiqueta de fase con su regla, a modo de llave sobre sus pasos -->
-      <div class="mb-3 flex items-center gap-2 lg:pr-6" :class="fase.texto">
-        <span class="text-[11px] font-black uppercase tracking-widest">{{ fase.nombre }}</span>
-        <span class="h-px flex-1 bg-current opacity-25" />
-      </div>
-
-      <!-- Qué es lo que se trabaja en la fase (reto, propuesta/proyecto…). Contenedor siempre
-           presente para mantener las tres filas del subgrid aunque la fase no tenga concepto -->
-      <div class="lg:pr-6">
-        <ConceptoClave v-if="fase.concepto" class="mb-4 lg:mb-5" :color="fase.concepto.color" :segmentos="fase.concepto.segmentos" />
+      <div class="mb-3 flex items-end gap-2 lg:pr-6" :class="fase.texto">
+        <!-- Con concepto: nombre destacado, tooltip con la pregunta y toast al pulsar -->
+        <span v-if="fase.concepto" class="group relative">
+          <button type="button"
+                  class="flex items-center gap-1.5 rounded-md font-heading text-lg font-black uppercase tracking-wider underline decoration-current/40 decoration-dashed decoration-2 underline-offset-4 transition hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 sm:text-xl"
+                  :aria-label="fase.concepto.pregunta" @click="abrirConcepto(fase.concepto)">
+            {{ fase.nombre }}
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-current/15 text-[11px] no-underline" aria-hidden="true">?</span>
+          </button>
+          <span role="tooltip"
+                class="pointer-events-none absolute bottom-full left-0 z-20 mb-2 whitespace-nowrap rounded-lg bg-azul-noche px-2.5 py-1 text-xs font-semibold normal-case tracking-normal text-white opacity-0 shadow-md transition group-hover:opacity-100 group-focus-within:opacity-100">
+            {{ fase.concepto.pregunta }}
+          </span>
+        </span>
+        <span v-else class="text-[11px] font-black uppercase tracking-widest">{{ fase.nombre }}</span>
+        <span class="mb-1.5 h-px flex-1 bg-current opacity-25" />
       </div>
 
       <ol class="flex flex-col lg:flex-row">
@@ -66,5 +94,21 @@ const conectorDe = (fase, fi, pi) =>
         </li>
       </ol>
     </div>
+
+  <!-- Toast con la definición: abajo y centrado (el de sesión de App.vue va abajo a la derecha).
+       Dentro del nodo raíz para que el componente siga recibiendo `class` de quien lo usa -->
+  <Teleport to="body">
+    <Transition enter-from-class="translate-y-3 opacity-0" leave-to-class="translate-y-3 opacity-0"
+                enter-active-class="transition duration-200 ease-out" leave-active-class="transition duration-150 ease-in">
+      <div v-if="conceptoAbierto" role="status" aria-live="polite"
+           class="fixed bottom-4 left-1/2 z-[60] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl bg-white shadow-xl">
+        <ConceptoClave class="pr-10" :color="conceptoAbierto.color" :segmentos="conceptoAbierto.segmentos" />
+        <button type="button" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-700"
+                aria-label="Cerrar" @click="cerrarConcepto">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </Transition>
+  </Teleport>
   </div>
 </template>
