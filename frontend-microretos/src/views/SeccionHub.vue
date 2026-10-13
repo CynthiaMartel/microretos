@@ -144,26 +144,30 @@ const abrir = (card) => {
           </div>
           <!-- Con `separador` los botones son caminos alternativos ("o"); sin él, pantallas en paralelo -->
           <div class="grid items-stretch gap-2"
-               :class="bloque.separador ? 'sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'sm:grid-cols-2'">
+               :class="bloque.separador
+                 ? (bloque.cards.some(c => c.compacta) ? 'sm:grid-cols-[minmax(0,1.6fr)_auto_minmax(0,1fr)]' : 'sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]')
+                 : 'sm:grid-cols-2'">
             <template v-for="(card, i) in bloque.cards" :key="card.titulo">
               <span v-if="i > 0 && bloque.separador" aria-hidden="true"
                     class="flex items-center justify-center text-xs font-semibold uppercase tracking-widest text-gray-400">{{ bloque.separador }}</span>
               <button type="button" @click="abrir(card)"
-                      class="group flex min-w-0 flex-col rounded-xl p-4 text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-md"
-                      :class="[i === 0 && bloque.destacarPrimera ? 'bg-centros/5 ring-centros/25' : 'bg-white ring-gray-200/70', claseResalte(card)]">
-                <span class="flex items-center gap-3">
-                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105" :class="card.tile">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                      class="group flex min-w-0 flex-col rounded-xl text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-md"
+                      :class="[card.compacta ? 'p-3 sm:self-center' : 'p-4', i === 0 && bloque.destacarPrimera ? 'bg-centros/5 ring-centros/25' : 'bg-white ring-gray-200/70', claseResalte(card)]">
+                <!-- `compacta`: botón secundario más pequeño (icono, título y texto reducidos) -->
+                <span class="flex items-center" :class="card.compacta ? 'gap-2' : 'gap-3'">
+                  <span class="flex shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105"
+                        :class="[card.tile, card.compacta ? 'h-8 w-8' : 'h-10 w-10']">
+                    <svg :class="card.compacta ? 'h-4 w-4' : 'h-5 w-5'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                       <path :d="ICONOS_NAV[card.icon]" />
                     </svg>
                   </span>
                   <span class="min-w-0">
                     <span v-if="card.etiqueta" class="block text-[10px] font-bold uppercase tracking-widest"
                           :class="i === 0 && bloque.destacarPrimera ? 'text-centros' : 'text-gray-400'">{{ card.etiqueta }}</span>
-                    <span class="block text-sm font-semibold">{{ card.titulo }}</span>
+                    <span class="block font-semibold" :class="card.compacta ? 'text-xs' : 'text-sm'">{{ card.titulo }}</span>
                   </span>
                 </span>
-                <span class="mt-2 block text-xs leading-relaxed text-gray-500">{{ card.desc }}</span>
+                <span class="mt-2 block leading-relaxed text-gray-500" :class="card.compacta ? 'text-[11px]' : 'text-xs'">{{ card.desc }}</span>
               </button>
             </template>
           </div>

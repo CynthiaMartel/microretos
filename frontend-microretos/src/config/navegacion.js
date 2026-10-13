@@ -114,19 +114,20 @@ export const SECCIONES = {
         integrada: true,
         ruta: '/proyectos',routeName: 'startup-day', icon: 'capas', tile: 'bg-empresas' },
     ],
-    // Bloque secundario: de qué reto parte el proyecto. La biblioteca va primero porque es
-    // la vía directa; el generador es opcional, para personalizar lo que se trabaja.
+    // Bloque secundario: de qué reto parte el proyecto. El generador va primero y destacado;
+    // la biblioteca va en pequeño (`compacta`): es solo un acceso directo para consultarla,
+    // porque los retos concretos se eligen dentro de «Generar proyecto».
     bloqueSecundario: {
       separador: 'o', destacarPrimera: true,
       titulo: '¿De qué reto parte tu proyecto?',
-      texto: 'Todo proyecto nace de un reto: la necesidad real de una empresa convertida en una pregunta para tu alumnado. Tenemos una biblioteca con retos disponibles, pero si quieres crear tu reto personalizado utiliza nuestro generador.',
+      texto: 'Todo proyecto nace de un reto: la necesidad real de una empresa convertida en una pregunta para tu alumnado. Crea tu reto a medida con el generador o consulta la biblioteca de retos. Al pulsar «Generar proyecto» también podrás elegir ahí mismo los retos concretos de la biblioteca.',
       cards: [
-        { titulo: 'Biblioteca de retos', etiqueta: 'Listos para usar',
-          desc: 'Elige entre los retos que ya existen para tu familia profesional y empieza tu proyecto directamente.',
-          ruta: '/retos', routeName: 'biblioteca', icon: 'libro', tile: 'bg-centros' },
         { titulo: 'Generador de retos', etiqueta: 'Para personalizar',
-          desc: 'Si quieres trabajar algo concreto, crea un reto a medida: eliges la empresa, los módulos y los RA y CE.',
-          ruta: '/retos/crear', routeName: 'microretos', icon: 'rayo', tile: 'bg-azul-noche' },
+          desc: 'Crea un reto a medida: eliges la empresa, los módulos y los RA y CE.',
+          ruta: '/retos/crear', routeName: 'microretos', icon: 'rayo', tile: 'bg-centros' },
+        { titulo: 'Biblioteca de retos', etiqueta: 'Consultar', compacta: true,
+          desc: 'Acceso directo para ver los retos disponibles. Para usarlos, elígelos en «Generar proyecto».',
+          ruta: '/retos', routeName: 'biblioteca', icon: 'libro', tile: 'bg-azul-noche' },
       ],
     },
     // Flujo explicativo (no navega): del reto al proyecto validado, agrupado por fases.

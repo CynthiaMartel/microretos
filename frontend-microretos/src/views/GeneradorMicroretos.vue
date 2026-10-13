@@ -456,6 +456,7 @@ const seleccionarEmpresa = (emp) => {
   seleccion.value.empresaNombre = emp.nombre_comercial;
   buscadorEmpresa.value = emp.nombre_comercial;
   mostrarDropdownEmpresas.value = false;
+  avisoCatalogo.value = '';
 };
 
 const abrirModalEmpresa = () => {
@@ -691,8 +692,12 @@ const usarDelCatalogo = async (plantilla) => {
     const { data } = await usarEmpresaCatalogo(plantilla.id, payload);
     const yaEnLista = empresas.value.find(e => String(e.id) === String(data.empresa.id));
     if (yaEnLista) seleccionarEmpresa(yaEnLista); else onEmpresaCreada(data.empresa);
-    avisoCatalogo.value = data.nueva ? '' : 'Tu centro ya tenía una copia de esta empresa: la hemos seleccionado.';
-    if (data.nueva) panelCatalogo.value = false;
+    // El panel se cierra siempre para que se vea la empresa ya seleccionada debajo; el
+    // aviso se muestra fuera del panel.
+    avisoCatalogo.value = data.nueva
+      ? `«${data.empresa.nombre_comercial}» se ha copiado a ${authStore.isSuperAdmin ? 'este centro' : 'tu centro'} y está seleccionada.`
+      : `${authStore.isSuperAdmin ? 'Este centro' : 'Tu centro'} ya tenía una copia de «${data.empresa.nombre_comercial}»: la hemos seleccionado.`;
+    panelCatalogo.value = false;
   } catch (e) {
     errorCatalogo.value = e.response?.data?.error || e.response?.data?.message || 'No se pudo usar esta empresa.';
   } finally {
@@ -771,6 +776,7 @@ const limpiarFormulario = () => {
     panelFicticiaIA.value = false; // al desmontarse, el componente descarta su propuesta
     if (borradorIA.value) descartarBorradorIA();
     panelCatalogo.value = false;
+    avisoCatalogo.value = '';
     todosGuardados.value = false;
     esModoDemo.value = false;
     mostrarSelectorDemo.value = false;
@@ -2044,6 +2050,11 @@ async function guardarEstadoGen(nuevoEstado) {
                         Catálogo DuaLab
                       </button>
                     </div>
+                    <p v-if="avisoCatalogo && !panelFicticiaIA && !panelCatalogo" role="status"
+                       class="mt-3 flex items-start gap-2 text-xs font-bold text-centros bg-centros/5 border border-centros/20 rounded-xl px-3 py-2 break-words">
+                      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      <span class="min-w-0">{{ avisoCatalogo }}</span>
+                    </p>
 
                     <!-- Catálogo DuaLab: plantillas compartidas; se usan a través de una copia del centro -->
                     <div v-if="panelCatalogo" class="p-4 sm:p-5 rounded-2xl border-2 border-centros/20 bg-centros/5">
@@ -2084,7 +2095,6 @@ async function guardarEstadoGen(nuevoEstado) {
                           </button>
                         </li>
                       </ul>
-                      <p v-if="avisoCatalogo" class="mt-2 text-xs font-bold text-centros">{{ avisoCatalogo }}</p>
                       <p v-if="errorCatalogo" role="alert" class="mt-2 text-xs font-bold text-red-500">{{ errorCatalogo }}</p>
                     </div>
 
