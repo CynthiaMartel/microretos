@@ -142,7 +142,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
     Route::post('/admin/logout',          [AdminAuthController::class, 'logout']);
-    Route::middleware('throttle:5,1')
+    // Todo `throttle:N,M` lleva un prefijo propio (3.er argumento): sin él, la clave del
+    // contador es solo el id del usuario y TODAS las rutas con throttle comparten cupo
+    // (6 consultas a /notificaciones/no-leidas agotaban el 5/min de /generar-microreto → 429).
+    Route::middleware('throttle:5,1,verify-password')
         ->post('/admin/verify-password', [AdminAuthController::class, 'verifyPassword']);
 
     // Perfil propio (accesible por todos los roles autenticados)
@@ -150,7 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/perfil', [AdminAuthController::class, 'updatePerfil']);
 
     // Biblioteca de microretos (lectura — todos los roles autenticados)
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware('throttle:60,1,microretos-lectura')->group(function () {
         Route::get('/microretos',      [MicroretoIAController::class, 'index']);
         Route::get('/microretos/{id}', [MicroretoIAController::class, 'show']);
     });
@@ -179,7 +182,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/ciclos/{id}',  [DatosFPController::class, 'destroyCiclo']);
         // Currículo del ciclo (módulos, RA y CE) desde CSV; throttle propio: procesa archivos grandes
         Route::post('/ciclos/{id}/curriculo/importar', [CurriculoController::class, 'importar'])
-            ->whereNumber('id')->middleware('throttle:20,1');
+            ->whereNumber('id')->middleware('throttle:20,1,curriculo-importar');
 
         // Papelera
         Route::prefix('papelera')->group(function () {
@@ -216,7 +219,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Notificaciones in-app y notas personales (vistas Notificaciones y Calendario).
         // Siempre sobre el usuario autenticado; el contador se consulta al navegar.
         // Rutas fijas antes que las paramétricas.
-        Route::middleware('throttle:60,1')->group(function () {
+        Route::middleware('throttle:60,1,docente-panel')->group(function () {
             Route::get('/notificaciones',                [NotificacionController::class, 'index']);
             Route::get('/notificaciones/no-leidas',      [NotificacionController::class, 'contadorNoLeidas']);
             Route::post('/notificaciones/leer-todas',    [NotificacionController::class, 'marcarTodasLeidas']);
@@ -236,10 +239,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Listado de alumnado participante (por encuentros visibles para el usuario).
         // Respuesta pesada (equipos, fases, tareas…): throttle propio más bajo.
-        Route::get('/alumnado', [AlumnadoController::class, 'index'])->middleware('throttle:30,1');
+        Route::get('/alumnado', [AlumnadoController::class, 'index'])->middleware('throttle:30,1,alumnado');
 
         // Generación IA: throttle estricto (5/min por usuario)
-        Route::middleware('throttle:5,1')->group(function () {
+        Route::middleware('throttle:5,1,ia-generacion')->group(function () {
             Route::post('/generar-microreto',        [MicroretoIAController::class, 'generar']);
             Route::post('/simular-info-empresa',     [MicroretoIAController::class, 'simularInfoEmpresa']);
             // Empresa ficticia completa (datos + diagnóstico) desde el Generador: la IA genera
@@ -248,7 +251,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // Confirmar (guardar) o descartar la propuesta de empresa ficticia generada con IA.
-        Route::middleware('throttle:30,1')->group(function () {
+        Route::middleware('throttle:30,1,ficticia-ia')->group(function () {
             Route::post('/empresas/ficticia-ia',                     [EmpresaFicticiaController::class, 'store']);
             // Ruta fija antes que las paramétricas de /empresas/ficticia-ia/propuesta/{token}
             Route::get('/empresas/ficticia-ia/familias',             [EmpresaFicticiaController::class, 'familiasDisponibles']);
@@ -263,19 +266,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/empresas/catalogo',             [EmpresaFicticiaController::class, 'catalogo']);
         Route::post('/empresas/catalogo/{id}/usar',  [EmpresaFicticiaController::class, 'usarEnCentro'])
             ->whereNumber('id')
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:30,1,catalogo-usar');
 
         // Datos de ficha de una empresa: docente solo sus ficticias, admin las de su centro,
         // superadmin todas (EmpresaPolicy::update). Alta y estado siguen siendo de admin.
         Route::put('/empresas/{id}', [DatosFPController::class, 'actualizarEmpresa'])
             ->whereNumber('id')
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:30,1,empresa-editar');
 
         // Diagnóstico de empresa desde el Generador (P1–P4): solo ficticias de su centro,
         // las reales están protegidas (ver EmpresaPolicy::actualizarDiagnostico).
         Route::patch('/empresas/{id}/diagnostico', [DatosFPController::class, 'actualizarDiagnosticoEmpresa'])
             ->whereNumber('id')
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:30,1,empresa-diagnostico');
 
         // Guardado y borrado de microretos
         Route::post('/guardar-microreto-bd',    [MicroretoIAController::class, 'guardarEnBD']);
@@ -310,7 +313,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/encuentros/{id}',                  [EncuentroController::class, 'destroy']);
 
         // Subida y gestión de recursos (Cloudinary)
-        Route::middleware('throttle:30,1')->group(function () {
+        Route::middleware('throttle:30,1,upload')->group(function () {
             Route::get('/upload/recursos',           [UploadController::class, 'listar']);
             Route::post('/upload/recurso',           [UploadController::class, 'recurso']);
             Route::delete('/upload/recurso',         [UploadController::class, 'destroy']);
@@ -318,7 +321,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // Módulo Empresas — contacto y validación
-        Route::middleware('throttle:10,1')
+        Route::middleware('throttle:10,1,empresas-acceso')
             ->post('/empresas/verificar-acceso', [EmpresaContactoController::class, 'verificarAcceso']);
         Route::post('/empresas/{id}/contactar',          [EmpresaContactoController::class, 'contactar']);
         Route::post('/empresas/{id}/enviar-validacion',  [EmpresaContactoController::class, 'enviarValidacion']);
@@ -333,7 +336,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/startup/proyectos/{uuid}',              [MicroproyectoController::class, 'destroy']);
 
         // StartUp Day — IA: sugerencia de RA/CE y KPIs
-        Route::middleware('throttle:10,1')->group(function () {
+        Route::middleware('throttle:10,1,startup-ia')->group(function () {
             Route::post('/startup/sugerir-ra-ce',           [MicroproyectoController::class, 'sugerirRaCe']);
             Route::post('/startup/sugerir-kpis',            [MicroproyectoController::class, 'sugerirKpis']);
             Route::post('/startup/sugerir-objetivos',       [MicroproyectoController::class, 'sugerirObjetivos']);
@@ -356,7 +359,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->whereNumber('id');
 
         // Diagnóstico final IA — mismo throttle que el resto de llamadas de generación (arriba)
-        Route::middleware('throttle:10,1')
+        Route::middleware('throttle:10,1,diagnostico-final')
             ->post('/startup/equipos/{id}/diagnostico-final', [EquipoGestionController::class, 'diagnosticoFinal'])
             ->whereNumber('id');
         // Edición manual del diagnóstico — sin llamada externa, basta el throttle global
@@ -370,7 +373,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/',                      [AdminUserController::class, 'store']);
         Route::get('/papelera',               [AdminUserController::class, 'papelera']);
         // Throttle propio: implica cambio de contraseña de otra cuenta, más restrictivo que el resto del CRUD
-        Route::middleware('throttle:20,1')
+        Route::middleware('throttle:20,1,admin-usuario-editar')
             ->patch('/{user}',                [AdminUserController::class, 'update']);
         Route::patch('/{user}/activar',       [AdminUserController::class, 'activar']);
         Route::patch('/{user}/bloquear',      [AdminUserController::class, 'toggleBloquear']);
