@@ -77,6 +77,23 @@ microretos/                         ← raíz del proyecto (backend)
         └── general/               ← comandos portables a otros proyectos
 ```
 
+## Responsive — norma obligatoria en el frontend
+
+Toda vista o componente `.vue` nuevo o modificado debe funcionar en **360px (móvil), 768px (tablet) y 1280px (escritorio)**, sin scroll horizontal y sin contenido cortado. Una tarea de frontend no está terminada si solo se ha pensado en escritorio.
+
+- **Mobile-first:** la clase sin prefijo es la de móvil; los prefijos (`sm:` 640 · `md:` 768 · `lg:` 1024 · `xl:` 1280) abren el layout. Ejemplo: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, nunca `grid-cols-3` sin prefijo.
+- **Sin anchos fijos que desborden:** nada de `w-[600px]` sin prefijo. En modales y paneles flotantes, `w-[min(40rem,calc(100vw-2rem))]` o `max-w-*` + `w-full`.
+- **Textos variables** (títulos, empresas, emails): `min-w-0` + `truncate` o `break-words`; nunca `whitespace-nowrap` sin control de overflow.
+- **Tablas:** dentro de `overflow-x-auto`, o con vista alternativa en tarjetas para móvil.
+- **Filas `flex`** con varios elementos: `flex-wrap` o `flex-col sm:flex-row`.
+- **Táctil:** nada que dependa solo de hover (acciones con `group-hover`, tooltips sin alternativa); objetivos táctiles de unos 36px como mínimo.
+- **Tipografía y espaciado** grandes, con versión reducida en móvil (`text-2xl sm:text-4xl`, `p-4 sm:p-8`).
+- **Elementos `fixed`** (toasts, barras): limitados en alto (`max-h-[70vh]` + scroll) y sin tapar contenido en móvil.
+
+Antes de dar por terminada una tarea que toque layout, revisar el código contra estas reglas y proponer `/general:responsive-audit [Vista]`. Para verificarlo en el navegador hace falta una sesión: pedir credenciales de un usuario existente; nunca crear usuarios ni cambiar contraseñas (ver regla de base de datos).
+
+---
+
 ## Backlog de seguridad — SECURITY_FIXES.md
 
 Existe `SECURITY_FIXES.md` en la raíz con todos los issues de seguridad detectados en auditoría SAST/DAST, clasificados por prioridad:
@@ -101,4 +118,5 @@ Los agentes generales están definidos en `~/.claude/CLAUDE.md`. Además de esos
 | El usuario quiere resolver un ítem concreto de SECURITY_FIXES.md (C1, A3, M7…) | `/specific_dualab:fix [código]` |
 | Se añaden o modifican rutas en `routes/api.php` | `/general:route-audit` |
 | Se modifican componentes `.vue` o archivos en `frontend-microretos/src/` | `/general:vue-audit` |
+| Se crean o modifican vistas/componentes `.vue` que afectan al layout | `/general:responsive-audit [Vista]` |
 | La tarea termina con cambios sin commitear | `/general:commit` |

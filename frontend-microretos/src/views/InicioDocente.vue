@@ -79,10 +79,11 @@ const proCurso   = computed(() => proyectos.value.filter(p => cursoDe(fechaProye
 
 // ── Contadores ────────────────────────────────────────────────────────────────
 const kpis = computed(() => [
-  { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/mis-grupos' },
-  { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/empresas' },
+  { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/seccion/alumnado' },
+  { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/seccion/empresas' },
+  // Mismo criterio que /proyectos/terminados: estado 'completado' (solo se llega desde 'validado')
+  { key: 'completados', valor: proCurso.value.filter(p => p.estado === 'completado').length, label: 'Proyectos completados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos/terminados' },
   { key: 'encuentros', valor: encCurso.value.length,                                                 label: 'Encuentros realizados',  tile: 'bg-centros',          num: 'text-centros',          icon: 'encuentro', ruta: '/encuentros' },
-  { key: 'validados',  valor: proCurso.value.filter(p => ['validado', 'completado'].includes(p.estado)).length, label: 'Proyectos validados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
 ])
 
 // ── Impacto acumulado del curso ───────────────────────────────────────────────

@@ -13,3 +13,13 @@ export const getModulosDeCiclo = (cicloId) => api.get(`/ciclos/${cicloId}/modulo
 
 // RA de un módulo con sus CE: { ra: [{ id, orden, descripcion, criterios: [{ id, orden, descripcion }] }] }
 export const getRaCeModulo = (moduloId) => api.get(`/modulos/${moduloId}/ra-ce`);
+
+// Currículo de un ciclo (módulos, RA y CE) desde CSV — superadmin. Con simular=true solo valida.
+export const importarCurriculo = (cicloId, archivo, simular) => {
+  const datos = new FormData();
+  datos.append('archivo', archivo);
+  datos.append('simular', simular ? '1' : '0');
+  return api.post(`/ciclos/${cicloId}/curriculo/importar`, datos, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};

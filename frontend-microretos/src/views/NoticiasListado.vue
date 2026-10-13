@@ -1,5 +1,6 @@
 <!-- Ruta: /noticias/:tipo — listado completo, accedido desde las secciones de noticias de /panel-docente -->
 <script setup>
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { noticiasDualab, novedadesPlataforma } from '../data/noticiasMock.js'
@@ -33,21 +34,8 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <!-- Cabecera -->
-      <header class="mb-8">
-        <button @click="router.push({ name: 'inicio-docente' })"
-                class="inline-flex items-center gap-1.5 mb-4 text-[11px] font-black uppercase
-                       tracking-widest text-gray-400 hover:text-gray-600 transition-colors">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Panel docente
-        </button>
-        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-azul-noche">
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-centros to-primary-400">{{ config.titulo }}</span>
-        </h1>
-        <p class="text-gray-500 text-sm mt-1">{{ config.descripcion }}</p>
-      </header>
+      <CabeceraSeccion :titulo="config.titulo" :volver="{ name: 'inicio-docente' }"
+                       :subtitulo="config.descripcion" class="mb-8" />
 
       <!-- Estado vacío -->
       <div v-if="!config.items.length" class="text-center py-16">

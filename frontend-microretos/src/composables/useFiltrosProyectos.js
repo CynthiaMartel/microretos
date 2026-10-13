@@ -1,10 +1,11 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { modulosDeProyecto, modulosDisponibles as listarModulos } from '../utils/modulos.js';
 
 // Sentinela para agrupar proyectos sin familia_id (legacy) — nunca se ocultan,
 // a diferencia de BibliotecaMicroretos.vue que sí puede descartar retos huérfanos.
 export const SIN_FAMILIA = '__sin_familia__';
 
-// Filtros por familia/ciclo/curso + búsqueda, compartidos entre /proyectos y
+// Filtros por familia/ciclo/módulo/curso + búsqueda, compartidos entre /proyectos y
 // /proyectos/terminados — mismo patrón (familia → ciclo/curso dependientes)
 // que BibliotecaMicroretos.vue. `filtroFamilia` actúa como selector de "capa":
 // '' = capa de familias (o vista "Todos" en capa de detalle, según la vista lo use),
@@ -13,10 +14,12 @@ export function useFiltrosProyectos(proyectosBase) {
   const busqueda      = ref('');
   const filtroFamilia = ref('');
   const filtroCiclo   = ref('');
+  const filtroModulo  = ref('');
   const filtroCurso   = ref('');
 
   const resetFiltrosDetalle = () => {
     filtroCiclo.value = '';
+    filtroModulo.value = '';
     filtroCurso.value = '';
   };
 
@@ -53,6 +56,16 @@ export function useFiltrosProyectos(proyectosBase) {
     return [...new Set(d.map(p => p.ciclo_nombre).filter(Boolean))].sort();
   });
 
+  // Módulos de los proyectos de la familia (y del ciclo, si hay uno elegido)
+  const modulosDisponibles = computed(() => {
+    if (!filtroFamilia.value) return [];
+    let d = proyectosBase.value.filter(coincideFamilia);
+    if (filtroCiclo.value) d = d.filter(p => p.ciclo_nombre === filtroCiclo.value);
+    return listarModulos(d, modulosDeProyecto);
+  });
+  // El módulo depende del ciclo: al cambiar de ciclo se quita
+  watch(filtroCiclo, () => { filtroModulo.value = ''; });
+
   const cursosDisponibles = computed(() => {
     let d = proyectosBase.value.filter(coincideFamilia);
     if (filtroCiclo.value) d = d.filter(p => p.ciclo_nombre === filtroCiclo.value);
@@ -85,12 +98,13 @@ export function useFiltrosProyectos(proyectosBase) {
   }
 
   const hayFiltrosDetalleActivos = computed(() =>
-    !!(filtroCiclo.value || filtroCurso.value || busqueda.value)
+    !!(filtroCiclo.value || filtroModulo.value || filtroCurso.value || busqueda.value)
   );
 
   function aplicarFiltros(lista) {
     let out = lista.filter(coincideFamilia);
     if (filtroCiclo.value) out = out.filter(p => p.ciclo_nombre === filtroCiclo.value);
+    if (filtroModulo.value) out = out.filter(p => modulosDeProyecto(p).includes(filtroModulo.value));
     if (filtroCurso.value) out = out.filter(p => String(p.curso) === String(filtroCurso.value));
     if (busqueda.value.trim()) {
       const q = busqueda.value.toLowerCase();
@@ -104,8 +118,8 @@ export function useFiltrosProyectos(proyectosBase) {
   }
 
   return {
-    busqueda, filtroFamilia, filtroCiclo, filtroCurso,
-    familiasDisponibles, countSinFamilia, ciclosDisponibles, cursosDisponibles,
+    busqueda, filtroFamilia, filtroCiclo, filtroModulo, filtroCurso,
+    familiasDisponibles, countSinFamilia, ciclosDisponibles, modulosDisponibles, cursosDisponibles,
     coincideFamilia, seleccionarFamilia, seleccionarCiclo, seleccionarCurso,
     volverAFamilias, limpiarFiltrosDetalle, hayFiltrosDetalleActivos, aplicarFiltros,
   };

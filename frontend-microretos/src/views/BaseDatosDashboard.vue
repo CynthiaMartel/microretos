@@ -291,6 +291,16 @@ const plantillasCatalogo = computed(() => {
 // Plantillas sin ninguna familia con módulos y RA/CE: los centros no las ven (no se podría
 // completar un reto con ellas). Aquí siguen visibles para poder editarlas o eliminarlas.
 const plantillasOcultas = computed(() => plantillasCatalogo.value.filter(e => e.disponible_para_retos === false).length)
+// Familias que dejan plantillas ocultas (sin contar la búsqueda): qué hay que completar
+const familiasSinDatosConPlantillas = computed(() => {
+  const sinDatos = new Set(familiasProfesionales.value.filter(f => !f.con_datos_retos).map(f => f.nombre))
+  const nombres = empresas.value
+    .filter(e => e.es_catalogo && e.disponible_para_retos === false)
+    .flatMap(e => e.familias_nombres || [])
+    .filter(n => sinDatos.has(n))
+  return [...new Set(nombres)].sort((a, b) => a.localeCompare(b))
+})
+const mostrarExplicacionOcultas = ref(false)
 
 const empresasHuerfanas = computed(() => {
   const q = busqueda.value.toLowerCase().trim()
@@ -1741,8 +1751,51 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 {{ plantillasCatalogo.length }} {{ plantillasCatalogo.length === 1 ? 'plantilla' : 'plantillas' }}
                 ficticias compartidas con todos los centros · Solo lectura para los centros: las usan a través de una copia
               </p>
-              <p v-if="plantillasOcultas" class="text-xs text-amber-700 font-bold mt-1">
-                {{ plantillasOcultas }} {{ plantillasOcultas === 1 ? 'oculta' : 'ocultas' }} a los centros: su familia aún no tiene módulos ni RA/CE para generar retos
+            </div>
+          </div>
+
+          <!-- Por qué hay plantillas ocultas a los centros y cómo volver a mostrarlas -->
+          <div v-if="plantillasOcultas" class="px-6 py-4 border-b border-[#1F2937]/10 bg-amber-50">
+            <button type="button" @click="mostrarExplicacionOcultas = !mostrarExplicacionOcultas"
+              :aria-expanded="mostrarExplicacionOcultas"
+              class="w-full flex items-start gap-3 text-left">
+              <svg class="w-5 h-5 mt-0.5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span class="flex-1 min-w-0">
+                <span class="block text-sm font-black text-amber-900">
+                  {{ plantillasOcultas }} {{ plantillasOcultas === 1 ? 'plantilla oculta' : 'plantillas ocultas' }} a los centros
+                </span>
+                <span class="block text-xs text-amber-800 mt-0.5">¿Por qué? {{ mostrarExplicacionOcultas ? 'Ocultar explicación' : 'Ver explicación' }}</span>
+              </span>
+              <svg class="w-4 h-4 mt-1 shrink-0 text-amber-600 transition-transform duration-200"
+                   :class="mostrarExplicacionOcultas ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div v-if="mostrarExplicacionOcultas" class="mt-3 pl-8 space-y-2 text-xs text-amber-900 leading-relaxed">
+              <p>
+                Para generar un reto, el generador envía a la IA los <strong>módulos</strong> del ciclo y sus
+                <strong>resultados de aprendizaje (RA)</strong> y <strong>criterios de evaluación (CE)</strong>.
+                Si la familia profesional de una plantilla no tiene esos datos cargados, el reto no se podría completar.
+              </p>
+              <p>
+                Por eso estas plantillas <strong>no aparecen</strong> en el catálogo del Generador de Retos ni se pueden
+                usar en un centro. Siguen aquí para que puedas editarlas o eliminarlas. Las marcadas con
+                <span class="font-black">«Oculta»</span> en la lista de abajo son las afectadas.
+              </p>
+              <div v-if="familiasSinDatosConPlantillas.length">
+                <p class="font-bold">Familias sin módulos ni RA/CE ({{ familiasSinDatosConPlantillas.length }}):</p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span v-for="f in familiasSinDatosConPlantillas" :key="f"
+                        class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{{ f }}</span>
+                </div>
+              </div>
+              <p>
+                <strong>Para que vuelvan a verse</strong> basta con cargar los ciclos, módulos y RA/CE de su familia: en cuanto
+                los tenga, la plantilla aparece de nuevo a los centros automáticamente.
+                Puedes consultar qué hay cargado en
+                <button type="button" @click="abrirCatalogoBoe" class="font-black underline hover:text-amber-950">Catálogo FP</button>.
               </p>
             </div>
           </div>

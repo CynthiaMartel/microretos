@@ -8,6 +8,11 @@ import { useRouter } from 'vue-router'
 const props = defineProps({
   encuentros: { type: Array, default: () => [] },
   cargando:   { type: Boolean, default: false },
+  // Encuentros por página: en el hub se muestran pocos para no alargar la vista
+  porPagina:  { type: Number, default: 5 },
+  // 'reciente': más nuevo primero · 'proxima': los de fecha más cercana a hoy primero
+  // (próximos ascendente y, detrás, los pasados del más reciente al más antiguo)
+  orden:      { type: String, default: 'reciente' },
 })
 const emit = defineEmits(['ver', 'eliminar'])
 
@@ -16,7 +21,6 @@ const router = useRouter()
 // ─── Filtros y paginación ────────────────────────────────────────────────────
 const filtroSes             = ref({ fecha: '', titulo: '', curso: '', grupo: '' })
 const paginaEncuentros      = ref(1)
-const ENCUENTROS_POR_PAGINA = 5
 
 const encuentrosFiltrados = computed(() => {
   let lista = [...props.encuentros]
@@ -28,16 +32,36 @@ const encuentrosFiltrados = computed(() => {
   }
   if (filtroSes.value.curso) lista = lista.filter(s => s.curso === filtroSes.value.curso)
   if (filtroSes.value.grupo) lista = lista.filter(s => s.grupo === filtroSes.value.grupo)
-  return lista.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
+  const desc = (a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0)
+  if (props.orden !== 'proxima') return lista.sort(desc)
+  // Un encuentro sigue "próximo" mientras no haya pasado su fecha_fin (los que están en curso cuentan)
+  const proximos = lista.filter(s => !esPasado(s)).sort((a, b) => -desc(a, b))
+  const pasados  = lista.filter(esPasado).sort(desc)
+  return [...proximos, ...pasados]
 })
 
+const esPasado = (s) => (s.fecha_fin || s.fecha || '') < hoyISO()
+
+// Etiqueta de estado solo en orden 'proxima', para distinguir los próximos de los pasados
+function estadoTemporal(s) {
+  if (props.orden !== 'proxima' || !s.fecha || esPasado(s)) return null
+  const hoy = hoyISO()
+  if (s.fecha === hoy) return 'Hoy'
+  return s.fecha < hoy ? 'En curso' : 'Próximo'
+}
+
+function hoyISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const encuentrosVisibles = computed(() => {
-  const start = (paginaEncuentros.value - 1) * ENCUENTROS_POR_PAGINA
-  return encuentrosFiltrados.value.slice(start, start + ENCUENTROS_POR_PAGINA)
+  const start = (paginaEncuentros.value - 1) * props.porPagina
+  return encuentrosFiltrados.value.slice(start, start + props.porPagina)
 })
 
 const totalPaginasSes = computed(() =>
-  Math.ceil(encuentrosFiltrados.value.length / ENCUENTROS_POR_PAGINA)
+  Math.ceil(encuentrosFiltrados.value.length / props.porPagina)
 )
 
 watch(filtroSes, () => { paginaEncuentros.value = 1 }, { deep: true })
@@ -237,7 +261,8 @@ function formatFecha(isoDate) {
               {{ formatFecha(s.fecha) }}
             </p>
             <div class="flex flex-wrap gap-1 mt-1">
-              <span v-if="s.curso"       class="tag tag-green">{{ s.curso }}</span>
+              <span v-if="estadoTemporal(s)" class="tag tag-proximo">{{ estadoTemporal(s) }}</span>
+              <span v-if="s.curso"      class="tag tag-green">{{ s.curso }}</span>
               <span v-if="s.grupo"       class="tag tag-lime">Clase {{ s.grupo }}</span>
               <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} al.</span>
               <span v-if="s.num_equipos" class="tag tag-gray">{{ s.num_equipos }} gr.</span>
@@ -269,10 +294,10 @@ function formatFecha(isoDate) {
          class="px-4 py-3 border-t border-gray-50 flex items-center justify-between gap-2">
       <button @click="paginaEncuentros--"
               :disabled="paginaEncuentros === 1"
-              class="p-1.5 rounded-lg border border-gray-200 text-gray-400
+              class="p-2.5 rounded-lg border border-gray-200 text-gray-400
                      hover:border-centros hover:text-centros
                      disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
       </button>
@@ -281,10 +306,10 @@ function formatFecha(isoDate) {
       </span>
       <button @click="paginaEncuentros++"
               :disabled="paginaEncuentros === totalPaginasSes"
-              class="p-1.5 rounded-lg border border-gray-200 text-gray-400
+              class="p-2.5 rounded-lg border border-gray-200 text-gray-400
                      hover:border-centros hover:text-centros
                      disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
         </svg>
       </button>
@@ -306,4 +331,5 @@ function formatFecha(isoDate) {
 .tag-gray  { background: #F3F4F6; color: #6B7280; }
 .tag-green { background: rgba(48,114,170,0.1); color: #3072AA; }
 .tag-lime  { background: rgba(107,164,213,0.12); color: #275d8a; }
+.tag-proximo { background: #ECFDF5; color: #047857; }
 </style>

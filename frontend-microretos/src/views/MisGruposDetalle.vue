@@ -3,6 +3,7 @@
      porque en las vistas del docente los equipos de alumnado se llaman "grupos" y la letra del
      encuentro (Encuentro.grupo) se muestra como "Clase". Ver router/index.js. -->
 <script setup>
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
@@ -315,15 +316,14 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen bg-[#F8FAFC] pt-16">
+    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
+      <CabeceraSeccion titulo="Detalle de" destacado="grupos" :volver="{ name: 'mis-grupos' }"
+                       subtitulo="Avance de cada grupo del encuentro, fase a fase." />
+    </div>
+
     <!-- Topbar. top-16 (no top-0): la TopBar global es fixed h-16 con z-50 — con top-0
          esta cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-      <button @click="router.back()"
-              class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
-        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
       <div class="flex-1 min-w-0">
         <p class="text-xs font-black uppercase tracking-widest text-centros">Detalle de grupos</p>
         <p class="text-sm font-bold text-[#121212] truncate">

@@ -13,6 +13,9 @@ import { useRouter } from 'vue-router'
 import { getParticipacionesAlumnado } from '../services/alumnadoService.js'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import SelectorCurso from '../components/SelectorCurso.vue'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import FiltroSegmentado from '../components/FiltroSegmentado.vue'
+import FiltroSelect from '../components/FiltroSelect.vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
 import { formatCurso } from '../utils/formatCurso.js'
@@ -97,6 +100,15 @@ const proyectosDisponibles = computed(() =>
     .sort((a, b) => a[1].localeCompare(b[1], 'es')))
 const clasesDisponibles = computed(() =>
   [...new Set(delCurso.value.map(claseDe).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')))
+
+const opcionesProyecto = computed(() => proyectosDisponibles.value.map(([value, label]) => ({ value, label })))
+const OPCIONES_ESTADO = [
+  { value: '', label: 'Todos' }, { value: 'en_curso', label: 'En curso' },
+  { value: 'completado', label: 'Completados' }, { value: 'sin_iniciar', label: 'Sin iniciar' },
+]
+const OPCIONES_ORDEN = [
+  { value: 'nombre', label: 'Nombre' }, { value: 'nota', label: 'Nota media' }, { value: 'reciente', label: 'Más reciente' },
+]
 
 const hayFiltros = computed(() => !!(busqueda.value || filtroEstado.value || filtroProyecto.value || filtroClase.value || fechaDesde.value || fechaHasta.value))
 function limpiarFiltros() {
@@ -184,10 +196,8 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
   <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
     <div class="mx-auto max-w-[1200px] space-y-4 px-4 py-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Listado de" destacado="alumnado" color="text-alumnos"
-                       subtitulo="Cada alumno con los proyectos y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de los proyectos terminados.">
-        <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
-      </CabeceraSeccion>
+      <CabeceraSeccion titulo="Listado de" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
+                       subtitulo="Cada alumno con los proyectos y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de los proyectos terminados." />
 
       <!-- Contadores -->
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -210,58 +220,29 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
       </div>
 
       <!-- Búsqueda y filtros -->
-      <article class="card space-y-3 p-4">
-        <div class="relative">
-          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <label class="sr-only" for="al-buscar">Buscar alumno</label>
-          <input id="al-buscar" v-model="busqueda" type="search" placeholder="Buscar alumno por nombre o alias…"
-                 class="h-10 w-full rounded-lg border border-gray-200 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-alumnos/40" />
-        </div>
+      <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar alumno por nombre o alias…"
+                    :resultados="alumnos.length" :unidad="['alumno', 'alumnos']"
+                    :hay-activos="hayFiltros" @limpiar="limpiarFiltros">
+        <template #curso>
+          <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+        </template>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="flex overflow-hidden rounded-lg border border-gray-200" role="group" aria-label="Estado del proyecto">
-            <button v-for="e in [{ v: '', l: 'Todos' }, { v: 'en_curso', l: 'En curso' }, { v: 'completado', l: 'Completados' }, { v: 'sin_iniciar', l: 'Sin iniciar' }]" :key="e.v"
-                    type="button" @click="filtroEstado = e.v"
-                    :class="['border-l border-gray-200 px-3 py-2 text-xs font-bold first:border-l-0 transition-colors',
-                             filtroEstado === e.v ? 'bg-azul-noche text-white' : 'bg-white text-gray-500 hover:text-azul-noche']">
-              {{ e.l }}
-            </button>
+        <FiltroSegmentado v-model="filtroEstado" label="Estado" :opciones="OPCIONES_ESTADO" />
+        <FiltroSelect v-model="filtroProyecto" label="Proyecto" todos="Todos los proyectos" :opciones="opcionesProyecto" />
+        <FiltroSelect v-model="filtroClase" label="Clase" todos="Todas las clases" :opciones="clasesDisponibles" />
+        <FiltroSegmentado v-model="orden" label="Ordenar por" :opciones="OPCIONES_ORDEN" />
+
+        <div class="min-w-0 max-w-full">
+          <p class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">Encuentros entre</p>
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500">
+            <label class="sr-only" for="al-desde">Desde</label>
+            <input id="al-desde" v-model="fechaDesde" type="date" class="campo" />
+            <span>y</span>
+            <label class="sr-only" for="al-hasta">Hasta</label>
+            <input id="al-hasta" v-model="fechaHasta" type="date" class="campo" />
           </div>
-
-          <label class="sr-only" for="al-proyecto">Proyecto</label>
-          <select id="al-proyecto" v-model="filtroProyecto" :disabled="!proyectosDisponibles.length" class="campo max-w-[16rem]">
-            <option value="">Todos los proyectos</option>
-            <option v-for="[uuid, titulo] in proyectosDisponibles" :key="uuid" :value="uuid">{{ titulo }}</option>
-          </select>
-
-          <label class="sr-only" for="al-clase">Clase</label>
-          <select id="al-clase" v-model="filtroClase" :disabled="!clasesDisponibles.length" class="campo max-w-[16rem]">
-            <option value="">Todas las clases</option>
-            <option v-for="c in clasesDisponibles" :key="c" :value="c">{{ c }}</option>
-          </select>
-
-          <label class="sr-only" for="al-orden">Ordenar</label>
-          <select id="al-orden" v-model="orden" class="campo">
-            <option value="nombre">Orden: nombre</option>
-            <option value="nota">Orden: nota media</option>
-            <option value="reciente">Orden: encuentro más reciente</option>
-          </select>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500">
-          <span>Encuentros entre</span>
-          <label class="sr-only" for="al-desde">Desde</label>
-          <input id="al-desde" v-model="fechaDesde" type="date" class="campo" />
-          <span>y</span>
-          <label class="sr-only" for="al-hasta">Hasta</label>
-          <input id="al-hasta" v-model="fechaHasta" type="date" class="campo" />
-          <button v-if="hayFiltros" type="button" @click="limpiarFiltros" class="ml-auto font-bold text-gray-400 hover:text-gray-600">
-            Limpiar filtros ✕
-          </button>
-        </div>
-      </article>
+      </FiltrosPanel>
 
       <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
 
@@ -419,6 +400,6 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 
 .card   { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .link   { @apply font-semibold text-centros hover:underline; }
-.campo  { @apply h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-alumnos/40 disabled:opacity-50; }
+.campo  { @apply h-9 min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-azul-noche focus:border-centros focus:bg-white focus:outline-none disabled:opacity-50; }
 .accion { @apply inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-azul-noche transition-colors hover:border-alumnos hover:text-alumnos-dark; }
 </style>

@@ -11,7 +11,6 @@ import { useAuthStore } from '../stores/auth';
 import LoginModal from '../components/LoginModal.vue';
 import InsertModifyEmpresa from '../components/InsertModifyEmpresa.vue';
 import { useUIState } from '../composables/useUIState.js';
-import TourPromptModal from '../components/TourPromptModal.vue';
 import SelectorRaCeModulos from '../components/SelectorRaCeModulos.vue';
 import CrearEmpresaFicticiaIA from '../components/CrearEmpresaFicticiaIA.vue';
 
@@ -209,6 +208,32 @@ watch(idsModulosForzados, (ids) => {
   const podado = Object.fromEntries(Object.entries(seleccionRaCe.value).filter(([, s]) => ids.includes(s.moduloId)));
   if (Object.keys(podado).length !== Object.keys(seleccionRaCe.value).length) seleccionRaCe.value = podado;
 }, { deep: true });
+
+// ─── HISTORIAL DE AVISOS ────────────────────────────────────────────────
+// Los avisos (cambio de paso, errores) no bloquean: se acumulan en el historial, el más reciente
+// arriba. Desde xl es una columna fija a la derecha; por debajo, un botón flotante arriba a la derecha
+// que se despliega, y el último aviso asoma unos segundos bajo el botón aunque esté plegado.
+const historialAvisos = ref([]); // { id, tipo: 'info' | 'error', titulo, texto, hora }
+const avisoFlotante = ref(null);
+const historialAbierto = ref(false);
+const avisosVistos = ref(0);
+const avisosNoLeidos = computed(() => historialAvisos.value.length - avisosVistos.value);
+const toggleHistorial = () => {
+  historialAbierto.value = !historialAbierto.value;
+  avisosVistos.value = historialAvisos.value.length;
+  avisoFlotante.value = null;
+};
+let idAviso = 0;
+let avisoFlotanteTimer = null;
+const registrarAviso = (titulo, texto, tipo = 'info') => {
+  const hora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const aviso = { id: ++idAviso, tipo, titulo, texto, hora };
+  historialAvisos.value.unshift(aviso);
+  if (historialAbierto.value) avisosVistos.value = historialAvisos.value.length;
+  avisoFlotante.value = aviso;
+  clearTimeout(avisoFlotanteTimer);
+  avisoFlotanteTimer = setTimeout(() => { avisoFlotante.value = null; }, tipo === 'error' ? 8000 : 5000);
+};
 
 const toastModulos = ref(null); // { tipo: 'auto' | 'forzado', titulo, texto }
 let toastModulosTimer = null;
@@ -556,9 +581,9 @@ const guardarBorradorIA = async () => {
     return true;
   } catch (e) {
     if (e.response?.status === 410) {
-      alert('La empresa generada ha caducado (más de 2 horas sin guardar). Vuelve al paso 1 y genera otra.');
+      registrarAviso('Empresa caducada', 'La empresa generada ha caducado (más de 2 horas sin guardar). Vuelve al paso 1 y genera otra.', 'error');
     } else {
-      alert(e.response?.data?.error || e.response?.data?.message || 'No se pudo guardar la empresa. Inténtalo de nuevo.');
+      registrarAviso('Error al guardar la empresa', e.response?.data?.error || e.response?.data?.message || 'No se pudo guardar la empresa. Inténtalo de nuevo.', 'error');
     }
     return false;
   } finally {
@@ -627,13 +652,17 @@ const avisoCatalogo = ref('');
 // permitirían completar el reto): el filtro tampoco muestra familias vacías.
 const familiasCatalogo = computed(() => todasLasFamilias.value.filter(f => f.con_datos_retos));
 
+// Superadmin no tiene centro propio: el catálogo se filtra por el centro elegido en el paso 1
+// (solo plantillas con ciclos de ese centro que tengan módulos y RA/CE).
+const centroCatalogo = computed(() => (authStore.isSuperAdmin ? centroFiltro.value : '') || null);
+
 const cargarCatalogo = async () => {
-  const clave = familiaCatalogo.value || 'todas';
+  const clave = `${familiaCatalogo.value || 'todas'}|${centroCatalogo.value || ''}`;
   if (catalogoCargadoPara.value === clave) return;
   cargandoCatalogo.value = true;
   errorCatalogo.value = '';
   try {
-    const { data } = await getCatalogoEmpresas(familiaCatalogo.value || null);
+    const { data } = await getCatalogoEmpresas(familiaCatalogo.value || null, centroCatalogo.value);
     empresasCatalogo.value = data.data ?? data;
     catalogoCargadoPara.value = clave;
   } catch (e) {
@@ -651,7 +680,7 @@ const abrirPanelCatalogo = () => {
   panelCatalogo.value = true;
   cargarCatalogo();
 };
-watch(familiaCatalogo, () => { if (panelCatalogo.value) cargarCatalogo(); });
+watch([familiaCatalogo, centroCatalogo], () => { if (panelCatalogo.value) cargarCatalogo(); });
 
 const usarDelCatalogo = async (plantilla) => {
   if (usandoCatalogoId.value) return;
@@ -725,6 +754,10 @@ const limpiarFormulario = () => {
   if(confirm("¿Estás seguro de que quieres vaciar el formulario y empezar de cero?")) {
     pasoActual.value = 1;
     pasoMaxBloqueado.value = 0;
+    // Vaciar reinicia también el historial: solo queda el aviso de que se ha vaciado.
+    historialAvisos.value = [];
+    avisosVistos.value = 0;
+    registrarAviso('Formulario vaciado', 'Se ha vaciado el formulario y se han desbloqueado todos los pasos: puedes empezar de nuevo.');
     buscadorEmpresa.value = '';
     // Docente/admin: el centro está fijado a su cuenta y no se vacía; superadmin sí lo pierde
     centroFiltro.value = centroFijadoPorRol.value ? authStore.userCentroNombre : '';
@@ -810,7 +843,7 @@ const cargarDemo = async (familiaProfesional) => {
     demoModuloNombre.value = demo.modulo_nombre || '';
   } catch (e) {
     console.error('Error cargando demo:', e);
-    alert('Error al cargar la demo seleccionada.');
+    registrarAviso('Error en la demo', 'No se ha podido cargar la demo seleccionada.', 'error');
   }
 };
 
@@ -834,11 +867,11 @@ const generarRetoDemo = async () => {
       });
       setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300);
     } else {
-      alert('No hay microretos guardados para esta demo todavía.');
+      registrarAviso('Demo sin retos', 'No hay retos guardados para esta demo todavía.');
     }
   } catch (e) {
     console.error('Error cargando microretos demo:', e);
-    alert('Error al cargar los microretos de la demo.');
+    registrarAviso('Error en la demo', 'No se han podido cargar los retos de la demo.', 'error');
   } finally {
     cargando.value = false;
   }
@@ -963,13 +996,12 @@ onMounted(async () => {
     await comprobarBorradorRecuperable();
     await nextTick();
     pasoGuia.value = 1;
-    // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
-    // showTourPrompt.value = true;
   }
 });
 
 onUnmounted(() => {
   clearTimeout(toastModulosTimer);
+  clearTimeout(avisoFlotanteTimer);
   document.removeEventListener('click', cerrarDropdownFuera);
   window.removeEventListener('beforeunload', avisoAntesDeSalir);
   tourActivo.value = false;
@@ -1027,17 +1059,31 @@ async function cargarFamiliasEmpresa(idEmpresa) {
     }
     if (seleccion.value.familia) return;
 
-    // Ahorrar volver a elegir la familia cuando ya se puede deducir
+    // Ahorrar volver a elegir la familia cuando ya se puede deducir (nunca una sin módulos/RA/CE)
     const filtro = filtroFamiliaEmpresa.value;
-    if (filtro && resFam.data.includes(filtro)) {
+    const usables = resFam.data.filter(familiaTieneDatos);
+    if (filtro && usables.includes(filtro)) {
       seleccion.value.familia = familiaPreseleccionada.value = filtro;
       motivoFamiliaPreseleccionada.value = 'filtro';
-    } else if (resFam.data.length === 1) {
-      seleccion.value.familia = familiaPreseleccionada.value = resFam.data[0];
-      motivoFamiliaPreseleccionada.value = 'unica';
+    } else if (usables.length === 1) {
+      seleccion.value.familia = familiaPreseleccionada.value = usables[0];
+      motivoFamiliaPreseleccionada.value = resFam.data.length === 1 ? 'unica' : 'unica_con_datos';
     }
   } catch(e) { console.error(e); }
 }
+
+// Familias/ciclos sin módulos con RA y CE: el reto no se podría completar (la IA los necesita).
+// Mientras /familias no ha cargado, o en modo demo (datos propios), no se bloquea nada.
+const familiasConDatos = computed(() =>
+  new Set(todasLasFamilias.value.filter(f => f.con_datos_retos).map(f => f.nombre)));
+function familiaTieneDatos(nombre) {
+  return esModoDemo.value || !todasLasFamilias.value.length || familiasConDatos.value.has(nombre);
+}
+const cicloTieneDatos = (c) => esModoDemo.value || c.con_datos_retos !== false;
+const empresaSinFamiliasConDatos = computed(() =>
+  !!seleccion.value.empresaId && familiasEmpresaCargadas.value && familiasFiltradas.value.length > 0
+  && !familiasFiltradas.value.some(familiaTieneDatos));
+const ningunCicloConDatos = computed(() => ciclos.value.length > 0 && !ciclos.value.some(cicloTieneDatos));
 
 const empresaSinFamilias = computed(() =>
   !!seleccion.value.empresaId && familiasEmpresaCargadas.value && familiasFiltradas.value.length === 0);
@@ -1045,8 +1091,9 @@ const empresaSinFamilias = computed(() =>
 // El aviso de preselección solo tiene sentido mientras no se cambie la familia a mano
 const familiaSigueSiendoPreseleccionada = computed(() =>
   !!motivoFamiliaPreseleccionada.value && seleccion.value.familia === familiaPreseleccionada.value);
+// Solo las que se pueden elegir de verdad (con módulos y RA/CE)
 const otrasFamiliasEmpresa = computed(() =>
-  familiasFiltradas.value.filter(f => f !== seleccion.value.familia));
+  familiasFiltradas.value.filter(f => f !== seleccion.value.familia && familiaTieneDatos(f)));
 
 watch(() => seleccion.value.familia, async (val) => {
   // Limpiar siempre los campos dependientes al cambiar familia, incluso si el nuevo valor es vacío
@@ -1098,22 +1145,18 @@ const avanzarPaso = async () => {
   if (pasoActual.value >= totalPasos || !pasoActualValido.value) return;
   const step = pasoActual.value;
   const guardaBorrador = step === 2 && !!borradorIA.value;
-  if (!estaPasoBloqueado(step)) {
-    const confirmado = confirm(
-      (guardaBorrador
-        ? 'Al continuar, la empresa ficticia generada con IA se guardará en la base de datos con este diagnóstico, y los datos de este paso quedarán bloqueados. '
-        : 'Al continuar, los datos de este paso quedarán bloqueados y no podrás modificarlos. ') +
-      'Si necesitas cambiarlos más adelante, tendrás que pulsar "Vaciar" y empezar de nuevo.\n\n¿Continuar?'
-    );
-    if (!confirmado) return;
-  }
+  const yaSellado = estaPasoBloqueado(step);
   if (guardaBorrador && !(await guardarBorradorIA())) return;
   sellarPaso(step);
+  if (!yaSellado) {
+    registrarAviso(`Paso ${step} completado`,
+      (guardaBorrador ? 'La empresa ficticia generada con IA se ha guardado en la base de datos con este diagnóstico. ' : '') +
+      'Los datos de este paso han quedado bloqueados. Si necesitas cambiarlos, pulsa «Vaciar» y empieza de nuevo.');
+  }
   pasoActual.value++;
   window.scrollTo({ top: 0, behavior: 'instant' });
   await nextTick();
   pasoGuia.value = 1;
-  modoGuia.value = true;
 };
 // Única vía para navegar entre pasos: desde el botón "Volver"/"Siguiente Paso" o desde
 // el indicador de progreso. Hacia atrás siempre se permite (solo lectura, ya sellado);
@@ -1162,7 +1205,7 @@ const guardarInfoEmpresa = async () => {
     }
     crmActualizado.value = true;
     setTimeout(() => crmActualizado.value = false, 3000); 
-  } catch(e) { alert(e.response?.data?.error || e.response?.data?.message || "Error al procesar la empresa en la BD."); } finally { actualizandoCRM.value = false; }
+  } catch(e) { registrarAviso('Error al guardar la empresa', e.response?.data?.error || e.response?.data?.message || 'Error al procesar la empresa en la BD.', 'error'); } finally { actualizandoCRM.value = false; }
 };
 
 const CAMPOS_DIAGNOSTICO = ['diaANormal', 'friccionArea', 'friccionProblema', 'restricciones',
@@ -1220,7 +1263,7 @@ const guardarDiagnosticoEmpresa = async () => {
     diagnosticoGuardado.value = true;
     setTimeout(() => { diagnosticoGuardado.value = false; }, 4000);
   } catch (e) {
-    alert(e.response?.data?.error || e.response?.data?.message || 'Error al guardar el diagnóstico.');
+    registrarAviso('Error en el diagnóstico', e.response?.data?.error || e.response?.data?.message || 'Error al guardar el diagnóstico.', 'error');
   } finally {
     guardandoDiagnostico.value = false;
   }
@@ -1238,7 +1281,7 @@ const toggleInfoSimulada = async () => {
   }
 
   if (!seleccion.value.empresaNombre || !seleccion.value.empresaSector) {
-    alert('Selecciona una empresa con nombre y sector antes de generar información simulada.');
+    registrarAviso('Falta la empresa', 'Selecciona una empresa con nombre y sector antes de generar información simulada.', 'error');
     return;
   }
 
@@ -1274,7 +1317,7 @@ const toggleInfoSimulada = async () => {
     }
   } catch (e) {
     console.error(e);
-    alert('Error al generar información simulada. Inténtalo de nuevo.');
+    registrarAviso('Error en la información simulada', 'No se ha podido generar la información simulada. Inténtalo de nuevo.', 'error');
   } finally {
     cargandoSimulacion.value = false;
   }
@@ -1332,7 +1375,7 @@ const generarReto = async () => {
     setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 300);
   } catch (e) {
     console.error(e);
-    alert(e.response?.data?.error || e.response?.data?.message || "Error al contactar con la IA");
+    registrarAviso('Error al generar el reto', e.response?.data?.error || e.response?.data?.message || 'Error al contactar con la IA.', 'error');
   } finally { cargando.value = false; }
 };
 
@@ -1348,11 +1391,11 @@ const guardarTodos = async () => {
       microretosGenerados.value.forEach(r => r._ui_guardado = true);
       todosGuardados.value = true;
     } else {
-      alert("Todos los retos mostrados ya estaban guardados.");
+      registrarAviso('Retos ya guardados', 'Todos los retos mostrados ya estaban guardados.');
     }
   } catch (e) { 
     console.error("Error al guardar el lote:", e);
-    alert("Error al guardar el lote de retos en BD");
+    registrarAviso('Error al guardar', 'No se ha podido guardar el lote de retos en la BD.', 'error');
   } finally { 
     guardandoTodos.value = false; 
   }
@@ -1368,7 +1411,7 @@ const guardar = async (index) => {
     reto._ui_guardado = true;
   } catch (e) { 
     console.error("Error al guardar:", e);
-    alert("Error al guardar este reto");
+    registrarAviso('Error al guardar', 'No se ha podido guardar este reto.', 'error');
   } finally { 
     reto._ui_guardando = false; 
   }
@@ -1384,9 +1427,6 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 // ─── TOUR GUIADO (tres conjuntos independientes, uno por paso) ────────────
 const { tourActivo } = useUIState()
 const modoGuia = ref(false)
-const showTourPrompt = ref(false)
-function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true }
-function omitirTourDesdeModal()  { showTourPrompt.value = false }
 const pasoGuia = ref(1)
 
 // Refs paso 1
@@ -1418,7 +1458,7 @@ const guiaPasos1 = [
   { ref: 'refInfoSimulada',    seccion: 'acciones', texto: 'La IA se comporta como la empresa seleccionada en el Paso 1 y rellena automáticamente todos los campos del diagnóstico (Paso 2) simulando lo que esa empresa habría dicho en una reunión real. Muy útil si no has podido hacer la reunión con la empresa. Puedes revisar y editar los datos generados antes de continuar.' },
   { ref: 'refBaseDatos',       seccion: 'acciones', texto: 'Accede a la base de datos completa de la plataforma: empresas, centros, familias profesionales y ciclos formativos disponibles. Desde aquí puedes revisar o añadir empresas que no aparezcan en el buscador.' },
   { ref: 'refInsertarEmpresa', seccion: 'acciones', texto: 'Registra una nueva empresa en la base de datos o modifica los datos de la empresa actualmente seleccionada. Los cambios quedan guardados para todos los usuarios de tu centro.' },
-  { ref: 'refBtnGuia',         seccion: null,       texto: 'Pulsa este botón en cualquier momento para volver a ver esta guía.' },
+  { ref: 'refBtnGuia',         seccion: null,       texto: 'Pulsa «Ayuda» en cualquier momento para volver a ver esta guía.' },
 ]
 const guiaPasos2 = [
   { ref: 'refEncabezadoProblema', seccion: 'diagnostico', texto: 'Paso 2 — Realidad de la empresa: aquí transcribes lo que la empresa te ha contado en la reunión de diagnóstico. Estos datos son la materia prima con la que la IA construirá el microreto. Si no has hecho la reunión, puedes usar el botón "Información Simulada" del Paso 1.' },
@@ -1434,7 +1474,7 @@ const guiaPasos3 = [
   { ref: 'refCantidadVariantes', seccion: 'match', texto: 'Elige cuántas variantes del microreto quieres generar. Cada variante presenta un enfoque distinto para el mismo problema de empresa, permitiéndote elegir la que mejor encaje con tu grupo.' },
   { ref: 'refGuardarEmpresa',    seccion: 'match', texto: 'Si has completado o modificado datos de la empresa durante este flujo, guárdalos aquí antes de generar. Así el registro queda actualizado en la base de datos para futuros usos.' },
   { ref: 'refBtnGenerar',        seccion: 'match', texto: '¡Todo listo! Pulsa aquí para que la IA genere el microreto cruzando el diagnóstico de empresa del Paso 2 con el perfil académico del alumnado que has configurado en este paso. El proceso tarda unos segundos.' },
-  { ref: 'refBtnGuia',           seccion: null,    texto: 'Pulsa este botón cuando quieras volver a ver esta guía en cualquier momento.' },
+  { ref: 'refBtnGuia',           seccion: null,    texto: 'Pulsa «Ayuda» cuando quieras volver a ver esta guía.' },
 ]
 
 const guiaPasosActual = computed(() => {
@@ -1729,12 +1769,25 @@ async function guardarEstadoGen(nuevoEstado) {
     </div>
   </Transition>
 
-  <div class="max-w-6xl mx-auto">
+  <!-- xl:pr-56 reserva el hueco de la columna fija de avisos; el formulario mantiene su ancho -->
+  <div class="xl:pr-56">
+    <div class="max-w-6xl mx-auto">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Factoría de" destacado="Retos" color="text-centros"
+      <CabeceraSeccion titulo="Factoría de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
                        subtitulo="Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial."
-                       class="mb-4 md:mb-5" />
+                       class="mb-4 md:mb-5">
+        <!-- Ayuda: mismo botón y sitio en todas las vistas -->
+        <button type="button" ref="refBtnGuia" @click="modoGuia = true; pasoGuia = 1"
+                :class="tourTargetActivo === 'refBtnGuia' ? 'tour-active' : ''"
+                class="accion-secundaria" title="Guía paso a paso de esta pantalla">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Ayuda
+        </button>
+      </CabeceraSeccion>
 
       <div class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
@@ -1779,19 +1832,6 @@ async function guardarEstadoGen(nuevoEstado) {
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
                 <h2 class="text-xl font-black uppercase tracking-tight text-azul-noche">Buscar en la base de datos de DuaLab</h2>
-
-                <button
-                  ref="refBtnGuia"
-                  @click="modoGuia = true; pasoGuia = 1"
-                  class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100
-                         shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
-                         hover:bg-blue-100 hover:border-blue-200 transition-all">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  Activar Guía
-                </button>
               </div>
 
               <div v-if="esModoDemo"
@@ -2026,7 +2066,8 @@ async function guardarEstadoGen(nuevoEstado) {
                       </select>
                       <p v-if="cargandoCatalogo" class="text-xs text-gray-400 italic">Cargando catálogo…</p>
                       <p v-else-if="!empresasCatalogo.length && !errorCatalogo" class="text-xs text-gray-400 italic">
-                        Todavía no hay empresas del catálogo para esta familia.
+                        No hay empresas del catálogo con las que {{ authStore.isSuperAdmin ? 'este centro' : 'tu centro' }} pueda generar retos
+                        {{ familiaCatalogo ? 'en esta familia' : '' }}: solo se muestran las de familias con módulos y RA/CE en ciclos que imparte el centro.
                       </p>
                       <ul v-else class="space-y-2 max-h-72 overflow-y-auto pr-1">
                         <li v-for="p in empresasCatalogo" :key="p.id" class="flex flex-col sm:flex-row sm:items-center gap-2 bg-white rounded-xl border border-gray-100 px-4 py-3">
@@ -2898,7 +2939,9 @@ async function guardarEstadoGen(nuevoEstado) {
                   <label class="label-style">Familia Profesional Asociada *</label>
                   <select v-model="seleccion.familia" :disabled="esModoDemo" class="input-style">
                     <option value="">Selecciona Familia...</option>
-                    <option v-for="f in familiasFiltradas" :key="f" :value="f">{{ f }}</option>
+                    <option v-for="f in familiasFiltradas" :key="f" :value="f" :disabled="!familiaTieneDatos(f)">
+                      {{ f }}{{ familiaTieneDatos(f) ? '' : ' — sin módulos ni RA/CE' }}
+                    </option>
                   </select>
 
                   <!-- Aviso: por qué la familia se elige aquí aunque ya se filtrara en el paso 1 -->
@@ -2909,6 +2952,9 @@ async function guardarEstadoGen(nuevoEstado) {
                       <div>
                         <p v-if="motivoFamiliaPreseleccionada === 'filtro'">
                           <strong>Preseleccionada</strong> porque filtraste por «{{ familiaPreseleccionada }}» en el paso 1.
+                        </p>
+                        <p v-else-if="motivoFamiliaPreseleccionada === 'unica_con_datos'">
+                          <strong>Preseleccionada:</strong> es la única familia de {{ seleccion.empresaNombre }} con módulos y RA/CE cargados.
                         </p>
                         <p v-else><strong>Preseleccionada:</strong> es la única familia vinculada a {{ seleccion.empresaNombre }}.</p>
                         <p v-if="otrasFamiliasEmpresa.length" class="mt-1 text-gray-600">
@@ -2929,6 +2975,11 @@ async function guardarEstadoGen(nuevoEstado) {
                         </p>
                       </div>
                     </div>
+
+                    <p v-else-if="empresaSinFamiliasConDatos" class="mt-3 text-xs text-red-500 font-bold">
+                      Ninguna familia de esta empresa tiene módulos con RA y CE cargados, así que todavía no se puede generar un reto con ella.
+                      Pulsa «Vaciar» para elegir otra empresa.
+                    </p>
 
                     <p v-else-if="empresaSinFamilias" class="mt-3 text-xs text-red-500 font-bold">
                       Esta empresa no tiene familias profesionales vinculadas, así que no se puede generar el reto.
@@ -2954,20 +3005,28 @@ async function guardarEstadoGen(nuevoEstado) {
                   <!-- Ciclos de BD -->
                   <div v-if="ciclos.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                      <button v-for="c in ciclos" :key="c.id"
-                        @click="!esModoDemo && (seleccion.cicloId = c.id)"
-                        :disabled="esModoDemo"
+                        @click="!esModoDemo && cicloTieneDatos(c) && (seleccion.cicloId = c.id)"
+                        :disabled="esModoDemo || !cicloTieneDatos(c)"
+                        :title="cicloTieneDatos(c) ? '' : 'Este ciclo no tiene módulos con RA y CE cargados: no se puede generar un reto con él'"
                         :class="seleccion.cicloId === c.id
                             ? 'bg-gradient-to-r from-centros to-primary-400 border-transparent text-white'
-                            : 'bg-[#1F2937] border-transparent text-gray-300 hover:border-centros/40'"
+                            : cicloTieneDatos(c)
+                              ? 'bg-[#1F2937] border-transparent text-gray-300 hover:border-centros/40'
+                              : 'bg-gray-100 border-dashed border-gray-300 text-gray-400 cursor-not-allowed'"
                         class="text-left px-5 py-4 rounded-2xl border-2 transition-all duration-200 flex items-center gap-3 relative overflow-hidden group shadow-sm">
                         <div class="shrink-0 transition-transform" :class="seleccion.cicloId === c.id ? 'scale-100' : 'scale-0 opacity-0 hidden'">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                         </div>
                         <div class="flex-1">
                             <span class="text-sm font-bold leading-tight">{{ c.nombre }}</span>
+                            <p v-if="!cicloTieneDatos(c)" class="text-[10px] uppercase tracking-wide mt-0.5">Sin módulos ni RA/CE</p>
                         </div>
                      </button>
                   </div>
+                  <p v-if="ningunCicloConDatos" class="mt-3 text-xs text-red-500 font-bold">
+                    Ningún ciclo de esta familia{{ seleccion.empresaCentro ? ` en ${seleccion.empresaCentro}` : '' }} tiene módulos con RA y CE cargados:
+                    todavía no se puede generar un reto. Elige otra familia si la empresa tiene más.
+                  </p>
                   <!-- Tarjeta virtual cuando la familia no está en BD pero hay demo activa -->
                   <div v-else-if="esModoDemo && demoCicloNombre" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div class="text-left px-5 py-4 rounded-2xl border-2 border-transparent bg-gradient-to-r from-centros to-primary-400 text-white flex items-center gap-3 shadow-sm">
@@ -3583,6 +3642,55 @@ async function guardarEstadoGen(nuevoEstado) {
       </transition>
 
     </div>
+
+    <!-- Historial de avisos. A la derecha porque la izquierda ya la ocupa el menú lateral.
+         xl: columna fija junto al formulario. < xl: botón flotante desplegable. -->
+    <aside aria-label="Historial de avisos"
+      class="fixed top-20 right-4 z-[60] flex flex-col items-end max-w-[calc(100vw-2rem)]
+             xl:w-52 xl:items-stretch">
+      <div class="flex items-center gap-1.5 xl:justify-between xl:mb-2">
+        <button type="button" @click="toggleHistorial" :aria-expanded="historialAbierto"
+          class="relative flex items-center gap-1.5 px-3 py-2 bg-white rounded-xl border border-gray-200 shadow-md text-azul-noche text-[10px] font-black uppercase tracking-wider hover:border-centros transition-all
+                 xl:pointer-events-none xl:p-0 xl:bg-transparent xl:border-0 xl:shadow-none xl:text-gray-500">
+          <svg class="w-3.5 h-3.5 xl:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          Avisos
+          <span v-if="avisosNoLeidos > 0"
+            class="xl:hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
+            {{ avisosNoLeidos }}
+          </span>
+        </button>
+      </div>
+
+      <!-- Último aviso asomando bajo el botón con el historial plegado (< xl) -->
+      <transition name="fade">
+        <div v-if="avisoFlotante && !historialAbierto" role="status"
+          class="xl:hidden mt-2 w-72 max-w-full rounded-xl border px-3 py-2 shadow-xl text-[11px] leading-snug"
+          :class="avisoFlotante.tipo === 'error' ? 'bg-red-50 border-red-200 text-red-900' : 'bg-white border-centros/40 text-azul-noche'">
+          <p class="font-black uppercase tracking-wide text-[9px]">{{ avisoFlotante.titulo }}</p>
+          <p class="mt-0.5 text-gray-600">{{ avisoFlotante.texto }}</p>
+        </div>
+      </transition>
+
+      <div :class="historialAbierto ? 'block' : 'hidden xl:block'"
+        class="mt-2 xl:mt-0 w-72 max-w-full xl:w-auto bg-white rounded-2xl border border-gray-100 shadow-xl xl:shadow-[0_10px_30px_rgb(0,0,0,0.05)] p-2.5">
+        <p v-if="!historialAvisos.length" class="px-1 py-1 text-[11px] text-gray-400 leading-snug">
+          Aquí irán apareciendo los avisos al pasar de paso y los errores, si los hay.
+        </p>
+        <ul v-else class="space-y-1.5 max-h-[60vh] xl:max-h-[calc(100vh-14rem)] overflow-y-auto" aria-live="polite">
+          <li v-for="(aviso, i) in historialAvisos" :key="aviso.id"
+            class="rounded-xl border px-2.5 py-1.5 text-[11px] leading-snug"
+            :class="aviso.tipo === 'error' ? 'bg-red-50 border-red-200' : i === 0 ? 'bg-centros/5 border-centros/30' : 'bg-gray-50 border-gray-100'">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-black uppercase tracking-wide text-[9px] truncate" :class="aviso.tipo === 'error' ? 'text-red-600' : i === 0 ? 'text-centros' : 'text-gray-500'">{{ aviso.titulo }}</span>
+              <span class="text-[9px] text-gray-400 shrink-0">{{ aviso.hora }}</span>
+            </div>
+            <p class="mt-0.5 text-gray-600">{{ aviso.texto }}</p>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
   </div>
 
   <!-- Botón volver arriba: visible en paso 3 -->
@@ -3613,15 +3721,6 @@ async function guardarEstadoGen(nuevoEstado) {
     @empresa-actualizada="onEmpresaActualizada"
     @necesita-login="onNecesitaLoginEmpresa"
     @crear-con-ia="abrirPanelFicticiaIA"
-  />
-
-  <!-- Modal: ¿Activar guía-tour? -->
-  <TourPromptModal
-    :show="showTourPrompt"
-    titulo="¿Quieres activar la guía-tour?"
-    descripcion="Explora el generador de microretos con una guía paso a paso."
-    @activar="activarTourDesdeModal"
-    @omitir="omitirTourDesdeModal"
   />
 </template>
 

@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { formatearFecha } from '../utils/fechas.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
 import api from '../api.js';
@@ -36,6 +37,24 @@ const paletteExtra = {
   administraciones: { groupHoverText: 'group-hover:text-administraciones', hoverBorderTextBg5: 'hover:border-administraciones hover:text-administraciones hover:bg-administraciones/5' },
   primary:          { groupHoverText: 'group-hover:text-primary-700', hoverBorderTextBg5: 'hover:border-primary-600 hover:text-primary-700 hover:bg-primary-600/5' },
 }
+
+// Curso al que va dirigido: nivel (1º, 2º…) + ciclo, como en los chips de "Nivel" de /proyectos
+const cursoDirigido = computed(() =>
+  [props.proyecto.curso != null && props.proyecto.curso !== '' ? `${props.proyecto.curso}º` : null, props.proyecto.ciclo_nombre]
+    .filter(Boolean).join(' · ')
+);
+
+// Módulos que trabaja: los elegidos en el asistente o, en proyectos antiguos, los de la
+// evaluación oficial — mismo criterio que Microproyecto::nombresModulos() en el backend.
+const MAX_MODULOS = 2;
+const modulos = computed(() => {
+  const p = props.proyecto;
+  let nombres = (p.modulos_seleccionados ?? []).map(m => m?.nombre).filter(Boolean);
+  if (!nombres.length) nombres = (p.evaluacion_oficial ?? []).map(e => e?.modulo).filter(Boolean);
+  return [...new Set(nombres.map(n => String(n).trim()))];
+});
+
+const fechaCreacion = computed(() => formatearFecha(props.proyecto.created_at));
 
 function getEtiqueta(p) {
   if (p.estado === 'en_edicion') return 'En edición';
@@ -89,6 +108,30 @@ function getColor(p) {
         {{ proyecto.titulo }}
       </h3>
 
+      <!-- Ficha académica: curso al que va dirigido, módulos que trabaja y fecha de creación -->
+      <dl v-if="cursoDirigido || modulos.length || fechaCreacion"
+          class="space-y-2 rounded-xl bg-gray-50 px-3 py-2.5 text-xs">
+        <div v-if="cursoDirigido" class="flex items-start gap-2">
+          <dt class="w-14 shrink-0 pt-px text-[9px] font-black uppercase tracking-wider text-gray-400">Curso</dt>
+          <dd class="min-w-0 font-semibold leading-snug text-azul-noche line-clamp-2" :title="cursoDirigido">{{ cursoDirigido }}</dd>
+        </div>
+        <div v-if="modulos.length" class="flex items-start gap-2">
+          <dt class="w-14 shrink-0 pt-1 text-[9px] font-black uppercase tracking-wider text-gray-400">
+            {{ modulos.length > 1 ? 'Módulos' : 'Módulo' }}
+          </dt>
+          <dd class="flex min-w-0 flex-wrap gap-1">
+            <span v-for="m in modulos.slice(0, MAX_MODULOS)" :key="m" :title="m"
+                  class="max-w-full truncate rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-600 ring-1 ring-gray-200">{{ m }}</span>
+            <span v-if="modulos.length > MAX_MODULOS" :title="modulos.slice(MAX_MODULOS).join(', ')"
+                  class="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-gray-400">+{{ modulos.length - MAX_MODULOS }}</span>
+          </dd>
+        </div>
+        <div v-if="fechaCreacion" class="flex items-start gap-2">
+          <dt class="w-14 shrink-0 pt-px text-[9px] font-black uppercase tracking-wider text-gray-400">Creado</dt>
+          <dd class="font-semibold text-gray-600">{{ fechaCreacion }}</dd>
+        </div>
+      </dl>
+
       <!-- Meta -->
       <div class="space-y-1.5 text-xs text-gray-500 mt-auto">
         <div v-if="proyecto.empresa_nombre" class="flex items-center gap-1.5">
@@ -105,14 +148,23 @@ function getColor(p) {
           </svg>
           {{ proyecto.centro_nombre }}
         </div>
+        <!-- Validaciones: colores del logo — empresa en verde, docente (centro) en azul -->
         <div v-if="proyecto.empresa_validado"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border"
-             :class="[theme.bg5, theme.border20, theme.text]">
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-empresas/5 border-empresas/30 text-empresas-dark">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
           </svg>
           <span class="text-[9px] font-black uppercase tracking-wider leading-tight">
             Validado por empresa
+          </span>
+        </div>
+        <div v-if="proyecto.docente_validado"
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-centros/5 border-centros/30 text-centros">
+          <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span class="text-[9px] font-black uppercase tracking-wider leading-tight">
+            Validado por docente
           </span>
         </div>
       </div>

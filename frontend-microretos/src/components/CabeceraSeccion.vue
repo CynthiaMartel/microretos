@@ -1,11 +1,16 @@
 <!-- Cabecera de las vistas de sección (hubs, Calendario, Notificaciones…): mismo degradado
      y cinta de colores del logo que la bienvenida del panel docente (InicioDocente.vue). -->
 <script setup>
+import BotonVolver from './BotonVolver.vue'
+
 defineProps({
   titulo:    { type: String, required: true },
   destacado: { type: String, default: '' },
   color:     { type: String, default: 'text-centros' },
   subtitulo: { type: String, default: '' },
+  // Ruta de respaldo de la flecha "volver" (ver BotonVolver). Sin ella no hay flecha:
+  // las secciones del panel lateral son el primer nivel y no tienen a dónde volver.
+  volver:    { type: [String, Object], default: null },
 })
 </script>
 
@@ -13,6 +18,7 @@ defineProps({
   <section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-transparent">
     <div class="relative z-10 flex flex-wrap items-end justify-between gap-3 p-5 sm:p-6">
       <div class="min-w-0">
+        <BotonVolver v-if="volver" :fallback="volver" class="-mt-1 mb-2" />
         <h1 class="font-heading text-2xl font-bold tracking-tight text-azul-noche sm:text-3xl">
           {{ titulo }} <span v-if="destacado" :class="color">{{ destacado }}</span>
         </h1>

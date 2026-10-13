@@ -3,7 +3,7 @@
      del encuentro (Encuentro.grupo) se muestra como "Clase"; los datos vienen de GET /encuentros/mis-grupos. -->
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getMisGrupos } from '../services/encuentroService.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
@@ -12,10 +12,15 @@ import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademi
 import SelectorCurso from '../components/SelectorCurso.vue'
 import ConceptoClave from '../components/ConceptoClave.vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import MigasNavegacion from '../components/MigasNavegacion.vue'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import FiltroSegmentado from '../components/FiltroSegmentado.vue'
+import FiltroSelect from '../components/FiltroSelect.vue'
 import { ICONOS_NAV } from '../config/navegacion.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 const router = useRouter()
+const route  = useRoute()
 
 
 const cargando = ref(true)
@@ -165,6 +170,16 @@ const familiasDisponibles = computed(() =>
   [...new Set(gruposCurso.value.map(familiaDe))].sort((a, b) => (a === SIN_FAMILIA) - (b === SIN_FAMILIA) || a.localeCompare(b, 'es'))
 )
 
+const OPCIONES_ESTADO = [
+  { value: '', label: 'Todos' },
+  { value: 'progreso', label: 'En progreso' },
+  { value: 'completado', label: 'Completados' },
+]
+const opcionesNivel = computed(() => [
+  { value: '', label: 'Todos' },
+  ...cursosDisponibles.value.map(c => ({ value: c, label: formatCurso(c) })),
+])
+
 const hayFiltrosActivos = computed(() => !!(busqueda.value || filtroCurso.value || filtroFamilia.value || filtroEstado.value))
 function limpiarFiltros() {
   busqueda.value = ''
@@ -224,11 +239,23 @@ function agrupar(lista, claveDe, alFinal = []) {
 // (sobre todo el curso, no sobre el recorte filtrado, para que no aparezca y desaparezca al buscar)
 const variasFamilias = computed(() => new Set(gruposCurso.value.map(familiaDe)).size > 1)
 
-const familiaSel = ref(null)
-const moduloSel  = ref(null)
+// Familia y módulo abiertos viven en la URL (?familia=…&modulo=…): cada paso queda en el
+// historial, así la flecha "volver" de la cabecera y el atrás del navegador suben de nivel.
+const familiaSel = computed(() => (route.query.familia ? String(route.query.familia) : null))
+const moduloSel  = computed(() => (route.query.modulo ? String(route.query.modulo) : null))
 
-// Elegir una familia en el filtro equivale a entrar en su card (y quitarlo, a volver)
-watch(filtroFamilia, (f) => { familiaSel.value = f || null; moduloSel.value = null })
+function rutaNivel(familia = null, modulo = null) {
+  const query = {}
+  if (familia) query.familia = familia
+  if (modulo) query.modulo = modulo
+  return { name: 'mis-grupos', query }
+}
+
+// Elegir una familia en el filtro equivale a entrar en su card (y quitarlo, a volver).
+// Es un filtro, no un paso: replace, sin añadir entrada al historial.
+watch(filtroFamilia, (f) => {
+  if ((f || null) !== familiaSel.value) router.replace(rutaNivel(f || null))
+})
 
 // Con texto de búsqueda se salta la navegación por cards: resultados directos
 const buscando = computed(() => !!busqueda.value.trim())
@@ -250,16 +277,35 @@ const gruposLista = computed(() =>
   buscando.value ? gruposFiltrados.value : gruposDeFamilia.value.filter(g => moduloDe(g) === moduloSel.value)
 )
 
-function abrirFamilia(nombre) { familiaSel.value = nombre; moduloSel.value = null }
-function abrirModulo(nombre)  { moduloSel.value = nombre }
-function irAFamilias()        { familiaSel.value = null; moduloSel.value = null }
+function abrirFamilia(nombre) { router.push(rutaNivel(nombre)) }
+function abrirModulo(nombre)  { router.push(rutaNivel(familiaSel.value, nombre)) }
+
+// Flecha "volver" de la cabecera sin vista anterior (enlace directo): el nivel de arriba
+const volverCabecera = computed(() => {
+  if (moduloSel.value) return rutaNivel(familiaSel.value)
+  if (familiaSel.value) return rutaNivel()
+  return null
+})
+
+// Migas "dónde estás": niveles superiores enlazados y el actual destacado
+const migas = computed(() => {
+  const items = []
+  if (variasFamilias.value) items.push({ label: 'Familias', to: rutaNivel() })
+  if (moduloSel.value) {
+    items.push(variasFamilias.value
+      ? { label: familiaSel.value, to: rutaNivel(familiaSel.value) }
+      : { label: 'Módulos', to: rutaNivel() })
+  }
+  return { items, actual: moduloSel.value || familiaSel.value || '' }
+})
 
 // Si los filtros dejan vacía la familia o el módulo abiertos, volver al nivel de arriba
+// (solo con los datos ya cargados: durante la carga las listas están vacías)
 watch(familias, (lista) => {
-  if (familiaSel.value && !lista.some(f => f.nombre === familiaSel.value)) irAFamilias()
+  if (!cargando.value && familiaSel.value && !lista.some(f => f.nombre === familiaSel.value)) router.replace(rutaNivel())
 })
 watch(modulos, (lista) => {
-  if (moduloSel.value && !lista.some(m => m.nombre === moduloSel.value)) moduloSel.value = null
+  if (!cargando.value && moduloSel.value && !lista.some(m => m.nombre === moduloSel.value)) router.replace(rutaNivel(familiaSel.value))
 })
 
 // Resumen de una card (familia o módulo): encuentros, equipos por estado y avance medio
@@ -330,7 +376,7 @@ onMounted(cargar)
 
     <!-- Cabecera como el resto de vistas del panel docente (degradado + cinta de colores) -->
     <div class="max-w-5xl mx-auto px-4 pt-5">
-      <CabeceraSeccion titulo="Seguimiento de" destacado="grupos"
+      <CabeceraSeccion titulo="Seguimiento de" destacado="grupos" :volver="volverCabecera"
                        subtitulo="Revisa el avance de todos tus grupos activos, encuentro a encuentro." />
     </div>
 
@@ -381,63 +427,27 @@ onMounted(cargar)
             </div>
           </div>
 
-          <!-- Búsqueda y filtros -->
-          <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-3">
-            <div class="relative">
-              <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              <input v-model="busqueda" type="text"
-                     placeholder="Buscar por clase, proyecto, ciclo o grupo..."
-                     class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium
-                            text-[#1F2937] placeholder-gray-400 focus:bg-white focus:border-centros
-                            focus:ring-2 focus:ring-centros/10 outline-none transition-all"/>
-              <button v-if="busqueda" @click="busqueda = ''"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center
-                             rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 transition-colors">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" class="mr-1" />
-              <div class="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
-                <button @click="filtroEstado = ''"
-                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors',
-                                 filtroEstado === '' ? 'bg-[#1F2937] text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
-                  Todos
-                </button>
-                <button @click="filtroEstado = 'progreso'"
-                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors border-l border-gray-200',
-                                 filtroEstado === 'progreso' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
-                  En progreso
-                </button>
-                <button @click="filtroEstado = 'completado'"
-                        :class="['px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors border-l border-gray-200',
-                                 filtroEstado === 'completado' ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-[#1F2937]']">
-                  Completados
-                </button>
-              </div>
-              <select v-model="filtroCurso" :disabled="!cursosDisponibles.length"
-                      class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
-                             focus:bg-white focus:border-centros outline-none transition-all disabled:opacity-50">
-                <option value="">Todos los niveles</option>
-                <option v-for="c in cursosDisponibles" :key="c" :value="c">Nivel {{ formatCurso(c) }}</option>
-              </select>
-              <select v-model="filtroFamilia" :disabled="!familiasDisponibles.length"
-                      class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1F2937]
-                             focus:bg-white focus:border-centros outline-none transition-all disabled:opacity-50">
-                <option value="">Todas las familias</option>
-                <option v-for="f in familiasDisponibles" :key="f" :value="f">{{ f }}</option>
-              </select>
-              <button v-if="hayFiltrosActivos" @click="limpiarFiltros"
-                      class="px-3 py-2 text-xs font-black text-gray-500 hover:text-gray-700 uppercase tracking-wider transition-colors">
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
+          <!-- Búsqueda y filtros (pie: encuentros visibles tras filtrar, como la tarjeta "Encuentros") -->
+          <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar por clase, proyecto, ciclo o grupo…"
+                        :resultados="gruposFiltrados.length" :unidad="['encuentro', 'encuentros']"
+                        :hay-activos="hayFiltrosActivos" @limpiar="limpiarFiltros">
+            <template #curso>
+              <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+            </template>
+
+            <FiltroSegmentado v-model="filtroEstado" label="Estado" :opciones="OPCIONES_ESTADO" />
+
+            <!-- Nivel: Encuentro.curso es texto libre; con pocos valores (lo normal: 1º/2º) segmentado,
+                 si hubiera más, desplegable -->
+            <template v-if="cursosDisponibles.length">
+              <FiltroSegmentado v-if="cursosDisponibles.length <= 4" v-model="filtroCurso" label="Nivel" :opciones="opcionesNivel" />
+              <FiltroSelect v-else v-model="filtroCurso" label="Nivel" todos="Todos los niveles" :opciones="opcionesNivel.slice(1)" />
+            </template>
+
+            <!-- Familia: su v-model tiene un watch que navega a la card de la familia (router.replace) -->
+            <FiltroSelect v-model="filtroFamilia" label="Familia profesional" todos="Todas las familias"
+                          :opciones="familiasDisponibles" />
+          </FiltrosPanel>
         </template>
 
         <p v-if="gruposConAlerta.length" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2">
@@ -450,22 +460,8 @@ onMounted(cargar)
 
         <template v-if="gruposFiltrados.length">
           <!-- Migas: dónde estás dentro de familia → módulo (no se muestran en el primer nivel) -->
-          <nav v-if="!buscando && nivel !== (variasFamilias ? 'familias' : 'modulos')"
-               class="flex flex-wrap items-center gap-1.5 pt-1 text-xs font-bold text-gray-400" aria-label="Agrupación">
-            <button v-if="variasFamilias" type="button" class="hover:text-centros" @click="irAFamilias">Todas las familias</button>
-            <template v-if="variasFamilias && familiaSel">
-              <span aria-hidden="true">›</span>
-              <button v-if="moduloSel" type="button" class="hover:text-centros" @click="moduloSel = null">{{ familiaSel }}</button>
-              <span v-else class="text-azul-noche">{{ familiaSel }}</span>
-            </template>
-            <template v-if="!variasFamilias">
-              <button type="button" class="hover:text-centros" @click="moduloSel = null">Todos los módulos</button>
-            </template>
-            <template v-if="moduloSel">
-              <span aria-hidden="true">›</span>
-              <span class="text-azul-noche">{{ moduloSel }}</span>
-            </template>
-          </nav>
+          <MigasNavegacion v-if="!buscando && nivel !== (variasFamilias ? 'familias' : 'modulos')"
+                           :items="migas.items" :actual="migas.actual" />
 
           <p v-else-if="buscando" class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 pt-1">
             Resultados de la búsqueda

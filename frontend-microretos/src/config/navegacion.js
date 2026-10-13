@@ -28,6 +28,7 @@ export const ICONOS_NAV = {
   info:         'M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-4M12 8h.01',
   glosario:     'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
   codigo:       'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+  ojo:          'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 100-6 3 3 0 000 6z',
 }
 
 // ── Entradas del SidePanel (docente, admin y superadmin) ──────────────────────
@@ -53,19 +54,16 @@ export const GRUPOS_NAV = [
       { key: 'retos-proyectos', label: 'Retos y proyectos', icon: 'capas', ruta: '/seccion/retos-proyectos', routeName: 'seccion', color: 'docente',
         tip: 'Genera retos y proyectos, y consulta sus bibliotecas',
         activa: (p) => p === '/seccion/retos-proyectos' || p.startsWith('/retos')
-          || (p.startsWith('/proyectos') && !p.startsWith('/proyectos/terminados') && !esPantallaAcceso(p)) },
+          || (p.startsWith('/proyectos') && !esPantallaAcceso(p)) },
       { key: 'encuentros', label: 'Encuentros', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'alumnos',
         tip: 'Crea encuentros con el alumnado y consulta los registrados',
         activa: (p) => p === '/seccion/encuentros' || p.startsWith('/encuentros') },
       { key: 'mis-grupos', label: 'Mis grupos', icon: 'grafica', ruta: '/mis-grupos', routeName: 'mis-grupos', color: 'docente',
         tip: 'Seguimiento del avance de todos tus grupos de alumnado',
         activa: (p) => p.startsWith('/mis-grupos') },
-      { key: 'evaluacion', label: 'Evaluación', icon: 'evaluacion', ruta: '/seccion/evaluacion', routeName: 'seccion', color: 'docente',
-        tip: 'Proyectos terminados, diagnósticos y validación docente',
-        activa: (p) => p === '/seccion/evaluacion' || p.startsWith('/proyectos/terminados') || p.startsWith('/evaluacion') },
       { key: 'alumnado', label: 'Alumnado', icon: 'alumnado', ruta: '/seccion/alumnado', routeName: 'seccion', color: 'alumnos',
-        tip: 'Da acceso al alumnado, consulta su listado y accede a su espacio de trabajo',
-        activa: (p) => p === '/seccion/alumnado' || p.startsWith('/alumnado') || esPantallaAcceso(p) || p.startsWith('/unirse') || p.startsWith('/workspace-proyecto') },
+        tip: 'Listado del alumnado, diagnósticos y acceso al encuentro',
+        activa: (p) => p === '/seccion/alumnado' || p.startsWith('/alumnado') || p.startsWith('/evaluacion') || esPantallaAcceso(p) || p.startsWith('/unirse') || p.startsWith('/workspace-proyecto') },
       { key: 'empresas', label: 'Empresas', icon: 'empresa', ruta: '/seccion/empresas', routeName: 'seccion', color: 'empresas',
         tip: 'Directorio de empresas y envío de propuestas',
         activa: (p) => p === '/seccion/empresas' || p.startsWith('/empresas') },
@@ -97,21 +95,29 @@ export const GRUPOS_NAV = [
 // Cada card: `ruta` (navega) o `accion` (abre un modal: 'comoFunciona' | 'creditos').
 // `routeName` filtra por rol con canAccess(); sin él, la card se muestra a todos los
 // roles que pueden entrar en la sección. `tile`: color de marca del icono.
+// `ancho`: acción destacada a toda la fila — la card entera es el botón (tintada con el
+// color del tile y una flecha a la derecha), sin CTA aparte que parezca otra acción.
+// `integrada`: mismo estilo que `ancho` pero ocupando solo su columna.
+//
+// `bloqueSecundario` (opcional): card con texto a la izquierda y botones pequeños a la
+// derecha. `separador`: texto entre botones cuando son alternativas ("o");
+// `destacarPrimera`: la primera opción va resaltada (vía directa); `icon`: junto al título.
 export const SECCIONES = {
   'retos-proyectos': {
     titulo: 'Retos y', destacado: 'proyectos', color: 'text-centros',
     subtitulo: 'Crea proyectos para tu alumnado y gestiona los que ya tienes en marcha.',
     cards: [
       { titulo: 'Generar proyecto', desc: 'Crea una propuesta de proyecto a partir de un reto y envíala a la empresa.',
-        cta: 'Crear proyecto', principal: true,
+        integrada: true,
         ruta: '/proyectos/crear', routeName: 'startup-day-crear', icon: 'masCirculo', tile: 'bg-centros' },
       { titulo: 'Biblioteca de proyectos', desc: 'Tus propuestas y proyectos: en edición, pendientes de validar, en marcha y terminados.',
-        cta: 'Ver biblioteca',
-        ruta: '/proyectos', routeName: 'startup-day', icon: 'capas', tile: 'bg-empresas' },
+        integrada: true,
+        ruta: '/proyectos',routeName: 'startup-day', icon: 'capas', tile: 'bg-empresas' },
     ],
     // Bloque secundario: de qué reto parte el proyecto. La biblioteca va primero porque es
     // la vía directa; el generador es opcional, para personalizar lo que se trabaja.
-    pasoAtras: {
+    bloqueSecundario: {
+      separador: 'o', destacarPrimera: true,
       titulo: '¿De qué reto parte tu proyecto?',
       texto: 'Todo proyecto nace de un reto: la necesidad real de una empresa convertida en una pregunta para tu alumnado. Tenemos una biblioteca con retos disponibles, pero si quieres crear tu reto personalizado utiliza nuestro generador.',
       cards: [
@@ -137,6 +143,12 @@ export const SECCIONES = {
           concepto: { color: 'centros', pregunta: '¿Qué es un reto?', segmentos: [
             { t: 'Un ' }, { t: 'RETO', b: true }, { t: ' es la necesidad real de una empresa, transformada (con ayuda de la IA) en una ' },
             { t: 'pregunta', b: true }, { t: ' que el alumnado deberá responder.' },
+            { br: true },
+            { t: 'Puedes elegir trabajar un reto en nuestra ' },
+            { t: 'biblioteca de retos', ruta: '/retos', routeName: 'biblioteca', tip: 'Ir a la biblioteca de retos' },
+            { t: ' o ' },
+            { t: 'crear uno nuevo', ruta: '/retos/crear', routeName: 'microretos', tip: 'Ir a crear reto' },
+            { t: '.' },
           ] },
           pasos: [
             { titulo: 'Crea un reto a medida (opcional)', conector: '¿Te gusta?',
@@ -146,8 +158,17 @@ export const SECCIONES = {
           ] },
         { nombre: 'Proyectos', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: null,
           concepto: { color: 'empresas', pregunta: '¿Qué es un proyecto?', segmentos: [
-            { t: 'Una ' }, { t: 'PROPUESTA', b: true }, { t: ' es la concreción curricular del reto que hace el docente. Al validarla la empresa y el propio docente, pasa a ser ' },
-            { t: 'PROYECTO', b: true }, { t: ': la respuesta que elaborará el alumnado, con sus fases, entregables y evaluación.' },
+            { t: 'Un ' }, { t: 'PROYECTO', b: true }, { t: ' es la respuesta a la pregunta del reto que el alumnado deberá responder, con sus fases, entregables y evaluación.' },
+            { br: true },
+            { t: 'Todo proyecto parte de una ' },
+            { t: 'PROPUESTA', b: true },
+            { t: ', que es la concreción curricular del reto y la asignación de alumnado en equipos de trabajo (grupos) acordado previamente por el docente. Esta propuesta, al ser validada por el docente y/o por la empresa, pasa a convertirse en el proyecto a trabajar por el alumnado.' },
+            { br: true },
+            { t: 'Puedes ver la ' },
+            { t: 'biblioteca de proyectos', ruta: '/proyectos', routeName: 'startup-day', tip: 'Ir a la biblioteca de proyectos' },
+            { t: ' que hayas creado y/o ' },
+            { t: 'crear una propuesta', ruta: '/proyectos/crear', routeName: 'startup-day-crear', tip: 'Ir a generar proyecto' },
+            { t: '.' },
           ] },
           pasos: [
             { titulo: 'Crea un proyecto', conector: 'Guárdalo',
@@ -167,6 +188,12 @@ export const SECCIONES = {
         { t: 'Un ' }, { t: 'ENCUENTRO', b: true }, { t: ' es el ' }, { t: 'cuándo', b: true },
         { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
         { t: 'workspace', b: true }, { t: '.' },
+        { br: true },
+        { t: 'Puedes ver los encuentros creados en la ' },
+        { t: 'biblioteca de encuentros', ruta: '/encuentros', routeName: 'encuentros-registrados', tip: 'Ir a la biblioteca de encuentros' },
+        { t: ' o ' },
+        { t: 'crear un nuevo encuentro', ruta: '/encuentros/crear', routeName: 'dashboard-docente', tip: 'Ir a crear encuentro' },
+        { t: '.' },
       ] },
     ],
     cards: [
@@ -175,8 +202,6 @@ export const SECCIONES = {
       { titulo: 'Biblioteca de encuentros', desc: 'Consulta todos los encuentros registrados.',
         ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-alumnos' },
     ],
-    // Panel "Historial · Resumen de encuentros" (el mismo que en /encuentros/crear) bajo las cards
-    historialEncuentros: true,
     flujo: {
       titulo: 'Mira cómo funciona',
       fases: [
@@ -203,13 +228,26 @@ export const SECCIONES = {
     cards: [
       { titulo: 'Listado de alumnado', desc: 'Cada alumno con sus proyectos, encuentros, grupo, fase y nota final.',
         ruta: '/alumnado/listado', routeName: 'alumnado-listado', icon: 'alumnado', tile: 'bg-alumnos' },
+      { titulo: 'Biblioteca de diagnósticos', desc: 'Diagnósticos finales de los proyectos terminados.',
+        ruta: '/evaluacion/diagnosticos', routeName: 'biblioteca-diagnosticos', icon: 'diagnostico', tile: 'bg-administraciones' },
       { titulo: 'Dar acceso al encuentro', desc: 'Elige un encuentro y proyecta su QR y código para el alumnado.',
+        ancho: true,
         ruta: '/pantalla-acceso', routeName: 'pantalla-acceso-lista', icon: 'candado', tile: 'bg-alumnos' },
-      { titulo: 'Unirse a un grupo', desc: 'Primera vez: el alumno elige su clase y su grupo (en su pantalla aparece como «equipo»).',
-        ruta: '/unirse', icon: 'entrar', tile: 'bg-azul-noche' },
-      { titulo: 'Retomar workspace', desc: 'El grupo introduce su código para volver a su flujo de trabajo.',
-        ruta: '/workspace-proyecto', icon: 'documento', tile: 'bg-azul-noche' },
     ],
+    // Pantallas del propio alumnado: el docente solo las abre para ver qué ve su alumnado
+    bloqueSecundario: {
+      icon: 'ojo',
+      titulo: 'Cómo lo ve el alumnado',
+      texto: 'Estas son las pantallas que usa tu alumnado desde su dispositivo. Ábrelas solo para ver lo que ven ellos: no necesitas usarlas como docente.',
+      cards: [
+        { titulo: 'Unirse a un grupo', etiqueta: 'Primera vez',
+          desc: 'El alumno elige su clase y su grupo (en su pantalla aparece como «equipo»).',
+          ruta: '/unirse', icon: 'entrar', tile: 'bg-azul-noche' },
+        { titulo: 'Retomar workspace', etiqueta: 'Otro día',
+          desc: 'El grupo introduce su código para volver a su flujo de trabajo.',
+          ruta: '/workspace-proyecto', icon: 'documento', tile: 'bg-azul-noche' },
+      ],
+    },
     flujo: {
       titulo: 'Mira cómo entra el alumnado',
       fases: [
@@ -242,40 +280,6 @@ export const SECCIONES = {
         ruta: '/empresas', routeName: 'empresas', icon: 'candado', tile: 'bg-empresas' },
     ],
   },
-  evaluacion: {
-    titulo: 'Evaluación', destacado: '', color: 'text-centros',
-    subtitulo: 'Revisa los proyectos terminados, sus diagnósticos y las propuestas que esperan tu validación.',
-    cards: [
-      { titulo: 'Pendientes de validar', desc: 'Propuestas de proyecto que esperan la validación docente.',
-        ruta: { path: '/proyectos', query: { filtro: 'propuesta' } }, routeName: 'startup-day', icon: 'evaluacion', tile: 'bg-centros' },
-      { titulo: 'Proyectos terminados', desc: 'Proyectos finalizados por los grupos, con su resultado.',
-        ruta: '/proyectos/terminados', routeName: 'startup-day', icon: 'trofeo', tile: 'bg-administraciones' },
-      { titulo: 'Biblioteca de diagnósticos', desc: 'Diagnósticos finales de los proyectos terminados.',
-        ruta: '/evaluacion/diagnosticos', routeName: 'biblioteca-diagnosticos', icon: 'diagnostico', tile: 'bg-administraciones' },
-    ],
-    flujo: {
-      titulo: 'Mira cómo funciona',
-      fases: [
-        { nombre: 'Propuesta', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Se trabaja en el aula',
-          pasos: [
-            { titulo: 'Valida la propuesta',
-              desc: 'La empresa desde su enlace, o tú como docente: la propuesta pasa a ser proyecto.' },
-          ] },
-        { nombre: 'Grupos', texto: 'text-alumnos-dark', borde: 'border-alumnos', halo: 'ring-alumnos/15', conector: '5 fases completas',
-          pasos: [
-            { titulo: 'Los grupos completan las fases',
-              desc: 'Cada grupo avanza y cierra sus 5 fases en su workspace.' },
-          ] },
-        { nombre: 'Cierre', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15',
-          pasos: [
-            { titulo: 'Evalúa y genera el diagnóstico', conector: 'Márcalo completado',
-              desc: 'Valora los RA/CE de cada grupo y genera su diagnóstico final con IA.' },
-            { titulo: 'Proyecto terminado',
-              desc: 'Queda en Proyectos terminados, y sus diagnósticos en la biblioteca de diagnósticos.' },
-          ] },
-      ],
-    },
-  },
   recursos: {
     titulo: 'Recursos', destacado: '', color: 'text-centros',
     subtitulo: 'Todo lo que necesitas para entender y sacar partido a DuaLab.',
@@ -306,7 +310,9 @@ export const SECCIONES = {
           ] },
         { nombre: 'Evaluación', texto: 'text-azul-noche', borde: 'border-administraciones', halo: 'ring-administraciones/15',
           pasos: [
-            { titulo: 'Sigue y evalúa', desc: 'Avance por fases, evaluación RA/CE y diagnóstico final con IA.' },
+            { titulo: 'Sigue a tus grupos', conector: 'Al terminar',
+              desc: 'En Mis grupos ves el avance por fases de cada grupo, sus tareas y entregas, y quién necesita ayuda.' },
+            { titulo: 'Evalúa', desc: 'Evaluación RA/CE y diagnóstico final con IA.' },
           ] },
       ],
     },

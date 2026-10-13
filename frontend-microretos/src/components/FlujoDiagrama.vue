@@ -80,7 +80,7 @@ onBeforeUnmount(cerrarConcepto)
             <span v-if="paso.n < totalPasos"
                   class="relative my-2 w-0 flex-1 border-l-2 border-dashed border-gray-300 lg:mx-3 lg:my-0 lg:h-0 lg:border-l-0 lg:border-t-2">
               <span v-if="conectorDe(fase, fi, pi)"
-                    class="absolute bottom-1.5 left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-[11px] italic text-gray-500 lg:block">
+                    class="absolute inset-x-0 bottom-1.5 hidden px-1 text-center text-[11px] italic leading-tight text-gray-500 lg:block">
                 {{ conectorDe(fase, fi, pi) }}
               </span>
             </span>
@@ -101,9 +101,9 @@ onBeforeUnmount(cerrarConcepto)
     <Transition enter-from-class="translate-y-3 opacity-0" leave-to-class="translate-y-3 opacity-0"
                 enter-active-class="transition duration-200 ease-out" leave-active-class="transition duration-150 ease-in">
       <div v-if="conceptoAbierto" role="status" aria-live="polite"
-           class="fixed bottom-4 left-1/2 z-[60] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl bg-white shadow-xl">
+           class="fixed bottom-4 left-1/2 z-[60] max-h-[70vh] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-xl">
         <ConceptoClave class="pr-10" :color="conceptoAbierto.color" :segmentos="conceptoAbierto.segmentos" />
-        <button type="button" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-700"
+        <button type="button" class="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-700"
                 aria-label="Cerrar" @click="cerrarConcepto">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

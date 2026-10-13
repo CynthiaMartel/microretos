@@ -44,6 +44,17 @@ const conceptos = [
   ...fasesRetosProyectos.map(f => f.concepto).filter(Boolean),
   ...(SECCIONES.encuentros.conceptos ?? []),
 ]
+// En escritorio, cada columna es más ancha cuanto más texto tiene su concepto, para que las
+// tres cajas queden con una altura parecida y las cortas no se llenen de hueco en blanco.
+// Se acota a 1–2 veces el ancho de la más corta para que ninguna quede estrecha.
+const largoTexto = (c) => c.segmentos.reduce((n, s) => n + (s.t?.length ?? 0), 0)
+const minLargo = Math.min(...conceptos.map(largoTexto))
+const columnasConceptos = conceptos
+  .map(c => `${Math.min(2, largoTexto(c) / minLargo).toFixed(2)}fr`)
+  .join(' ')
+// En tablet (2 columnas), el concepto más largo ocupa toda la columna derecha y los otros
+// dos se apilan a la izquierda: se mantiene el orden de lectura y las alturas se compensan.
+const iConceptoLargo = conceptos.reduce((iMax, c, i) => (largoTexto(c) > largoTexto(conceptos[iMax]) ? i : iMax), 0)
 
 // Recorrido completo: el flujo de la sección Recursos
 const recorrido = SECCIONES.recursos.flujo
@@ -55,7 +66,7 @@ const visible = (c) => !c.routeName || authStore.canAccess(c.routeName)
 const herramientasDe = (key) => {
   const s = SECCIONES[key]
   if (!s) return []
-  return [...(s.pasoAtras?.cards ?? []), ...s.cards]
+  return [...(s.bloqueSecundario?.cards ?? []), ...s.cards]
     .filter(c => visible(c) && c.accion !== 'comoFunciona')
 }
 const gruposPanel = computed(() =>
@@ -177,8 +188,12 @@ const ir = (destino) => {
                 <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
                   Las piezas de DuaLab
                 </p>
-                <div class="grid gap-3 lg:grid-cols-3">
-                  <ConceptoClave v-for="(c, i) in conceptos" :key="i" :color="c.color" :segmentos="c.segmentos" />
+                <!-- Móvil: una columna; tablet: dos, con el más largo a la derecha;
+                     escritorio: tres columnas proporcionales al texto -->
+                <div class="grid gap-3 md:grid-cols-2 lg:[grid-template-columns:var(--cols-conceptos)]"
+                     :style="{ '--cols-conceptos': columnasConceptos }">
+                  <ConceptoClave v-for="(c, i) in conceptos" :key="i" :color="c.color" :segmentos="c.segmentos"
+                                 :class="i === iConceptoLargo && 'md:col-start-2 md:row-span-2 md:row-start-1 lg:col-start-auto lg:row-span-1 lg:row-start-auto'" />
                 </div>
               </section>
 

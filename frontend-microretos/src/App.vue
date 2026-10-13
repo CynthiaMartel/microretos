@@ -7,7 +7,7 @@ import SidePanel from './components/SidePanel.vue'
 import AppCredit from './components/AppCredit.vue'
 import ComoFuncionaModal from './components/ComoFuncionaModal.vue'
 import LoginModal from './components/LoginModal.vue'
-import { useAuthStore, ROLE_DOCENTE, ROLE_ADMIN, ROLE_EMPRESA } from './stores/auth'
+import { useAuthStore, ROLE_EMPRESA } from './stores/auth'
 import { useIdleTimer } from './composables/useIdleTimer'
 import { useLoginModal } from './composables/useLoginModal.js'
 import { useUIState } from './composables/useUIState.js'
@@ -53,9 +53,8 @@ const onLoginSuccess = (data) => {
 }
 
 function rolHome(role) {
-  if (role === ROLE_DOCENTE || role === ROLE_ADMIN) return '/panel-docente'
   if (role === ROLE_EMPRESA) return '/proyectos'
-  return '/retos/crear'
+  return '/panel-docente'
 }
 
 // ── Sesión caducada (401 del servidor) ────────────────────────────────────────

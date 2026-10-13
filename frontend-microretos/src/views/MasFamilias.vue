@@ -1,5 +1,6 @@
 <!-- Ruta: /retos/familias (name: mas-familias). Resto de familias que quedan tras las visibles en la Biblioteca. -->
 <script setup>
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import api from '../api.js';
@@ -61,8 +62,6 @@ const cargarDatos = async () => {
 
 onMounted(cargarDatos);
 
-const volver = () => router.push({ name: 'biblioteca' });
-
 const seleccionarFamilia = (nombre) => {
   router.push({ name: 'biblioteca', query: { familia: nombre, ...(centro ? { centro } : {}) } });
 };
@@ -77,28 +76,10 @@ const seleccionarFamilia = (nombre) => {
 
     <div class="relative z-10 max-w-6xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <div class="mb-8">
-        <button @click="volver"
-                class="inline-flex items-center gap-2 px-5 py-2.5
-                       bg-white border border-gray-200 rounded-full
-                       text-xs font-black uppercase tracking-widest text-[#1F2937]
-                       shadow-sm
-                       transition-all active:scale-95"
-                :class="paletteExtra[theme.key].hoverBorderText">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          Volver a la Biblioteca
-        </button>
-      </div>
-
-      <h1 class="text-2xl md:text-4xl font-black text-azul-noche tracking-tight leading-tight mb-2">
-        Más familias profesionales
-      </h1>
-      <p class="text-gray-400 text-sm font-bold uppercase tracking-widest mb-10">
-        Selecciona una familia para explorar sus micro-retos
-      </p>
+      <CabeceraSeccion titulo="Más familias" destacado="profesionales" :color="theme.text"
+                       :volver="{ name: 'biblioteca' }"
+                       subtitulo="Selecciona una familia para explorar sus retos."
+                       class="mb-8" />
 
       <div v-if="cargando" class="text-center py-20 text-gray-400 text-sm font-bold uppercase tracking-widest">
         Cargando familias…

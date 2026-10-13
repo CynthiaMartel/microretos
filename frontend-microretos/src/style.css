@@ -145,3 +145,22 @@ input:focus, select:focus, textarea:focus {
 .fixed.inset-0.items-center {
   align-items: safe center;
 }
+
+/* ---------------------------------------------------
+   Acciones de la cabecera de sección (slot de CabeceraSeccion)
+   Mismo sitio y mismo aspecto en todas las vistas: a la derecha del título.
+   · .accion-principal  → la acción principal de la vista (una sola: "Nuevo…")
+   · .accion-secundaria → ayuda/guía, navegación secundaria
+   · .accion-icono      → acciones de solo icono (papelera de superadmin), con title
+--------------------------------------------------- */
+@layer components {
+  .accion-principal {
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90;
+  }
+  .accion-secundaria {
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm transition-colors hover:bg-centros/5;
+  }
+  .accion-icono {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-red-200 hover:text-red-500;
+  }
+}

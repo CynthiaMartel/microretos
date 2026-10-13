@@ -1,4 +1,5 @@
 <script setup>
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
@@ -92,19 +93,8 @@ async function guardar() {
   <div class="min-h-screen pt-16">
     <div class="max-w-lg mx-auto px-4 py-10">
 
-      <!-- Cabecera -->
-      <div class="mb-6">
-        <button @click="router.back()"
-          class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600
-                 transition-colors mb-4">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Volver
-        </button>
-        <h1 class="text-2xl font-black text-azul-noche">Mi usuario</h1>
-        <p class="text-sm text-gray-400 mt-1">Edita tu nombre o cambia la contraseña de acceso.</p>
-      </div>
+      <CabeceraSeccion titulo="Mi" destacado="usuario" volver="/"
+                       subtitulo="Edita tu nombre o cambia la contraseña de acceso." class="mb-6" />
 
       <!-- Tarjeta -->
       <div class="bg-white border border-gray-200 rounded-[1.75rem] p-8 shadow-sm space-y-5">

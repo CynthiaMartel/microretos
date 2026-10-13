@@ -2,7 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import {
-  proponerEmpresaFicticiaIA, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA,
+  proponerEmpresaFicticiaIA, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, getFamiliasFicticiaIA,
 } from '../services/empresaService.js'
 
 // «Crear empresa ficticia con IA»: único flujo de creación con IA (Generador de Retos y
@@ -26,9 +26,82 @@ const emit = defineEmits(['guardada', 'cerrar', 'borrador'])
 const authStore = useAuthStore()
 const esSuperAdmin = computed(() => authStore.isSuperAdmin)
 
-const familiaId    = ref(props.familiaInicialId || '')
+const familiaId    = ref('')
 const centroElegido = ref(props.centroFijo || '')
 const paraCatalogo = ref(false)
+
+// ── Familias elegibles ─────────────────────────────────────────
+// Solo las que el centro de destino tiene asociadas y con módulos, RA y CE: con otra familia
+// la empresa no serviría en el Generador de Retos (la IA necesita esos datos). La lista la da
+// el backend según el destino; mientras no llega, las que tienen datos en general. El backend
+// vuelve a comprobarlo al generar.
+const destinoFamilias = ref(null)   // { familias, centro, limitado_por_centro, sin_datos_en_centro }
+const cargandoFamilias = ref(false)
+let peticionFamilias = 0
+
+const necesitaCentro = computed(() => esSuperAdmin.value && !paraCatalogo.value && !centroElegido.value)
+
+async function cargarFamiliasDestino() {
+  const id = ++peticionFamilias
+  if (necesitaCentro.value) { destinoFamilias.value = null; return }
+  cargandoFamilias.value = true
+  try {
+    const { data } = await getFamiliasFicticiaIA(esSuperAdmin.value
+      ? { centro: paraCatalogo.value ? null : centroElegido.value, catalogo: paraCatalogo.value }
+      : {})
+    if (id === peticionFamilias) destinoFamilias.value = data
+  } catch {
+    if (id === peticionFamilias) destinoFamilias.value = null
+  } finally {
+    if (id === peticionFamilias) cargandoFamilias.value = false
+  }
+}
+
+const familiasUsables = computed(() => destinoFamilias.value?.familias
+  ?? (props.familias.some(f => 'con_datos_retos' in f) ? props.familias.filter(f => f.con_datos_retos) : props.familias))
+
+// La familia elegida (o la que llega preseleccionada) solo vale si está entre las elegibles
+watch(familiasUsables, (lista) => {
+  const deseada = familiaId.value || props.familiaInicialId
+  familiaId.value = lista.some(f => String(f.id) === String(deseada)) ? deseada : ''
+}, { immediate: true })
+
+// ── Aviso flotante sobre el selector de familia ─────────────────
+const avisoFamiliasVisible = ref(true)
+watch([paraCatalogo, centroElegido], () => { avisoFamiliasVisible.value = true; cargarFamiliasDestino() }, { immediate: true })
+
+const nombreCentroAviso = computed(() => destinoFamilias.value?.centro || centroElegido.value || '')
+const sinDatosEnCentro = computed(() => destinoFamilias.value?.sin_datos_en_centro ?? [])
+const avisoFamilias = computed(() => {
+  const centro = nombreCentroAviso.value
+  if (paraCatalogo.value) {
+    return {
+      titulo: 'Solo familias con currículo cargado',
+      texto: 'Aparecen únicamente las familias profesionales que ya tienen módulos, resultados de aprendizaje (RA) y criterios de evaluación (CE) en la base de datos. Son los datos que el Generador de Retos envía a la IA para construir cada reto: una plantilla de otra familia no se podría usar.',
+      accion: 'Para habilitar otra familia, carga el currículo de alguno de sus ciclos en «Base de datos» → gestión de familias y ciclos (botón de importar de cada ciclo).',
+    }
+  }
+  if (necesitaCentro.value) {
+    return {
+      titulo: 'Primero, el centro',
+      texto: 'Las familias disponibles dependen del centro educativo: elige el centro para ver solo las que tiene asociadas.',
+      accion: '',
+    }
+  }
+  const limitado = destinoFamilias.value?.limitado_por_centro
+  const deQuien = esSuperAdmin.value ? `«${centro}»` : (centro ? `tu centro, «${centro}»,` : 'tu centro')
+  return {
+    titulo: limitado
+      ? (esSuperAdmin.value ? 'Solo las familias de este centro' : 'Solo las familias de tu centro')
+      : (esSuperAdmin.value ? 'Este centro aún no tiene ciclos asociados' : 'Tu centro aún no tiene ciclos asociados'),
+    texto: limitado
+      ? `Aparecen únicamente las familias profesionales que ${deQuien} tiene asociadas en la base de datos y que ya cuentan con módulos, resultados de aprendizaje (RA) y criterios de evaluación (CE). El Generador de Retos necesita esos datos para crear un reto, así que con cualquier otra familia la empresa no se podría usar.`
+      : `${esSuperAdmin.value ? `«${centro}»` : 'Tu centro'} todavía no tiene ciclos formativos asociados en la base de datos, así que se muestran todas las familias que ya tienen módulos, resultados de aprendizaje (RA) y criterios de evaluación (CE). Es lo mínimo que necesita el Generador de Retos.`,
+    accion: esSuperAdmin.value
+      ? 'Para ampliar las familias de este centro, asóciale sus ciclos y carga el currículo que falte en «Base de datos» → gestión de familias y ciclos.'
+      : '¿Necesitas otra familia? Pídeselo al superadmin de DuaLab: tiene que asociarla a tu centro en la base de datos y cargar sus módulos, RA y CE. En cuanto lo haga, aparecerá aquí.',
+  }
+})
 const propuesta    = ref(null)   // { token, destino, familia, empresa, paraCatalogo }
 const generando    = ref(false)
 const guardando    = ref(false)
@@ -153,10 +226,34 @@ const resumen = computed(() => {
         </select>
       </template>
 
+      <!-- Aviso flotante que señala el selector: por qué solo aparecen estas familias -->
+      <Transition name="cefi-aviso">
+        <div v-if="avisoFamiliasVisible" role="note" class="relative mb-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-3 pr-9 shadow-lg shadow-amber-200/50 text-xs text-amber-900 leading-relaxed">
+          <button type="button" @click="avisoFamiliasVisible = false" aria-label="Cerrar aviso"
+            class="absolute top-2 right-2 w-6 h-6 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-100">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <p class="font-black uppercase tracking-wide text-[11px] flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            {{ avisoFamilias.titulo }}
+          </p>
+          <p class="mt-1">{{ avisoFamilias.texto }}</p>
+          <p v-if="sinDatosEnCentro.length && !paraCatalogo" class="mt-1">
+            {{ esSuperAdmin ? 'Este centro' : 'Tu centro' }} también tiene asociada{{ sinDatosEnCentro.length > 1 ? 's' : '' }}
+            <strong>{{ sinDatosEnCentro.join(', ') }}</strong>, pero todavía sin módulos ni RA/CE cargados.
+          </p>
+          <p v-if="avisoFamilias.accion" class="mt-1 font-bold">{{ avisoFamilias.accion }}</p>
+          <!-- Flecha hacia el selector de familia -->
+          <span aria-hidden="true" class="absolute -bottom-2 left-8 w-3.5 h-3.5 rotate-45 bg-amber-50 border-r-2 border-b-2 border-amber-300"></span>
+        </div>
+      </Transition>
+      <button v-if="!avisoFamiliasVisible" type="button" @click="avisoFamiliasVisible = true"
+        class="mb-2 text-[11px] font-bold text-amber-700 hover:underline">¿Por qué solo aparecen estas familias?</button>
+
       <div class="flex flex-col sm:flex-row sm:items-center gap-2">
         <select v-model="familiaId" :disabled="generando" class="input-style !py-2 text-sm sm:flex-1" aria-label="Familia profesional de la empresa ficticia">
-          <option value="">Elige la familia profesional…</option>
-          <option v-for="f in familias" :key="f.id ?? f" :value="f.id">{{ f.nombre ?? f }}</option>
+          <option value="">{{ cargandoFamilias ? 'Cargando familias…' : (familiasUsables.length ? 'Elige la familia profesional…' : 'No hay familias disponibles') }}</option>
+          <option v-for="f in familiasUsables" :key="f.id ?? f" :value="f.id">{{ f.nombre ?? f }}</option>
         </select>
         <div class="flex gap-2 shrink-0">
           <button type="button" @click="generar" :disabled="!familiaId || !destinoValido || generando"
@@ -215,3 +312,8 @@ const resumen = computed(() => {
     <p v-if="error" role="alert" class="mt-2 text-xs font-bold text-red-500">{{ error }}</p>
   </div>
 </template>
+
+<style scoped>
+.cefi-aviso-enter-active, .cefi-aviso-leave-active { transition: opacity .2s ease, transform .2s ease; }
+.cefi-aviso-enter-from, .cefi-aviso-leave-to { opacity: 0; transform: translateY(-4px); }
+</style>

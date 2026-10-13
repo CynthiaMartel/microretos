@@ -134,3 +134,50 @@ Ya hecho: `microretos.diagnostico_empresa` se rellena al guardar un reto y la fi
 la usan. Falta decidir si ejecutar `php artisan microretos:capturar-diagnostico --commit`
 para los 746 retos anteriores (copia el diagnóstico de HOY de su empresa; el original de las
 empresas ya editadas no se puede recuperar). Requiere confirmación explícita (regla de BD).
+
+---
+
+## T4 · Energía y Agua sin módulos ni RA/CE — pendiente
+
+**Contexto.** Desde el 2026-10-13 una familia solo se ofrece para generar retos si alguno de sus
+ciclos tiene módulos con RA y CE (`Familia::scopeConDatosParaRetos`). «Energía y Agua» tiene 2
+ciclos en la BD local (ids 365 *Redes y Estaciones de Tratamiento de Aguas* y 366 *Energías
+Renovables*) pero 0 módulos, así que sus plantillas del catálogo DuaLab están ocultas.
+
+Existe `database/seeders/EnergiasRenovablesSeeder.php` (+ `energias_renovables_seed.sql`) con
+familia, ciclo, módulos, RA y CE de Energías Renovables, pero no llegó a cargarlos: busca el
+ciclo por `referenciaBOE = 'RD 1584/2011'` y en la BD está como `BOE-A-2013-2035`.
+
+**Qué hacer.**
+1. Revisar por qué el seeder no cargó los datos (referencia distinta, `INSERT IGNORE` que choca
+   con ids existentes…) y si su SQL crearía un ciclo duplicado.
+2. Cargar módulos/RA/CE de los dos ciclos, con el seeder corregido o con el importador de T5.
+3. Comprobar en producción el mismo estado antes de ejecutar nada.
+
+**Ojo.** Escribe en BD → solo con confirmación explícita de Cynthia.
+
+**Hecho cuando.** Energía y Agua aparece con datos en «Base de datos» (sale del aviso de
+plantillas ocultas) y se puede generar un reto con ella.
+
+---
+
+## T5 · Cargar módulos, RA y CE desde «Base de datos» — B hecho en local (2026-10-13), C pendiente
+
+**B · Importador CSV — hecho.** En «Base de datos» → gestión de familias y ciclos, cada ciclo
+tiene un botón de importar (y la etiqueta «Sin módulos» si no tiene RA/CE). Modal
+`ImportarCurriculoModal.vue`: plantilla descargable (`;` + BOM, se abre en Excel), «Comprobar
+archivo» (valida sin escribir) e «Importar». Backend: `POST /ciclos/{id}/curriculo/importar`
+(superadmin, throttle 20/min, `ImportarCurriculoRequest`, `CurriculoImportService`). Solo añade:
+los módulos que el ciclo ya tiene se omiten. Migración `2026_10_13_000001_add_indices_curriculo`
+(índices en modulos/RA/CE: el catálogo pasó de ~1,8 s a ~40 ms). **Producción:** desplegar y
+`migrate`.
+
+**C · Edición manual — pendiente.** Formularios para crear, editar y borrar módulos, RA y CE
+sueltos (corregir erratas sin reimportar).
+**Ojo:** borrar o cambiar un RA/CE puede afectar a retos ya generados que los citan — revisar
+antes cómo guardan los retos sus RA/CE (`microretos.ra_ce_origen` y relacionados).
+Las tablas `modulos`, `resultados_aprendizaje` y `criterios_evaluacion` no tienen
+`created_at`/`updated_at`: sus modelos necesitan `public $timestamps = false;` antes de
+guardar con Eloquent (a `CicloFormativo` le pasaba y el alta/edición de ciclos daba 500).
+
+**Hecho cuando.** Un superadmin puede corregir un módulo, RA o CE concreto desde «Base de datos».

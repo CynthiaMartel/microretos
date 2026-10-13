@@ -1,7 +1,10 @@
 <!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js. -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import MigasNavegacion from '../components/MigasNavegacion.vue'
+import { migasFamilia } from '../utils/migasFamilia.js'
+import { modulosDeEncuentro, modulosDisponibles } from '../utils/modulos.js'
 import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
@@ -14,6 +17,9 @@ import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
 import GenerarCodigoBoton from '../components/GenerarCodigoBoton.vue'
 import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
 import SelectorCurso from '../components/SelectorCurso.vue'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import FiltroSegmentado from '../components/FiltroSegmentado.vue'
+import FiltroSelect from '../components/FiltroSelect.vue'
 import api from '../api.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -86,6 +92,9 @@ async function cargarEncuentros() {
 
 onMounted(async () => {
   await cargarEncuentros()
+  // Solo el superadmin ve varios centros: el resto (docente, admin…) ve únicamente el suyo,
+  // así que se abre desplegado por defecto en vez de obligar a un clic extra.
+  if (!authStore.isSuperAdmin) centrosOrdenados.value.forEach(c => centrosExpandidos.value.add(c))
   const idParam = route.query.id
   if (idParam) {
     const s = encuentros.value.find(s => String(s.id) === String(idParam))
@@ -133,9 +142,23 @@ const filtros = ref({
   hasta:   '',
   curso:   '',
   grupo:   '',
+  familia: '',
   ciclo:   '',
+  modulo:  '',
   centro:  '',
 })
+const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familia: '', ciclo: '', modulo: '', centro: '' }
+
+// Encuentros cuyo proyecto no tiene familia: opción propia en el filtro
+const SIN_FAMILIA = '__sin_familia__'
+const coincideFamilia = (s) => !filtros.value.familia
+  || (filtros.value.familia === SIN_FAMILIA ? !s.familia_nombre : s.familia_nombre === filtros.value.familia)
+const coincideCiclo = (s) => !filtros.value.ciclo
+  || (s.ciclo_formativo || '').toLowerCase().includes(filtros.value.ciclo.toLowerCase())
+
+// Familia → ciclo → módulo: cada nivel reinicia los que dependen de él
+watch(() => filtros.value.familia, () => { filtros.value.ciclo = ''; filtros.value.modulo = '' })
+watch(() => filtros.value.ciclo, () => { filtros.value.modulo = '' })
 
 // Curso académico compartido (store): filtros, listado y estadísticas salen de esta lista
 const cursoStore      = useCursoAcademicoStore()
@@ -144,8 +167,14 @@ const cursosConDatos  = computed(() => [...new Set(encuentros.value.map(cursoDeE
 
 const encuentrosUnicos = computed(() => {
   const centros = [...new Set(encuentrosCurso.value.map(s => s.centro_educativo).filter(Boolean))].sort()
-  const ciclos  = [...new Set(encuentrosCurso.value.map(s => s.ciclo_formativo).filter(Boolean))].sort()
-  return { centros, ciclos }
+  const nombresFamilia = [...new Set(encuentrosCurso.value.map(s => s.familia_nombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+  const familias = nombresFamilia.map(f => ({ value: f, label: f }))
+  if (encuentrosCurso.value.some(s => !s.familia_nombre)) familias.push({ value: SIN_FAMILIA, label: 'Sin familia asignada' })
+  const deFamilia = encuentrosCurso.value.filter(coincideFamilia)
+  const ciclos  = [...new Set(deFamilia.map(s => s.ciclo_formativo).filter(Boolean))].sort()
+  // Módulos solo con una familia elegida (como en las bibliotecas), acotados al ciclo si lo hay
+  const modulos = filtros.value.familia ? modulosDisponibles(deFamilia.filter(coincideCiclo), modulosDeEncuentro) : []
+  return { centros, familias, ciclos, modulos }
 })
 
 const encuentrosFiltrados = computed(() => {
@@ -163,21 +192,40 @@ const encuentrosFiltrados = computed(() => {
     lista = lista.filter(s => s.curso === filtros.value.curso)
   if (filtros.value.grupo)
     lista = lista.filter(s => s.grupo === filtros.value.grupo)
+  if (filtros.value.familia)
+    lista = lista.filter(coincideFamilia)
   if (filtros.value.ciclo)
-    lista = lista.filter(s => (s.ciclo_formativo || '').toLowerCase().includes(filtros.value.ciclo.toLowerCase()))
+    lista = lista.filter(coincideCiclo)
+  if (filtros.value.modulo)
+    lista = lista.filter(s => modulosDeEncuentro(s).includes(filtros.value.modulo))
   if (filtros.value.centro)
     lista = lista.filter(s => s.centro_educativo === filtros.value.centro)
 
   return lista
 })
 
+const OPCIONES_NIVEL = [{ value: '', label: 'Todos' }, { value: '1º', label: '1º' }, { value: '2º', label: '2º' }]
+const OPCIONES_CLASE = [{ value: '', label: 'Todas' }, ...['A', 'B', 'C', 'D'].map(g => ({ value: g, label: g }))]
+
 const hayFiltrosActivos = computed(() =>
   Object.values(filtros.value).some(v => v !== '')
 )
 
 function limpiarFiltros() {
-  filtros.value = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', ciclo: '', centro: '' }
+  filtros.value = { ...FILTROS_VACIOS }
 }
+
+// Migas comunes a las vistas por familia (Familias › <familia> › <ciclo> › <módulo>), solo con
+// una familia elegida. La familia es un filtro, no una capa: cada nivel quita los de debajo.
+const migas = computed(() => migasFamilia({
+  raiz:    { label: 'Familias', accion: () => { filtros.value.familia = '' } },
+  familia: {
+    label: filtros.value.familia === SIN_FAMILIA ? 'Sin familia asignada' : filtros.value.familia,
+    accion: () => { filtros.value.ciclo = ''; filtros.value.modulo = '' },
+  },
+  ciclo:   filtros.value.ciclo ? { label: filtros.value.ciclo, accion: () => { filtros.value.modulo = '' } } : null,
+  modulo:  filtros.value.modulo ? { label: filtros.value.modulo } : null,
+}))
 
 // ─── Acordeón por centro educativo ───────────────────────────────────────────
 const centrosExpandidos = ref(new Set())
@@ -401,200 +449,94 @@ function formatFecha(isoDate) {
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Encuentros" destacado="registrados" color="text-alumnos"
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) + acciones de la vista -->
+      <CabeceraSeccion titulo="Encuentros" destacado="registrados" color="text-alumnos" volver="/seccion/encuentros"
                        subtitulo="Consulta y filtra todo el historial de encuentros de trabajo con retos."
-                       class="mb-6" />
+                       class="mb-6">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- ¿Qué necesitas? — abre el modal de opciones (guiaBienvenida) -->
+          <button type="button" @click="guiaBienvenida = true" class="accion-secundaria" title="¿Qué necesitas? Opciones y guía de esta pantalla">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Ayuda
+          </button>
+          <!-- Papelera — la papelera de "Base de datos" es solo superadmin -->
+          <button v-if="authStore.isSuperAdmin" type="button"
+                  @click="router.push({ name: 'papelera' })"
+                  class="accion-icono"
+                  title="Ver encuentros eliminados en la papelera"
+                  aria-label="Ver encuentros eliminados en la papelera">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+          <!-- Nuevo encuentro (acción principal) -->
+          <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal"
+                  title="Ir al formulario para registrar un nuevo encuentro">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
+            </svg>
+            Nuevo encuentro
+          </button>
+        </div>
+      </CabeceraSeccion>
 
       <!-- Qué es un encuentro (mismo texto que ComoFuncionaModal.vue) -->
       <ConceptoClave color="alumnos" class="mb-8" :segmentos="CONCEPTO_ENCUENTRO" />
 
-      <!-- ─── Acciones ─────────────────────────────────────────────────────── -->
-      <div class="mb-8">
-        <!-- Volver -->
-        <button @click="router.push('/encuentros/crear')"
-                class="inline-flex items-center gap-2 mb-5 text-[10px] font-black uppercase tracking-widest
-                       text-gray-400 hover:text-centros transition-colors group">
-          <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Volver a crear encuentro
-        </button>
-
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full
-                        bg-centros/10 border border-centros/20">
-              <span class="w-2 h-2 rounded-full bg-centros" />
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Dashboard docente</span>
-            </div>
-          </div>
-
-          <!-- Stats + Acciones -->
-          <div class="flex flex-wrap gap-3 items-center">
-            <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                         M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-              </svg>
-              <span class="font-black text-xl text-[#1F2937]">{{ stats.total }}</span>
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">encuentros</span>
-            </div>
-            <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
-              <span class="font-black text-xl text-[#1F2937]">{{ stats.microretos }}</span>
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">retos</span>
-            </div>
-            <!-- Botón ¿Qué necesitas? — abre el modal de opciones (guiaBienvenida),
-                 antes solo se disparaba automáticamente y no tenía botón propio. -->
-            <button @click="guiaBienvenida = true"
-                    class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-centros/20
-                           shadow-sm text-centros text-xs font-bold hover:bg-centros/5 transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              ¿Qué necesitas?
-            </button>
-            <!-- Botón Crear nuevo encuentro -->
-            <button
-              @click="router.push('/encuentros/crear')"
-              class="flex items-center gap-2 px-4 py-2 bg-centros rounded-2xl border border-centros
-                     shadow-sm text-white text-xs font-black uppercase tracking-wider
-                     hover:bg-centros/90 hover:border-centros/90 transition-all"
-              title="Ir al formulario para registrar un nuevo encuentro"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-              </svg>
-              Nuevo encuentro
-            </button>
-            <!-- Botón Papelera — la papelera de "Base de datos" es solo superadmin -->
-            <button
-              v-if="authStore.isSuperAdmin"
-              @click="router.push({ name: 'papelera' })"
-              class="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-200
-                     shadow-sm text-amber-600 text-xs font-black uppercase tracking-wider
-                     hover:bg-amber-100 hover:border-amber-300 transition-all"
-              title="Ver encuentros eliminados en la papelera"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
-              Papelera
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- Dato que no da el pie del panel: retos distintos trabajados en el curso elegido -->
+      <p v-if="stats.total" class="mb-2 px-1 text-xs font-semibold text-gray-500">
+        {{ stats.microretos }} {{ stats.microretos === 1 ? 'reto distinto trabajado' : 'retos distintos trabajados' }}
+        en {{ stats.total }} {{ stats.total === 1 ? 'encuentro' : 'encuentros' }} del curso
+      </p>
 
       <!-- ─── Filtros ──────────────────────────────────────────────────────── -->
-      <div class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-          <div class="flex flex-wrap items-center gap-4">
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Filtrar encuentros</p>
-            <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
-          </div>
-          <button v-if="hayFiltrosActivos"
-                  @click="limpiarFiltros"
-                  class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-400 transition-colors">
-            Limpiar filtros
-          </button>
+      <FiltrosPanel v-model:busqueda="filtros.titulo" placeholder="Buscar por título de reto…"
+                    :resultados="encuentrosFiltrados.length" :unidad="['encuentro', 'encuentros']"
+                    :hay-activos="hayFiltrosActivos" @limpiar="limpiarFiltros" class="mb-6">
+        <template #curso>
+          <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+        </template>
+
+        <FiltroSelect v-model="filtros.centro" label="Centro educativo" todos="Todos los centros"
+                      :opciones="encuentrosUnicos.centros" />
+
+        <FiltroSelect v-if="encuentrosUnicos.familias.length" v-model="filtros.familia" label="Familia profesional"
+                      todos="Todas las familias" :opciones="encuentrosUnicos.familias" />
+
+        <!-- Ciclo: lista de los ciclos presentes en el curso (el filtro compara por "contiene") -->
+        <FiltroSelect v-model="filtros.ciclo" label="Ciclo formativo" todos="Todos los ciclos"
+                      :opciones="encuentrosUnicos.ciclos" />
+
+        <!-- Módulo: con una familia elegida; un encuentro multimódulo aparece en cada uno -->
+        <FiltroSelect v-if="encuentrosUnicos.modulos.length" v-model="filtros.modulo" label="Módulo"
+                      todos="Todos los módulos" :opciones="encuentrosUnicos.modulos" />
+
+        <!-- Nivel (1º/2º) — el curso académico se elige arriba -->
+        <FiltroSegmentado v-model="filtros.curso" label="Nivel" :opciones="OPCIONES_NIVEL" />
+
+        <!-- Clase (campo grupo: A, B, C, D) -->
+        <FiltroSegmentado v-model="filtros.grupo" label="Clase" :opciones="OPCIONES_CLASE" />
+
+        <!-- Rango de fechas -->
+        <div class="flex min-w-0 flex-wrap gap-3">
+          <label class="block min-w-0">
+            <span class="mb-1 block text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">Desde</span>
+            <input v-model="filtros.desde" type="date"
+                   class="h-9 max-w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-azul-noche transition-colors focus:border-centros focus:bg-white focus:outline-none" />
+          </label>
+          <label class="block min-w-0">
+            <span class="mb-1 block text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">Hasta</span>
+            <input v-model="filtros.hasta" type="date"
+                   class="h-9 max-w-full rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-azul-noche transition-colors focus:border-centros focus:bg-white focus:outline-none" />
+          </label>
         </div>
+      </FiltrosPanel>
 
-        <div class="px-6 py-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          <!-- Búsqueda por título -->
-          <div class="lg:col-span-2">
-            <label class="field-label">Buscar por título de reto</label>
-            <div class="relative">
-              <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-              </svg>
-              <input v-model="filtros.titulo" type="text"
-                     placeholder="Buscar por título..."
-                     class="field-input pl-10" />
-            </div>
-          </div>
-
-          <!-- Centro -->
-          <div>
-            <label class="field-label">Centro educativo</label>
-            <select v-model="filtros.centro" class="field-input">
-              <option value="">Todos los centros</option>
-              <option v-for="c in encuentrosUnicos.centros" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </div>
-
-          <!-- Fecha desde -->
-          <div>
-            <label class="field-label">Desde</label>
-            <input v-model="filtros.desde" type="date" class="field-input" />
-          </div>
-
-          <!-- Fecha hasta -->
-          <div>
-            <label class="field-label">Hasta</label>
-            <input v-model="filtros.hasta" type="date" class="field-input" />
-          </div>
-
-          <!-- Ciclo -->
-          <div>
-            <label class="field-label">Ciclo formativo</label>
-            <input v-model="filtros.ciclo" type="text"
-                   placeholder="Filtrar por ciclo..."
-                   class="field-input" />
-          </div>
-
-          <!-- Nivel (1º/2º) — el curso académico se elige arriba -->
-          <div>
-            <label class="field-label">Nivel</label>
-            <div class="flex gap-2 mt-1">
-              <button v-for="c in ['', '1º', '2º']" :key="c"
-                      @click="filtros.curso = c"
-                      class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all"
-                      :class="filtros.curso === c
-                        ? 'bg-centros border-centros text-white'
-                        : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-centros/40 hover:text-centros'">
-                {{ c === '' ? 'Todos' : c }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Clase (campo grupo: A, B, C, D) -->
-          <div>
-            <label class="field-label">Clase</label>
-            <div class="flex gap-1.5 mt-1">
-              <button v-for="g in ['', 'A', 'B', 'C', 'D']" :key="g"
-                      @click="filtros.grupo = g"
-                      class="flex-1 py-2 rounded-xl text-xs font-black uppercase border transition-all"
-                      :class="filtros.grupo === g
-                        ? 'bg-primary-400 border-primary-400 text-white'
-                        : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-primary-400/40 hover:text-primary-400'">
-                {{ g === '' ? 'Todos' : g }}
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Contador de resultados -->
-        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100">
-          <p class="text-[10px] font-bold text-gray-400">
-            <span v-if="hayFiltrosActivos">
-              {{ encuentrosFiltrados.length }} {{ encuentrosFiltrados.length === 1 ? 'encuentro encontrado' : 'encuentros encontrados' }}
-              <span class="text-gray-300">de {{ stats.total }} totales</span>
-            </span>
-            <span v-else>{{ stats.total }} {{ stats.total === 1 ? 'encuentro' : 'encuentros' }} en total</span>
-          </p>
-        </div>
-      </div>
+      <MigasNavegacion v-if="filtros.familia && !cargando" :items="migas.items" :actual="migas.actual" class="mb-6" />
 
       <!-- ─── Grid de encuentros ──────────────────────────────────────────────── -->
 
@@ -630,11 +572,7 @@ function formatFecha(isoDate) {
         <svg class="w-8 h-8 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
         </svg>
-        <p class="text-sm text-gray-400 font-medium mb-3">Sin encuentros para esos filtros.</p>
-        <button @click="limpiarFiltros"
-                class="text-xs font-black uppercase tracking-widest text-centros hover:underline">
-          Limpiar filtros
-        </button>
+        <p class="text-sm text-gray-400 font-medium">Sin encuentros para esos filtros.</p>
       </div>
 
       <!-- Acordeón por centro educativo -->
@@ -1209,15 +1147,6 @@ function formatFecha(isoDate) {
 </template>
 
 <style scoped>
-.field-label {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #6B7280;
-  margin-bottom: 0.375rem;
-}
 .field-input {
   width: 100%;
   background: #F9FAFB;

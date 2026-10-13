@@ -227,7 +227,9 @@ async function completar() {
 
     <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
     <div class="relative z-10 mx-auto mb-6 max-w-4xl">
-      <CabeceraSeccion titulo="Ficha de" destacado="Proyecto" :color="theme.text"
+      <!-- Volver con historial y no push a la lista: la ficha se abre desde varios sitios
+           (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) -->
+      <CabeceraSeccion titulo="Ficha de" destacado="Proyecto" :color="theme.text" :volver="{ name: 'startup-day' }"
                        subtitulo="Consulta el detalle completo, el estado de validación y el progreso del grupo." />
     </div>
 
@@ -255,17 +257,6 @@ async function completar() {
         <!-- Barra de navegación y acciones (fuera del cuaderno) -->
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div class="flex flex-wrap items-center gap-2">
-            <!-- router.back() y no push a la lista: esta ficha se abre desde varios sitios
-                 (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) — forzar
-                 siempre la lista rompía el "atrás" cuando se llegaba desde otro lado. -->
-            <button @click="router.back()"
-                    class="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center
-                           text-gray-400 transition-all shrink-0"
-                    :class="paletteExtra[theme.key].hoverBorderText">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-              </svg>
-            </button>
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                  :class="[theme.bg5, theme.border20]">
               <span class="w-2 h-2 rounded-full" :class="theme.bg" />

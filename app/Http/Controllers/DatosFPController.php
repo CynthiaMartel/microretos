@@ -15,9 +15,12 @@ use App\Models\CentroEducativo;
 use App\Models\Encuentro;
 use App\Models\Microproyecto;
 use App\Http\Requests\AsociarEmpresasCentroRequest;
+use App\Http\Requests\StoreCicloRequest;
 use App\Http\Requests\StoreEmpresaRequest;
+use App\Http\Requests\UpdateCicloRequest;
 use App\Http\Requests\UpdateEmpresaRequest;
 use App\Http\Requests\UpdateDiagnosticoEmpresaRequest;
+use App\Http\Resources\CicloFormativoResource;
 use App\Http\Resources\EmpresaResource;
 use App\Http\Resources\EmpresaDashboardResource;
 use App\Services\EmpresaFamiliaService;
@@ -133,32 +136,20 @@ class DatosFPController extends Controller
             ? CicloFormativo::where('familia_id', $familiaModel->id)
             : CicloFormativo::where('familia', $nombreFamilia); // fallback defensivo
 
-        if ($request->filled('centro')) {
-            $centro = $request->centro;
-
-            // Primero buscamos por centro_id normalizado
-            $centroModel = CentroEducativo::where('nombre', $centro)->first();
-
-            if ($centroModel) {
-                $ciclosDelCentro = DB::table('centro_ciclo')
-                    ->where('centro_id', $centroModel->id)
-                    ->pluck('ciclo_id');
-            } else {
-                // Fallback legacy: columna 'centro_educativo' string
-                $ciclosDelCentro = DB::table('centro_ciclo')
-                    ->where('centro_educativo', $centro)
-                    ->pluck('ciclo_id');
-            }
-
-            // Solo filtramos si el centro ya tiene ciclos vinculados.
-            // Si está vacío (centro recién creado o sin configurar), devolvemos
-            // todos los ciclos de la familia para que la empresa sea usable.
-            if ($ciclosDelCentro->isNotEmpty()) {
-                $query->whereIn('id', $ciclosDelCentro);
-            }
+        // Solo se filtra si el centro ya tiene ciclos vinculados; si no (centro recién creado
+        // o sin configurar), se devuelven todos los de la familia para que la empresa sea usable.
+        $ciclosDelCentro = CicloFormativo::idsDelCentro($request->filled('centro') ? (string) $request->centro : null);
+        if ($ciclosDelCentro !== null) {
+            $query->whereIn('id', $ciclosDelCentro);
         }
 
-        return response()->json($query->orderBy('nombre')->get());
+        $ciclos = $query->orderBy('nombre')->get();
+
+        // Ciclo con módulos y RA/CE: sin ellos el generador no puede completar el reto
+        $conDatos = CicloFormativo::conDatosParaRetos()->whereIn('id', $ciclos->pluck('id'))->pluck('id')->flip();
+        $ciclos->each(fn ($c) => $c->con_datos_retos = $conDatos->has($c->id));
+
+        return response()->json($ciclos);
     }
 
     public function getModulos($idCiclo)
@@ -482,53 +473,41 @@ class DatosFPController extends Controller
     // CRUD CICLOS FORMATIVOS
     // ==========================================
 
-    public function storeCiclo(Request $request)
+    public function storeCiclo(StoreCicloRequest $request)
     {
-        $request->validate([
-            'nombre'      => 'required|string|max:255',
-            'familia_id'  => 'required|integer|exists:familias,id',
-            'grado'       => 'nullable|string|max:100',
-            'siglasGrado' => 'nullable|string|max:3',
-        ]);
-
-        $familia = Familia::find($request->familia_id);
+        $datos   = $request->validated();
+        $familia = Familia::find($datos['familia_id']);
 
         $ciclo = CicloFormativo::create([
             'idCiclo'     => 0,
-            'nombre'      => $request->nombre,
+            'nombre'      => $datos['nombre'],
             'familia'     => $familia->nombre,
-            'familia_id'  => $request->familia_id,
-            'grado'       => $request->grado,
-            'siglasGrado' => $request->siglasGrado ?? 'FP',
+            'familia_id'  => $familia->id,
+            'grado'       => $datos['grado'] ?? null,
+            'siglasGrado' => $datos['siglasGrado'] ?? 'FP',
         ]);
 
-        return response()->json(['message' => 'Ciclo creado', 'ciclo' => $ciclo], 201);
+        return response()->json(['message' => 'Ciclo creado', 'ciclo' => new CicloFormativoResource($ciclo)], 201);
     }
 
-    public function updateCiclo(Request $request, $id)
+    public function updateCiclo(UpdateCicloRequest $request, $id)
     {
         $ciclo = CicloFormativo::find($id);
         if (!$ciclo) return response()->json(['error' => 'Ciclo no encontrado'], 404);
 
-        $request->validate([
-            'nombre'      => 'required|string|max:255',
-            'familia_id'  => 'required|integer|exists:familias,id',
-            'grado'       => 'nullable|string|max:100',
-            'siglasGrado' => 'nullable|string|max:3',
-        ]);
+        $datos   = $request->validated();
+        $familia = Familia::find($datos['familia_id']);
 
-        $familia = Familia::find($request->familia_id);
-
-        $ciclo->nombre      = $request->nombre;
-        $ciclo->familia_id  = $request->familia_id;
+        $ciclo->nombre      = $datos['nombre'];
+        $ciclo->familia_id  = $familia->id;
         $ciclo->familia     = $familia->nombre;
-        $ciclo->grado       = $request->grado;
-        if ($request->filled('siglasGrado')) {
-            $ciclo->siglasGrado = $request->siglasGrado;
+        $ciclo->grado       = $datos['grado'] ?? null;
+        if (!empty($datos['siglasGrado'])) {
+            $ciclo->siglasGrado = $datos['siglasGrado'];
         }
         $ciclo->save();
 
-        return response()->json(['message' => 'Ciclo actualizado', 'ciclo' => $ciclo]);
+        return response()->json(['message' => 'Ciclo actualizado', 'ciclo' => new CicloFormativoResource($ciclo)]);
     }
 
     public function destroyCiclo($id)

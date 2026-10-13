@@ -1,4 +1,5 @@
 <script setup>
+import BotonVolver from '../components/BotonVolver.vue'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api.js'
 
@@ -215,6 +216,8 @@ onMounted(cargarPapelera)
     <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
     <div class="bg-white border-b border-gray-100 shadow-sm">
       <div class="max-w-4xl mx-auto px-6 py-6 pl-20 lg:pl-6">
+        <!-- Se llega desde varias bibliotecas: vuelve a la que se venía -->
+        <BotonVolver fallback="/base-datos" class="mb-3" />
         <div class="flex items-start justify-between gap-4 flex-wrap">
 
           <div class="flex items-center gap-3">

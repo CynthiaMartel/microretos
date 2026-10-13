@@ -60,17 +60,11 @@ onMounted(cargar)
 
     <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
     <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
-      <CabeceraSeccion titulo="Pantalla de" destacado="Acceso" color="text-alumnos"
+      <CabeceraSeccion titulo="Pantalla de" destacado="Acceso" color="text-alumnos" volver="/seccion/alumnado"
                        subtitulo="Elige el encuentro que quieres proyectar en clase para que el alumnado escanee su QR y código." />
     </div>
 
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-      <button @click="router.back()"
-              class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0">
-        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-bold text-[#121212]">Todos tus encuentros</p>
       </div>

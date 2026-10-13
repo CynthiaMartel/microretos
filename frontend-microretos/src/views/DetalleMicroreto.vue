@@ -1,5 +1,7 @@
 <!-- Ruta: /retos/:id (name: detalle-microreto). Antes vivía en /biblioteca/:id — ver router/index.js. -->
 <script setup>
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import { useVolver } from '../composables/useVolver.js'
 import { formatearFecha } from '../utils/fechas.js'
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -46,7 +48,8 @@ onMounted(async () => {
   }
 });
 
-const volver = () => router.push({ name: 'biblioteca' })
+const volverAtras = useVolver()
+const volver = () => volverAtras({ name: 'biblioteca' })
 
 const trabajarMicroreto = () => {
   const id = reto.value?.uuid || reto.value?.id
@@ -210,21 +213,14 @@ async function copiarUrl() {
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- ── Botón volver + descargar (cabecera) ── -->
+      <CabeceraSeccion titulo="Ficha del" destacado="reto" :color="theme.text"
+                       :volver="{ name: 'biblioteca' }"
+                       subtitulo="Consulta el reto completo, descárgalo o empieza a trabajarlo con tu alumnado."
+                       class="mb-6" />
+
+      <!-- ── Acciones del reto (descargar, QR, trabajar) ── -->
       <div class="mb-8 flex flex-wrap items-center gap-2 transition-all duration-700 ease-out"
            :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'">
-        <button @click="volver"
-                class="inline-flex items-center gap-2 px-5 py-2.5
-                       bg-white border border-gray-200 rounded-full
-                       text-xs font-black uppercase tracking-widest text-[#1F2937]
-                       shadow-sm
-                       transition-all active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          Volver a la Biblioteca
-        </button>
 
         <button v-if="reto" @click="handleDescargarPDF"
                 class="inline-flex items-center gap-2 px-5 py-2.5
@@ -864,19 +860,8 @@ async function copiarUrl() {
           </div>
         </div>
 
-        <!-- Botones volver + descargar pie -->
+        <!-- Descargar (pie) -->
         <div class="flex flex-wrap justify-center gap-4 mt-10 pb-8">
-          <button @click="volver"
-                  class="inline-flex items-center gap-2 px-8 py-4 bg-white border-2 border-gray-200
-                         rounded-full text-xs font-black uppercase tracking-widest text-[#1F2937]
-                         shadow-sm transition-all
-                         hover:-translate-y-0.5 active:scale-95" :class="paletteExtra[theme.key].hoverBorderText">
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Volver a la Biblioteca
-          </button>
 
           <button @click="descargarPDF(reto)"
                   class="inline-flex items-center gap-2 px-8 py-4 border-2

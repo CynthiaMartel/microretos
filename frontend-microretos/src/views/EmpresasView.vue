@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import FiltroSelect from '../components/FiltroSelect.vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import AccesoEmpresasModal from '../components/AccesoEmpresasModal.vue'
@@ -162,12 +164,12 @@ async function cargarDatos() {
 // Centralizado para poder reutilizarlo en el contador de los chips de sector,
 // excluyendo el propio filtro de sector al contarlo (si no, seleccionar uno haría
 // que el resto de sectores siempre mostrara 0).
-function empresaCumpleFiltros(e, { omitirSector = false } = {}) {
+function empresaCumpleFiltros(e, { omitirSector = false, omitirEstado = false } = {}) {
   const q = busqueda.value.toLowerCase()
   const matchNombre  = !q ||
     (e.nombre_comercial || '').toLowerCase().includes(q) ||
     (e.razon_social || '').toLowerCase().includes(q)
-  const matchEstado  = !filtroEstado.value   || e.estado_contacto === filtroEstado.value
+  const matchEstado  = omitirEstado || !filtroEstado.value || e.estado_contacto === filtroEstado.value
   const matchProv    = !filtroProvincia.value || e.provincia === filtroProvincia.value
   const matchSector  = omitirSector || !filtroSector.value || e.sector === filtroSector.value
   const matchCentro  = !filtroCentro.value   || e.centro_educativo === filtroCentro.value
@@ -380,20 +382,27 @@ const centrosOrdenados = computed(() => {
     .concat(keys.includes(SIN_CENTRO) ? [SIN_CENTRO] : [])
 })
 
-// ─── Estadísticas de contacto ─────────────────────────────────────────────────
-const estadisticasContacto = computed(() => {
-  const counts = {}
-  for (const e of empresas.value) {
-    const est = e.estado_contacto || 'Sin contactar'
-    counts[est] = (counts[est] || 0) + 1
-  }
-  return counts
+// ─── Filtro de estado con contadores ──────────────────────────────────────────
+// Sustituye a los antiguos chips de estadísticas (activas, contactadas, reunión…):
+// cada opción cuenta las empresas que quedarían con ese estado, dados el resto de
+// filtros activos (mismo criterio que los chips de sector).
+const opcionesEstado = computed(() => {
+  const base = empresas.value.filter(e => empresaCumpleFiltros(e, { omitirEstado: true }))
+  // 7 estados: lista larga → FiltroSelect, con el recuento en la etiqueta
+  return estadosContacto.map(est => ({ value: est, label: `${est} (${base.filter(e => e.estado_contacto === est).length})` }))
 })
+const totalSinFiltroEstado = computed(() => empresas.value.filter(e => empresaCumpleFiltros(e, { omitirEstado: true })).length)
 
-const totalActivas     = computed(() => estadisticasContacto.value['Activo'] || 0)
-const totalContactadas = computed(() => estadisticasContacto.value['Contactado'] || 0)
-const totalReunion     = computed(() => estadisticasContacto.value['Reunión fijada'] || 0)
+const hayFiltrosActivos = computed(() =>
+  !!(busqueda.value || filtroEstado.value || filtroProvincia.value || filtroSector.value || filtroCentro.value))
 
+// Pie del panel: "N empresas" (+ "en M centros" para superadmin, antes un chip aparte)
+const unidadResultados = computed(() => {
+  if (!auth.isSuperAdmin) return ['empresa', 'empresas']
+  const n = centrosOrdenados.value.length
+  const sufijo = ` en ${n} centro${n !== 1 ? 's' : ''}`
+  return ['empresa' + sufijo, 'empresas' + sufijo]
+})
 
 </script>
 
@@ -738,208 +747,69 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
     >
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Directorio de" destacado="Empresas" color="text-empresas"
+      <CabeceraSeccion titulo="Directorio de" destacado="Empresas" color="text-empresas" volver="/seccion/empresas"
                        subtitulo="Consulta y contacta con las empresas registradas en la base de datos de DuaLab."
-                       class="mb-8" />
-
-      <!-- Stats chips -->
-      <div v-if="!cargando && empresas.length"
-           class="mb-5 flex flex-wrap gap-3 items-center">
-        <div class="flex flex-wrap gap-2 items-center
-                    bg-white/70 rounded-[1.4rem] border border-gray-100 shadow-sm
-                    px-2 py-1.5">
-
-          <!-- Total empresas -->
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <svg class="w-4 h-4 text-empresas" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       class="mb-5">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Guía: qué se puede hacer en esta pantalla -->
+          <button type="button" @click="mostrarBienvenida = true" class="accion-secundaria" title="¿Qué necesitas? Opciones y guía de esta pantalla">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/>
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span class="font-black text-xl text-[#1F2937]">{{ empresas.length }}</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">empresas</span>
-          </div>
-
-          <!-- Total centros (solo superadmin: para el resto de roles es información redundante) -->
-          <div v-if="auth.isSuperAdmin"
-               class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <svg class="w-4 h-4 text-empresas" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
-            </svg>
-            <span class="font-black text-xl text-[#1F2937]">{{ centrosOrdenados.length }}</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">centros</span>
-          </div>
-
-          <!-- Activas -->
-          <div v-if="totalActivas > 0"
-               class="flex items-center gap-2 px-3 py-1.5 bg-empresas/10 rounded-2xl border border-empresas/20 shadow-sm">
-            <svg class="w-4 h-4 text-empresas" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span class="font-black text-xl text-empresas-dark">{{ totalActivas }}</span>
-            <span class="text-xs font-semibold text-empresas-dark uppercase tracking-wider">activas</span>
-          </div>
-
-          <!-- Contactadas -->
-          <div v-if="totalContactadas > 0"
-               class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">
-            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            <span class="font-black text-xl text-blue-700">{{ totalContactadas }}</span>
-            <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">contactadas</span>
-          </div>
-
-          <!-- Reunión fijada -->
-          <div v-if="totalReunion > 0"
-               class="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm">
-            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <span class="font-black text-xl text-amber-700">{{ totalReunion }}</span>
-            <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider">reunión</span>
-          </div>
-
-          <!-- Filtrado activo -->
-          <div v-if="empresasFiltradas.length !== empresas.length"
-               class="flex items-center gap-2 px-3 py-1.5 bg-violet-50 rounded-2xl border border-violet-100 shadow-sm">
-            <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-            </svg>
-            <span class="font-black text-xl text-violet-700">{{ empresasFiltradas.length }}</span>
-            <span class="text-xs font-semibold text-violet-600 uppercase tracking-wider">mostrando</span>
-          </div>
-
-        </div>
-
-        <!-- Guía: qué se puede hacer en esta pantalla -->
-        <button @click="mostrarBienvenida = true"
-                class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-2xl border border-empresas/20
-                       shadow-sm text-empresas text-xs font-bold hover:bg-empresas/5 transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          ¿Qué necesitas?
-        </button>
-      </div>
-
-      <!-- Filtros -->
-      <div class="mb-5 rounded-[2rem] bg-white border border-empresas/15 shadow-sm p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-
-          <!-- Búsqueda -->
-          <div class="relative lg:col-span-2">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" stroke-width="2"/>
-              <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <input
-              v-model="busqueda"
-              type="text"
-              placeholder="Buscar empresa por nombre..."
-              class="w-full pl-9 pr-4 py-2.5 bg-empresas/5! border border-empresas/25! rounded-2xl
-                     text-sm text-[#1F2937] placeholder-gray-400 shadow-sm
-                     focus:outline-none focus:border-empresas! focus:bg-white! focus:ring-4 focus:ring-empresas/20 transition-colors"
-            />
-          </div>
-
-          <select v-model="filtroCentro"
-                  class="px-3 py-2.5 bg-empresas/5! border border-empresas/25! rounded-2xl shadow-sm
-                         text-sm text-[#1F2937] focus:outline-none focus:border-empresas! focus:bg-white! focus:ring-4 focus:ring-empresas/20 transition-colors">
-            <option value="">Todos los centros</option>
-            <option v-for="c in centros" :key="c" :value="c">{{ c }}</option>
-          </select>
-
-          <select v-model="filtroEstado"
-                  class="px-3 py-2.5 bg-empresas/5! border border-empresas/25! rounded-2xl shadow-sm
-                         text-sm text-[#1F2937] focus:outline-none focus:border-empresas! focus:bg-white! focus:ring-4 focus:ring-empresas/20 transition-colors">
-            <option value="">Todos los estados</option>
-            <option v-for="e in estadosContacto" :key="e" :value="e">{{ e }}</option>
-          </select>
-
-          <select v-model="filtroProvincia"
-                  class="px-3 py-2.5 bg-empresas/5! border border-empresas/25! rounded-2xl shadow-sm
-                         text-sm text-[#1F2937] focus:outline-none focus:border-empresas! focus:bg-white! focus:ring-4 focus:ring-empresas/20 transition-colors">
-            <option value="">Todas las provincias</option>
-            <option v-for="p in provincias" :key="p" :value="p">{{ p }}</option>
-          </select>
-
-        </div>
-
-        <!-- Filtro por sector (a qué actividad económica se dedica la empresa, texto
-             libre). Abierto por defecto: es el único chip que queda, así que no hay
-             riesgo de amontonamiento vertical; el usuario puede plegarlo si quiere. -->
-        <div class="mt-4">
-
-          <div v-if="sectoresConContador.length" class="rounded-2xl border border-empresas/25 bg-empresas/5">
-            <button @click="sectoresAbierto = !sectoresAbierto"
-                    class="w-full flex items-center gap-2 pl-3 pr-3 py-2 text-left">
-              <svg class="w-3.5 h-3.5 text-empresas-dark shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-              </svg>
-              <p class="text-[10px] font-black uppercase tracking-widest text-empresas-dark shrink-0"
-                 title="Actividad económica a la que se dedica la empresa">Sectores</p>
-              <span v-if="filtroSector"
-                    class="flex items-center gap-1 text-[10px] font-bold text-empresas-dark bg-white rounded-full pl-2 pr-1 py-0.5 border border-empresas/25 truncate">
-                {{ filtroSector }}
-                <span @click.stop="filtroSector = ''"
-                      class="w-3.5 h-3.5 rounded-full bg-empresas/15 hover:bg-empresas/25 flex items-center justify-center shrink-0">✕</span>
-              </span>
-              <span v-else class="text-[10px] text-gray-400">Todos</span>
-              <svg class="w-3.5 h-3.5 text-empresas-dark/60 ml-auto shrink-0 transition-transform duration-200"
-                   :class="sectoresAbierto ? 'rotate-180' : ''"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-            <Transition name="slide-down">
-              <div v-if="sectoresAbierto" class="flex flex-wrap gap-2 px-3 pb-3 pt-1">
-                <button
-                  v-for="s in sectoresConContador"
-                  :key="s.sector"
-                  @click="toggleFiltroSector(s.sector)"
-                  :class="[
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all',
-                    filtroSector === s.sector
-                      ? 'bg-empresas text-white border-empresas shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-empresas/40 hover:text-empresas-dark'
-                  ]"
-                >
-                  {{ s.sector }}
-                  <span :class="[
-                    'text-[10px] font-black rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center',
-                    filtroSector === s.sector ? 'bg-white/20 text-white' : 'bg-empresas/15 text-empresas-dark'
-                  ]">{{ s.count }}</span>
-                </button>
-              </div>
-            </Transition>
-          </div>
-
-        </div>
-
-        <div class="flex items-center justify-between mt-3">
-          <p class="text-[10px] text-gray-400">
-            {{ empresasFiltradas.length }} empresa{{ empresasFiltradas.length !== 1 ? 's' : '' }}
-            <template v-if="auth.isSuperAdmin">
-              en {{ centrosOrdenados.length }} centro{{ centrosOrdenados.length !== 1 ? 's' : '' }}
-            </template>
-          </p>
-          <button
-            v-if="busqueda || filtroEstado || filtroProvincia || filtroSector || filtroCentro"
-            @click="limpiarFiltros"
-            class="text-[10px] font-bold text-gray-400 hover:text-empresas transition-colors uppercase tracking-widest"
-          >
-            Limpiar filtros
+            Ayuda
           </button>
         </div>
-      </div>
+      </CabeceraSeccion>
+
+      <!-- Filtros. Los antiguos chips de contadores (activas, contactadas, reunión…) son
+           ahora los counts del segmentado de Estado; el total y los centros, el pie. -->
+      <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar empresa por nombre…"
+                    :resultados="cargando ? null : empresasFiltradas.length" :unidad="unidadResultados"
+                    :hay-activos="hayFiltrosActivos" @limpiar="limpiarFiltros" class="mb-5">
+        <FiltroSelect v-model="filtroCentro" label="Centro" todos="Todos los centros" :opciones="centros" />
+        <FiltroSelect v-model="filtroProvincia" label="Provincia" todos="Todas las provincias" :opciones="provincias" />
+        <FiltroSelect v-model="filtroEstado" label="Estado" :todos="`Todos los estados (${totalSinFiltroEstado})`" :opciones="opcionesEstado" />
+
+        <!-- Filtro por sector (a qué actividad económica se dedica la empresa, texto
+             libre). Fila propia dentro del panel; abierto por defecto, plegable. -->
+        <div v-if="sectoresConContador.length" class="w-full min-w-0">
+          <button type="button" @click="sectoresAbierto = !sectoresAbierto" :aria-expanded="sectoresAbierto"
+                  class="mb-1 flex min-h-6 max-w-full items-center gap-2 text-left">
+            <span class="shrink-0 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400"
+                  title="Actividad económica a la que se dedica la empresa">Sectores</span>
+            <span v-if="filtroSector" class="min-w-0 truncate text-[10px] font-bold text-empresas-dark">· {{ filtroSector }}</span>
+            <svg class="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform duration-200"
+                 :class="sectoresAbierto ? 'rotate-180' : ''"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <Transition name="slide-down">
+            <div v-if="sectoresAbierto" class="flex flex-wrap gap-2">
+              <button
+                v-for="s in sectoresConContador"
+                :key="s.sector"
+                type="button"
+                @click="toggleFiltroSector(s.sector)"
+                :aria-pressed="filtroSector === s.sector"
+                :class="[
+                  'inline-flex h-9 max-w-full items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors',
+                  filtroSector === s.sector
+                    ? 'bg-empresas text-white border-empresas'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-empresas/40 hover:text-empresas-dark'
+                ]"
+              >
+                <span class="min-w-0 truncate">{{ s.sector }}</span>
+                <span :class="[
+                  'shrink-0 rounded-full px-1.5 text-[10px] font-black',
+                  filtroSector === s.sector ? 'bg-white/20 text-white' : 'bg-gray-200/70 text-gray-500'
+                ]">{{ s.count }}</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
+      </FiltrosPanel>
 
       <!-- Cargando -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-24">
@@ -1418,10 +1288,6 @@ const totalReunion     = computed(() => estadisticasContacto.value['Reunión fij
           </svg>
         </div>
         <p class="text-gray-400 text-sm">No se han encontrado empresas con estos filtros.</p>
-        <button @click="limpiarFiltros"
-                class="mt-3 text-xs font-bold text-empresas hover:text-primary-700 transition-colors">
-          Limpiar filtros
-        </button>
       </div>
 
     </div>

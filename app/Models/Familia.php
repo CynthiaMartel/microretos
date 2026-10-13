@@ -26,9 +26,9 @@ class Familia extends Model
     }
 
     // Familias con lo mínimo para generar un reto: algún ciclo con módulos que tengan
-    // RA y criterios de evaluación (es lo que el generador envía a la IA).
-    public function scopeConDatosParaRetos($query)
+    // RA y criterios de evaluación. Con $ciclosIds (los de un centro), solo entre esos.
+    public function scopeConDatosParaRetos($query, ?\Illuminate\Support\Collection $ciclosIds = null)
     {
-        return $query->whereHas('ciclos.modulos.ras.criteriosEvaluacion');
+        return $query->whereHas('ciclos', fn ($q) => $q->conDatosParaRetos($ciclosIds));
     }
 }

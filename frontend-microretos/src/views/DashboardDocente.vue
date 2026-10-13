@@ -344,7 +344,7 @@ const guiaPasosData = [
   { ref: 'refCampoNotas',    seccion: 'datos', texto: 'Indica cualquier nota relevante sobre el encuentro.' },
   { ref: 'refBtnGuardar',    seccion: 'datos', texto: 'Pulsa guardar encuentro para registrar la información.' },
   { ref: 'refEncuentros',    seccion: 'encuentros', texto: 'Quedará disponible para crear el proyecto y comenzar el taller de ideas, o consultar esta info más adelante.' },
-  { ref: 'refBtnGuia',       seccion: null,    texto: 'Pincha aquí para volver a activar la guía cuando quieras.' },
+  { ref: 'refBtnGuia',       seccion: null,    texto: 'Pulsa «Ayuda» cuando quieras para volver a activar la guía.' },
 ]
 
 const TOTAL_PASOS_GUIA = guiaPasosData.length
@@ -614,49 +614,24 @@ function formatFecha(isoDate) {
 
     <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
 
-      <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Encuentros" destacado="DuaLab" color="text-centros"
+      <!-- Cabecera de sección (mismo estilo que Retos y proyectos). El total de encuentros
+           ya lo muestra el panel lateral (ResumenEncuentrosPanel). -->
+      <CabeceraSeccion titulo="Encuentros" destacado="DuaLab" color="text-centros" volver="/seccion/encuentros"
                        subtitulo="Registra y consulta tus encuentros de trabajo con retos."
-                       class="mb-6 md:mb-8" />
-
-      <!-- Acciones -->
-      <div class="mb-8">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
-          <div>
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full
-                        bg-centros/10 border border-centros/20">
-              <span class="w-2 h-2 rounded-full bg-centros" />
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Dashboard docente</span>
-            </div>
-          </div>
-
-          <!-- Stats chips -->
-          <div class="flex flex-wrap gap-3 items-center">
-            <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                         M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-              </svg>
-              <span class="font-black text-xl text-[#1F2937]">{{ encuentros.length }}</span>
-              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">encuentros</span>
-            </div>
-
-            <!-- Botón activar guía -->
-            <button ref="refBtnGuia"
-                    @click="modoGuia = true; pasoGuia = 1"
-                    class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100
-                           shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
-                           hover:bg-blue-100 hover:border-blue-200 transition-all">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Activar Guía
-            </button>
-          </div>
+                       class="mb-6 md:mb-8">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Botón activar guía (paso del tour: refBtnGuia) -->
+          <button ref="refBtnGuia" type="button"
+                  @click="modoGuia = true; pasoGuia = 1"
+                  class="accion-secundaria" title="Guía paso a paso de esta pantalla">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Ayuda
+          </button>
         </div>
-      </div>
+      </CabeceraSeccion>
 
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 

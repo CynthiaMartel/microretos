@@ -95,6 +95,41 @@ const gruposDia = computed(() => {
 const { pagina: paginaGrupos, totalPaginas: totalPagGrupos, itemsPagina: gruposPagina } = usePaginacion(gruposDia, 3)
 watch(selDia, () => { paginaGrupos.value = 0 })
 
+// ── Encuentro activo: ilumina en el calendario todos los días que dura ──────────
+// Como en el panel docente (InicioDocente.vue): pasar el ratón (o el foco) por un
+// encuentro lo ilumina; hacer clic lo deja fijado. Cambiar de día suelta el fijado
+// si el encuentro no está en curso ese día.
+const hoverEncId = ref(null)
+const selEncId   = ref(null)
+const encActivo  = computed(() => {
+  const id = hoverEncId.value ?? selEncId.value
+  return id ? encuentros.value.find(e => e.id === id) : null
+})
+const fijarEncuentro = (e) => { selEncId.value = selEncId.value === e.id ? null : e.id }
+watch(selDia, (d) => {
+  const fijado = encuentros.value.find(e => e.id === selEncId.value)
+  if (fijado && !cubreDia(fijado, d)) selEncId.value = null
+})
+
+// Días naturales que dura un encuentro (inicio y fin incluidos)
+const diasEnc = (e) => Math.round((_pf(e.fecha_fin || e.fecha) - _pf(e.fecha)) / 86_400_000) + 1
+const fechaCortaEnc = (isoStr) => _pf(isoStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '')
+const rangoEnc = (e) => e.fecha_fin && e.fecha_fin !== e.fecha
+  ? `${fechaCortaEnc(e.fecha)} – ${fechaCortaEnc(e.fecha_fin)}`
+  : fechaCortaEnc(e.fecha)
+const diasTexto = (e) => { const n = diasEnc(e); return `${n} día${n === 1 ? '' : 's'}` }
+
+// Posición del día dentro del encuentro activo: 'inicio' | 'fin' | 'unico' | 'medio' | null
+function tramoDia(c) {
+  const e = encActivo.value
+  if (!e || !cubreDia(e, c.iso)) return null
+  const fin = e.fecha_fin || e.fecha
+  if (c.iso === e.fecha && c.iso === fin) return 'unico'
+  if (c.iso === e.fecha) return 'inicio'
+  if (c.iso === fin) return 'fin'
+  return 'medio'
+}
+
 // ── Notas (BD) ────────────────────────────────────────────────────────────────
 const notasSinFecha = computed(() => notas.value.filter(n => !n.fecha))
 // Misma paginación que las tareas pendientes, para que ambas tarjetas queden a la par
@@ -183,7 +218,13 @@ function enviarTarea() {
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
               </button>
             </div>
-            <div class="flex items-center gap-4 text-xs text-gray-500">
+            <!-- Encuentro activo: cuántos días dura y de cuándo a cuándo; si no, la leyenda -->
+            <p v-if="encActivo" class="flex min-w-0 items-center gap-2 text-xs" aria-live="polite">
+              <span class="shrink-0 rounded-full bg-centros px-2 py-0.5 font-bold text-white">{{ diasTexto(encActivo) }}</span>
+              <span class="min-w-0 truncate text-gray-600"><strong class="font-semibold text-azul-noche">{{ tituloEnc(encActivo) }}</strong> · {{ rangoEnc(encActivo) }}</span>
+              <button v-if="selEncId" class="shrink-0 text-gray-400 hover:text-gray-600" aria-label="Dejar de destacar el encuentro" @click="selEncId = null">×</button>
+            </p>
+            <div v-else class="flex items-center gap-4 text-xs text-gray-500">
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-centros" />Encuentro</span>
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-alumnos" />Nota</span>
               <button class="link" @click="irAHoy">Hoy</button>
@@ -199,13 +240,25 @@ function enviarTarea() {
               <div v-if="c.otroMes" class="min-h-[64px] rounded-lg p-1.5 text-xs text-gray-300 sm:min-h-[84px]">{{ c.d }}</div>
               <button v-else type="button" @click="selDia = c.iso"
                       class="flex min-h-[64px] min-w-0 flex-col gap-0.5 rounded-lg p-1.5 text-left ring-1 transition sm:min-h-[84px]"
-                      :class="selDia === c.iso ? 'bg-centros/8 ring-centros/50' : 'ring-transparent hover:bg-gray-50'"
+                      :class="[
+                        tramoDia(c) ? 'bg-centros/15' : (selDia === c.iso ? 'bg-centros/8' : 'hover:bg-gray-50'),
+                        selDia === c.iso ? 'ring-centros/50' : (tramoDia(c) ? 'ring-centros/25' : 'ring-transparent'),
+                      ]"
                       :aria-label="`${fechaLarga(c.iso)}: ${c.encs.length} encuentros, ${c.notas.length} notas`">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold"
-                      :class="c.hoy ? 'bg-alumnos text-white' : 'text-gray-700'">{{ c.d }}</span>
+                <span class="flex items-center gap-1">
+                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                        :class="['inicio', 'fin', 'unico'].includes(tramoDia(c)) ? 'bg-centros text-white shadow-md shadow-centros/30'
+                              : c.hoy ? 'bg-alumnos text-white'
+                              : tramoDia(c) ? 'font-bold text-centros' : 'text-gray-700'">{{ c.d }}</span>
+                  <!-- Primer día del encuentro activo: cuántos días dura -->
+                  <span v-if="['inicio', 'unico'].includes(tramoDia(c))"
+                        class="hidden truncate text-[10px] font-bold text-centros sm:inline">{{ diasTexto(encActivo) }}</span>
+                </span>
                 <!-- En móvil, solo puntos; desde sm, el título -->
                 <span v-for="e in c.encs.slice(0, 2)" :key="'e' + e.id"
-                      class="hidden truncate rounded bg-centros/10 px-1 text-[11px] font-medium leading-5 text-centros sm:block">{{ tituloEnc(e) }}</span>
+                      class="hidden truncate rounded px-1 text-[11px] font-medium leading-5 sm:block"
+                      :class="encActivo?.id === e.id ? 'bg-centros text-white' : 'bg-centros/10 text-centros'"
+                      @mouseenter="hoverEncId = e.id" @mouseleave="hoverEncId = null">{{ tituloEnc(e) }}</span>
                 <span v-for="n in c.notas.slice(0, 1)" :key="'n' + n.id"
                       class="hidden truncate rounded bg-alumnos/10 px-1 text-[11px] font-medium leading-5 text-alumnos-dark sm:block">{{ n.texto }}</span>
                 <span v-if="c.encs.length + c.notas.length > 3" class="hidden text-[10px] text-gray-400 sm:block">+{{ c.encs.length + c.notas.length - 3 }} más</span>
@@ -233,14 +286,23 @@ function enviarTarea() {
                   <span class="mt-0.5 inline-block max-w-full truncate rounded-full bg-centros/10 px-2 py-0.5 text-[10px] font-semibold text-centros" :title="g.familia">{{ g.familia }}</span>
                 </header>
                 <ul class="space-y-1">
-                  <li v-for="e in g.encs" :key="e.id">
-                    <button class="flex w-full items-center gap-2.5 rounded-lg bg-centros/[0.07] p-1.5 text-left ring-1 ring-centros/20 transition hover:bg-centros/[0.12] hover:ring-centros/45" @click="router.push('/mis-grupos/' + e.id)">
+                  <!-- Pasar el ratón ilumina sus días en el calendario; clic lo deja fijado; la flecha lo abre -->
+                  <li v-for="e in g.encs" :key="e.id"
+                      class="flex items-stretch rounded-lg ring-1 transition"
+                      :class="encActivo?.id === e.id ? 'bg-centros/[0.14] ring-centros/50 shadow-sm' : 'bg-centros/[0.07] ring-centros/20 hover:bg-centros/[0.12] hover:ring-centros/45'"
+                      @mouseenter="hoverEncId = e.id" @mouseleave="hoverEncId = null">
+                    <button class="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left" :aria-pressed="selEncId === e.id"
+                            @click="fijarEncuentro(e)" @focus="hoverEncId = e.id" @blur="hoverEncId = null">
                       <span class="h-8 w-1 shrink-0 rounded-full bg-centros" />
                       <span class="min-w-0 flex-1">
                         <span class="block truncate text-[13px] font-semibold">{{ tituloEnc(e) }}</span>
                         <span class="block truncate text-[11px] text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo && `Clase ${e.grupo}`].filter(Boolean).join(' · ') }}</span>
+                        <span class="block truncate text-[11px] font-semibold text-centros">{{ diasTexto(e) }} · {{ rangoEnc(e) }}</span>
                       </span>
-                      <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    <button class="flex w-9 shrink-0 items-center justify-center rounded-r-lg text-gray-400 hover:text-centros"
+                            :aria-label="`Abrir ${tituloEnc(e)}`" @click="router.push('/mis-grupos/' + e.id)">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </button>
                   </li>
                 </ul>

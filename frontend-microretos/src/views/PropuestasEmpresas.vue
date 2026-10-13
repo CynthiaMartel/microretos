@@ -67,7 +67,7 @@ const abrir = (p) => router.push(`/proyectos/${p.uuid}`)
   <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
     <div class="mx-auto max-w-[1440px] space-y-4 px-4 py-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Propuestas a" destacado="empresas" color="text-empresas"
+      <CabeceraSeccion titulo="Propuestas a" destacado="empresas" color="text-empresas" volver="/seccion/empresas"
                        subtitulo="Envía tus propuestas de proyecto a las empresas y sigue sus respuestas. El envío se confirma desde la ficha de cada proyecto.">
         <button @click="router.push('/proyectos/crear')"
                 class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">

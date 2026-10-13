@@ -22,6 +22,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\AlumnadoController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
 use App\Http\Controllers\PublicMicroproyectoCatalogoController;
+use App\Http\Controllers\CurriculoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -176,6 +177,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/ciclos',         [DatosFPController::class, 'storeCiclo']);
         Route::put('/ciclos/{id}',     [DatosFPController::class, 'updateCiclo']);
         Route::delete('/ciclos/{id}',  [DatosFPController::class, 'destroyCiclo']);
+        // Currículo del ciclo (módulos, RA y CE) desde CSV; throttle propio: procesa archivos grandes
+        Route::post('/ciclos/{id}/curriculo/importar', [CurriculoController::class, 'importar'])
+            ->whereNumber('id')->middleware('throttle:20,1');
 
         // Papelera
         Route::prefix('papelera')->group(function () {
@@ -195,7 +199,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // El dashboard global (todos los centros) y el borrado son solo superadmin: es catálogo
     // cross-centro, no trabajo del día a día de un centro concreto.
     Route::get('/empresas',                [DatosFPController::class, 'getEmpresas']);
-    Route::get('/empresas/{id}/familias',  [DatosFPController::class, 'getFamiliasPorEmpresa']);
+    // whereNumber: sin él capturaba /empresas/ficticia-ia/familias (registrada más abajo)
+    Route::get('/empresas/{id}/familias',  [DatosFPController::class, 'getFamiliasPorEmpresa'])->whereNumber('id');
     Route::middleware('admin')->group(function () {
         Route::post('/empresas',               [DatosFPController::class, 'guardarEmpresa']);
         Route::patch('/empresas/{id}/estado',  [DatosFPController::class, 'actualizarEstadoEmpresa']);
@@ -245,6 +250,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Confirmar (guardar) o descartar la propuesta de empresa ficticia generada con IA.
         Route::middleware('throttle:30,1')->group(function () {
             Route::post('/empresas/ficticia-ia',                     [EmpresaFicticiaController::class, 'store']);
+            // Ruta fija antes que las paramétricas de /empresas/ficticia-ia/propuesta/{token}
+            Route::get('/empresas/ficticia-ia/familias',             [EmpresaFicticiaController::class, 'familiasDisponibles']);
             Route::get('/empresas/ficticia-ia/propuesta/{token}',    [EmpresaFicticiaController::class, 'verPropuesta'])
                 ->whereUuid('token');
             Route::delete('/empresas/ficticia-ia/propuesta/{token}', [EmpresaFicticiaController::class, 'descartar'])

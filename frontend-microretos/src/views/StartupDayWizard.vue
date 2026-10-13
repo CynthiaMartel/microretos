@@ -194,6 +194,11 @@ const retoBusqueda      = ref('')
 const retoFiltroFamilia = ref('')
 const retoFiltroCiclo   = ref('')
 const retoFiltroCurso   = ref('')
+// Desplegable de miniaturas: plegado por defecto; se abre al buscar o filtrar.
+const retosAbiertos     = ref(false)
+watch([retoBusqueda, retoFiltroFamilia, retoFiltroCiclo, retoFiltroCurso], (vals) => {
+  if (vals.some(Boolean)) retosAbiertos.value = true
+})
 
 const familiasFiltroRetos = computed(() =>
   [...new Set(microretos.value.map(m => m.familia).filter(Boolean))].sort()
@@ -246,6 +251,7 @@ function limpiarReto() {
   retoFiltroFamilia.value = ''
   retoFiltroCiclo.value   = ''
   retoFiltroCurso.value   = ''
+  retosAbiertos.value     = true
 }
 
 const form = ref({
@@ -1197,22 +1203,24 @@ onUnmounted(() => { tourActivo.value = false; });
 
     <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
     <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
-      <CabeceraSeccion titulo="Taller de" destacado="Ideas" color="text-centros"
-                       subtitulo="Convierte una propuesta en un proyecto StartUp Day completo, paso a paso." />
+      <CabeceraSeccion titulo="Taller de" destacado="Ideas" color="text-centros" :volver="{ name: 'startup-day' }"
+                       subtitulo="Convierte una propuesta en un proyecto StartUp Day completo, paso a paso.">
+        <!-- Ayuda: mismo botón y sitio en todas las vistas -->
+        <button type="button" @click="modoGuia = true"
+                class="accion-secundaria" title="Guía de este paso">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Ayuda
+        </button>
+      </CabeceraSeccion>
     </div>
 
     <!-- Barra de progreso superior -->
     <div class="sticky top-16 z-20 bg-[#F8FAFC]/95 backdrop-blur border-b border-gray-100 shadow-sm">
       <div class="max-w-3xl mx-auto px-4 py-3">
         <div class="flex items-center gap-4 mb-2">
-          <button @click="router.push({ name: 'startup-day' })"
-                  class="inline-flex items-center gap-1.5 text-gray-500 hover:text-centros
-                         transition-colors text-xs font-black uppercase tracking-widest shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Todos los Proyectos
-          </button>
           <div class="flex-1 min-w-0">
             <p class="text-[9px] font-black uppercase tracking-[0.25em] text-centros">
               StartUp Day · Paso {{ paso }} de {{ totalPasos }}
@@ -1220,13 +1228,6 @@ onUnmounted(() => { tourActivo.value = false; });
             <p class="text-xs font-bold text-gray-600 truncate">{{ form.titulo || 'Nueva propuesta' }}</p>
           </div>
           <span class="text-xs font-black text-gray-400 shrink-0">{{ progreso }}%</span>
-          <button @click="modoGuia = true"
-                  title="Ver guía de este paso"
-                  class="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 shrink-0
-                         flex items-center justify-center text-blue-500 text-[10px] font-black
-                         hover:bg-blue-500/20 transition-all uppercase tracking-widest">
-            Guía
-          </button>
         </div>
 
         <!-- Barra progreso -->
@@ -1370,10 +1371,11 @@ onUnmounted(() => { tourActivo.value = false; });
 
             <!-- Selector de reto (creación) -->
             <div v-if="!uuid"
-                 class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4 mb-4">
+                 class="bg-centros/[0.04] rounded-4xl border-2 border-centros/25 shadow-sm
+                        p-6 space-y-4 mb-8">
 
               <!-- Header -->
-              <div class="flex items-start justify-between gap-3 pb-3 border-b border-gray-100">
+              <div class="flex items-start justify-between gap-3 pb-3 border-b border-centros/15">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-xl bg-centros/15 border border-centros/30
                               flex items-center justify-center shrink-0">
@@ -1460,11 +1462,26 @@ onUnmounted(() => { tourActivo.value = false; });
                   </button>
                 </div>
 
-                <!-- Contador -->
-                <p class="text-[10px] text-gray-400 font-medium">
-                  {{ retosFiltrados.length }} reto{{ retosFiltrados.length !== 1 ? 's' : '' }}
-                </p>
+                <!-- Desplegable de miniaturas -->
+                <button type="button" @click="retosAbiertos = !retosAbiertos"
+                        :aria-expanded="retosAbiertos"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl
+                               bg-white border border-gray-200 hover:border-centros/40
+                               transition-colors text-left">
+                  <span class="text-xs font-black text-[#1F2937]">
+                    {{ retosAbiertos ? 'Ocultar retos' : 'Ver retos de la biblioteca' }}
+                    <span class="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-full
+                                 bg-centros/10 text-centros border border-centros/20">
+                      {{ retosFiltrados.length }}
+                    </span>
+                  </span>
+                  <svg :class="['w-4 h-4 text-gray-400 transition-transform', retosAbiertos && 'rotate-180']"
+                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
 
+                <template v-if="retosAbiertos">
                 <!-- Sin resultados -->
                 <p v-if="!retosFiltrados.length"
                    class="text-xs text-gray-400 font-medium text-center py-8">
@@ -1474,7 +1491,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Grid de miniaturas -->
                 <div v-else class="grid sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   <div v-for="mr in retosFiltrados" :key="mr.id"
-                       class="relative rounded-2xl border border-gray-100 bg-gray-50
+                       class="relative rounded-2xl border border-gray-100 bg-white
                               hover:border-centros/40 hover:bg-centros/5 hover:shadow-sm
                               transition-all group">
                     <button @click="seleccionarReto(mr)"
@@ -1516,12 +1533,17 @@ onUnmounted(() => { tourActivo.value = false; });
                     </button>
                   </div>
                 </div>
+                </template>
 
               </div>
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-5">
+            <div class="bg-white rounded-4xl border border-gray-200 shadow-sm p-6 space-y-5">
+              <div class="pb-3 border-b border-gray-100">
+                <p class="text-xs font-black text-[#121212]">Datos de la propuesta</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">Completa la información básica de tu propuesta.</p>
+              </div>
               <div>
                 <label class="field-label">Título de la propuesta *</label>
                 <input v-model="form.titulo" type="text" required class="field-input"
