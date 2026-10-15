@@ -75,10 +75,24 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip());
         });
 
+        // Contraseña común del módulo Empresas: usuario + IP, como el login, para que ni
+        // una cuenta desde varias IPs ni varias cuentas desde una IP puedan probar en bucle.
+        RateLimiter::for('empresas-acceso', function (Request $request) {
+            return Limit::perMinute(5)->by(($request->user()?->id ?? 'anon') . '|' . $request->ip());
+        });
+
         // Escaparate público de microretos (frontoffice) — throttle propio, no
         // comparte cupo con el resto de rutas públicas.
         RateLimiter::for('catalogo-publico', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
+        });
+
+        // Formulario de soporte (público, envía 2 emails por petición): 3/min y 10/hora por IP
+        RateLimiter::for('soporte', function (Request $request) {
+            return [
+                Limit::perMinute(3)->by('soporte-min|' . $request->ip()),
+                Limit::perHour(10)->by('soporte-hora|' . $request->ip()),
+            ];
         });
     }
 }

@@ -12,12 +12,12 @@ const isLoaded = ref(false)
 const TIPOS = {
   dualab: {
     items: noticiasDualab,
-    titulo: 'Noticias DuaLab',
-    descripcion: 'Convocatorias, formación y comunidad del ecosistema DuaLab.',
+    titulo: 'Noticias DUALAB',
+    descripcion: 'Convocatorias, formación y comunidad del ecosistema DUALAB.',
   },
   plataforma: {
     items: novedadesPlataforma,
-    titulo: 'Novedades plataforma DuaLab',
+    titulo: 'Novedades plataforma DUALAB',
     descripcion: 'Nuevas funcionalidades, guías y recursos de la plataforma.',
   },
 }

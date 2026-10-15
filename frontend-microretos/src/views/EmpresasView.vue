@@ -3,27 +3,14 @@ import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import FiltrosPanel from '../components/FiltrosPanel.vue'
 import FiltroSelect from '../components/FiltroSelect.vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import api from '../api.js'
 import AccesoEmpresasModal from '../components/AccesoEmpresasModal.vue'
 import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import { useAuthStore } from '../stores/auth.js'
 import { iconoFamilia, colorFamilia } from '../utils/familiaIconos.js'
 
-const router = useRouter()
 const auth = useAuthStore()
-
-// ─── Estado de acceso ─────────────────────────────────────────────────────────
-const desbloqueado = ref(sessionStorage.getItem('empresas_module_unlocked') === 'true')
-
-async function onDesbloqueado() {
-  desbloqueado.value = true
-  await cargarDatos()
-}
-
-function onCerrarAcceso() {
-  router.go(-1)
-}
 
 // ─── Datos ────────────────────────────────────────────────────────────────────
 const empresas   = ref([])
@@ -42,6 +29,7 @@ const filtroEstado    = ref('')
 const filtroProvincia = ref('')
 const filtroSector    = ref('')
 const filtroCentro    = ref('')
+const filtroFamilia   = ref('')   // id de familia (string, viene del <select>)
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 const empresaExpandida = ref(null)
@@ -94,13 +82,11 @@ const validacionError    = ref('')
 // ─── Cargar datos ─────────────────────────────────────────────────────────────
 onMounted(async () => {
   setTimeout(() => { isLoaded.value = true }, 60)
-  if (!desbloqueado.value) return
   await cargarDatos()
 })
 
 // `onActivated` cubre KeepAlive; el watcher cubre re-navegación a la misma ruta (SidePanel añade ?_t=)
 onActivated(() => {
-  if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
   }
@@ -108,7 +94,6 @@ onActivated(() => {
 
 const route = useRoute()
 watch(() => route.fullPath, () => {
-  if (!desbloqueado.value) return
   if (route.query.empresa_id) {
     aplicarQueryParams()
   }
@@ -135,7 +120,7 @@ function aplicarQueryParams() {
     proyecto_uuid: route.query.proyecto_uuid || '',
     mensaje: '',
   }
-  if (route.query.panel === 'validacion') panelActivo.value = 'validacion'
+  if (route.query.panel === 'validacion') abrirPanel('validacion')
 }
 
 async function cargarDatos() {
@@ -173,7 +158,10 @@ function empresaCumpleFiltros(e, { omitirSector = false, omitirEstado = false } 
   const matchProv    = !filtroProvincia.value || e.provincia === filtroProvincia.value
   const matchSector  = omitirSector || !filtroSector.value || e.sector === filtroSector.value
   const matchCentro  = !filtroCentro.value   || e.centro_educativo === filtroCentro.value
-  return matchNombre && matchEstado && matchProv && matchSector && matchCentro
+  // Una empresa puede tener varias familias: basta con que una coincida
+  const matchFamilia = !filtroFamilia.value  ||
+    (e.familias || []).some(f => String(f.id) === filtroFamilia.value)
+  return matchNombre && matchEstado && matchProv && matchSector && matchCentro && matchFamilia
 }
 
 const empresasFiltradas = computed(() => {
@@ -195,6 +183,14 @@ const centros = computed(() => {
   const set = new Set(empresas.value.map(e => e.centro_educativo).filter(Boolean))
   return [...set].sort((a, b) => a.localeCompare(b, 'es'))
 })
+// Solo las familias vinculadas a alguna empresa del listado (no el catálogo completo)
+const opcionesFamilia = computed(() => {
+  const porId = new Map()
+  empresas.value.forEach(e => (e.familias || []).forEach(f => porId.set(String(f.id), f.nombre)))
+  return [...porId]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es'))
+})
 
 // ─── Chips de sector con contador ──────────────────────────────────────────────
 // El contador refleja cuántas empresas quedarían si se aplicase ese chip, dados el
@@ -214,9 +210,8 @@ function toggleFiltroSector(sector) {
   filtroSector.value = filtroSector.value === sector ? '' : sector
 }
 
-// Desplegable de sectores: abierto por defecto (es el único filtro chip que queda,
-// no hay riesgo de amontonamiento vertical); el usuario puede plegarlo si quiere.
-const sectoresAbierto = ref(true)
+// Desplegable de sectores: plegado por defecto para no ocupar media pantalla al entrar
+const sectoresAbierto = ref(false)
 
 // Nombre de familia profesional canónico a partir del familia_id de un proyecto,
 // para usar el mismo icono/color que /retos (BibliotecaMicroretos.vue) — a
@@ -255,8 +250,34 @@ function toggleEmpresa(empresa) {
   }
 }
 
+// Enviar email / validación piden la contraseña del módulo una vez por sesión. El
+// backend es quien la exige (423 si la sesión no está desbloqueada); este flag solo
+// evita pedirla de nuevo en cada panel.
+const envioDesbloqueado = ref(false)
+const panelPendiente    = ref('')   // panel que se abrirá al acertar la contraseña
+
 function abrirPanel(panel) {
-  panelActivo.value = panelActivo.value === panel ? '' : panel
+  if (panelActivo.value === panel) {
+    panelActivo.value = ''
+    return
+  }
+  if (!envioDesbloqueado.value) {
+    panelPendiente.value = panel
+    return
+  }
+  panelActivo.value = panel
+}
+
+function onEnvioDesbloqueado() {
+  envioDesbloqueado.value = true
+  panelActivo.value = panelPendiente.value
+  panelPendiente.value = ''
+}
+
+// La sesión del servidor puede haber caducado: se vuelve a pedir la contraseña
+function pedirDesbloqueoDeNuevo(panel) {
+  envioDesbloqueado.value = false
+  panelPendiente.value = panel
 }
 
 // ─── Proyectos asociados a cada empresa ────────────────────────────────────────
@@ -309,6 +330,7 @@ async function enviarEmail() {
     emailForm.value.asunto = ''
     emailForm.value.mensaje = ''
   } catch (e) {
+    if (e.response?.status === 423) return pedirDesbloqueoDeNuevo('email')
     emailError.value = e.response?.data?.message || 'Error al enviar el correo.'
   } finally {
     enviandoEmail.value = false
@@ -326,6 +348,7 @@ async function enviarValidacionEmail() {
     validForm.value.proyecto_uuid = ''
     validForm.value.mensaje = ''
   } catch (e) {
+    if (e.response?.status === 423) return pedirDesbloqueoDeNuevo('validacion')
     validacionError.value = e.response?.data?.message || 'Error al enviar el enlace.'
   } finally {
     enviandoValidacion.value = false
@@ -351,6 +374,7 @@ function limpiarFiltros() {
   filtroProvincia.value = ''
   filtroSector.value    = ''
   filtroCentro.value    = ''
+  filtroFamilia.value   = ''
 }
 
 // ─── Acordeón de centros ──────────────────────────────────────────────────────
@@ -394,7 +418,7 @@ const opcionesEstado = computed(() => {
 const totalSinFiltroEstado = computed(() => empresas.value.filter(e => empresaCumpleFiltros(e, { omitirEstado: true })).length)
 
 const hayFiltrosActivos = computed(() =>
-  !!(busqueda.value || filtroEstado.value || filtroProvincia.value || filtroSector.value || filtroCentro.value))
+  !!(busqueda.value || filtroEstado.value || filtroProvincia.value || filtroSector.value || filtroCentro.value || filtroFamilia.value))
 
 // Pie del panel: "N empresas" (+ "en M centros" para superadmin, antes un chip aparte)
 const unidadResultados = computed(() => {
@@ -414,9 +438,9 @@ const unidadResultados = computed(() => {
                 bg-primary-400 opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <!-- ══════════════════════════════════════════════════════
-         GATE: Modal oscuro de contraseña
+         CONTRASEÑA: antes de enviar email o validación a una empresa
     ═════════════════════════════════════════════════════════ -->
-    <AccesoEmpresasModal v-if="!desbloqueado" @desbloqueado="onDesbloqueado" @cerrar="onCerrarAcceso" />
+    <AccesoEmpresasModal v-if="panelPendiente" :motivo="panelPendiente" @desbloqueado="onEnvioDesbloqueado" @cerrar="panelPendiente = ''" />
 
     <!-- ══════════════════════════════════════════════════════
          FICHA DE PROYECTO: al pulsar una miniatura en una empresa
@@ -427,7 +451,7 @@ const unidadResultados = computed(() => {
          MODAL BIENVENIDA: ¿Qué necesitas?
     ═════════════════════════════════════════════════════════ -->
     <Transition name="bv-fade">
-      <div v-if="desbloqueado && mostrarBienvenida"
+      <div v-if="mostrarBienvenida"
            class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div class="relative bg-white border border-gray-200 rounded-[2rem]
                     shadow-2xl max-w-md w-full p-8">
@@ -740,7 +764,6 @@ const unidadResultados = computed(() => {
          CONTENIDO PRINCIPAL
     ═════════════════════════════════════════════════════════ -->
     <div
-      v-if="desbloqueado"
       class="relative z-10 max-w-5xl mx-auto px-6 py-10 pl-24"
       :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
       style="transition: opacity 0.4s ease, transform 0.4s ease"
@@ -748,7 +771,7 @@ const unidadResultados = computed(() => {
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
       <CabeceraSeccion titulo="Directorio de" destacado="Empresas" color="text-empresas" volver="/seccion/empresas"
-                       subtitulo="Consulta y contacta con las empresas registradas en la base de datos de DuaLab."
+                       subtitulo="Consulta y contacta con las empresas registradas en la base de datos de DUALAB."
                        class="mb-5">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Guía: qué se puede hacer en esta pantalla -->
@@ -768,18 +791,28 @@ const unidadResultados = computed(() => {
                     :resultados="cargando ? null : empresasFiltradas.length" :unidad="unidadResultados"
                     :hay-activos="hayFiltrosActivos" @limpiar="limpiarFiltros" class="mb-5">
         <FiltroSelect v-model="filtroCentro" label="Centro" todos="Todos los centros" :opciones="centros" />
+        <FiltroSelect v-model="filtroFamilia" label="Familia" todos="Todas las familias" :opciones="opcionesFamilia" />
         <FiltroSelect v-model="filtroProvincia" label="Provincia" todos="Todas las provincias" :opciones="provincias" />
         <FiltroSelect v-model="filtroEstado" label="Estado" :todos="`Todos los estados (${totalSinFiltroEstado})`" :opciones="opcionesEstado" />
 
         <!-- Filtro por sector (a qué actividad económica se dedica la empresa, texto
-             libre). Fila propia dentro del panel; abierto por defecto, plegable. -->
+             libre). Fila propia dentro del panel; plegado por defecto. -->
         <div v-if="sectoresConContador.length" class="w-full min-w-0">
           <button type="button" @click="sectoresAbierto = !sectoresAbierto" :aria-expanded="sectoresAbierto"
-                  class="mb-1 flex min-h-6 max-w-full items-center gap-2 text-left">
-            <span class="shrink-0 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400"
-                  title="Actividad económica a la que se dedica la empresa">Sectores</span>
-            <span v-if="filtroSector" class="min-w-0 truncate text-[10px] font-bold text-empresas-dark">· {{ filtroSector }}</span>
-            <svg class="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform duration-200"
+                  title="Actividad económica a la que se dedica la empresa"
+                  :class="[
+                    'mb-2 inline-flex min-h-9 max-w-full items-center gap-2 rounded-xl border px-3 text-left transition-colors',
+                    sectoresAbierto
+                      ? 'bg-empresas/10 border-empresas/40'
+                      : 'bg-empresas/5 border-empresas/25 hover:bg-empresas/10 hover:border-empresas/40'
+                  ]">
+            <svg class="h-4 w-4 shrink-0 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>
+            </svg>
+            <span class="shrink-0 text-xs font-black uppercase tracking-wider text-empresas-dark">Sectores</span>
+            <span class="shrink-0 rounded-full bg-empresas/15 px-1.5 text-[10px] font-black text-empresas-dark">{{ sectoresConContador.length }}</span>
+            <span v-if="filtroSector" class="min-w-0 truncate text-xs font-bold text-empresas-dark">· {{ filtroSector }}</span>
+            <svg class="h-4 w-4 shrink-0 text-empresas-dark transition-transform duration-200"
                  :class="sectoresAbierto ? 'rotate-180' : ''"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
@@ -908,8 +941,32 @@ const unidadResultados = computed(() => {
                           {{ empresa.estado_contacto }}
                         </span>
                       </div>
-                      <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-                        <span v-if="empresa.sector" class="text-sm text-gray-400">{{ empresa.sector }}</span>
+                      <!-- Sector (uno) y familias (varias): destacados para identificar la empresa de un vistazo -->
+                      <div v-if="empresa.sector || empresa.familias?.length" class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span v-if="empresa.sector"
+                              class="inline-flex max-w-full items-center gap-1 rounded-full border border-empresas/25 bg-empresas/10 px-2 py-0.5 text-[11px] font-black text-empresas-dark"
+                              title="Sector de la empresa">
+                          <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                          </svg>
+                          <span class="min-w-0 truncate">{{ empresa.sector }}</span>
+                        </span>
+                        <span v-for="f in (empresa.familias || []).slice(0, 2)" :key="f.id"
+                              class="inline-flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-bold text-gray-600"
+                              title="Familia profesional">
+                          <svg :class="['h-3 w-3 shrink-0', colorFamilia(f.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path v-for="d in iconoFamilia(f.nombre)" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"/>
+                          </svg>
+                          <span class="min-w-0 truncate">{{ f.nombre }}</span>
+                        </span>
+                        <span v-if="(empresa.familias?.length || 0) > 2"
+                              class="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-bold text-gray-500"
+                              :title="empresa.familias.slice(2).map(f => f.nombre).join(', ')">
+                          +{{ empresa.familias.length - 2 }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-3 mt-1 flex-wrap">
                         <span v-if="empresa.municipio" class="text-sm text-gray-400">
                           {{ empresa.municipio }}<span v-if="empresa.provincia">, {{ empresa.provincia }}</span>
                         </span>
@@ -933,6 +990,30 @@ const unidadResultados = computed(() => {
                         <!-- Ficha de datos -->
                         <div class="space-y-4">
                           <p class="text-[11px] font-black uppercase tracking-widest text-gray-400">Datos de la empresa</p>
+
+                          <!-- Sector y familias: lo primero de la ficha -->
+                          <div v-if="empresa.sector || empresa.familias?.length"
+                               class="space-y-3 rounded-2xl border border-empresas/15 bg-empresas/5 p-4">
+                            <div v-if="empresa.sector">
+                              <p class="mb-1 text-[11px] font-black uppercase tracking-widest text-empresas-dark">Sector</p>
+                              <p class="text-sm font-black text-[#121212] break-words">{{ empresa.sector }}</p>
+                            </div>
+                            <div v-if="empresa.familias?.length">
+                              <p class="mb-1.5 text-[11px] font-black uppercase tracking-widest text-empresas-dark">
+                                {{ empresa.familias.length === 1 ? 'Familia profesional' : 'Familias profesionales' }}
+                              </p>
+                              <div class="flex flex-wrap gap-1.5">
+                                <span v-for="f in empresa.familias" :key="f.id"
+                                      class="inline-flex max-w-full items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-[#1F2937]">
+                                  <svg :class="['h-3.5 w-3.5 shrink-0', colorFamilia(f.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path v-for="d in iconoFamilia(f.nombre)" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"/>
+                                  </svg>
+                                  <span class="min-w-0 break-words">{{ f.nombre }}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
                           <div class="space-y-2">
                             <template v-if="empresa.razon_social">
                               <div class="flex justify-between gap-3">
@@ -1028,18 +1109,6 @@ const unidadResultados = computed(() => {
                             </p>
                           </div>
 
-                          <div v-if="empresa.familias?.length" class="pt-3 border-t border-gray-100">
-                            <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              Familias profesionales
-                            </p>
-                            <div class="flex flex-wrap gap-1.5">
-                              <span v-for="f in empresa.familias" :key="f.id"
-                                    class="text-[11px] px-2 py-0.5 rounded-full bg-empresas/10
-                                           border border-empresas/20 text-empresas font-medium">
-                                {{ f.nombre }}
-                              </span>
-                            </div>
-                          </div>
                         </div>
 
                         <!-- Acciones -->

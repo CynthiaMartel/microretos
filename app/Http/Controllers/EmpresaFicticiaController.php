@@ -60,7 +60,7 @@ class EmpresaFicticiaController extends Controller
         return response()->json([
             'token'      => $propuesta['token'],
             'minutos'    => EmpresaFicticiaIAService::MINUTOS_PROPUESTA,
-            'destino'    => $centro === null ? 'Catálogo DuaLab' : $centro->nombre,
+            'destino'    => $centro === null ? 'Catálogo DUALAB' : $centro->nombre,
             'familia'    => $familia->nombre,
             'familia_id' => $familia->id,
             'empresa'    => $propuesta['columnas'],
@@ -79,7 +79,7 @@ class EmpresaFicticiaController extends Controller
         }
 
         return response()->json([
-            'message' => $empresa->es_catalogo ? 'Empresa añadida al catálogo DuaLab' : 'Empresa ficticia guardada',
+            'message' => $empresa->es_catalogo ? 'Empresa añadida al catálogo DUALAB' : 'Empresa ficticia guardada',
             'empresa' => new EmpresaResource($empresa),
         ], 201);
     }
@@ -97,7 +97,7 @@ class EmpresaFicticiaController extends Controller
         return response()->json([
             'token'      => $token,
             'caduca_en'  => $propuesta['caduca_en'],
-            'destino'    => $propuesta['centro'] === null ? 'Catálogo DuaLab' : $propuesta['centro']->nombre,
+            'destino'    => $propuesta['centro'] === null ? 'Catálogo DUALAB' : $propuesta['centro']->nombre,
             'familia'    => $propuesta['familia']->nombre,
             'familia_id' => $propuesta['familia']->id,
             'empresa'    => $propuesta['columnas'],
@@ -211,7 +211,7 @@ class EmpresaFicticiaController extends Controller
     private function errorSinCentro(User $user): string
     {
         return $user->isSuperAdmin()
-            ? 'Elige un centro educativo (o marca «Añadir al catálogo DuaLab»).'
+            ? 'Elige un centro educativo (o marca «Añadir al catálogo DUALAB»).'
             : 'Tu cuenta no tiene un centro educativo asociado. Contacta con el administrador.';
     }
 }

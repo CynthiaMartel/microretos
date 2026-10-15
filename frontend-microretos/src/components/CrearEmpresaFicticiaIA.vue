@@ -99,7 +99,7 @@ const avisoFamilias = computed(() => {
       : `${esSuperAdmin.value ? `«${centro}»` : 'Tu centro'} todavía no tiene ciclos formativos asociados en la base de datos, así que se muestran todas las familias que ya tienen módulos, resultados de aprendizaje (RA) y criterios de evaluación (CE). Es lo mínimo que necesita el Generador de Retos.`,
     accion: esSuperAdmin.value
       ? 'Para ampliar las familias de este centro, asóciale sus ciclos y carga el currículo que falte en «Base de datos» → gestión de familias y ciclos.'
-      : '¿Necesitas otra familia? Pídeselo al superadmin de DuaLab: tiene que asociarla a tu centro en la base de datos y cargar sus módulos, RA y CE. En cuanto lo haga, aparecerá aquí.',
+      : '¿Necesitas otra familia? Pídeselo al superadmin de DUALAB: tiene que asociarla a tu centro en la base de datos y cargar sus módulos, RA y CE. En cuanto lo haga, aparecerá aquí.',
   }
 })
 const propuesta    = ref(null)   // { token, destino, familia, empresa, paraCatalogo }
@@ -114,7 +114,7 @@ watch(() => props.centroFijo, (v) => { centroElegido.value = v || '' })
 const destinoValido = computed(() => !esSuperAdmin.value || paraCatalogo.value || !!centroElegido.value)
 const destinoTexto = computed(() => {
   if (!esSuperAdmin.value) return 'tu centro'
-  if (paraCatalogo.value) return 'el catálogo DuaLab'
+  if (paraCatalogo.value) return 'el catálogo DUALAB'
   return centroElegido.value || '—'
 })
 
@@ -156,7 +156,7 @@ const guardar = async () => {
   try {
     const { data } = await guardarEmpresaFicticiaIA(actual.token)
     propuesta.value = null
-    if (actual.paraCatalogo) aviso.value = `«${data.empresa.nombre_comercial}» añadida al catálogo DuaLab.`
+    if (actual.paraCatalogo) aviso.value = `«${data.empresa.nombre_comercial}» añadida al catálogo DUALAB.`
     emit('guardada', data.empresa, { paraCatalogo: actual.paraCatalogo })
   } catch (e) {
     if (e.response?.status === 410) propuesta.value = null
@@ -216,7 +216,7 @@ const resumen = computed(() => {
       <template v-if="esSuperAdmin">
         <label class="flex items-start gap-2 mb-3 text-xs text-gray-700 cursor-pointer">
           <input type="checkbox" v-model="paraCatalogo" :disabled="generando" class="mt-0.5" />
-          <span><strong>Añadir al catálogo DuaLab</strong>: compartida con todos los centros y de solo lectura (la usarán a través de una copia).</span>
+          <span><strong>Añadir al catálogo DUALAB</strong>: compartida con todos los centros y de solo lectura (la usarán a través de una copia).</span>
         </label>
         <!-- Sin centro fijo (p. ej. «Base de datos»): el superadmin elige el centro de destino -->
         <select v-if="!paraCatalogo && !centroFijo" v-model="centroElegido" :disabled="generando"

@@ -726,7 +726,7 @@ class DatosFPController extends Controller
                 'empresa_id' => $empresa->id,
                 'user_id'    => $auth->id,
             ]);
-            return response()->json(['error' => 'Solo DuaLab puede cambiar si una empresa es real o ficticia. Ponte en contacto con DuaLab.'], 403);
+            return response()->json(['error' => 'Solo DUALAB puede cambiar si una empresa es real o ficticia. Ponte en contacto con DUALAB.'], 403);
         }
 
         // El diagnóstico de una empresa real solo lo cambia superadmin (DuaLab), igual que

@@ -520,7 +520,7 @@ const adoptarBorrador = async (data) => {
   const e = data.empresa;
   borradorIA.value = data;
   buscadorEmpresa.value = '';
-  if (authStore.isSuperAdmin && data.destino && data.destino !== 'Catálogo DuaLab') centroFiltro.value = data.destino;
+  if (authStore.isSuperAdmin && data.destino && data.destino !== 'Catálogo DUALAB') centroFiltro.value = data.destino;
   Object.assign(seleccion.value, {
     empresaNombre: e.nombre_comercial || '', empresaSector: e.sector || '', empresaTamano: e.tamano || '',
     empresaWeb: e.web || '', empresaCentro: centroFiltro.value,
@@ -1837,7 +1837,7 @@ async function guardarEstadoGen(nuevoEstado) {
                 <div class="w-10 h-10 rounded-2xl bg-centros/10 flex items-center justify-center text-centros">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
-                <h2 class="text-xl font-black uppercase tracking-tight text-azul-noche">Buscar en la base de datos de DuaLab</h2>
+                <h2 class="text-xl font-black uppercase tracking-tight text-azul-noche">Buscar en la base de datos de DUALAB</h2>
               </div>
 
               <div v-if="esModoDemo"
@@ -2047,7 +2047,7 @@ async function guardarEstadoGen(nuevoEstado) {
                       <button type="button" @click="abrirPanelCatalogo()"
                         class="px-4 py-2 rounded-full font-bold text-xs tracking-widest uppercase transition-all flex items-center gap-2 border bg-white text-centros hover:bg-centros/5 border-centros/30 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                        Catálogo DuaLab
+                        Catálogo DUALAB
                       </button>
                     </div>
                     <p v-if="avisoCatalogo && !panelFicticiaIA && !panelCatalogo" role="status"
@@ -2059,13 +2059,13 @@ async function guardarEstadoGen(nuevoEstado) {
                     <!-- Catálogo DuaLab: plantillas compartidas; se usan a través de una copia del centro -->
                     <div v-if="panelCatalogo" class="p-4 sm:p-5 rounded-2xl border-2 border-centros/20 bg-centros/5">
                       <div class="flex items-start justify-between gap-3 mb-1">
-                        <p class="text-xs font-black uppercase tracking-widest text-centros">Catálogo DuaLab</p>
+                        <p class="text-xs font-black uppercase tracking-widest text-centros">Catálogo DUALAB</p>
                         <button type="button" @click="panelCatalogo = false" class="text-gray-400 hover:text-gray-600 shrink-0" aria-label="Cerrar catálogo">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                       </div>
                       <p class="text-xs text-gray-600 leading-relaxed mb-3">
-                        Empresas ficticias preparadas por DuaLab para todos los centros. Al pulsar «Usar en mi centro»
+                        Empresas ficticias preparadas por DUALAB para todos los centros. Al pulsar «Usar en mi centro»
                         se crea una copia para {{ authStore.isSuperAdmin ? centroFiltro : 'tu centro' }} que podrás adaptar; el original no cambia.
                       </p>
                       <p v-if="seleccion.empresaId && seleccion.empresaNombre" class="text-xs text-gray-600 leading-relaxed mb-3 bg-white/70 border border-gray-200 rounded-xl px-3 py-2">
@@ -2697,7 +2697,7 @@ async function guardarEstadoGen(nuevoEstado) {
                 <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v4h8z"/></svg>
                 <p class="flex-1 text-sm text-amber-800 leading-relaxed">
                   <strong class="font-bold">Esta es una empresa real y no puede modificarse</strong> porque su diagnóstico contiene datos sensibles.
-                  Si necesitas cambiar algo, ponte en contacto con DuaLab.
+                  Si necesitas cambiar algo, ponte en contacto con DUALAB.
                 </p>
                 <button type="button" @click="avisoEmpresaReal = false" class="text-amber-500 hover:text-amber-700 shrink-0" aria-label="Cerrar aviso">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -2708,7 +2708,7 @@ async function guardarEstadoGen(nuevoEstado) {
               <div v-if="editandoDiagnostico" class="mb-8 flex flex-col md:flex-row md:items-center gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-4">
                 <svg class="w-5 h-5 text-amber-500 shrink-0 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                 <p class="flex-1 text-sm text-amber-800 leading-relaxed">
-                  <strong class="font-bold">Estás editando el diagnóstico de una empresa {{ empresaEsFicticia ? 'ficticia' : 'real (permiso DuaLab)' }}.</strong>
+                  <strong class="font-bold">Estás editando el diagnóstico de una empresa {{ empresaEsFicticia ? 'ficticia' : 'real (permiso DUALAB)' }}.</strong>
                   Si pulsas «Guardar en la base de datos», estos datos se sobrescribirán en la base de datos y se usarán en los próximos retos de esta empresa.
                   Si no guardas, los cambios solo se usarán para este reto.
                 </p>
@@ -3354,7 +3354,7 @@ async function guardarEstadoGen(nuevoEstado) {
             <div class="bg-gray-50 border-b border-gray-100 p-10 md:px-16 pt-12">
               <p class="text-centros font-bold text-[10px] tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                DuaLab · Ficha de Reto
+                DUALAB · Ficha de Reto
               </p>
               <h1 class="text-3xl md:text-5xl font-black text-azul-noche tracking-tight leading-tight mb-2">
                 {{ reto.titulo }}

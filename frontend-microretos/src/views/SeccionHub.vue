@@ -183,7 +183,7 @@ const abrir = (card) => {
           <div class="relative z-10 px-5 py-4 sm:max-w-[60%]">
             <h2 class="card-title">{{ flujo.titulo }}</h2>
             <p class="mt-1 text-sm text-gray-600">
-              Más detalle en <button type="button" class="font-semibold text-centros hover:underline" @click="abrirComoFunciona">¿Cómo funciona DuaLab?</button>
+              Más detalle en <button type="button" class="font-semibold text-centros hover:underline" @click="abrirComoFunciona">¿Cómo funciona DUALAB?</button>
             </p>
           </div>
         </div>

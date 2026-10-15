@@ -12,7 +12,7 @@
                     d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
               </div>
-              <h2 class="modal-title">Acceso DuaLab</h2>
+              <h2 class="modal-title">Acceso DUALAB</h2>
               <p class="modal-subtitle">Introduce tus credenciales</p>
             </div>
 
@@ -103,83 +103,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import api, { primeCsrfCookie } from '../api.js'
+import { useLoginForm } from '../composables/useLoginForm.js'
 
-const authStore = useAuthStore()
-
-const props = defineProps({
+defineProps({
   modelValue: Boolean
 })
 
 const emit = defineEmits(['update:modelValue', 'login-success'])
 
-const form = reactive({ email: '', password: '' })
-const errors = reactive({ email: '', password: '' })
-const loginError = ref('')
-const isLoading = ref(false)
-const showPassword = ref(false)
-
-function validate() {
-  let valid = true
-  errors.email = ''
-  errors.password = ''
-
-  if (!form.email) {
-    errors.email = 'El correo es obligatorio'
-    valid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Formato de correo inválido'
-    valid = false
-  }
-
-  if (!form.password) {
-    errors.password = 'La contraseña es obligatoria'
-    valid = false
-  }
-
-  return valid
-}
-
-async function handleLogin() {
-  if (!validate()) return
-
-  isLoading.value = true
-  loginError.value = ''
-
-  try {
-    // Sanctum SPA stateful: la cookie XSRF-TOKEN tiene que existir antes de un POST.
-    await primeCsrfCookie()
-
-    const response = await api.post('/admin/login', {
-      email: form.email,
-      password: form.password
-    })
-
-    if (response.data.success) {
-      authStore.login(response.data)
-      emit('login-success', response.data)
-      emit('update:modelValue', false)
-      form.email = ''
-      form.password = ''
-    }
-  } catch (error) {
-    const status = error.response?.status
-    if (status === 401) {
-      loginError.value = 'Credenciales incorrectas. Inténtalo de nuevo.'
-    } else if (status === 403 || status === 429) {
-      loginError.value = error.response?.data?.message || 'No se ha podido iniciar sesión.'
-    } else if (status === 422) {
-      const errs = error.response?.data?.errors ?? {}
-      loginError.value = Object.values(errs)[0]?.[0] || 'Revisa el correo y la contraseña introducidos.'
-    } else {
-      loginError.value = 'Error de conexión. Inténtalo más tarde.'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
+const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLoginForm((data) => {
+  emit('login-success', data)
+  emit('update:modelValue', false)
+})
 </script>
 
 <style scoped>

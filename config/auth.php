@@ -39,6 +39,11 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            // "Recordarme" en el login: duración de la cookie recaller (minutos). Sin
+            // esto Laravel la emite a 5 años; 7 días limita el margen de una sesión
+            // olvidada en un equipo compartido. Solo lo usan admin, docente y empresa
+            // (User::puedeRecordarSesion).
+            'remember' => (int) env('AUTH_REMEMBER_MINUTES', 10080),
         ],
     ],
 
@@ -95,7 +100,8 @@ return [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
-            'throttle' => 60,
+            // Máx. 1 enlace de restablecimiento por email cada 5 minutos
+            'throttle' => 300,
         ],
     ],
 

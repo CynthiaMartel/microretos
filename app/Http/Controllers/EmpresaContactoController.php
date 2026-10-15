@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContactarEmpresaRequest;
+use App\Http\Requests\EnviarValidacionEmpresaRequest;
+use App\Http\Requests\VerificarAccesoEmpresasRequest;
 use App\Models\Empresa;
 use App\Models\Microproyecto;
 use Illuminate\Http\JsonResponse;
@@ -10,19 +13,22 @@ use Illuminate\Support\Facades\Mail;
 
 class EmpresaContactoController extends Controller
 {
+    private const SESION_DESBLOQUEO = 'empresas_contacto_desbloqueado';
+
     /**
      * Verifica la contraseña especial del módulo Empresas.
      * La contraseña se configura en .env como EMPRESAS_ACCESS_PASSWORD.
+     * Al acertarla se marca la sesión: contactar() y enviarValidacion() la exigen.
      */
-    public function verificarAcceso(Request $request): JsonResponse
+    public function verificarAcceso(VerificarAccesoEmpresasRequest $request): JsonResponse
     {
-        $request->validate(['password' => 'required|string']);
+        $pass = (string) config('services.empresas.access_password');
 
-        $pass = config('services.empresas.access_password');
-
-        if ($request->password !== $pass) {
+        if ($pass === '' || !hash_equals($pass, $request->validated('password'))) {
             return response()->json(['success' => false, 'message' => 'Contraseña incorrecta.'], 401);
         }
+
+        $request->session()->put(self::SESION_DESBLOQUEO, true);
 
         return response()->json(['success' => true]);
     }
@@ -30,16 +36,13 @@ class EmpresaContactoController extends Controller
     /**
      * Envía un correo libre al email de la empresa.
      */
-    public function contactar(Request $request, int $id): JsonResponse
+    public function contactar(ContactarEmpresaRequest $request, int $id): JsonResponse
     {
+        $this->exigirDesbloqueo($request);
         $empresa = Empresa::findOrFail($id);
         $this->autorizarEmpresa($request, $empresa);
 
-        $data = $request->validate([
-            'remitente' => 'required|email|max:255',
-            'asunto'    => 'required|string|max:200',
-            'mensaje'   => 'required|string|max:5000',
-        ]);
+        $data = $request->validated();
 
         $destinatario = $empresa->email_contacto ?: $empresa->email_general;
 
@@ -62,16 +65,13 @@ class EmpresaContactoController extends Controller
     /**
      * Envía por email el enlace de validación de un microproyecto publicado a una empresa.
      */
-    public function enviarValidacion(Request $request, int $id): JsonResponse
+    public function enviarValidacion(EnviarValidacionEmpresaRequest $request, int $id): JsonResponse
     {
+        $this->exigirDesbloqueo($request);
         $empresa = Empresa::findOrFail($id);
         $this->autorizarEmpresa($request, $empresa);
 
-        $data = $request->validate([
-            'remitente'     => 'required|email|max:255',
-            'proyecto_uuid' => 'required|string|exists:microproyectos,uuid',
-            'mensaje'       => 'nullable|string|max:2000',
-        ]);
+        $data = $request->validated();
 
         $proyecto = Microproyecto::where('uuid', $data['proyecto_uuid'])
             ->whereIn('estado', ['propuesta', 'validado'])
@@ -86,8 +86,7 @@ class EmpresaContactoController extends Controller
             ], 422);
         }
 
-        $isLocal = app()->environment('local');
-        $base = $isLocal ? 'http://localhost:5173' : 'https://dualab.es';
+        $base = rtrim(config('app.frontend_url'), '/');
         $url  = "{$base}/startup/landing/{$proyecto->token_empresa}";
 
         $nombre = $empresa->persona_contacto
@@ -95,7 +94,7 @@ class EmpresaContactoController extends Controller
             : "Estimado equipo de {$empresa->nombre_comercial},";
 
         $cuerpo  = "{$nombre}\n\n";
-        $cuerpo .= "Nos ponemos en contacto con vosotros desde DuaLab para compartir el microproyecto ";
+        $cuerpo .= "Nos ponemos en contacto con vosotros desde DUALAB para compartir el microproyecto ";
         $cuerpo .= "que nuestro alumnado ha desarrollado en colaboración con vuestra empresa.\n\n";
         $cuerpo .= "📋 Proyecto: {$proyecto->titulo}\n\n";
         $cuerpo .= "Os invitamos a revisar el trabajo del equipo y, si lo consideráis oportuno, ";
@@ -109,7 +108,7 @@ class EmpresaContactoController extends Controller
         $cuerpo .= "El proceso es muy sencillo: accedéis al enlace, revisáis la propuesta del equipo ";
         $cuerpo .= "y respondéis unas breves preguntas de valoración.\n\n";
         $cuerpo .= "Muchas gracias por vuestra colaboración.\n\n";
-        $cuerpo .= "Un saludo,\nEquipo DuaLab · ViaÓptima";
+        $cuerpo .= "Un saludo,\nEquipo DUALAB · ViaÓptima";
 
         Mail::raw($cuerpo, function ($mail) use ($empresa, $data, $destinatario, $proyecto) {
             $mail->to($destinatario, $empresa->nombre_comercial)
@@ -121,6 +120,15 @@ class EmpresaContactoController extends Controller
         $proyecto->update(['enviado_a_empresa_mail' => true]);
 
         return response()->json(['success' => true]);
+    }
+
+    // Los envíos a empresas exigen haber introducido la contraseña del módulo en esta
+    // sesión (verificarAcceso). 423 para que el frontend reabra el modal de contraseña.
+    private function exigirDesbloqueo(Request $request): void
+    {
+        if (!$request->session()->get(self::SESION_DESBLOQUEO)) {
+            abort(423, 'Introduce la contraseña del módulo Empresas para enviar correos.');
+        }
     }
 
     // Docente y admin solo pueden contactar/validar con empresas de su propio centro;

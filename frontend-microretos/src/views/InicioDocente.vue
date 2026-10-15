@@ -1107,9 +1107,9 @@ const irA = (ruta) => router.push(ruta)
               <p class="font-heading text-base font-bold leading-snug text-azul-noche">
                 Formación, talento, empresa e innovación <span class="text-centros">conectados</span>
               </p>
-              <p class="mt-1 line-clamp-2 text-sm text-gray-600">DuaLab impulsa la FP dual con retos reales y colaboración entre todos los actores.</p>
+              <p class="mt-1 line-clamp-2 text-sm text-gray-600">DUALAB impulsa la FP dual con retos reales y colaboración entre todos los actores.</p>
               <button class="mt-2 self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-centros ring-1 ring-centros/40 hover:bg-centros/5" @click="irA('/noticias/dualab')">
-                Novedades de DuaLab →
+                Novedades de DUALAB →
               </button>
             </div>
           </section>

@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import GeneradorMicroretos from '../views/GeneradorMicroretos.vue'
 import BibliotecaMicroretos from '../views/BibliotecaMicroretos.vue'
-import Home from '../views/Home.vue'
+import LoginView from '../views/LoginView.vue'
+import RestablecerContrasena from '../views/RestablecerContrasena.vue'
 import DetalleMicroreto from '../views/DetalleMicroreto.vue'
 import MasFamilias from '../views/MasFamilias.vue'
 import BaseDatosDashboard from '../views/BaseDatosDashboard.vue'
@@ -44,21 +45,27 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      // Sin sesión, la raíz muestra la misma página de acceso que /login (en producción
+      // la raíz de dualab.es la sirve el frontoffice, ver comentario de /login)
       path: '/',
       name: 'home',
-      component: Home
+      component: LoginView
     },
     {
       // Entrada directa desde fuera del dominio (p. ej. el botón "Iniciar sesión"
       // de la home del frontoffice en dualab.es/info.dualab.es) — la raíz "/" ya
       // no está disponible como primer punto de entrada porque un carve-out de
-      // Apache la reserva para esa home; esta ruta reutiliza el mismo Home.vue
-      // (con el modal de login, ver App.vue) para que dualab.es/login funcione
-      // como un enlace externo normal. Admite ?redirect=/ruta para abrir el modal
-      // ya apuntando a esa ruta tras iniciar sesión (ver el watch en App.vue).
+      // Apache la reserva para esa home. Página de acceso a pantalla completa
+      // (LoginView); admite ?redirect=/ruta para volver a esa ruta tras iniciar sesión.
       path: '/login',
       name: 'login',
-      component: Home
+      component: LoginView
+    },
+    {
+      // Enlace del email de "¿Has olvidado tu contraseña?" (?token=…&email=…)
+      path: '/restablecer-contrasena',
+      name: 'restablecer-contrasena',
+      component: RestablecerContrasena
     },
     {
       path: '/retos/crear',
@@ -101,7 +108,7 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA] }
     },
     {
-      // Seguimiento del envío de propuestas: no pide la contraseña del directorio
+      // Seguimiento del envío de propuestas
       path: '/empresas/propuestas',
       name: 'propuestas-empresas',
       component: PropuestasEmpresas,

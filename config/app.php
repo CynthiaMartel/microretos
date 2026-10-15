@@ -54,6 +54,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // URL pública de la SPA (frontend-microretos). La usan los enlaces que salen por
+    // email hacia vistas del frontend, p. ej. /restablecer-contrasena.
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

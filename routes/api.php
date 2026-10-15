@@ -5,6 +5,8 @@ use App\Http\Controllers\DatosFPController;
 use App\Http\Controllers\MicroretoIAController;
 use App\Http\Controllers\EmpresaFicticiaController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\SoporteController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\MicroretoTokenController;
 use App\Http\Controllers\MicroproyectoController;
@@ -134,6 +136,17 @@ Route::middleware('throttle:catalogo-publico')->group(function () {
 // Auth pública — throttle estricto para prevenir fuerza bruta
 Route::middleware('throttle:admin-login')
     ->post('/admin/login', [AdminAuthController::class, 'login']);
+
+// "¿Has olvidado tu contraseña?" — además del throttle por IP, el broker limita a
+// 1 enlace por email cada 5 minutos (config/auth.php → passwords.users.throttle)
+Route::middleware('throttle:5,1,forgot-password')
+    ->post('/password/forgot', [PasswordResetController::class, 'forgot']);
+Route::middleware('throttle:5,1,reset-password')
+    ->post('/password/reset', [PasswordResetController::class, 'reset']);
+
+// "Contacta con soporte" (pública: quien no consigue entrar también tiene que poder escribir)
+Route::middleware('throttle:soporte')
+    ->post('/soporte', [SoporteController::class, 'store']);
 
 
 // --- RUTAS PROTEGIDAS (requieren token Sanctum) ---
@@ -321,7 +334,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // Módulo Empresas — contacto y validación
-        Route::middleware('throttle:10,1,empresas-acceso')
+        Route::middleware('throttle:empresas-acceso')
             ->post('/empresas/verificar-acceso', [EmpresaContactoController::class, 'verificarAcceso']);
         Route::post('/empresas/{id}/contactar',          [EmpresaContactoController::class, 'contactar']);
         Route::post('/empresas/{id}/enviar-validacion',  [EmpresaContactoController::class, 'enviarValidacion']);

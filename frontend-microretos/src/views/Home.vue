@@ -30,7 +30,7 @@ const irABiblioteca = () => {
       <header class="flex justify-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 transition-all duration-1000 ease-out transform"
         :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'">
         <div class="inline-flex items-center bg-[#1F2937] py-2 sm:py-3 pr-5 sm:pr-7 md:pr-10 pl-2 sm:pl-4 md:pl-5 rounded-[1.5rem] sm:rounded-[2rem] shadow-lg border border-[#333333]">
-          <img src="../assets/logo_colores.png" alt="Logo DuaLab" class="h-10 sm:h-14 md:h-18 lg:h-20 w-auto object-contain relative z-10" style="height: clamp(2.5rem, 5vw, 5rem);" />
+          <img src="../assets/logo_colores.png" alt="Logo DUALAB" class="h-10 sm:h-14 md:h-18 lg:h-20 w-auto object-contain relative z-10" style="height: clamp(2.5rem, 5vw, 5rem);" />
           <span class="font-black text-xl sm:text-2xl md:text-3xl lg:text-4xl tracking-tighter uppercase text-white relative z-20 ml-1 sm:ml-2">
             Dua<span :class="theme.textDark">Lab</span>
           </span>
@@ -49,7 +49,7 @@ const irABiblioteca = () => {
               Conecta talento <br class="hidden md:block"/> con <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">retos reales.</span>
             </h1>
             <p class="text-sm md:text-base text-gray-500 leading-relaxed font-medium max-w-xl mx-auto md:mx-0">
-              DuaLab conecta empresas con alumnado en prácticas. Transformamos necesidades empresariales en <strong class="text-primary-700 font-bold">retos académicos</strong> para impulsar el aprendizaje práctico y descubrir talento emergente.
+              DUALAB conecta empresas con alumnado en prácticas. Transformamos necesidades empresariales en <strong class="text-primary-700 font-bold">retos académicos</strong> para impulsar el aprendizaje práctico y descubrir talento emergente.
             </p>
           </div>
 
@@ -102,7 +102,7 @@ const irABiblioteca = () => {
                 <div class="bg-administraciones text-white w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-black shadow-md text-sm">2</div>
                 <div>
                   <h4 class="font-bold text-administraciones text-base">La IA lo transforma</h4>
-                  <p class="text-sm text-gray-600 leading-relaxed mt-0.5">DuaLab genera un reto académico alineado al currículo oficial.</p>
+                  <p class="text-sm text-gray-600 leading-relaxed mt-0.5">DUALAB genera un reto académico alineado al currículo oficial.</p>
                 </div>
               </div>
 

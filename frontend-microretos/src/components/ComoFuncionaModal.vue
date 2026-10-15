@@ -19,7 +19,7 @@ import {
 const router = useRouter()
 const authStore = useAuthStore()
 const { abrirCreditos } = useCredits()
-const { comoFuncionaAbierto: abierto, abrirComoFunciona: abrir, cerrarComoFunciona: cerrar } = useComoFunciona()
+const { comoFuncionaAbierto: abierto, cerrarComoFunciona: cerrar } = useComoFunciona()
 const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
 const onKeydown = (e) => { if (e.key === 'Escape') cerrar() }
 
@@ -88,26 +88,7 @@ const ir = (destino) => {
 </script>
 
 <template>
-  <!-- ── Botón flotante ─────────────────────────────────────────────────── -->
-  <div class="fixed bottom-16 right-5 z-[70] group">
-    <span
-      class="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-3 whitespace-nowrap
-             rounded-lg bg-[#1a2332] px-3 py-1.5 text-xs font-bold text-white shadow-lg
-             opacity-0 translate-x-1 transition-all duration-150
-             group-hover:opacity-100 group-hover:translate-x-0"
-    >
-      ¿Cómo funciona DuaLab?
-    </span>
-    <button
-      @click="abrir"
-      aria-label="¿Cómo funciona DuaLab?"
-      class="w-14 h-14 rounded-full bg-centros hover:bg-primary-700 text-white shadow-lg
-             hover:shadow-xl hover:scale-105 flex items-center justify-center
-             transition-all duration-200"
-    >
-      <LightBulbIcon class="w-6 h-6" />
-    </button>
-  </div>
+  <!-- El botón que abre el modal (bombilla) está en TopBar.vue -->
 
   <!-- ── Modal ──────────────────────────────────────────────────────────── -->
   <Teleport to="body">
@@ -155,7 +136,7 @@ const ir = (destino) => {
 
               <!-- Intro -->
               <p class="text-gray-500 text-sm leading-relaxed max-w-3xl">
-                DuaLab es la plataforma que conecta centros educativos de FP con empresas para
+                DUALAB es la plataforma que conecta centros educativos de FP con empresas para
                 generar retos de aprendizaje real, alineados con los módulos y resultados de
                 aprendizaje del ciclo.
               </p>
@@ -186,7 +167,7 @@ const ir = (destino) => {
               <!-- Conceptos clave: reto, propuesta/proyecto, encuentro -->
               <section>
                 <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
-                  Las piezas de DuaLab
+                  Las piezas de DUALAB
                 </p>
                 <!-- Móvil: una columna; tablet: dos, con el más largo a la derecha;
                      escritorio: tres columnas proporcionales al texto -->

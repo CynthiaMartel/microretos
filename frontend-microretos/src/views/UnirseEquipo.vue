@@ -115,7 +115,7 @@ function continuarConEquipoGuardado() {
                   d="M12 2L2 7l10 5 10-5-10-5zm0 10l-10-5m10 5l10-5m-10 5v10"/>
           </svg>
         </div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-alumnos mb-1">DuaLab</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-alumnos mb-1">DUALAB</p>
         <h1 class="text-2xl font-black text-white leading-tight">Únete a tu proyecto</h1>
         <p class="text-sm text-white/50 mt-2">Introduce el código que te ha dado el docente</p>
       </div>
@@ -294,7 +294,7 @@ function continuarConEquipoGuardado() {
 
       <!-- Footer -->
       <p class="text-center text-white/20 text-[11px] mt-6">
-        DuaLab Studio · Microproyectos
+        DUALAB Studio · Microproyectos
       </p>
     </div>
   </div>

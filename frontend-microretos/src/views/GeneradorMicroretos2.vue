@@ -280,7 +280,7 @@ const guardar = async () => {
           <div class="bg-emerald-500 p-1.5 rounded-lg">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
-          <span class="font-black text-xl tracking-tighter uppercase dark:text-white italic">DuaLab <span class="text-emerald-500 not-italic text-xs">Studio Tool</span></span>
+          <span class="font-black text-xl tracking-tighter uppercase dark:text-white italic">DUALAB <span class="text-emerald-500 not-italic text-xs">Studio Tool</span></span>
         </div>
         <h1 class="text-5xl font-black tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">
           Factoría de Micro-Retos
@@ -318,7 +318,7 @@ const guardar = async () => {
                 <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
-                <h2 class="text-2xl font-black uppercase tracking-tight">Buscar en CRM DuaLab</h2>
+                <h2 class="text-2xl font-black uppercase tracking-tight">Buscar en CRM DUALAB</h2>
               </div>
               
               <div class="mb-10 relative z-20">
@@ -425,7 +425,7 @@ const guardar = async () => {
           <div v-if="pasoActual === 2" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
              <section class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
               <div class="absolute top-0 right-0 bg-amber-500/10 text-amber-600 px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-bl-3xl">
-                Diagnóstico Consultor DuaLab
+                Diagnóstico Consultor DUALAB
               </div>
               <div class="flex items-center gap-4 mb-8">
                 <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-500">
@@ -655,7 +655,7 @@ const guardar = async () => {
               </div>
               
               <div class="relative z-10">
-                <p class="text-emerald-400 font-bold text-xs tracking-[0.2em] uppercase mb-4">DuaLab Studio</p>
+                <p class="text-emerald-400 font-bold text-xs tracking-[0.2em] uppercase mb-4">DUALAB Studio</p>
                 <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight mb-4">
                   {{ microretoGenerado.titulo }}
                 </h1>

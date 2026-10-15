@@ -56,6 +56,9 @@ export const useAuthStore = defineStore('auth', () => {
   // hacer bajar un contador, se ancla aquí (minutosRestantesServidor + medidoEn) y
   // se descuenta localmente con un reloj que tickea cada minuto.
   const minutosRestantesServidor = ref(-1)
+  // "Recordarme": el backend mantiene la sesión con la cookie recaller aunque caduque
+  // la de Laravel, así que ni el cierre por inactividad ni el aviso de caducidad aplican
+  const recordado                = ref(false)
   const medidoEn                 = ref(0)
   const now                      = ref(Date.now())
   setInterval(() => { now.value = Date.now() }, 60_000)
@@ -74,6 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
     userCentroNombre.value = ''
     userCentroImg.value    = ''
     minutosRestantesServidor.value = -1
+    recordado.value = false
   }
 
   // data = payload de /perfil (data.data) o del login — misma forma en ambos.
@@ -85,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
     userCentroNombre.value = data.centro_nombre || ''
     userCentroImg.value    = data.centro_img || ''
     minutosRestantesServidor.value = Number(data.minutos_restantes ?? -1)
+    recordado.value = Boolean(data.recordado)
     medidoEn.value = Date.now()
   }
 
@@ -177,7 +182,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     isInitialized, isAuthenticated, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
-    minutosRestantes,
+    minutosRestantes, recordado,
     isSuperAdmin, isAdmin, isDocente, isEmpresa, roleLabel,
     init, login, logout, ping, updateName, updateCentroImg, canAccess,
   }

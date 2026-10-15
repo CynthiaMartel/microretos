@@ -143,6 +143,6 @@
         @endif
     @endif
 
-    <div class="footer-nota">Entregable presentado por el equipo {{ $meta['equipo'] }} a {{ $meta['empresa'] }} &middot; Aprendizaje Basado en Retos, DuaLab.</div>
+    <div class="footer-nota">Entregable presentado por el equipo {{ $meta['equipo'] }} a {{ $meta['empresa'] }} &middot; Aprendizaje Basado en Retos, DUALAB.</div>
 </body>
 </html>

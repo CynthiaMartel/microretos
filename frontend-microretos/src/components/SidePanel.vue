@@ -198,7 +198,7 @@ watch(() => route.fullPath, () => {
               <div v-if="authStore.canAccess('base-datos')" class="group/tip relative">
                 <button
                   @click="irA('/base-datos')"
-                  data-tip="Empresas, centros educativos, familias y ciclos del ecosistema DuaLab"
+                  data-tip="Empresas, centros educativos, familias y ciclos del ecosistema DUALAB"
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
                   @mouseleave="hideTooltip"
@@ -212,7 +212,7 @@ watch(() => route.fullPath, () => {
                   </svg>
                   <span>Base de datos</span>
                 </button>
-                <div class="sp-tooltip">Empresas, centros educativos, familias y ciclos del ecosistema DuaLab<div class="sp-tooltip-arrow"/></div>
+                <div class="sp-tooltip">Empresas, centros educativos, familias y ciclos del ecosistema DUALAB<div class="sp-tooltip-arrow"/></div>
               </div>
 
               <!-- Papelera -->
@@ -274,7 +274,7 @@ watch(() => route.fullPath, () => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          ¿Qué es DuaLab?
+          ¿Qué es DUALAB?
         </button>
 
         <!-- Indicador sistema activo -->
@@ -332,7 +332,7 @@ watch(() => route.fullPath, () => {
 
           <!-- Mensaje principal -->
           <h2 class="text-azul-noche text-xl font-bold leading-snug">
-            ¡Te damos la bienvenida<br>a DuaLab para
+            ¡Te damos la bienvenida<br>a DUALAB para
           </h2>
           <p class="text-4xl font-black tracking-tight mt-2 mb-1" :class="theme.text">
             {{ welcomeRole === ROLE_DOCENTE ? 'docentes' : welcomeRole === ROLE_EMPRESA ? 'empresas' : 'admin' }}

@@ -80,7 +80,7 @@ function continuarConEquipoGuardado() {
                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
           </svg>
         </div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-alumnos mb-1">DuaLab</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-alumnos mb-1">DUALAB</p>
         <h1 class="text-2xl font-black text-white leading-tight">Tu flujo de trabajo</h1>
         <p class="text-sm text-white/50 mt-2">Mete tu código para ver tu flujo de trabajo</p>
       </div>

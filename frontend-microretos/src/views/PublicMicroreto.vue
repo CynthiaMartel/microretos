@@ -102,7 +102,7 @@ const imagenFondo = computed(() => {
       <div class="flex items-center justify-between mb-8
                   transition-all duration-700 ease-out"
            :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'">
-        <span class="text-alumnos-dark font-black text-lg tracking-tight">DuaLab</span>
+        <span class="text-alumnos-dark font-black text-lg tracking-tight">DUALAB</span>
         <span v-if="expira"
               class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200
                      text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
@@ -136,7 +136,7 @@ const imagenFondo = computed(() => {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
                          a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              DuaLab · Ficha de Reto
+              DUALAB · Ficha de Reto
             </p>
 
             <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-azul-noche
@@ -348,7 +348,7 @@ const imagenFondo = computed(() => {
 
       <!-- Pie de página -->
       <p class="text-center text-[10px] text-gray-400 mt-8 tracking-wider uppercase">
-        DuaLab Studio · Acceso temporal para alumnado
+        DUALAB Studio · Acceso temporal para alumnado
       </p>
     </div>
 

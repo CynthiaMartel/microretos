@@ -42,6 +42,14 @@
      sobre el nuevo azul noche — separador sutil sobre el propio chrome. */
   --color-azul-noche-border: #2C3F57;
 
+  /* Pantallas de acceso (LoginView, RestablecerContrasena): colores medidos en el
+     diseño "Página de acceso a DuaLab.png" — títulos índigo profundo y azul vivo
+     en botones y enlaces. Solo los usan AccesoLayout y sus vistas. */
+  --color-acceso-tinta: #0B1A55;
+  --color-acceso-texto: #5B6888;
+  --color-acceso-azul: #1171DB;
+  --color-acceso-azul-hover: #0C5BB5;
+
   /* Azul aclarado: el resto de colores de marca ya leen bien como texto sobre
      fondo oscuro (--color-azul-noche del TopBar/SidePanel) — el azul plano no
      (contraste ~2.9:1). Se usa solo para texto/iconos sobre fondo oscuro. */

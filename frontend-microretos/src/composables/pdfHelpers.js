@@ -40,7 +40,7 @@ export function addFooters(doc) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(156, 163, 175);
     doc.text(
-      `DuaLab · Generado el ${today} · Página ${i} de ${pageCount}`,
+      `DUALAB · Generado el ${today} · Página ${i} de ${pageCount}`,
       MARGIN,
       PAGE_H - 6
     );

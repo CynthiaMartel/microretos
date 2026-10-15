@@ -18,13 +18,13 @@ class EmpresaPolicy
             return Response::allow();
         }
         if ($empresa->es_catalogo) {
-            return Response::deny('Esta empresa es del catálogo de DuaLab y es de solo lectura. Usa «Usar en mi centro» para tener tu propia copia editable.');
+            return Response::deny('Esta empresa es del catálogo de DUALAB y es de solo lectura. Usa «Usar en mi centro» para tener tu propia copia editable.');
         }
         if (!($user->isDocente() || $user->isAdmin()) || !$empresa->perteneceAlCentroDe($user)) {
             return Response::deny('No autorizado: esta empresa no pertenece a tu centro educativo.');
         }
         if ($user->isDocente() && !$empresa->es_simulada) {
-            return Response::deny('Esta empresa es real y sus datos no pueden modificarse porque son sensibles. Ponte en contacto con DuaLab para cualquier cambio.');
+            return Response::deny('Esta empresa es real y sus datos no pueden modificarse porque son sensibles. Ponte en contacto con DUALAB para cualquier cambio.');
         }
         return Response::allow();
     }
@@ -40,7 +40,7 @@ class EmpresaPolicy
 
         // Plantilla del catálogo DuaLab (T2): compartida por todos los centros, solo lectura.
         if ($empresa->es_catalogo) {
-            return Response::deny('Esta empresa es del catálogo de DuaLab y es de solo lectura. Usa «Usar en mi centro» para tener tu propia copia editable.');
+            return Response::deny('Esta empresa es del catálogo de DUALAB y es de solo lectura. Usa «Usar en mi centro» para tener tu propia copia editable.');
         }
 
         if (!($user->isDocente() || $user->isAdmin()) || !$empresa->perteneceAlCentroDe($user)) {
@@ -49,6 +49,6 @@ class EmpresaPolicy
 
         return $empresa->es_simulada
             ? Response::allow()
-            : Response::deny('Esta empresa es real y su diagnóstico no puede modificarse porque contiene datos sensibles. Ponte en contacto con DuaLab para cualquier cambio.');
+            : Response::deny('Esta empresa es real y su diagnóstico no puede modificarse porque contiene datos sensibles. Ponte en contacto con DUALAB para cualquier cambio.');
     }
 }

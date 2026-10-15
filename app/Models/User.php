@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
+use App\Notifications\RestablecerContrasena;
 
 class User extends Authenticatable
 {
@@ -32,6 +34,32 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    // "Recordarme" deja en el navegador una cookie que vuelve a abrir sesión aunque se
+    // borren las filas de `sessions`. Todo lo que hoy cierra sesiones (cambio de
+    // contraseña propio o por un admin, restablecimiento, bloqueo) debe invalidarla
+    // también: se rota remember_token aquí para cubrir todos esos caminos a la vez.
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if (!$user->exists) return;
+            if ($user->isDirty('password') || ($user->isDirty('is_blocked') && $user->is_blocked)) {
+                $user->setRememberToken(Str::random(60));
+            }
+        });
+    }
+
+    // "Recordarme" en el login: no para superadmin (acceso total, siempre sesión corta
+    // con cierre por inactividad)
+    public function puedeRecordarSesion(): bool
+    {
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCENTE, self::ROLE_EMPRESA], true);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new RestablecerContrasena($token));
+    }
 
     protected function casts(): array
     {

@@ -49,6 +49,20 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // Buzón de soporte (soporte@dualab.es): envía el formulario "Contacta con
+        // soporte" de la pantalla de acceso (SoporteService). Mismo servidor SMTP que
+        // el general; cuenta y contraseña propias en .env.
+        'soporte' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_SOPORTE_SCHEME', env('MAIL_SCHEME')),
+            'host' => env('MAIL_SOPORTE_HOST', env('MAIL_HOST', '127.0.0.1')),
+            'port' => env('MAIL_SOPORTE_PORT', env('MAIL_PORT', 2525)),
+            'username' => env('MAIL_SOPORTE_USERNAME'),
+            'password' => env('MAIL_SOPORTE_PASSWORD'),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
@@ -113,6 +127,12 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
+    ],
+
+    // Destinatario y remitente de las solicitudes de soporte (mailer 'soporte')
+    'soporte' => [
+        'address' => env('MAIL_SOPORTE_ADDRESS', 'soporte@dualab.es'),
+        'name' => env('MAIL_SOPORTE_NAME', 'Soporte DUALAB'),
     ],
 
 ];

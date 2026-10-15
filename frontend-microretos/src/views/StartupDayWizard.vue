@@ -1187,15 +1187,15 @@ const guiaWizard = [
   },
 ];
 
-watch(paso, () => { modoGuia.value = true; });
+// La guía solo se abre a petición (botón Ayuda), nunca sola al cambiar de paso.
 watch(modoGuia, (val) => { tourActivo.value = val; });
 onUnmounted(() => { tourActivo.value = false; });
 </script>
 
 <template>
   <div class="min-h-screen font-sans text-[#1F2937] pt-16 md:pt-16"
-       :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-       style="transition: opacity 0.4s ease, transform 0.4s ease">
+       :class="isLoaded ? 'opacity-100' : 'opacity-0 translate-y-3'"
+       style="transition: opacity 0.4s ease, translate 0.4s ease">
 
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-175 h-100
@@ -3105,7 +3105,7 @@ onUnmounted(() => { tourActivo.value = false; });
   >
     <div v-if="modalBorradorAviso"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-         @click.self="modalBorradorAviso = false; modoGuia.value = true">
+         @click.self="modalBorradorAviso = false">
 
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
@@ -3130,7 +3130,7 @@ onUnmounted(() => { tourActivo.value = false; });
         </p>
 
         <button
-          @click="modalBorradorAviso = false; modoGuia.value = true"
+          @click="modalBorradorAviso = false"
           class="mt-7 w-full inline-flex items-center justify-center
                  px-6 py-3 bg-[#1F2937] text-white rounded-full
                  text-xs font-black uppercase tracking-widest shadow-sm

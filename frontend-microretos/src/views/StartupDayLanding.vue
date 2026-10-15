@@ -94,7 +94,7 @@ function youtubeId(url) {
           </svg>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-empresas">DuaLab</p>
+          <p class="text-[10px] font-black uppercase tracking-widest text-empresas">DUALAB</p>
           <p class="text-xs text-gray-400">Portal de validación empresa</p>
         </div>
       </div>
@@ -143,7 +143,7 @@ function youtubeId(url) {
           </p>
           <div class="mt-6 flex items-center justify-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-empresas"/>
-            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">DuaLab · Gracias por colaborar</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">DUALAB · Gracias por colaborar</span>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ function youtubeId(url) {
           </p>
           <div class="mt-6 flex items-center justify-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"/>
-            <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">DuaLab · Gracias por vuestra respuesta</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">DUALAB · Gracias por vuestra respuesta</span>
           </div>
         </div>
 
@@ -209,9 +209,9 @@ function youtubeId(url) {
 
               <!-- Qué es DuaLab -->
               <div class="p-4 rounded-2xl bg-empresas/5 border border-empresas/10 mb-4">
-                <p class="text-[10px] font-black uppercase tracking-widest text-empresas mb-2">¿Qué es DuaLab?</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-empresas mb-2">¿Qué es DUALAB?</p>
                 <p class="text-sm text-gray-600 leading-relaxed">
-                  <strong class="text-[#121212]">DuaLab</strong> es la plataforma que conecta centros de Formación Profesional
+                  <strong class="text-[#121212]">DUALAB</strong> es la plataforma que conecta centros de Formación Profesional
                   con empresas del tejido productivo para que el alumnado trabaje en
                   <strong class="text-[#121212]">retos reales</strong>.
                   Vuestro papel como empresa es fundamental: vuestra experiencia ayuda al equipo

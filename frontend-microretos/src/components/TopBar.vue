@@ -4,12 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSidePanel } from '../composables/useSidePanel.js'
 import { useRoleTheme } from '../composables/useRoleTheme.js'
+import { useComoFunciona } from '../composables/useComoFunciona.js'
+import { LightBulbIcon } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
 const route     = useRoute()
 const router    = useRouter()
 const { mobileOpen, toggleMobilePanel } = useSidePanel()
 const { theme } = useRoleTheme()
+const { abrirComoFunciona } = useComoFunciona()
 
 const irHome = () => {
   const destino = authStore.isAuthenticated && (authStore.isDocente || authStore.isAdmin)
@@ -100,16 +103,16 @@ const cerrarSesion = async () => {
       @click="irHome"
       class="flex items-center gap-2 mr-1 shrink-0 hover:opacity-80 transition-opacity duration-150 cursor-pointer"
     >
-      <img src="../assets/logo_colores.png" alt="DuaLab" class="h-11 w-auto object-contain" />
+      <img src="../assets/logo_colores.png" alt="DUALAB" class="h-11 w-auto object-contain" />
       <span class="font-black text-lg tracking-tighter text-white uppercase select-none">
         Dua<span :class="theme.textDark">Lab</span>
       </span>
     </button>
 
-    <!-- Separador + sección activa -->
+    <!-- Separador + sección activa — oculta en móvil, donde no cabe junto a la bombilla y el usuario -->
     <template v-if="sectionLabel">
-      <span class="text-white/15 select-none">/</span>
-      <span class="text-[11px] font-black uppercase tracking-[0.15em] text-white/50 truncate">
+      <span class="hidden text-white/15 select-none sm:inline">/</span>
+      <span class="hidden min-w-0 text-[11px] font-black uppercase tracking-[0.15em] text-white/50 truncate sm:inline">
         {{ sectionLabel }}
       </span>
     </template>
@@ -118,6 +121,22 @@ const cerrarSesion = async () => {
 
     <!-- ── Sesión activa ── -->
     <template v-if="authStore.isAuthenticated">
+
+      <!-- ¿Cómo funciona DUALAB? — abre ComoFuncionaModal.vue (montado en App.vue con sesión).
+           En móvil solo la bombilla; desde md se acompaña del texto. -->
+      <button
+        type="button"
+        @click="abrirComoFunciona"
+        aria-label="¿Cómo funciona DUALAB?"
+        title="¿Cómo funciona DUALAB?"
+        class="flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-xl px-2.5
+               text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
+      >
+        <LightBulbIcon class="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
+        <span class="hidden whitespace-nowrap text-[13px] font-bold md:inline">Cómo funciona</span>
+      </button>
+
+      <span class="h-6 w-px shrink-0 bg-white/10" aria-hidden="true" />
 
       <!-- Usuario (como en la maqueta idea_dashboard): avatar + nombre + "Rol · Centro" y
            flecha que despliega Mi usuario / Cerrar sesión. En vez de foto, el icono de usuario. -->

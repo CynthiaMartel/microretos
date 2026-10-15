@@ -187,7 +187,7 @@ function abrirFicticiaIADesdeModal() {
 function onFicticiaIAGuardada(empresa, { paraCatalogo }) {
   mostrarFicticiaIA.value = false
   mostrarSnack(paraCatalogo
-    ? `"${empresa.nombre_comercial}" añadida al catálogo DuaLab.`
+    ? `"${empresa.nombre_comercial}" añadida al catálogo DUALAB.`
     : `"${empresa.nombre_comercial}" creada correctamente.`, 'ok')
   cargarDatos()
 }
@@ -800,7 +800,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <span class="text-[10px] font-black uppercase tracking-widest text-administraciones">Base de datos</span>
             </div>
             <h1 class="text-3xl md:text-4xl font-black tracking-tight text-azul-noche">
-              Empresas <span class="text-transparent bg-clip-text bg-gradient-to-r from-administraciones to-administraciones/60">DuaLab</span>
+              Empresas <span class="text-transparent bg-clip-text bg-gradient-to-r from-administraciones to-administraciones/60">DUALAB</span>
             </h1>
             <p class="text-gray-500 text-sm mt-1">Consulta, edita y gestiona todas las empresas registradas.</p>
           </div>
@@ -1746,7 +1746,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <h2 class="font-black text-lg text-azul-noche">Catálogo DuaLab</h2>
+              <h2 class="font-black text-lg text-azul-noche">Catálogo DUALAB</h2>
               <p class="text-xs text-gray-500 font-medium mt-0.5">
                 {{ plantillasCatalogo.length }} {{ plantillasCatalogo.length === 1 ? 'plantilla' : 'plantillas' }}
                 ficticias compartidas con todos los centros · Solo lectura para los centros: las usan a través de una copia

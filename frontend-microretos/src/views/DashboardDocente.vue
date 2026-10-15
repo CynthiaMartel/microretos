@@ -616,7 +616,7 @@ function formatFecha(isoDate) {
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos). El total de encuentros
            ya lo muestra el panel lateral (ResumenEncuentrosPanel). -->
-      <CabeceraSeccion titulo="Encuentros" destacado="DuaLab" color="text-centros" volver="/seccion/encuentros"
+      <CabeceraSeccion titulo="Encuentros" destacado="DUALAB" color="text-centros" volver="/seccion/encuentros"
                        subtitulo="Registra y consulta tus encuentros de trabajo con retos."
                        class="mb-6 md:mb-8">
         <div class="flex flex-wrap items-center gap-2">

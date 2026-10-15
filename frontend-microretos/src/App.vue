@@ -27,6 +27,11 @@ const isPublicRetoRoute = computed(() =>
 
 // El panel lateral es navegación de docente/admin/empresa: sin sesión no aporta nada
 // y solo resta ancho útil a las vistas públicas (Home, Unirse, etc.)
+// Páginas de acceso a pantalla completa (/, /login, /restablecer-contrasena): sin TopBar
+// ni modal de login encima
+const ACCESO_ROUTES = ['home', 'login', 'restablecer-contrasena']
+const isLoginRoute = computed(() => ACCESO_ROUTES.includes(route.name))
+
 const showSidePanel = computed(() => !isPublicRetoRoute.value && authStore.isAuthenticated)
 
 // ── Login modal: vivía dentro de SidePanel, pero este ya no se monta sin sesión.
@@ -37,7 +42,7 @@ const { triggerWelcome } = useUIState()
 watch(
   () => route.query.redirect,
   (redirect) => {
-    if (redirect && !authStore.isAuthenticated) {
+    if (redirect && !authStore.isAuthenticated && !isLoginRoute.value) {
       destinoTrasLogin.value = String(redirect)
       showLogin.value = true
     }
@@ -89,7 +94,8 @@ async function cargarCentroImg() {
 const showIdleWarning = ref(false)
 
 const handleIdle = async () => {
-  if (!authStore.isAuthenticated) return
+  // Con "Recordarme" no se cierra por inactividad: logout() invalidaría la cookie recaller
+  if (!authStore.isAuthenticated || authStore.recordado) return
   showIdleWarning.value = false
   await authStore.logout()
   const currentPath = router.currentRoute.value.fullPath
@@ -100,7 +106,7 @@ const handleIdle = async () => {
 }
 
 const handleWarning = () => {
-  if (!authStore.isAuthenticated) return
+  if (!authStore.isAuthenticated || authStore.recordado) return
   showIdleWarning.value = true
 }
 
@@ -145,7 +151,7 @@ const tokenToastRefreshing  = ref(false)
 const tokenToastFeedback    = ref(null) // 'ok' | 'error' | null
 
 const showTokenToast = computed(() => {
-  if (!authStore.isAuthenticated || isPublicRetoRoute.value || tokenToastForceHidden.value) return false
+  if (!authStore.isAuthenticated || authStore.recordado || isPublicRetoRoute.value || tokenToastForceHidden.value) return false
   const m = authStore.minutosRestantes
   if (m < 0 || m > TOAST_THRESHOLD_MINUTES) return false
   if (tokenToastDismissedAt.value !== null && m >= tokenToastDismissedAt.value - 5) return false
@@ -193,7 +199,7 @@ const extenderDesdeToast = async () => {
          style="background: linear-gradient(to bottom, rgba(248,250,252,0) 0%, rgba(248,250,252,0.4) 20%, rgba(248,250,252,0.8) 45%, rgba(248,250,252,0.97) 65%, rgba(248,250,252,1) 80%); z-index: 0;"></div>
   </template>
 
-  <TopBar v-if="!isPublicRetoRoute" />
+  <TopBar v-if="!isPublicRetoRoute && !isLoginRoute" />
   <SidePanel v-if="showSidePanel" />
   <!-- pb-12: hueco para el pie fijo de AppCredit (fixed bottom-0), que si no tapa el final
        de todas las vistas y parece que el scroll "se queda pillado" sin llegar abajo -->

@@ -85,7 +85,7 @@ export const GRUPOS_NAV = [
     titulo: 'Ayuda',
     items: [
       { key: 'recursos', label: 'Recursos', icon: 'recursos', ruta: '/seccion/recursos', routeName: 'seccion', color: 'docente',
-        tip: 'Cómo funciona DuaLab, glosario y guías',
+        tip: 'Cómo funciona DUALAB, glosario y guías',
         activa: (p) => p === '/seccion/recursos' },
     ],
   },
@@ -283,15 +283,15 @@ export const SECCIONES = {
   },
   recursos: {
     titulo: 'Recursos', destacado: '', color: 'text-centros',
-    subtitulo: 'Todo lo que necesitas para entender y sacar partido a DuaLab.',
+    subtitulo: 'Todo lo que necesitas para entender y sacar partido a DUALAB.',
     cards: [
-      { titulo: '¿Qué es DuaLab?', desc: 'Cómo funciona la plataforma, paso a paso.',
+      { titulo: '¿Qué es DUALAB?', desc: 'Cómo funciona la plataforma, paso a paso.',
         accion: 'comoFunciona', icon: 'info', tile: 'bg-centros' },
       { titulo: 'Glosario', desc: 'Retos, proyectos, encuentros, RA, CE… explicados.',
         proximamente: true, icon: 'glosario', tile: 'bg-centros' },
       { titulo: 'Guías y plantillas', desc: 'Material de apoyo para preparar tus encuentros.',
         proximamente: true, icon: 'libro', tile: 'bg-empresas' },
-      { titulo: 'Acerca de', desc: 'El equipo que ha desarrollado DuaLab Studio Tool.',
+      { titulo: 'Acerca de', desc: 'El equipo que ha desarrollado DUALAB Studio Tool.',
         accion: 'creditos', icon: 'codigo', tile: 'bg-azul-noche' },
     ],
     flujo: {
