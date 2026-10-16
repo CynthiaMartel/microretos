@@ -62,7 +62,9 @@ class Empresa extends Model
     /** @return BelongsToMany<Familia, $this> */
     public function familias(): BelongsToMany
     {
-        return $this->belongsToMany(Familia::class, 'empresa_familia', 'empresa_id', 'familia_id');
+        // interes: para qué quiere la empresa al alumnado de esa familia (ver EmpresaFamiliaService)
+        return $this->belongsToMany(Familia::class, 'empresa_familia', 'empresa_id', 'familia_id')
+            ->withPivot('interes');
     }
 
     /** @return HasMany<Microreto, $this> */

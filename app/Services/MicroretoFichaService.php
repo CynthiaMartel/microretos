@@ -216,9 +216,21 @@ class MicroretoFichaService
         return $capturado->diffInHours($reto->created_at, true) <= 24 ? $capturado->toIso8601String() : null;
     }
 
+    /** @var array<int, ?string> */
+    private static array $nombresCentro = [];
+
+    // Solo para retos con la empresa purgada (pocos): memo por petición, sin una query por reto
+    private static function nombreCentro(?int $centroId): ?string
+    {
+        if (!$centroId) return null;
+        return self::$nombresCentro[$centroId] ??= \App\Models\CentroEducativo::whereKey($centroId)->value('nombre');
+    }
+
     private static function aplicarDatosEmpresa(Microreto $reto): void
     {
         $reto->es_simulado = (bool) $reto->es_simulado;
+        // activa | papelera | eliminada (null en demos): antes de sustituir la empresa por su copia
+        $reto->setAttribute('empresa_estado', $reto->estadoEmpresa());
 
         // Con copia guardada, el reto muestra el diagnóstico tal como era al crearlo. Se
         // sustituye por un clon: la misma instancia de Empresa la comparten todos los retos
@@ -246,7 +258,8 @@ class MicroretoFichaService
 
             $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
         } else {
-            $reto->centro_educativo    = 'Centro Desconocido';
+            // Empresa purgada: el reto conserva su centro propio
+            $reto->centro_educativo    = self::nombreCentro($reto->centro_id) ?? 'Centro Desconocido';
             $reto->familia             = 'Familia Desconocida';
             $reto->empresa_es_simulada = false;
         }

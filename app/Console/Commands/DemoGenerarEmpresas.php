@@ -176,9 +176,14 @@ class DemoGenerarEmpresas extends Command
                     $datosEmpresa['tamano'] = self::TAMANOS_PEQUENOS[$indiceGlobal % 2];
                 }
 
+                // Sector solo de la lista cerrada (mismo criterio que EmpresaFicticiaIAService);
+                // para el diagnóstico, sector + actividad dan más contexto que la familia.
+                $sector = \App\Support\SectoresEmpresa::esValido($datosEmpresa['sector'] ?? null) ? $datosEmpresa['sector'] : null;
+                $contextoSector = implode(' — ', array_filter([$sector, $datosEmpresa['actividad'] ?? null])) ?: $familia->nombre;
+
                 $reqDiagnostico = $this->peticion(SimularInfoEmpresaRequest::class, [
                     'empresaNombre'    => $datosEmpresa['nombre_comercial'],
-                    'empresaSector'    => $datosEmpresa['sector'] ?? $familia->nombre,
+                    'empresaSector'    => mb_substr($contextoSector, 0, 255),
                     'empresaTamano'    => $datosEmpresa['tamano'] ?? null,
                     'empresaUbicacion' => $datosEmpresa['municipio'] ?? null,
                 ]);
@@ -208,7 +213,7 @@ class DemoGenerarEmpresas extends Command
                     'cif'                 => $datosEmpresa['cif'] ?? null,
                     'centro_educativo'    => $centro?->nombre, // legacy, mismo criterio que guardarEmpresa
                     'centro_id'           => $centro?->id,
-                    'sector'              => $datosEmpresa['sector'] ?? null,
+                    'sector'              => $sector,
                     'tamano'              => $datosEmpresa['tamano'] ?? null,
                     'web'                 => $datosEmpresa['web'] ?? null,
                     'actividad'           => $datosEmpresa['actividad'] ?? null,

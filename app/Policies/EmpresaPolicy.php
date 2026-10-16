@@ -8,25 +8,15 @@ use Illuminate\Auth\Access\Response;
 
 class EmpresaPolicy
 {
-    // Datos de ficha (nombre, CIF, contacto, dirección...) — PUT /empresas/{id}.
-    // Superadmin: todas. Admin de centro: las de su centro. Docente: solo las FICTICIAS de
-    // su centro (son inventadas: no hay datos sensibles que proteger). Plantillas del
-    // catálogo: solo superadmin.
+    // Datos de ficha (nombre, CIF, sector, contacto, familias...) — PUT /empresas/{id}.
+    // Solo superadmin (DuaLab): los retos guardan su texto y una copia del diagnóstico, pero
+    // la ficha la leen en vivo (nombre, sector, familia, real/ficticia), así que cambiarla
+    // alteraría cómo se ven los retos ya generados con esa empresa en todos sus centros.
     public function update(User $user, Empresa $empresa): Response
     {
-        if ($user->isSuperAdmin()) {
-            return Response::allow();
-        }
-        if ($empresa->es_catalogo) {
-            return Response::deny('Esta empresa es del catálogo de DUALAB y es de solo lectura. Usa «Usar en mi centro» para tener tu propia copia editable.');
-        }
-        if (!($user->isDocente() || $user->isAdmin()) || !$empresa->perteneceAlCentroDe($user)) {
-            return Response::deny('No autorizado: esta empresa no pertenece a tu centro educativo.');
-        }
-        if ($user->isDocente() && !$empresa->es_simulada) {
-            return Response::deny('Esta empresa es real y sus datos no pueden modificarse porque son sensibles. Ponte en contacto con DUALAB para cualquier cambio.');
-        }
-        return Response::allow();
+        return $user->isSuperAdmin()
+            ? Response::allow()
+            : Response::deny('Solo DUALAB puede modificar los datos de una empresa: los retos ya generados con ella los muestran. Ponte en contacto con DUALAB para cualquier cambio.');
     }
 
     // Diagnóstico (P1–P4) desde el Generador de Retos. Las empresas reales contienen

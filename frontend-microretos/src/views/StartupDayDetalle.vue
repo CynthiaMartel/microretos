@@ -260,7 +260,7 @@ async function completar() {
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                  :class="[theme.bg5, theme.border20]">
               <span class="w-2 h-2 rounded-full" :class="theme.bg" />
-              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">StartUp Day</span>
+              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Proyecto</span>
             </div>
             <!-- Badge estado principal -->
             <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">

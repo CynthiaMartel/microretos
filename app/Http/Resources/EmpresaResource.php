@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Empresa para las vistas internas (Generador de Retos, Empresas, Startup Day,
+ * Empresa para las vistas internas (Generador de Retos, Empresas, Taller de Ideas,
  * Gestión de usuarios). Whitelist explícita de los campos que consume el frontend:
  * los de diagnóstico (friccion_*, consecuencias…) son necesarios para precargar el
  * Paso 2 del generador. Quedan fuera timestamps, soft-delete y campos internos
@@ -61,10 +61,15 @@ class EmpresaResource extends JsonResource
             'lo_que_no_quieren'   => $this->lo_que_no_quieren,
             'expectativas_alumno' => $this->expectativas_alumno,
 
-            // Familias vinculadas (filtro del generador, chips en Empresas, autoselección en Startup Day).
+            // Familias vinculadas (filtro del generador, chips en Empresas, autoselección en Taller de Ideas).
             // Una empresa puede tener varias; cada una aparece una sola vez.
             'familias'            => $this->whenLoaded('familias', fn () =>
-                $this->familias->unique('id')->map(fn ($f) => ['id' => $f->id, 'nombre' => $f->nombre])->values()
+                $this->familias->unique('id')->map(fn ($f) => [
+                    'id'      => $f->id,
+                    'nombre'  => $f->nombre,
+                    // Para qué quiere la empresa al alumnado de esa familia (opcional)
+                    'interes' => $f->pivot?->interes,
+                ])->values()
             ),
         ];
     }

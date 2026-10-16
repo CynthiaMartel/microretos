@@ -1204,7 +1204,7 @@ onUnmounted(() => { tourActivo.value = false; });
     <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
     <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
       <CabeceraSeccion titulo="Taller de" destacado="Ideas" color="text-centros" :volver="{ name: 'startup-day' }"
-                       subtitulo="Convierte una propuesta en un proyecto StartUp Day completo, paso a paso.">
+                       subtitulo="Convierte una propuesta en un proyecto completo, paso a paso.">
         <!-- Ayuda: mismo botón y sitio en todas las vistas -->
         <button type="button" @click="modoGuia = true"
                 class="accion-secundaria" title="Guía de este paso">
@@ -1223,9 +1223,9 @@ onUnmounted(() => { tourActivo.value = false; });
         <div class="flex items-center gap-4 mb-2">
           <div class="flex-1 min-w-0">
             <p class="text-[9px] font-black uppercase tracking-[0.25em] text-centros">
-              StartUp Day · Paso {{ paso }} de {{ totalPasos }}
+              Taller de Ideas · Paso {{ paso }} de {{ totalPasos }}
             </p>
-            <p class="text-xs font-bold text-gray-600 truncate">{{ form.titulo || 'Nueva propuesta' }}</p>
+            <p class="text-xs font-bold text-gray-600 truncate">{{ form.titulo || 'Nuevo proyecto' }}</p>
           </div>
           <span class="text-xs font-black text-gray-400 shrink-0">{{ progreso }}%</span>
         </div>
@@ -3608,7 +3608,7 @@ onUnmounted(() => { tourActivo.value = false; });
   <TourPromptModal
     :show="showTourPrompt"
     titulo="¿Quieres activar la guía-tour?"
-    descripcion="Explora el wizard de Startup Day con una guía paso a paso."
+    descripcion="Explora el Taller de Ideas con una guía paso a paso."
     @activar="activarTourDesdeModal"
     @omitir="omitirTourDesdeModal"
   />

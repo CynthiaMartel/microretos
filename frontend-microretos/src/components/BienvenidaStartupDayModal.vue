@@ -21,7 +21,7 @@ const emit = defineEmits(['seleccionar'])
             </svg>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Startup Day · Fase 2</p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Biblioteca de proyectos</p>
             <h2 class="text-xl font-black tracking-tight text-azul-noche">¿Qué necesitas?</h2>
           </div>
         </div>
@@ -45,8 +45,8 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear una propuesta</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Empieza el wizard guiado para registrar una nueva propuesta StartUp Day.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear proyecto</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Abre el Taller de Ideas para crear un nuevo proyecto paso a paso.</p>
             </div>
           </button>
 

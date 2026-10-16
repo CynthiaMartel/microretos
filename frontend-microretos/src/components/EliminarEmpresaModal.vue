@@ -27,6 +27,14 @@ const confirmNombre  = ref('')
 const eliminando     = ref(false)
 const error          = ref('')
 
+// microretos_count llega de /empresas/dashboard; sin él, el texto genérico
+const textoRetos = computed(() => {
+  const n = props.empresa?.microretos_count
+  if (n == null) return 'Los retos generados permanecerán en la biblioteca'
+  if (n === 0) return 'Esta empresa no tiene retos'
+  return n === 1 ? 'Su reto seguirá en la biblioteca' : `Sus ${n} retos seguirán en la biblioteca`
+})
+
 const nombreValido = computed(() =>
   confirmNombre.value === props.empresa?.nombre_comercial
 )
@@ -146,8 +154,11 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-blue-700">Los retos generados permanecerán en la biblioteca</p>
-                    <p class="text-xs text-blue-500 mt-0.5">Los retos ya creados con esta empresa no se eliminarán.</p>
+                    <p class="font-black text-sm text-blue-700">{{ textoRetos }}</p>
+                    <p class="text-xs text-blue-500 mt-0.5">
+                      No se eliminan: el centro los seguirá viendo, marcados como «empresa en la papelera»
+                      (y «empresa eliminada» si se borra definitivamente).
+                    </p>
                   </div>
                 </div>
 

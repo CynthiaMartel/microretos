@@ -16,10 +16,10 @@ class SimularInfoEmpresaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'empresaNombre'    => 'required|string',
-            'empresaSector'    => 'required|string',
-            'empresaTamano'    => 'nullable|string',
-            'empresaUbicacion' => 'nullable|string',
+            'empresaNombre'    => 'required|string|max:255',
+            'empresaSector'    => 'required|string|max:255',
+            'empresaTamano'    => 'nullable|string|max:50',
+            'empresaUbicacion' => 'nullable|string|max:520', // municipio + ", " + provincia
         ];
     }
 }

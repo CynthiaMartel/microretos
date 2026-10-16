@@ -8,7 +8,7 @@ use App\Models\User;
 class MicroretoPolicy
 {
     // Superadmin sin restricción. Docente/admin solo sobre microretos de su propio
-    // centro (vía la empresa asociada). Otros roles (p.ej. empresa) sin restricción
+    // centro (el del reto; en legacy sin centro_id, vía la empresa asociada). Otros roles (p.ej. empresa) sin restricción
     // aquí — el middleware de ruta ya limita qué acciones les llegan.
     public function update(User $user, Microreto $microreto): bool
     {
@@ -27,7 +27,7 @@ class MicroretoPolicy
         }
 
         if ($user->isDocente() || $user->isAdmin()) {
-            return (bool) ($microreto->empresa && $microreto->empresa->perteneceAlCentroDe($user));
+            return $microreto->perteneceAlCentroDe($user);
         }
 
         return true;

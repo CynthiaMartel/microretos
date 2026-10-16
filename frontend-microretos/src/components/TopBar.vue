@@ -36,7 +36,7 @@ const sectionLabels = {
   'encuentros-registrados': 'Encuentros',
   'startup-day':          'Propuestas-Proyecto',
   'proyectos-terminados': 'Proyectos Completados',
-  'startup-day-crear':    'Nueva propuesta',
+  'startup-day-crear':    'Taller de Ideas',
   'startup-day-detalle':  'Proyecto',
   'startup-day-editar':   'Editar proyecto',
   'gestion-usuarios':     'Usuarios',

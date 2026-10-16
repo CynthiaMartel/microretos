@@ -286,7 +286,7 @@ function proyectosDeEmpresa(empresaId) {
 }
 
 // Misma nomenclatura de estado que ProyectoCard.vue, para que la etiqueta de un
-// proyecto se lea igual aquí que en StartUp Day.
+// proyecto se lea igual aquí que en el Taller de Ideas.
 function etiquetaProyecto(p) {
   if (p.estado === 'en_edicion') return 'En edición'
   if (p.estado === 'archivado')  return 'Archivado'
@@ -1240,7 +1240,7 @@ const unidadResultados = computed(() => {
                                     </option>
                                   </select>
                                   <p v-if="proyectos.length === 0" class="text-sm text-gray-400 mt-1">
-                                    No hay propuestas publicadas. Publícalas en el StartUp Day.
+                                    No hay propuestas publicadas. Publícalas en el Taller de Ideas.
                                   </p>
                                 </div>
                                 <div>

@@ -12,6 +12,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { useUiHighlightStore } from '../stores/uiHighlight.js';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
 import LoginModal from '../components/LoginModal.vue';
+import AvisoEmpresaBorrada from '../components/AvisoEmpresaBorrada.vue';
 
 const route   = useRoute();
 const router  = useRouter();
@@ -383,6 +384,7 @@ async function copiarUrl() {
                   </svg>
                   {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
                 </span>
+                <AvisoEmpresaBorrada :estado="reto.empresa_estado" tamano="md" />
 
                 <span v-if="reto.es_simulado"
                       class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2

@@ -135,7 +135,7 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-blue-700">Los proyectos StartUp Day vinculados no se eliminarán</p>
+                    <p class="font-black text-sm text-blue-700">Los proyectos vinculados no se eliminarán</p>
                     <p class="text-xs text-blue-500 mt-0.5">Los proyectos creados a partir de este encuentro permanecen en la biblioteca.</p>
                   </div>
                 </div>

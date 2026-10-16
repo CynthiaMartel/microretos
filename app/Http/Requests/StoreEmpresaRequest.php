@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Support\SectoresEmpresa;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * POST /empresas — alta de empresa desde el modal InsertModifyEmpresa o desde el
@@ -43,7 +46,9 @@ class StoreEmpresaRequest extends FormRequest
             'razonSocial'      => 'nullable|string|max:255',
             'cif'              => 'nullable|string|max:20',
             'centroEducativo'  => 'nullable|string|max:255',
-            'sector'           => 'nullable|string|max:255',
+            // Lista cerrada (SectoresEmpresa); lo concreto que hace la empresa va en 'actividad'.
+            // Rule::in porque hay sectores con coma ("Marketing, publicidad y diseño").
+            'sector'           => ['nullable', 'string', Rule::in(SectoresEmpresa::LISTA)],
             'tamano'           => 'nullable|string|max:50',
             'web'              => 'nullable|string|max:255',
             'actividad'        => 'nullable|string|max:500',
@@ -70,8 +75,35 @@ class StoreEmpresaRequest extends FormRequest
             'familia'          => 'required_without:familias|string|max:255|exists:familias,nombre,deleted_at,NULL',
             'familias'         => 'required_without:familia|array|min:1|max:30',
             'familias.*'       => 'string|distinct|max:255|exists:familias,nombre,deleted_at,NULL',
+            // Para qué quiere la empresa al alumnado de cada familia: nombre de familia => texto.
+            // Las claves deben ser familias enviadas o ya vinculadas (ver after()).
+            'interesesFamilia'   => 'nullable|array|max:30',
+            'interesesFamilia.*' => 'nullable|string|max:500',
             'ciclosIds'        => 'nullable|array|max:100',
             'ciclosIds.*'      => 'integer|distinct|exists:ciclos_formativos,id,deleted_at,NULL',
         ];
+    }
+
+    /** @return array<int, callable> */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                $intereses = $this->input('interesesFamilia');
+                if (!is_array($intereses) || $intereses === []) return;
+
+                $permitidas = $this->familiasConInteresPermitido();
+                $sobrantes  = array_diff(array_keys($intereses), $permitidas);
+                if ($sobrantes) {
+                    $validator->errors()->add('interesesFamilia', 'Solo se puede indicar el interés de familias vinculadas a la empresa.');
+                }
+            },
+        ];
+    }
+
+    /** @return string[]  familias cuyo interés puede indicar esta petición */
+    protected function familiasConInteresPermitido(): array
+    {
+        return array_filter(array_merge((array) $this->input('familias', []), [$this->input('familia')]), 'is_string');
     }
 }

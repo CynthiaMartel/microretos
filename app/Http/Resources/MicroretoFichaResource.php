@@ -72,6 +72,8 @@ class MicroretoFichaResource extends JsonResource
             'familia'             => $this->familia,
             'centro_educativo'    => $this->centro_educativo,
             'empresa_es_simulada' => $this->empresa_es_simulada,
+            // activa | papelera | eliminada (null en demos): marca «empresa borrada» en la ficha
+            'empresa_estado'      => $this->empresa_estado,
             'es_simulado'         => (bool) $this->es_simulado,
             // Botón "Ver proyecto asociado completado" — el más reciente que cumple el
             // mismo gate (completado + visible_publico), ver PublicMicroretoCatalogoController.

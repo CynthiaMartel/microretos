@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CentroEducativo;
 use App\Models\Empresa;
 use App\Models\Familia;
+use App\Support\SectoresEmpresa;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -46,6 +47,7 @@ class EmpresaFicticiaIAService
         // Sin centro = plantilla del catálogo DuaLab, compartida por todos los centros (T2).
         $colaboraCon = $centro ? "el centro educativo '{$centro->nombre}'" : 'centros educativos de Formación Profesional';
         $tamanosStr = implode('", "', self::TAMANOS);
+        $sectoresStr = implode('", "', SectoresEmpresa::LISTA);
 
         $systemPrompt = "Eres un generador de datos ficticios y realistas para uso educativo. Inventas empresas creíbles del sector correspondiente a una familia profesional de Formación Profesional, ubicadas en España. Nunca reutilizas nombres, CIF, direcciones, teléfonos o webs de empresas reales que puedan existir — todo el contenido es inventado desde cero.";
 
@@ -71,7 +73,8 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional ni comentarios:
 
 Reglas:
 - El sector y la actividad deben encajar de forma realista con la familia profesional '{$familia->nombre}'.
-- El sector es la actividad económica CONCRETA de la empresa (p. ej. \"Desarrollo de software a medida\", \"Taller de reparación de vehículos\"), NUNCA el nombre de la familia profesional.
+- sector debe ser EXACTAMENTE uno de estos valores (la categoría general de la empresa): \"{$sectoresStr}\".
+- La actividad es lo que hace CONCRETAMENTE la empresa, en una o dos frases (p. ej. \"Desarrollo de software a medida para clínicas\", \"Taller de reparación de vehículos\"), NUNCA el nombre de la familia profesional.
 - El CIF debe tener formato español válido (una letra + 8 dígitos) pero completamente inventado.
 - El teléfono debe tener formato español de 9 dígitos (fijo o móvil), sin prefijo internacional.
 - La web y el email_general deben usar SIEMPRE el dominio reservado \".example\" (p. ej. https://www.nombre.example y contacto@nombre.example), nunca .com/.es ni dominios que puedan existir.
@@ -254,9 +257,11 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
         if (!$datos || empty($datos['nombre_comercial']) || empty($datos['sector'])) return null;
 
         $ubicacion = implode(', ', array_filter([$this->texto($datos['municipio'] ?? null), $this->texto($datos['provincia'] ?? null)]));
+        // El sector solo es la categoría: con la actividad, el diagnóstico simulado es más concreto
+        $sectorYActividad = implode(' — ', array_filter([$this->texto($datos['sector']), $this->texto($datos['actividad'] ?? null)]));
         $diag = $this->simularDiagnostico(
             $this->texto($datos['nombre_comercial']),
-            $this->texto($datos['sector']),
+            $sectorYActividad,
             $this->texto($datos['tamano'] ?? null),
             $ubicacion ?: null,
         );
@@ -306,7 +311,8 @@ Responde ÚNICAMENTE con este JSON exacto, sin texto adicional:
             'nombre_comercial'    => Empresa::nombreLibreEnCentro($centro?->id, $this->texto($datos['nombre_comercial'])),
             'razon_social'        => $this->texto($datos['razon_social'] ?? null),
             'cif'                 => $this->texto($datos['cif'] ?? null),
-            'sector'              => $this->texto($datos['sector']),
+            // Solo de la lista cerrada: si la IA se sale, la empresa queda sin sector (no se inventa uno)
+            'sector'              => SectoresEmpresa::esValido($this->texto($datos['sector'])) ? $this->texto($datos['sector']) : null,
             'tamano'              => $tamano,
             'web'                 => $this->texto($datos['web'] ?? null),
             'actividad'           => $this->texto($datos['actividad'] ?? null),

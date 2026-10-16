@@ -52,7 +52,7 @@ const guiaPasosDataBase = [
   { ref: 'refBusqueda', seccion: 'busqueda',  texto: 'Usa el buscador para encontrar propuestas y proyectos por título, empresa o centro educativo. La búsqueda filtra en tiempo real a medida que escribes.' },
   { ref: 'refFiltros',  seccion: 'filtros',   texto: 'Filtra por estado: Validados (proyectos aprobados por empresa), Pendiente validar (propuestas enviadas, esperando respuesta), En edición (borradores), Archivados o Todos. Puedes combinar filtro y buscador a la vez.' },
   { ref: 'refGrid',     seccion: 'grid',      texto: 'Aquí aparecen las propuestas y proyectos registrados. Cada tarjeta muestra título, empresa, ciclo y estado. Pulsa en una tarjeta para ver el detalle completo.' },
-  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear una nueva propuesta StartUp Day. Necesitarás haber registrado previamente un encuentro en el Dashboard Docente para poder vincularla al reto correspondiente.' },
+  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear un nuevo proyecto en el Taller de Ideas. Necesitarás haber registrado previamente un encuentro en el Dashboard Docente para poder vincularlo al reto correspondiente.' },
   { ref: 'refBtnGuia',  seccion: null,        texto: 'Pulsa «Ayuda» en cualquier momento para ver qué puedes hacer aquí o volver a esta guía.' },
 ];
 
@@ -524,7 +524,7 @@ function mostrarSnack(mensaje, accion = null) {
           <!-- Bocadillo -->
           <div class="bg-[#1a2332] border border-white/10 rounded-2xl p-4 shadow-2xl">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-[9px] font-black uppercase tracking-widest text-amber-400">Startup Day · Guía</span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-amber-400">Biblioteca de proyectos · Guía</span>
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }} / {{ guiaPasosData.length }}</span>
             </div>
             <p class="text-xs text-white/80 leading-relaxed mb-3">{{ pasoActual?.texto }}</p>
@@ -591,7 +591,7 @@ function mostrarSnack(mensaje, accion = null) {
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
             </svg>
           </button>
-          <!-- Nueva propuesta (acción principal; paso del tour: refBtnNuevo) -->
+          <!-- Crear proyecto (acción principal; paso del tour: refBtnNuevo) -->
           <button
             v-if="!authStore.isEmpresa"
             ref="refBtnNuevo"
@@ -606,7 +606,7 @@ function mostrarSnack(mensaje, accion = null) {
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
             </svg>
-            Nueva propuesta
+            Crear proyecto
           </button>
         </div>
       </CabeceraSeccion>
@@ -761,7 +761,7 @@ function mostrarSnack(mensaje, accion = null) {
                 {{ hayFiltrosDetalleActivos || filtroEstado !== 'todos' ? 'Sin resultados' : 'Todavía no hay propuestas ni proyectos' }}
               </h3>
               <p class="text-gray-400 text-sm mb-6">
-                {{ hayFiltrosDetalleActivos || filtroEstado !== 'todos' ? 'Prueba con otros filtros' : 'Crea tu primera propuesta StartUp Day' }}
+                {{ hayFiltrosDetalleActivos || filtroEstado !== 'todos' ? 'Prueba con otros filtros' : 'Crea tu primer proyecto' }}
               </p>
               <button v-if="!hayFiltrosDetalleActivos && filtroEstado === 'todos' && !authStore.isEmpresa"
                       @click="router.push({ name: 'startup-day-crear' })"
@@ -805,7 +805,7 @@ function mostrarSnack(mensaje, accion = null) {
               {{ hayFiltrosTodosActivos ? 'Sin resultados' : 'Todavía no hay propuestas ni proyectos' }}
             </h3>
             <p class="text-gray-400 text-sm">
-              {{ hayFiltrosTodosActivos ? 'Prueba con otros filtros' : 'Crea tu primera propuesta StartUp Day' }}
+              {{ hayFiltrosTodosActivos ? 'Prueba con otros filtros' : 'Crea tu primer proyecto' }}
             </p>
           </div>
 

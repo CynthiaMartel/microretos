@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
  * la IA solo elige ids de un currículo cerrado que se le entrega, nunca redacta
  * el texto — el texto final siempre se recupera de la base de datos. Se usa tanto
  * al generar microretos (MicroretoIAController) como al sugerir RA/CE en un
- * microproyecto de StartUp Day (MicroproyectoController), para que ambos flujos
+ * microproyecto del Taller de Ideas (MicroproyectoController), para que ambos flujos
  * compartan la misma garantía de no-alucinación.
  */
 class RaCeCatalogoService

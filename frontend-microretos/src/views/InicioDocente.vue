@@ -758,7 +758,7 @@ const irA = (ruta) => router.push(ruta)
                 </div>
                 <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-lg bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
                         @click="irA('/proyectos/crear')">
-                  Aún no hay proyectos en este curso · Crear propuesta →
+                  Aún no hay proyectos en este curso · Crear proyecto →
                 </button>
               </article>
             </div>
@@ -792,7 +792,7 @@ const irA = (ruta) => router.push(ruta)
                   <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
                   <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
                     {{ filtroProy === 'todos' ? 'Aún no hay proyectos en este curso.' : 'No hay proyectos con este estado en el curso seleccionado.' }}
-                    <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear propuesta →</button>
+                    <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear proyecto →</button>
                   </div>
                   <ul v-else class="divide-y divide-gray-100">
                     <li v-for="p in proyectosPagina" :key="p.id" class="h-16">

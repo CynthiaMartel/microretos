@@ -2,6 +2,7 @@
 <script setup>
 import { formatearFecha } from '../utils/fechas.js';
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import AvisoEmpresaBorrada from '../components/AvisoEmpresaBorrada.vue';
 import MigasNavegacion from '../components/MigasNavegacion.vue'
 import { migasFamilia } from '../utils/migasFamilia.js'
 import { modulosDeReto, modulosDisponibles as listarModulos } from '../utils/modulos.js'
@@ -829,6 +830,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                         : [theme.bg5, theme.border20, theme.text]">
                       {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
                     </span>
+                    <AvisoEmpresaBorrada :estado="reto.empresa_estado" />
                     <span v-if="reto.es_simulado"
                       class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-full whitespace-nowrap">
                       Info simulada

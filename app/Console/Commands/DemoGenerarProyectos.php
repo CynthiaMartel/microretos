@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 
 /**
- * Genera microproyectos (wizard StartUp Day) para cada microreto simulado, reutilizando
+ * Genera microproyectos (Taller de Ideas) para cada microreto simulado, reutilizando
  * el wizard real de MicroproyectoController: store() para el alta, y las llamadas IA
  * encadenadas sugerirFundamentacion()/sugerirMetodologia()/sugerirObjetivos()/sugerirKpis()
  * para el contenido narrativo, persistidas con update() (que además deriva `ra_ce` desde
@@ -44,7 +44,7 @@ class DemoGenerarProyectos extends Command
                             {--force : Vuelve a procesar retos que ya tienen proyectos simulados (añade más, no borra los existentes).}
                             {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste.}';
 
-    protected $description = 'Genera microproyectos (wizard StartUp Day) para los microretos simulados, con estados variados (nunca completado).';
+    protected $description = 'Genera microproyectos (Taller de Ideas) para los microretos simulados, con estados variados (nunca completado).';
 
     private const USUARIO_ID = 48; // DuaLab — único propietario de todo lo generado en este comando
     private const CENTRO_ID  = 10; // DuaLab

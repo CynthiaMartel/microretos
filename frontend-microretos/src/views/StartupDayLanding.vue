@@ -170,11 +170,11 @@ function youtubeId(url) {
         <!-- Contenido -->
         <template v-else-if="proyecto">
 
-          <!-- Badge StartUp Day -->
+          <!-- Badge Proyecto -->
           <div class="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full
                       bg-empresas/10 border border-empresas/20">
             <span class="w-2 h-2 rounded-full bg-empresas" />
-            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">StartUp Day · Proyecto</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">Proyecto</span>
           </div>
 
           <!-- ════════════════════════════════════════════════════════

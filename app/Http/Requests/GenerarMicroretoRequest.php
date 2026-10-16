@@ -32,8 +32,11 @@ class GenerarMicroretoRequest extends FormRequest
     {
         return [
             'empresa_id'        => 'required|integer|exists:empresas,id',
-            'empresaNombre'     => 'required|string',
-            'empresaSector'     => 'required|string',
+            // Llegan al prompt: mismos límites que las columnas de empresas
+            'empresaNombre'     => 'required|string|max:255',
+            'empresaSector'     => 'required|string|max:255',
+            'empresaTamano'     => 'sometimes|nullable|string|max:50',
+            'empresaUbicacion'  => 'sometimes|nullable|string|max:520', // municipio + ", " + provincia
             'friccionProblema'  => 'required|string|max:1200',
             // Resto del diagnóstico del paso 2 (llega al prompt): mismos límites que la empresa.
             'diaANormal'          => 'sometimes|nullable|string|max:1000',

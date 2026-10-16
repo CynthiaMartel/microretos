@@ -625,6 +625,12 @@ class DatosFPController extends Controller
             ? $auth->centroEducativo?->nombre
             : ($validated['centroEducativo'] ?? null);
 
+        // Un admin sin centro asignado no puede dar de alta: la empresa quedaría huérfana.
+        if ($auth->isAdmin() && !$centroEducativoNombre) {
+            Log::warning('Alta de empresa denegada: admin sin centro asignado.', ['user_id' => $auth->id]);
+            return response()->json(['error' => 'Tu cuenta no tiene centro asignado: contacta con DUALAB.'], 422);
+        }
+
         // Resolvemos o creamos el centro educativo
         $centroId = null;
         if ($centroEducativoNombre) {
@@ -641,6 +647,7 @@ class DatosFPController extends Controller
 
             // Una sola empresa con todas sus familias (nunca una empresa por familia)
             $familias->anadirPorNombre($empresa->id, $validated['familias'] ?? [$validated['familia']]);
+            $familias->guardarIntereses($empresa->id, $validated['interesesFamilia'] ?? []);
 
             return $empresa;
         });
@@ -664,6 +671,8 @@ class DatosFPController extends Controller
         $empresas = Empresa::with('familias:id,nombre')
             // Marca qué plantillas del catálogo pueden usar los centros (ver Empresa::scopeCatalogoUsable)
             ->withExists(['familias as disponible_para_retos' => fn ($q) => $q->conDatosParaRetos()])
+            // Aviso del modal de eliminar: cuántos retos quedarán marcados con la empresa en la papelera
+            ->withCount('microretos')
             ->orderBy('nombre_comercial')
             ->take(self::MAX_EMPRESAS_LISTADO)
             ->get();
@@ -707,6 +716,8 @@ class DatosFPController extends Controller
         }
 
         $validated = $request->validated();
+        // Hoy EmpresaPolicy::update solo deja pasar a superadmin. Las comprobaciones por rol
+        // de aquí abajo se mantienen como segunda barrera por si la Policy se relaja.
         // Vincular ciclos al centro es gestión del centro (admin/superadmin), no del docente.
         if ($auth->isDocente()) {
             unset($validated['ciclosIds'], $validated['estadoContacto']);
@@ -765,6 +776,9 @@ class DatosFPController extends Controller
                 $familias->sincronizarPorNombre($empresa->id, $validated['familias']);
             } elseif (!empty($validated['familia'])) {
                 $familias->anadirPorNombre($empresa->id, [$validated['familia']]);
+            }
+            if (array_key_exists('interesesFamilia', $validated)) {
+                $familias->guardarIntereses($empresa->id, $validated['interesesFamilia'] ?? []);
             }
         });
 

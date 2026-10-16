@@ -2,6 +2,7 @@
 import { formatearFecha } from '../utils/fechas.js'
 import { ref, computed, watch } from 'vue'
 import api from '../api.js'
+import AvisoEmpresaBorrada from './AvisoEmpresaBorrada.vue'
 import { usePdfExport } from '../composables/usePdfExport.js'
 
 const props = defineProps({
@@ -197,6 +198,7 @@ function cerrar() {
                       </svg>
                       {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
                     </span>
+                    <AvisoEmpresaBorrada :estado="reto.empresa_estado" tamano="md" />
                     <span v-if="reto.es_simulado"
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200
                                  text-rose-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">

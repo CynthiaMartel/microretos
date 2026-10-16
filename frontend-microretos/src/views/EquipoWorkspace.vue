@@ -2391,10 +2391,10 @@ watch(workspace, (val) => {
               <p v-if="errorImagen" class="text-[10px] text-red-500 font-medium mt-1.5">{{ errorImagen }}</p>
             </div>
 
-            <!-- Tarjeta empresa / startup day -->
+            <!-- Tarjeta empresa validadora -->
             <div v-if="proyecto.empresa_nombre" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
-                Startup Day
+                Empresa
               </h3>
               <p class="text-sm text-gray-500 leading-relaxed">
                 Empresa validadora:

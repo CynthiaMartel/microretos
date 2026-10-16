@@ -18,6 +18,8 @@ class EmpresaDashboardResource extends EmpresaResource
             'familias_nombres' => $this->whenLoaded('familias', fn () => $this->familias->pluck('nombre')->unique()->values()),
             // Alguna familia con módulos y RA/CE: las plantillas del catálogo sin ella se ocultan a los centros
             'disponible_para_retos' => $this->whenHas('disponible_para_retos', fn () => (bool) $this->disponible_para_retos),
+            // EliminarEmpresaModal: retos que siguen en la biblioteca tras borrar la empresa
+            'microretos_count' => $this->whenCounted('microretos'),
         ];
     }
 }

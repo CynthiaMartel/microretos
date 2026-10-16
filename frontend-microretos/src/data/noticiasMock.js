@@ -7,12 +7,12 @@
 // de edición de noticias (agregando también lo publicado en info.dualab.es).
 export const noticiasDualab = [
   {
-    id: 'dualab-startup-day',
+    id: 'dualab-taller-ideas',
     categoria: 'Convocatoria',
-    titulo: 'Startup Day 2025-2026 · Inscripciones abiertas',
+    titulo: 'Taller de Ideas 2025-2026 · Inscripciones abiertas',
     subtitulo: 'Plazo hasta el 15 de julio',
     imagen: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=600&q=80',
-    alt: 'Startup Day presentación',
+    alt: 'Taller de Ideas presentación',
     alturaClase: 'h-40',
   },
   {

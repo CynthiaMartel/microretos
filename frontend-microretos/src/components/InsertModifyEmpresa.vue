@@ -16,12 +16,16 @@ import { ref, reactive, watch, onMounted, computed, nextTick } from 'vue'
 import api from '../api.js'
 import CentroEducativoModal from './CentroEducativoModal.vue'
 import SelectorFamiliasEmpresa from './SelectorFamiliasEmpresa.vue'
+import { SECTORES_EMPRESA, esSectorDeLista } from '../config/sectoresEmpresa'
 import { useAuthStore } from '../stores/auth'
 
 // Real ↔ ficticia de una empresa ya creada: solo superadmin (DuaLab). El backend lo
 // rechaza igualmente (DatosFPController::actualizarEmpresa); aquí solo se refleja en la UI.
 const authStore = useAuthStore()
 const puedeCambiarTipoEmpresa = computed(() => authStore.isSuperAdmin)
+// Solo superadmin elige centro al dar de alta: el resto crea siempre en el de su cuenta
+// (el backend ya lo fuerza en DatosFPController::guardarEmpresa; aquí solo se refleja).
+const centroFijoAlta = computed(() => (authStore.isSuperAdmin ? '' : authStore.userCentroNombre || ''))
 
 const props = defineProps({
   mostrarNuevaEmpresa:   { type: Boolean, default: false },
@@ -92,6 +96,7 @@ const nuevaForm               = reactive({
   provincia: '', codigo_postal: '', actividad: '',
   es_simulada: false, estado_contacto: '',
   familias: [],   // una empresa puede trabajar con varias familias profesionales
+  intereses: {},  // { [familia]: para qué quiere la empresa a ese alumnado }
 })
 
 watch(() => props.mostrarNuevaEmpresa, (v) => {
@@ -100,8 +105,10 @@ watch(() => props.mostrarNuevaEmpresa, (v) => {
     Object.keys(nuevaErrors).forEach(k => delete nuevaErrors[k])
     Object.keys(nuevaForm).forEach(k => (nuevaForm[k] = ''))
     nuevaForm.familias = []
+    nuevaForm.intereses = {}
     nuevaForm.nombre_comercial = props.nombreBuscado || ''
     nuevaForm.es_simulada = false
+    nuevaForm.centro_educativo = centroFijoAlta.value
     nuevaConfirmando.value = false
     tabNueva.value = 'basico'
     campoDestacado.value = null
@@ -125,7 +132,8 @@ watch(() => nuevaForm.centro_educativo, (val) => {
     nuevaForm.familias = nuevaForm.familias.filter(n => delCentro.has(n))
   }
   // Guiar al siguiente paso natural: tras elegir centro, toca elegir la familia profesional.
-  if (val && !nuevaForm.familias.length) {
+  // Con el centro fijado al abrir no se guía: el usuario no lo ha elegido.
+  if (val && !nuevaForm.familias.length && !centroFijoAlta.value) {
     destacarCampo(familiaSelectRef, 'familia', 'Sigue por aquí')
   }
 })
@@ -208,7 +216,10 @@ function validarNueva() {
   if (!nuevaForm.sector)           { nuevaErrors.sector           = 'Obligatorio'; ok = false }
   if (!nuevaForm.tamano)           { nuevaErrors.tamano           = 'Obligatorio'; ok = false }
   if (!nuevaForm.familias.length)  { nuevaErrors.familia          = 'Elige al menos una familia'; ok = false }
-  if (!nuevaForm.centro_educativo) { nuevaErrors.centro_educativo = 'Obligatorio'; ok = false }
+  if (!nuevaForm.centro_educativo) {
+    nuevaErrors.centro_educativo = authStore.isSuperAdmin ? 'Obligatorio' : 'Tu cuenta no tiene centro asignado: contacta con DUALAB'
+    ok = false
+  }
   if (!ok) tabNueva.value = 'basico'
   return ok
 }
@@ -235,6 +246,7 @@ async function guardarNueva() {
       centroEducativo: nuevaForm.centro_educativo || null,
       ciclosIds: [],
       familias:        nuevaForm.familias,
+      interesesFamilia: interesesDe(nuevaForm.familias, nuevaForm.intereses),
       personaContacto: nuevaForm.persona_contacto || null,
       telefono:        nuevaForm.telefono         || null,
       emailGeneral:    nuevaForm.email_general    || null,
@@ -259,6 +271,11 @@ async function guardarNueva() {
   } finally {
     nuevaLoading.value = false
   }
+}
+
+// Solo los intereses de las familias marcadas (al desmarcar una, su texto no se envía)
+function interesesDe(familias, intereses) {
+  return Object.fromEntries(familias.map(n => [n, intereses?.[n]?.trim() || null]))
 }
 
 // ════════════════════════════════════════════════════════════
@@ -289,7 +306,10 @@ const editarForm               = reactive({
   email_general: '', direccion: '', municipio: '', provincia: '',
   codigo_postal: '', actividad: '', estado_contacto: '', es_simulada: false,
   familias: [],
+  intereses: null,  // null = la empresa llegó sin intereses cargados: no se muestran ni se envían
 })
+// Sector anterior a la lista cerrada: se conserva mientras no se elija otro (el backend lo admite sin cambios)
+const sectorAntiguoEditar = ref('')
 // Familias con las que se abrió el modal: si no tenía ninguna (empresa legacy), se puede
 // guardar el resto de datos sin obligar a asignarle una.
 const familiasOriginalesEditar = ref([])
@@ -329,6 +349,11 @@ watch(() => props.mostrarEditarEmpresa, (v) => {
     // /empresas devuelve familias [{id, nombre}]; /empresas/dashboard además familias_nombres
     const actuales = e.familias?.length ? e.familias.map(f => f.nombre) : (e.familias_nombres ?? [])
     editarForm.familias         = [...new Set(actuales.filter(Boolean))]
+    // Solo /empresas (EmpresaResource) trae familias con su interés
+    editarForm.intereses        = e.familias?.length
+      ? Object.fromEntries(e.familias.map(f => [f.nombre, f.interes || '']))
+      : (actuales.length ? null : {})
+    sectorAntiguoEditar.value   = e.sector && !esSectorDeLista(e.sector) ? e.sector : ''
     familiasOriginalesEditar.value = [...editarForm.familias]
     tabEditar.value = 'basico'
   }
@@ -366,6 +391,8 @@ async function guardarEdicion() {
       centroEducativo: editarForm.centro_educativo || null,
       // Conjunto completo: el backend añade y quita según esta lista
       ...(editarForm.familias.length ? { familias: editarForm.familias } : {}),
+      ...(editarForm.intereses && editarForm.familias.length
+        ? { interesesFamilia: interesesDe(editarForm.familias, editarForm.intereses) } : {}),
       ciclosIds:       [],
       personaContacto: editarForm.persona_contacto || null,
       telefono:        editarForm.telefono         || null,
@@ -608,9 +635,12 @@ defineExpose({ abrirTrasLogin })
                 </div>
                 <div>
                   <label class="ime-label">Sector de Actividad *</label>
-                  <input v-model="nuevaForm.sector" class="ime-input"
-                    :class="{'ime-input-err': nuevaErrors.sector}"
-                    placeholder="Ej: Informática y Comunicaciones"/>
+                  <select v-model="nuevaForm.sector" class="ime-input"
+                    :class="{'ime-input-err': nuevaErrors.sector}">
+                    <option value="">Selecciona...</option>
+                    <option v-for="s in SECTORES_EMPRESA" :key="s" :value="s">{{ s }}</option>
+                  </select>
+                  <p class="ime-hint">A qué se dedica la empresa en general. Lo concreto, en «Actividad».</p>
                   <p v-if="nuevaErrors.sector" class="ime-err">{{ nuevaErrors.sector }}</p>
                 </div>
               </div>
@@ -641,7 +671,16 @@ defineExpose({ abrirTrasLogin })
                     </div>
                   </Transition>
                   <label class="ime-label">Centro Educativo *</label>
-                  <select ref="centroSelectRef" v-model="nuevaForm.centro_educativo" class="ime-input"
+                  <!-- Admin/docente: su propio centro, sin poder cambiarlo. Superadmin: cualquiera o uno nuevo. -->
+                  <template v-if="!authStore.isSuperAdmin">
+                    <p class="ime-input bg-gray-50 text-gray-600 cursor-not-allowed break-words"
+                       :class="{'ime-input-err': nuevaErrors.centro_educativo}"
+                       title="La empresa se crea en el centro de tu cuenta">
+                      {{ centroFijoAlta || 'Sin centro asignado' }}
+                    </p>
+                    <p v-if="!nuevaErrors.centro_educativo" class="text-[10px] text-gray-400 mt-1">Se crea en el centro de tu cuenta.</p>
+                  </template>
+                  <select v-else ref="centroSelectRef" v-model="nuevaForm.centro_educativo" class="ime-input"
                     :class="[{'ime-input-err': nuevaErrors.centro_educativo}, campoDestacado === 'centro' ? 'ring-4 ring-amber-400/60 ring-offset-2' : '']">
                     <option value="">Selecciona un centro...</option>
                     <option v-for="c in centrosInternos" :key="c.id" :value="c.nombre">{{ c.nombre }}</option>
@@ -660,7 +699,7 @@ defineExpose({ abrirTrasLogin })
                   <label class="ime-label">Familias Profesionales *</label>
                   <div ref="familiaSelectRef" tabindex="-1" class="outline-none rounded-2xl"
                        :class="campoDestacado === 'familia' ? 'ring-4 ring-amber-400/60 ring-offset-2' : ''">
-                    <SelectorFamiliasEmpresa v-model="nuevaForm.familias" :opciones="familiasFiltradas"
+                    <SelectorFamiliasEmpresa v-model="nuevaForm.familias" v-model:intereses="nuevaForm.intereses" :opciones="familiasFiltradas"
                       :disabled="!nuevaForm.centro_educativo" :error="!!nuevaErrors.familia"
                       :texto-vacio="nuevaForm.centro_educativo ? 'Este centro no tiene familias' : 'Primero elige un centro'" />
                   </div>
@@ -669,8 +708,8 @@ defineExpose({ abrirTrasLogin })
               </div>
               <div>
                 <label class="ime-label">Actividad (descripción)</label>
-                <textarea v-model="nuevaForm.actividad" class="ime-input h-20 resize-none"
-                  placeholder="Breve descripción de la actividad de la empresa..."/>
+                <textarea v-model="nuevaForm.actividad" class="ime-input h-20 resize-none" maxlength="500"
+                  placeholder="Qué hace concretamente la empresa. Ej: Desarrollo de software a medida para clínicas y mantenimiento de sus redes"/>
               </div>
             </div>
 
@@ -945,7 +984,14 @@ defineExpose({ abrirTrasLogin })
                 </div>
                 <div>
                   <label class="ime-label">Sector de Actividad</label>
-                  <input v-model="editarForm.sector" class="ime-input" placeholder="Sector"/>
+                  <select v-model="editarForm.sector" class="ime-input">
+                    <option value="">Sin sector</option>
+                    <option v-if="sectorAntiguoEditar" :value="sectorAntiguoEditar">{{ sectorAntiguoEditar }} (antiguo)</option>
+                    <option v-for="s in SECTORES_EMPRESA" :key="s" :value="s">{{ s }}</option>
+                  </select>
+                  <p v-if="sectorAntiguoEditar && editarForm.sector === sectorAntiguoEditar" class="ime-hint ime-hint-aviso">
+                    Sector anterior a la lista: elige uno de la lista cuando puedas.
+                  </p>
                 </div>
               </div>
               <div class="ime-g2">
@@ -978,14 +1024,15 @@ defineExpose({ abrirTrasLogin })
                 </div>
                 <div>
                   <label class="ime-label">Familias Profesionales</label>
-                  <SelectorFamiliasEmpresa v-model="editarForm.familias" :opciones="familiasFiltradasEditar"
-                    :error="!!editarErrors.familia" />
+                  <SelectorFamiliasEmpresa v-model="editarForm.familias" v-model:intereses="editarForm.intereses"
+                    :opciones="familiasFiltradasEditar" :error="!!editarErrors.familia" />
                   <p v-if="editarErrors.familia" class="ime-err">{{ editarErrors.familia }}</p>
                 </div>
               </div>
               <div>
-                <label class="ime-label">Actividad</label>
-                <input v-model="editarForm.actividad" class="ime-input" placeholder="Descripción de actividad"/>
+                <label class="ime-label">Actividad (descripción)</label>
+                <textarea v-model="editarForm.actividad" class="ime-input h-20 resize-none" maxlength="500"
+                  placeholder="Qué hace concretamente la empresa. Ej: Desarrollo de software a medida para clínicas y mantenimiento de sus redes"/>
               </div>
             </div>
 
@@ -1123,6 +1170,8 @@ defineExpose({ abrirTrasLogin })
 
 .ime-label { display: block; font-size: .625rem; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; color: #6b7280; margin-bottom: .45rem; margin-left: .25rem; }
 .ime-err   { font-size: .7rem; color: #ef4444; font-weight: 700; margin-top: .35rem; margin-left: .25rem; }
+.ime-hint  { font-size: .7rem; color: #6b7280; margin-top: .35rem; margin-left: .25rem; }
+.ime-hint-aviso { color: #d97706; font-weight: 700; }
 
 .ime-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 

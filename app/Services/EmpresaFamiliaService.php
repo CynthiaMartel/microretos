@@ -49,13 +49,44 @@ class EmpresaFamiliaService
         $this->insertarFaltantes($empresaId, collect([$familia->id => $familia->nombre]));
     }
 
+    /**
+     * Guarda para qué quiere la empresa al alumnado de cada familia ya vinculada
+     * (p. ej. "Departamento de marketing: campaña de lanzamiento"). Una familia que no
+     * esté vinculada se ignora; un interés vacío lo borra.
+     *
+     * @param  array<string, ?string>  $intereses  nombre de familia => interés
+     */
+    public function guardarIntereses(int $empresaId, array $intereses): void
+    {
+        $familias = $this->familiasPorNombre(array_keys($intereses));
+
+        foreach ($familias as $familiaId => $nombre) {
+            $interes = trim(strip_tags((string) ($intereses[$nombre] ?? '')));
+            DB::table('empresa_familia')
+                ->where('empresa_id', $empresaId)
+                ->where('familia_id', $familiaId)
+                ->update(['interes' => $interes !== '' ? $interes : null, 'updated_at' => now()]);
+        }
+    }
+
+    /** Interés de la empresa en esa familia, o null si no lo tiene o no está vinculada. */
+    public function interes(int $empresaId, string $familiaNombre): ?string
+    {
+        return DB::table('empresa_familia')
+            ->join('familias', 'familias.id', '=', 'empresa_familia.familia_id')
+            ->where('empresa_familia.empresa_id', $empresaId)
+            ->where('familias.nombre', $familiaNombre)
+            ->value('empresa_familia.interes');
+    }
+
     /** Copia las familias de una empresa a otra (plantillas del catálogo DuaLab y sus copias). */
     public function copiar(int $origenId, int $destinoId): void
     {
-        $filas = DB::table('empresa_familia')->where('empresa_id', $origenId)->get(['familia_id', 'familia']);
+        $filas = DB::table('empresa_familia')->where('empresa_id', $origenId)->get(['familia_id', 'familia', 'interes']);
 
         // Con FK: sin repetir. Filas legacy sin FK: se copian tal cual (el índice único las admite).
         $this->insertarFaltantes($destinoId, $filas->whereNotNull('familia_id')->pluck('familia', 'familia_id'));
+        $this->guardarIntereses($destinoId, $filas->whereNotNull('familia_id')->whereNotNull('interes')->pluck('interes', 'familia')->all());
 
         $legacy = $filas->whereNull('familia_id')->pluck('familia')->filter()->unique()
             ->map(fn (string $nombre) => $this->fila($destinoId, null, $nombre))->values()->all();

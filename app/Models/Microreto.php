@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -36,6 +37,56 @@ class Microreto extends Model
                 $microreto->uuid = (string) Str::uuid();
             }
         });
+
+        // centro_id (no fillable) sale siempre de la empresa: así el reto sigue siendo del
+        // centro aunque la empresa se purgue después (empresa_id → NULL)
+        static::saving(function (Microreto $microreto) {
+            if ($microreto->empresa_id && ($microreto->isDirty('empresa_id') || !$microreto->centro_id)) {
+                $microreto->centro_id = Empresa::withTrashed()->whereKey($microreto->empresa_id)->value('centro_id');
+            }
+        });
+    }
+
+    public const EMPRESA_ACTIVA    = 'activa';
+    public const EMPRESA_PAPELERA  = 'papelera';
+    public const EMPRESA_ELIMINADA = 'eliminada';
+
+    /** Estado de la empresa del reto (null en retos de demo, que no tienen empresa). */
+    public function estadoEmpresa(): ?string
+    {
+        if ($this->empresa_id === null) {
+            return $this->demo_id ? null : self::EMPRESA_ELIMINADA;
+        }
+        // La relación incluye la papelera; sin fila, se borró a mano de la BD
+        return match (true) {
+            $this->empresa === null      => self::EMPRESA_ELIMINADA,
+            $this->empresa->trashed()    => self::EMPRESA_PAPELERA,
+            default                      => self::EMPRESA_ACTIVA,
+        };
+    }
+
+    /** Docente/admin: el reto es de su centro (propio o, en legacy sin centro_id, vía la empresa). */
+    public function perteneceAlCentroDe(User $user): bool
+    {
+        if (!$user->centro_educativo_id) return false;
+        if ($this->centro_id) return $this->centro_id === $user->centro_educativo_id;
+        return (bool) $this->empresa?->perteneceAlCentroDe($user);
+    }
+
+    /** Mismo criterio que perteneceAlCentroDe(), para filtrar listados. */
+    public function scopeDelCentroDe(Builder $query, User $user): Builder
+    {
+        $centroId     = $user->centro_educativo_id;
+        $centroNombre = $user->centroEducativo?->nombre;
+
+        return $query->where(function (Builder $q) use ($centroId, $centroNombre) {
+            $q->where('microretos.centro_id', $centroId)
+                ->orWhere(fn (Builder $legacy) => $legacy->whereNull('microretos.centro_id')
+                    ->whereHas('empresa', function ($e) use ($centroId, $centroNombre) {
+                        $e->where('centro_id', $centroId);
+                        if ($centroNombre) $e->orWhere('centro_educativo', $centroNombre);
+                    }));
+        });
     }
 
     protected $casts = [
@@ -59,10 +110,16 @@ class Microreto extends Model
         return $this->belongsTo(Demo::class, 'demo_id');
     }
 
-    /** @return BelongsTo<Empresa, $this> */
+    /**
+     * Incluye empresas en la papelera: al borrar una empresa sus retos siguen en la biblioteca
+     * del centro (lo promete EliminarEmpresaModal) y los filtros por centro con
+     * whereHas('empresa') no deben dejarlos fuera. El escaparate público sí los oculta.
+     *
+     * @return BelongsTo<Empresa, $this>
+     */
     public function empresa(): BelongsTo
     {
-        return $this->belongsTo(Empresa::class, 'empresa_id');
+        return $this->belongsTo(Empresa::class, 'empresa_id')->withTrashed();
     }
 
     public function cicloFormativo()

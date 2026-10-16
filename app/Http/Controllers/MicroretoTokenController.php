@@ -125,9 +125,7 @@ class MicroretoTokenController extends Controller
             return;
         }
 
-        if (($user->isDocente() || $user->isAdmin())
-            && $microreto->empresa
-            && $microreto->empresa->perteneceAlCentroDe($user)) {
+        if (($user->isDocente() || $user->isAdmin()) && $microreto->perteneceAlCentroDe($user)) {
             return;
         }
 

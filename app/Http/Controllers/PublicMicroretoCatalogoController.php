@@ -96,6 +96,8 @@ class PublicMicroretoCatalogoController extends Controller
         $query->whereHas('microproyectos', function ($q) {
             $q->where('estado', 'completado')->where('visible_publico', true);
         });
+        // La relación empresa incluye la papelera (biblioteca del centro); en público, no
+        $query->whereHas('empresa', fn ($q) => $q->withoutTrashed());
     }
 
     // Eager load constreñido al mismo criterio (completado + visible_publico), el más

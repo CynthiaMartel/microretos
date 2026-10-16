@@ -168,7 +168,7 @@ export const SECCIONES = {
             { t: 'Puedes ver la ' },
             { t: 'biblioteca de proyectos', ruta: '/proyectos', routeName: 'startup-day', tip: 'Ir a la biblioteca de proyectos' },
             { t: ' que hayas creado y/o ' },
-            { t: 'crear una propuesta', ruta: '/proyectos/crear', routeName: 'startup-day-crear', tip: 'Ir a generar proyecto' },
+            { t: 'crear un proyecto', ruta: '/proyectos/crear', routeName: 'startup-day-crear', tip: 'Ir a generar proyecto' },
             { t: '.' },
           ] },
           pasos: [
