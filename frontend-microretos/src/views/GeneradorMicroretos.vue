@@ -4,7 +4,7 @@ import { ref, unref, onMounted, onUnmounted, watch, computed, nextTick } from 'v
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import { getFamilias, getCiclosDeFamilia, getModulosDeCiclo } from '../services/datosFPService.js';
-import { getEmpresas, getFamiliasDeEmpresa, crearEmpresa, actualizarEmpresa, actualizarDiagnosticoEmpresa, getCatalogoEmpresas, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, verPropuestaFicticiaIA, usarEmpresaCatalogo } from '../services/empresaService.js';
+import { getEmpresas, getFamiliasDeEmpresa, crearEmpresa, actualizarEmpresa, actualizarDiagnosticoEmpresa, actualizarInteresEmpresa, getCatalogoEmpresas, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, verPropuestaFicticiaIA, usarEmpresaCatalogo } from '../services/empresaService.js';
 import { getDemos, getDemoDeFamilia, getMicroretosDemoDeFamilia } from '../services/demoService.js';
 import { generarMicroretos, simularInfoEmpresa, guardarMicroreto, guardarMicroretosLote } from '../services/microretoService.js';
 import { useAuthStore } from '../stores/auth';
@@ -13,6 +13,7 @@ import InsertModifyEmpresa from '../components/InsertModifyEmpresa.vue';
 import { useUIState } from '../composables/useUIState.js';
 import SelectorRaCeModulos from '../components/SelectorRaCeModulos.vue';
 import CrearEmpresaFicticiaIA from '../components/CrearEmpresaFicticiaIA.vue';
+import { ejemploInteres } from '../config/ejemplosInteresFamilia.js';
 import { SECTORES_EMPRESA } from '../config/sectoresEmpresa.js';
 
 const authStore = useAuthStore();
@@ -107,7 +108,8 @@ const centrosDisponibles = computed(() => {
 // Lista cerrada: el backend rechaza un sector nuevo fuera de ella (lo concreto va en «actividad»)
 const sectoresDisponibles = SECTORES_EMPRESA;
 
-// Para qué quiere la empresa al alumnado de la familia elegida (lo recibe la IA desde el backend)
+// Para qué quiere la empresa al alumnado de la familia elegida, guardado en la empresa.
+// La IA recibe este o, si el docente lo ajusta en el paso 3, interesAjustado (ver más abajo).
 const interesFamiliaSeleccionada = computed(() =>
   empresaDetalle.value?.familias?.find(f => f.nombre === seleccion.value.familia)?.interes || '');
 
@@ -228,6 +230,46 @@ const toggleHistorial = () => {
 };
 let idAviso = 0;
 let avisoFlotanteTimer = null;
+// --- INTERÉS DE LA EMPRESA EN LA FAMILIA (paso 3) ---
+// Como el diagnóstico: se puede ajustar solo para estos retos (interesAjustado, se manda como
+// interesReto y el reto lo guarda marcado) o guardarlo en la empresa si es ficticia de tu centro
+// (o eres DUALAB): mismas reglas que EmpresaPolicy::actualizarDiagnostico.
+const interesAjustado  = ref(null);   // null = se usa el guardado en la empresa
+const editandoInteres  = ref(false);
+const borradorInteres  = ref('');
+const guardandoInteres = ref(false);
+const interesParaReto  = computed(() => interesAjustado.value ?? interesFamiliaSeleccionada.value);
+watch(() => [seleccion.value.familia, seleccion.value.empresaId], () => {
+  interesAjustado.value = null;
+  editandoInteres.value = false;
+});
+const abrirEdicionInteres = () => {
+  borradorInteres.value = interesParaReto.value;
+  editandoInteres.value = true;
+};
+const usarInteresSoloEnReto = () => {
+  const texto = borradorInteres.value.trim();
+  interesAjustado.value = texto && texto !== interesFamiliaSeleccionada.value ? texto : null;
+  editandoInteres.value = false;
+};
+const guardarInteresEnEmpresa = async () => {
+  if (!seleccion.value.empresaId || !seleccion.value.familia || guardandoInteres.value) return;
+  guardandoInteres.value = true;
+  const texto = borradorInteres.value.trim();
+  try {
+    await actualizarInteresEmpresa(seleccion.value.empresaId, seleccion.value.familia, texto);
+    const fam = empresaDetalle.value?.familias?.find(f => f.nombre === seleccion.value.familia);
+    if (fam) fam.interes = texto || null;
+    interesAjustado.value = null;
+    editandoInteres.value = false;
+    registrarAviso('Interés guardado', 'Se ha guardado en la empresa y se usará en sus próximos retos con esta familia.');
+  } catch (e) {
+    registrarAviso('Error al guardar el interés', e.response?.data?.error || e.response?.data?.message || 'No se ha podido guardar el interés.', 'error');
+  } finally {
+    guardandoInteres.value = false;
+  }
+};
+
 const registrarAviso = (titulo, texto, tipo = 'info') => {
   const hora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   const aviso = { id: ++idAviso, tipo, titulo, texto, hora };
@@ -1359,6 +1401,8 @@ const generarReto = async () => {
       nivelGrupo: seleccion.value.nivelGrupo, expectativasAlumno: seleccion.value.expectativasAlumno,
       cursoSeleccionado: seleccion.value.cursoSeleccionado,
       cantidad: seleccion.value.cantidadMicroretos,
+      // Solo si se ajustó para este reto; si no, el backend usa el guardado en la empresa
+      interesReto: interesAjustado.value ?? undefined,
       seleccion_ra_ce: moduloIdCombinado.length > 0 && hayRaCeFijados.value
         ? Object.entries(seleccionRaCe.value).map(([raId, s]) => ({ ra_id: Number(raId), ce_ids: s.ceIds }))
         : null
@@ -2864,7 +2908,7 @@ watch(modoGuia, async (v) => {
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div ref="refFamiliaSelect" class="col-span-2 md:col-span-1"
+                <div ref="refFamiliaSelect" class="min-w-0"
                      :class="{ 'tour-active': tourTargetActivo === 'refFamiliaSelect' }">
                   <label class="label-style">Familia Profesional Asociada *</label>
                   <select v-model="seleccion.familia" :disabled="esModoDemo" class="input-style">
@@ -2874,11 +2918,64 @@ watch(modoGuia, async (v) => {
                     </option>
                   </select>
 
-                  <p v-if="!esModoDemo && interesFamiliaSeleccionada"
-                    class="mt-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-relaxed text-gray-700 break-words">
-                    <strong>Qué busca la empresa con esta familia:</strong> {{ interesFamiliaSeleccionada }}
-                    <span class="block mt-0.5 text-gray-500">La IA planteará el reto desde esta necesidad.</span>
-                  </p>
+                  <!-- Interés de la empresa en esta familia: se ve, se ajusta solo para este reto o se
+                       guarda en la empresa (ficticias de tu centro o DUALAB, como el diagnóstico) -->
+                  <div v-if="!esModoDemo && seleccion.empresaId && seleccion.familia"
+                    class="mt-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-relaxed text-gray-700">
+                    <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                      <strong class="text-azul-noche">Qué busca la empresa con esta familia</strong>
+                      <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-interes-reto">
+                        <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                          <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <span id="tip-interes-reto" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0 sm:right-auto sm:left-0">
+                          Son datos que enriquecen la generación del reto: la IA lo planteará desde este departamento o necesidad de la empresa.
+                          Es lo que dice la empresa; tu propia orientación como docente va en «Enfoque del reto».
+                        </span>
+                      </span>
+                      <span v-if="interesAjustado" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest">Ajustado para este reto</span>
+                    </div>
+
+                    <template v-if="!editandoInteres">
+                      <p v-if="interesParaReto" class="break-words">{{ interesParaReto }}</p>
+                      <p v-else class="text-gray-500 italic">La empresa no ha indicado para qué quiere a este alumnado. Añadirlo ayuda a la IA a plantear un reto más concreto.</p>
+                      <div class="mt-2 flex flex-wrap gap-2">
+                        <button type="button" @click="abrirEdicionInteres()"
+                          class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-white text-centros border-centros/30 hover:bg-centros hover:text-white">
+                          {{ interesParaReto ? 'Ajustar' : 'Añadir' }}
+                        </button>
+                        <button v-if="interesAjustado" type="button" @click="interesAjustado = null"
+                          class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-white text-gray-500 border-gray-200 hover:bg-gray-100">
+                          Volver al de la empresa
+                        </button>
+                      </div>
+                    </template>
+
+                    <template v-else>
+                      <textarea v-model="borradorInteres" rows="2" maxlength="500" class="input-style !py-2 text-sm mt-1"
+                        aria-label="Para qué quiere la empresa a este alumnado"
+                        :placeholder="`Ej: ${ejemploInteres(seleccion.familia)}`" :title="`Ej: ${ejemploInteres(seleccion.familia)}`"></textarea>
+                      <p class="mt-1 text-[11px] text-gray-500">
+                        «Usar solo en este reto» no cambia la empresa.
+                        <template v-if="puedeEditarDiagnostico">«Guardar en la empresa» lo usará también en sus próximos retos con esta familia.</template>
+                        <template v-else>Es una empresa real: solo DUALAB puede guardarlo en ella.</template>
+                      </p>
+                      <div class="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">
+                        <button type="button" @click="usarInteresSoloEnReto()" :disabled="guardandoInteres"
+                          class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-[#1F2937] text-white border-[#1F2937] hover:bg-[#1F2937]/90">
+                          Usar solo en este reto
+                        </button>
+                        <button v-if="puedeEditarDiagnostico" type="button" @click="guardarInteresEnEmpresa()" :disabled="guardandoInteres"
+                          class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-amber-500 text-white border-amber-500 hover:bg-amber-600 disabled:opacity-50">
+                          {{ guardandoInteres ? 'Guardando…' : 'Guardar en la empresa' }}
+                        </button>
+                        <button type="button" @click="editandoInteres = false" :disabled="guardandoInteres"
+                          class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-white text-gray-500 border-gray-200 hover:bg-gray-100">
+                          Cancelar
+                        </button>
+                      </div>
+                    </template>
+                  </div>
 
                   <!-- Aviso: por qué la familia se elige aquí aunque ya se filtrara en el paso 1 -->
                   <template v-if="!esModoDemo && seleccion.empresaId && familiasEmpresaCargadas">
@@ -2924,7 +3021,7 @@ watch(modoGuia, async (v) => {
                   </template>
                 </div>
 
-                <div ref="refNivelExigencia" class="col-span-2 md:col-span-1"
+                <div ref="refNivelExigencia" class="min-w-0"
                      :class="{ 'tour-active': tourTargetActivo === 'refNivelExigencia' }">
                   <label class="label-style">Nivel de exigencia del reto *</label>
                   <select v-model="seleccion.nivelGrupo" :disabled="esModoDemo" class="input-style">
@@ -2932,9 +3029,34 @@ watch(modoGuia, async (v) => {
                     <option value="Medio">Medio — El grupo maneja conceptos con soltura; el reto puede tener cierta complejidad y autonomía</option>
                     <option value="Alto">Alto — El grupo domina la materia; el reto es exigente, abierto y requiere criterio propio</option>
                   </select>
+
+                  <!-- Enfoque del reto (opcional): la intención del docente, distinta del interés y la P5
+                       (lo que dice la empresa). Bajo el nivel, a la par que familia + interés. -->
+                  <div class="mt-4">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                      <label for="enfoque-reto" class="label-style !mb-0 text-[#1F2937]">
+                        ¿Qué tipo de propuesta quieres trabajar? <span class="text-gray-400 normal-case font-medium">(opcional)</span>
+                      </label>
+                      <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-enfoque-reto">
+                        <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                          <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <span id="tip-enfoque-reto" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0">
+                          Orienta el reto hacia el tipo de trabajo que te interesa con tu alumnado. La IA lo usará como enfoque, sin darle la solución.
+                        </span>
+                      </span>
+                    </div>
+                    <textarea id="enfoque-reto" v-model="seleccion.enfoqueReto" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.enfoqueReto.max"
+                      rows="3" class="input-style !py-2 text-sm"
+                      placeholder="Ej: que diseñen un sistema para mejorar la gestión del stock, o una campaña para captar clientes jóvenes…"></textarea>
+                    <div class="flex items-center justify-end gap-2 mt-1 h-4">
+                      <span v-if="charInfo('enfoqueReto').isWarning && !charInfo('enfoqueReto').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
+                      <span class="text-[10px] transition-colors" :class="charInfo('enfoqueReto').isOver ? 'text-red-400 font-bold' : charInfo('enfoqueReto').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('enfoqueReto').len }}/{{ CHAR_LIMITS.enfoqueReto.max }}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div ref="refCicloGrid" class="col-span-2 mt-4"
+                <div ref="refCicloGrid" class="md:col-span-2 min-w-0 mt-4"
                      :class="{ 'tour-active': tourTargetActivo === 'refCicloGrid' }">
                   <label class="label-style !mb-4">Ciclo Formativo Implicado *</label>
 
@@ -2981,7 +3103,7 @@ watch(modoGuia, async (v) => {
                   </div>
                 </div>
 
-                <div ref="refCursoAlumno" class="col-span-2 mt-6"
+                <div ref="refCursoAlumno" class="md:col-span-2 min-w-0 mt-6"
                      :class="{ 'tour-active': tourTargetActivo === 'refCursoAlumno' }">
                   <label class="label-style !mb-3">Curso del Alumnado *</label>
                   <div class="flex bg-[#1F2937] p-1.5 rounded-2xl w-full md:w-1/2 shadow-inner">
@@ -3006,7 +3128,7 @@ watch(modoGuia, async (v) => {
                   </div>
                 </div>
 
-                <div ref="refModulosSection" class="col-span-2 mt-2 pt-6 border-t border-gray-100"
+                <div ref="refModulosSection" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
                      :class="{ 'tour-active': tourTargetActivo === 'refModulosSection' }">
                   <div class="w-full bg-gray-50 p-4 sm:p-6 rounded-3xl border border-gray-200 relative">
                     <!-- Cabecera: switch "Elige la IA" ↔ "Manual" (por defecto, la IA) -->
@@ -3136,24 +3258,7 @@ watch(modoGuia, async (v) => {
                   </div>
                 </div>
 
-                <!-- Enfoque del reto (opcional): la intención del docente, distinta de la P5 (lo que espera la empresa) -->
-                <div class="col-span-2 mt-2 pt-6 border-t border-gray-100">
-                  <label for="enfoque-reto" class="label-style !mb-1 text-[#1F2937]">
-                    ¿Qué tipo de propuesta quieres trabajar con tu alumnado? <span class="text-gray-400 normal-case font-medium">(opcional)</span>
-                  </label>
-                  <p class="text-xs text-gray-500 mb-3 ml-1">
-                    Orienta el reto hacia el tipo de trabajo que te interesa. La IA lo usará como enfoque, sin darle la solución al alumnado.
-                  </p>
-                  <textarea id="enfoque-reto" v-model="seleccion.enfoqueReto" :disabled="esModoDemo" :maxlength="CHAR_LIMITS.enfoqueReto.max"
-                    class="input-style h-20"
-                    placeholder="Ej: que diseñen un sistema para mejorar la gestión del stock, o una campaña para captar clientes jóvenes…"></textarea>
-                  <div class="flex items-center justify-end gap-2 mt-1 h-4">
-                    <span v-if="charInfo('enfoqueReto').isWarning && !charInfo('enfoqueReto').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
-                    <span class="text-[10px] transition-colors" :class="charInfo('enfoqueReto').isOver ? 'text-red-400 font-bold' : charInfo('enfoqueReto').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('enfoqueReto').len }}/{{ CHAR_LIMITS.enfoqueReto.max }}</span>
-                  </div>
-                </div>
-
-                <div ref="refCantidadVariantes" class="col-span-2 mt-2 pt-6 border-t border-gray-100"
+                <div ref="refCantidadVariantes" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
                      :class="{ 'tour-active': tourTargetActivo === 'refCantidadVariantes' }">
                   <div class="w-full md:w-1/3">
                     <label class="label-style !mb-3 text-[#1F2937]">Cantidad de Variantes a Generar *</label>

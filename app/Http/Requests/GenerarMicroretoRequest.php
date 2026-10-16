@@ -56,6 +56,8 @@ class GenerarMicroretoRequest extends FormRequest
             'familia'           => 'nullable|string',
             // Paso 3, opcional: tipo de propuesta que el docente quiere trabajar con su alumnado.
             'enfoqueReto'       => 'nullable|string|max:500',
+            // Interés de la empresa en la familia ajustado solo para estos retos (si no llega, el guardado)
+            'interesReto'       => 'sometimes|nullable|string|max:500',
 
             // RA/CE fijados a mano por el docente — solo tienen sentido con módulos forzados.
             // La pertenencia RA→módulo forzado y CE→RA se comprueba en el controller

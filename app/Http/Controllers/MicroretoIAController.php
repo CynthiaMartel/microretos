@@ -260,8 +260,10 @@ class MicroretoIAController extends Controller
         // pedir a Comercio y Marketing una campaña de su departamento de marketing.
         $actividadEmpresa = trim(strip_tags((string) $empresaReto?->actividad));
         if ($actividadEmpresa !== '') $contextoEmpresa .= "Actividad: \"{$actividadEmpresa}\". ";
+        // El docente puede ajustar el interés solo para estos retos (interesReto); si no, el guardado.
+        $interesAjustado = $request->filled('interesReto') ? trim(strip_tags((string) $request->validated('interesReto'))) : '';
         $interesFamilia = ($empresaReto && $familia)
-            ? trim((string) app(EmpresaFamiliaService::class)->interes($empresaReto->id, $familia))
+            ? ($interesAjustado !== '' ? $interesAjustado : trim((string) app(EmpresaFamiliaService::class)->interes($empresaReto->id, $familia)))
             : '';
         if ($interesFamilia !== '') {
             $contextoEmpresa .= "INTERÉS DE LA EMPRESA EN LA FAMILIA «{$familia}»: \"{$interesFamilia}\". ";
@@ -486,6 +488,12 @@ class MicroretoIAController extends Controller
                 $reto['diagnostico_firma']      = MicroretoFichaService::firmarDiagnosticoUsado($diagnosticoUsado, $empresaReto->id, $user->id);
             }
             $reto['ra_ce_firma']  = $raCeCatalogo->firmarOrigen($raCeOrigen, $reto['evaluacion_oficial'], $user->id);
+            // Familia e interés con los que se generó: el reto los guarda en su copia del diagnóstico
+            if ($empresaReto && $familia) {
+                $reto['interes_familia'] = $familia;
+                $reto['interes_usado']   = $interesFamilia;
+                $reto['interes_firma']   = MicroretoFichaService::firmarInteresUsado($familia, $interesFamilia, $empresaReto->id, $user->id);
+            }
 
             if (!empty($reglaCobertura) && !$cumpleCobertura($reto)) {
                 $reto['aviso_cobertura_incompleta'] = true;

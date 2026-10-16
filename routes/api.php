@@ -293,6 +293,12 @@ Route::middleware('auth:sanctum')->group(function () {
             ->whereNumber('id')
             ->middleware('throttle:30,1,empresa-diagnostico');
 
+        // Interés de la empresa en una familia (paso 3 del Generador): mismas reglas que el
+        // diagnóstico (EmpresaPolicy::actualizarDiagnostico).
+        Route::patch('/empresas/{id}/interes', [DatosFPController::class, 'actualizarInteresEmpresa'])
+            ->whereNumber('id')
+            ->middleware('throttle:30,1,empresa-interes');
+
         // Guardado y borrado de microretos
         Route::post('/guardar-microreto-bd',    [MicroretoIAController::class, 'guardarEnBD']);
         Route::post('/guardar-microretos-lote', [MicroretoIAController::class, 'guardarLote']);

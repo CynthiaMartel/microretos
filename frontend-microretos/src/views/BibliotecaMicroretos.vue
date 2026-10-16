@@ -871,6 +871,14 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                        title="La empresa ha actualizado su diagnóstico después de crear este reto">
                       ⚠ Diagnóstico de la empresa actualizado después
                     </p>
+                    <p v-if="reto.interes_modificado_en_reto" class="text-amber-600 text-[10px] font-bold uppercase tracking-wider"
+                       title="Se generó con un interés de la empresa en esta familia que no se guardó en la empresa">
+                      Interés ajustado para este reto
+                    </p>
+                    <p v-if="reto.interes_desactualizado" class="text-amber-600 text-[10px] font-bold uppercase tracking-wider"
+                       title="La empresa ha cambiado lo que busca con esta familia después de crear este reto">
+                      ⚠ Interés de la empresa actualizado después
+                    </p>
                   </div>
                   <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-6 flex-1">
                     {{ reto.pregunta_reto }}

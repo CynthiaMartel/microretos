@@ -77,6 +77,8 @@ class MicroretoFichaService
             ->get()
             ->groupBy('idcicloformativo');
         $ciclosPorNombre = CicloFormativo::pluck('id', 'nombre');
+        // Familia de cada ciclo en 2 queries para todo el listado (familiaDelReto la usa en retos sin copia)
+        self::precargarFamiliasCiclo($retos->pluck('ciclo_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all());
 
         return $retos->each(function (Microreto $reto) use ($modulosPorCiclo, $ciclosPorNombre) {
             self::aplicarDatosEmpresa($reto);
@@ -156,6 +158,15 @@ class MicroretoFichaService
     }
 
     /**
+     * Firma (HMAC con APP_KEY) de la familia y el interés con los que se generó el reto, ligada a
+     * usuario y empresa: al guardar solo se acepta un interés «ajustado» que haya pasado por generar().
+     */
+    public static function firmarInteresUsado(string $familia, string $interes, int $empresaId, int $userId): string
+    {
+        return hash_hmac('sha256', "interes#{$userId}#{$empresaId}#" . json_encode([$familia, $interes], JSON_UNESCAPED_UNICODE), (string) config('app.key'));
+    }
+
+    /**
      * Copia del diagnóstico que se guarda en el reto. Si llega un diagnóstico ajustado con firma
      * válida (generado con cambios sin guardar en la empresa), se guarda ese, marcado como
      * «modificado_en_reto»; si no, la copia de la empresa en BD.
@@ -166,14 +177,78 @@ class MicroretoFichaService
     public static function copiaDiagnosticoParaGuardar(?Empresa $empresa, array $datos, int $userId): ?array
     {
         $copia = self::copiaDiagnostico($empresa);
+        if (!$copia || !$empresa) return $copia;
+        $copia = self::conInteres($copia, $empresa, $datos, $userId);
+
         $usado = $datos['diagnostico_usado'] ?? null;
         $firma = $datos['diagnostico_firma'] ?? null;
-        if (!$copia || !$empresa || !is_array($usado) || !is_string($firma)) return $copia;
+        if (!is_array($usado) || !is_string($firma)) return $copia;
 
         $usado = array_map(fn ($v) => is_string($v) ? $v : '', array_intersect_key($usado, array_flip(self::CAMPOS_DIAGNOSTICO)));
         if (!hash_equals(self::firmarDiagnosticoUsado($usado, $empresa->id, $userId), $firma)) return $copia;
 
         return array_merge($copia, $usado, ['modificado_en_reto' => true]);
+    }
+
+    /**
+     * Añade a la copia la familia del reto y el interés de la empresa en ella. Con firma válida
+     * (viene de generar()), los usados al generar —marcando si se ajustaron solo para este reto—;
+     * si no, la familia del ciclo del reto y el interés guardado en la empresa.
+     *
+     * @param array<string, mixed> $copia
+     * @param array<string, mixed> $datos
+     * @return array<string, mixed>
+     */
+    private static function conInteres(array $copia, Empresa $empresa, array $datos, int $userId): array
+    {
+        $familias = app(EmpresaFamiliaService::class);
+        $familia  = $datos['interes_familia'] ?? null;
+        $usado    = is_string($datos['interes_usado'] ?? null) ? $datos['interes_usado'] : '';
+        $firma    = $datos['interes_firma'] ?? null;
+
+        if (is_string($familia) && is_string($firma)
+            && hash_equals(self::firmarInteresUsado($familia, $usado, $empresa->id, $userId), $firma)) {
+            $guardado = trim((string) $familias->interes($empresa->id, $familia));
+            $copia['familia'] = $familia;
+            $copia['interes'] = $usado !== '' ? $usado : null;
+            if (trim($usado) !== $guardado) $copia['interes_modificado_en_reto'] = true;
+            return $copia;
+        }
+
+        $familia = self::nombreFamiliaCiclo(isset($datos['ciclo_id']) ? (int) $datos['ciclo_id'] : null);
+        if ($familia) {
+            $copia['familia'] = $familia;
+            $copia['interes'] = $familias->interes($empresa->id, $familia) ?: null;
+        }
+        return $copia;
+    }
+
+    /** @var array<int, ?string> */
+    private static array $familiasCiclo = [];
+
+    /** @param int[] $cicloIds */
+    private static function precargarFamiliasCiclo(array $cicloIds): void
+    {
+        $faltan = array_values(array_diff($cicloIds, array_keys(self::$familiasCiclo)));
+        if (!$faltan) return;
+        $ciclos   = CicloFormativo::whereIn('id', $faltan)->get(['id', 'familia_id', 'familia']);
+        $nombres  = \App\Models\Familia::whereIn('id', $ciclos->pluck('familia_id')->filter()->unique())->pluck('nombre', 'id');
+        foreach ($faltan as $id) self::$familiasCiclo[$id] = null;
+        foreach ($ciclos as $ciclo) {
+            self::$familiasCiclo[$ciclo->id] = ($ciclo->familia_id ? $nombres->get($ciclo->familia_id) : null)
+                ?: ($ciclo->getAttribute('familia') ?: null);
+        }
+    }
+
+    // Familia del ciclo (memo por petición: en listados se repite el mismo ciclo)
+    private static function nombreFamiliaCiclo(?int $cicloId): ?string
+    {
+        if (!$cicloId) return null;
+        if (array_key_exists($cicloId, self::$familiasCiclo)) return self::$familiasCiclo[$cicloId];
+        // La columna legacy `familia` tapa a la relación familia(): se resuelve por familia_id
+        $ciclo = CicloFormativo::whereKey($cicloId)->first(['familia_id', 'familia']);
+        $nombre = $ciclo?->familia_id ? \App\Models\Familia::whereKey($ciclo->familia_id)->value('nombre') : null;
+        return self::$familiasCiclo[$cicloId] = $nombre ?: ($ciclo?->getAttribute('familia') ?: null);
     }
 
     // Listas guardadas como texto "a, b, c": se comparan como conjunto (orden/espacios no cuentan).
@@ -226,6 +301,27 @@ class MicroretoFichaService
         return self::$nombresCentro[$centroId] ??= \App\Models\CentroEducativo::whereKey($centroId)->value('nombre');
     }
 
+    /**
+     * ¿La empresa ha cambiado su interés en la familia del reto desde que se guardó la copia?
+     * Solo retos con interés copiado (los anteriores no lo tienen) y no ajustado para el reto.
+     *
+     * @param array<string, mixed> $copia
+     */
+    private static function interesCambiado(array $copia, Empresa $empresa): bool
+    {
+        if (!array_key_exists('interes', $copia) || empty($copia['familia']) || !empty($copia['interes_modificado_en_reto'])) return false;
+        $actual = $empresa->relationLoaded('familias')
+            ? $empresa->familias->firstWhere('nombre', $copia['familia'])?->pivot?->interes
+            : app(EmpresaFamiliaService::class)->interes($empresa->id, (string) $copia['familia']);
+        return trim((string) $actual) !== trim((string) $copia['interes']);
+    }
+
+    private static function familiaDelReto(Microreto $reto): ?string
+    {
+        $copia = is_array($reto->diagnostico_empresa) ? $reto->diagnostico_empresa : [];
+        return ($copia['familia'] ?? null) ?: self::nombreFamiliaCiclo($reto->ciclo_id ? (int) $reto->ciclo_id : null);
+    }
+
     private static function aplicarDatosEmpresa(Microreto $reto): void
     {
         $reto->es_simulado = (bool) $reto->es_simulado;
@@ -243,6 +339,8 @@ class MicroretoFichaService
             $reto->setAttribute('diagnostico_modificado_en_reto', $modificado);
             $reto->setAttribute('diagnostico_desactualizado', !$modificado && self::diagnosticoCambiado($reto->diagnostico_empresa, $reto->empresa));
             $reto->setAttribute('diagnostico_recogido_en', self::fechaCopiaDiagnostico($reto));
+            // Igual para el interés en la familia del reto (no aplica si se ajustó para este reto)
+            $reto->setAttribute('interes_desactualizado', self::interesCambiado($reto->diagnostico_empresa, $reto->empresa));
             $clon = clone $reto->empresa;
             $clon->forceFill(array_intersect_key($reto->diagnostico_empresa, array_flip(self::CAMPOS_DIAGNOSTICO)));
             $reto->setRelation('empresa', $clon);
@@ -253,14 +351,17 @@ class MicroretoFichaService
                 ?? $reto->empresa->centro_educativo
                 ?? 'Centro Desconocido';
 
-            $reto->familia = $reto->empresa->familias->first()?->nombre
+            // La familia es la del reto (su copia o su ciclo), no la primera de la empresa:
+            // una empresa puede tener varias y cada reto se genera para una.
+            $reto->familia = self::familiaDelReto($reto)
+                ?? $reto->empresa->familias->first()?->nombre
                 ?? 'Familia Desconocida';
 
             $reto->empresa_es_simulada = (bool) $reto->empresa->es_simulada;
         } else {
             // Empresa purgada: el reto conserva su centro propio
             $reto->centro_educativo    = self::nombreCentro($reto->centro_id) ?? 'Centro Desconocido';
-            $reto->familia             = 'Familia Desconocida';
+            $reto->familia             = self::familiaDelReto($reto) ?? 'Familia Desconocida';
             $reto->empresa_es_simulada = false;
         }
     }

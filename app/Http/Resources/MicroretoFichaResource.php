@@ -49,6 +49,12 @@ class MicroretoFichaResource extends JsonResource
             // ¿La empresa ha cambiado su diagnóstico después de crear el reto? Solo para personal
             // (docente/admin/superadmin): al alumnado y al escaparate público no se les avisa.
             'diagnostico_desactualizado' => $this->when($this->esPersonal($request), fn () => $this->diagnosticoDesactualizado()),
+            // Para qué quería la empresa al alumnado de esta familia al generar el reto (copia), y si
+            // el docente lo ajustó solo para este reto (no es lo que dice la ficha de la empresa).
+            'interes_familia'            => is_array($this->diagnostico_empresa) ? ($this->diagnostico_empresa['interes'] ?? null) : null,
+            'interes_modificado_en_reto' => is_array($this->diagnostico_empresa) && !empty($this->diagnostico_empresa['interes_modificado_en_reto']),
+            // ¿La empresa cambió ese interés después de crear el reto? Solo personal, como el diagnóstico.
+            'interes_desactualizado'     => $this->when($this->esPersonal($request), fn () => (bool) $this->resource->getAttribute('interes_desactualizado')),
             'quien_es'            => $this->quien_es,
             'dia_a_dia'           => $this->dia_a_dia,
             'pregunta_reto'       => $this->pregunta_reto,

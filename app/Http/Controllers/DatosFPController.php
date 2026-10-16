@@ -20,6 +20,7 @@ use App\Http\Requests\StoreEmpresaRequest;
 use App\Http\Requests\UpdateCicloRequest;
 use App\Http\Requests\UpdateEmpresaRequest;
 use App\Http\Requests\UpdateDiagnosticoEmpresaRequest;
+use App\Http\Requests\UpdateInteresEmpresaRequest;
 use App\Http\Resources\CicloFormativoResource;
 use App\Http\Resources\EmpresaResource;
 use App\Http\Resources\EmpresaDashboardResource;
@@ -818,6 +819,40 @@ class DatosFPController extends Controller
         return response()->json([
             'message' => 'Diagnóstico actualizado',
             'empresa' => new EmpresaResource($empresa->load('familias:id,nombre')),
+        ]);
+    }
+
+    /**
+     * PATCH /empresas/{id}/interes — para qué quiere la empresa al alumnado de una familia
+     * vinculada. Mismas reglas que el diagnóstico: ficticias de su centro, reales solo DuaLab.
+     */
+    public function actualizarInteresEmpresa(UpdateInteresEmpresaRequest $request, EmpresaFamiliaService $familias, int $id): \Illuminate\Http\JsonResponse
+    {
+        $empresa = Empresa::find($id);
+        if (!$empresa) {
+            return response()->json(['error' => 'Empresa no encontrada'], 404);
+        }
+
+        $decision = Gate::inspect('actualizarDiagnostico', $empresa);
+        if ($decision->denied()) {
+            Log::warning('Edición de interés de empresa denegada.', [
+                'empresa_id' => $empresa->id,
+                'user_id'    => $request->user()?->id,
+            ]);
+            return response()->json(['error' => $decision->message()], 403);
+        }
+
+        $validated = $request->validated();
+        $vinculada = $empresa->familias()->where('familias.nombre', $validated['familia'])->exists();
+        if (!$vinculada) {
+            return response()->json(['error' => 'Esa familia no está vinculada a la empresa.'], 422);
+        }
+
+        $familias->guardarIntereses($empresa->id, [$validated['familia'] => $validated['interes'] ?? '']);
+
+        return response()->json([
+            'message' => 'Interés actualizado',
+            'empresa' => new EmpresaResource($empresa->load('familias')),
         ]);
     }
 

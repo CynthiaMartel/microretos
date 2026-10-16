@@ -102,6 +102,10 @@ class StoreMicroretoRequest extends FormRequest
             'diagnostico_usado'   => 'nullable|array',
             'diagnostico_usado.*' => 'nullable|string|max:2000',
             'diagnostico_firma'   => 'nullable|string|size:64',
+            // Interés con el que se generó (firmado en generar(), ver MicroretoFichaService)
+            'interes_familia'     => 'nullable|string|max:255',
+            'interes_usado'       => 'nullable|string|max:500',
+            'interes_firma'       => 'nullable|string|size:64',
             'duracion'             => 'nullable|string|max:100',
             'es_simulado'          => 'nullable|boolean',
         ];

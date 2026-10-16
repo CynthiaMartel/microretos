@@ -63,6 +63,9 @@ class StoreMicroretoLoteRequest extends FormRequest
             'microretos.*.diagnostico_usado'   => 'nullable|array',
             'microretos.*.diagnostico_usado.*' => 'nullable|string|max:2000',
             'microretos.*.diagnostico_firma'   => 'nullable|string|size:64',
+            'microretos.*.interes_familia'     => 'nullable|string|max:255',
+            'microretos.*.interes_usado'       => 'nullable|string|max:500',
+            'microretos.*.interes_firma'       => 'nullable|string|size:64',
             'microretos.*.duracion'             => 'nullable|string|max:100',
             'microretos.*.es_simulado'          => 'nullable|boolean',
         ];

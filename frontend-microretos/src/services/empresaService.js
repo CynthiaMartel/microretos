@@ -32,3 +32,5 @@ export const getCatalogoEmpresas = (familiaId = null, centro = null) =>
   } });
 export const usarEmpresaCatalogo = (empresaId, payload = {}) =>
   api.post(`/empresas/catalogo/${empresaId}/usar`, payload);
+// Interés de la empresa en una familia vinculada (paso 3 del Generador)
+export const actualizarInteresEmpresa = (empresaId, familia, interes) => api.patch(`/empresas/${empresaId}/interes`, { familia, interes });
