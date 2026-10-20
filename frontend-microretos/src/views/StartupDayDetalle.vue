@@ -300,7 +300,7 @@ async function completar() {
               v-if="proyecto.estado === 'completado'"
               @click="irAResolucionAlumnado"
               class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider
-                     px-3.5 py-2 rounded-xl border transition-all
+                     px-3.5 py-2 rounded-full border transition-all
                      bg-alumnos/10 border-alumnos/25 text-alumnos-dark
                      hover:bg-alumnos hover:border-alumnos hover:text-white"
               title="Ir a la resolución del alumnado"
@@ -471,7 +471,7 @@ async function completar() {
               <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-gray-50 border border-gray-100
                          rounded-xl px-3 py-2 min-w-0">{{ landingUrl }}</p>
               <button @click="copiarUrl"
-                      class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
+                      class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all"
                       :class="urlCopiada
                                   ? [theme.bg5, theme.text, theme.border20]
                                   : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
@@ -538,7 +538,7 @@ async function completar() {
             </div>
             <button v-if="!authStore.isEmpresa"
                     @click="abrirConfirmEnvio"
-                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
+                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
                            bg-white text-blue-600 border-blue-200 hover:bg-blue-50 transition-all">
               Reenviar
             </button>
@@ -564,7 +564,7 @@ async function completar() {
             </div>
             <button v-if="!authStore.isEmpresa"
                     @click="abrirConfirmEnvio"
-                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
+                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
                            bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 transition-all">
               Enviar
             </button>
@@ -600,7 +600,7 @@ async function completar() {
               <p class="text-[10px] text-gray-400 mt-0.5">Puedes validar el proyecto directamente como docente.</p>
             </div>
             <button @click="modalValidarDocente = true"
-                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border
+                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
                            bg-centros/10 text-centros border-centros/30 hover:bg-centros/20 transition-all">
               Validar
             </button>
@@ -714,7 +714,7 @@ async function completar() {
              class="flex flex-wrap items-center justify-between gap-2">
           <p class="group-header !mb-0">El reto</p>
           <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
-                  class="px-3 py-1.5 rounded-xl border-2 text-[10px] font-black
+                  class="px-3 py-1.5 rounded-full border-2 text-[10px] font-black
                          uppercase tracking-wider hover:text-white transition-all mb-3"
                   :class="[theme.bg5, theme.border, theme.text, theme.bgHover]">
             📎 Ver ficha reto original
@@ -909,7 +909,7 @@ async function completar() {
                          class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
                                 hover:border-blue-200 hover:bg-blue-50/40 transition-colors group/vid">
                       <button @click="abrirRecurso(v)"
-                              class="w-7 h-7 rounded-lg bg-blue-50 shrink-0 flex items-center justify-center
+                              class="w-7 h-7 rounded-full bg-blue-50 shrink-0 flex items-center justify-center
                                      group-hover/vid:bg-blue-100 transition-colors">
                         <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -935,7 +935,7 @@ async function completar() {
                                 transition-colors group/doc"
                          :class="paletteExtra[theme.key].hoverBorderBg5">
                       <button @click="abrirRecurso(d)"
-                              class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-colors"
+                              class="w-7 h-7 rounded-full shrink-0 flex items-center justify-center transition-colors"
                               :class="[theme.bg5, paletteExtra[theme.key].groupHoverBg20]">
                         <svg class="w-3.5 h-3.5" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1224,7 +1224,7 @@ async function completar() {
               {{ landingUrl || '—' }}
             </p>
             <button @click="copiarUrlModal"
-                    class="shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all"
+                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all"
                     :class="urlCopiadaModal
                                ? [theme.bg5, theme.text, theme.border20]
                                : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
@@ -1290,7 +1290,7 @@ async function completar() {
             <button v-if="proyecto && proyecto.empresa_id"
                     @click="abrirConfirmEnvio"
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                           bg-empresas/10 border border-empresas/25 text-empresas-dark rounded-xl
+                           bg-empresas/10 border border-empresas/25 text-empresas-dark rounded-full
                            text-xs font-bold hover:bg-empresas/20 transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1300,7 +1300,7 @@ async function completar() {
             </button>
             <button @click="router.push({ name: 'empresas' }); modalPropuestaAviso = false"
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5
-                           bg-white border border-gray-200 text-gray-500 rounded-xl
+                           bg-white border border-gray-200 text-gray-500 rounded-full
                            text-xs font-bold transition-all"
                     :class="paletteExtra[theme.key].hoverBorder40Text">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1325,7 +1325,7 @@ async function completar() {
           <button v-if="!proyecto?.docente_validado"
                   @click="modalValidarDocente = true; modalPropuestaAviso = false"
                   class="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                         bg-centros text-white rounded-xl
+                         bg-centros text-white rounded-full
                          text-xs font-bold hover:bg-centros/90 transition-all">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>

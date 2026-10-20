@@ -605,7 +605,7 @@ onMounted(cargar)
             <!-- Acceso principal al trabajo real de los equipos: color de marca sólido para que
                  no se confunda con el desplegable (que solo muestra un resumen). -->
             <button @click.stop="router.push({ name: 'mis-grupos-detalle', params: { id: g.encuentro.id } })"
-                    class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-centros text-white shadow-md shadow-centros/20
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-centros text-white shadow-md shadow-centros/20
                            hover:bg-centros/90 hover:shadow-lg transition-all text-[10px] font-black uppercase tracking-wider">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -683,7 +683,7 @@ onMounted(cargar)
                     </div>
                   </div>
                   <button @click="irADiagnostico(g, equipo)"
-                          :class="['shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors',
+                          :class="['shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors',
                                    equipo.diagnostico_final
                                      ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-200'
                                      : 'bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50']">
@@ -703,7 +703,7 @@ onMounted(cargar)
                 <!-- Resumen de fases — solo estado, sin contenido: el detalle vive en "Detalle equipos" -->
                 <div class="flex flex-wrap gap-1.5">
                   <div v-for="f in FASES_PROYECTO" :key="f.num" :title="f.label"
-                       :class="['flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black', estadoFase(equipo, f.num).cls]">
+                       :class="['flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-black', estadoFase(equipo, f.num).cls]">
                     <span class="text-xs leading-none">{{ f.icono }}</span>
                     <span class="uppercase tracking-wider">F{{ f.num }}</span>
                     <span class="normal-case font-bold">· {{ estadoFase(equipo, f.num).label }}</span>
@@ -725,7 +725,7 @@ onMounted(cargar)
                 </p>
 
                 <button @click="router.push({ name: 'mis-grupos-detalle', params: { id: g.encuentro.id } })"
-                        class="w-full inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-centros text-white shadow-md shadow-centros/20
+                        class="w-full inline-flex items-center justify-center gap-1.5 py-3 rounded-full bg-centros text-white shadow-md shadow-centros/20
                                hover:bg-centros/90 hover:shadow-lg transition-all text-xs font-black uppercase tracking-wider">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

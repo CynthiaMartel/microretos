@@ -198,7 +198,7 @@ async function guardar() {
 
         <!-- Guardar -->
         <button @click="guardar" :disabled="guardando"
-          class="w-full py-3 rounded-xl text-white font-black
+          class="w-full py-3 rounded-full text-white font-black
                  text-xs uppercase tracking-widest transition-all
                  disabled:opacity-50 disabled:cursor-not-allowed"
           :class="[theme.bg, theme.bgHover]">

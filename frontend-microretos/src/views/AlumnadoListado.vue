@@ -333,7 +333,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 <div class="flex flex-wrap gap-1.5">
                   <span v-for="f in FASES_PROYECTO" :key="f.num"
                         :title="`${f.label}${p.equipo.fases[f.num]?.fecha_completada ? ' · completada el ' + new Date(p.equipo.fases[f.num].fecha_completada).toLocaleDateString('es-ES') : ''}`"
-                        :class="['inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold', estadoFase(p, f.num)]">
+                        :class="['inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold', estadoFase(p, f.num)]">
                     <span aria-hidden="true">{{ f.icono }}</span>F{{ f.num }}
                     <span class="hidden font-semibold lg:inline">{{ f.label }}</span>
                     <span v-if="p.equipo.fases[f.num]?.nota_docente !== null && p.equipo.fases[f.num]?.nota_docente !== undefined && f.num !== 4"
@@ -401,5 +401,5 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 .card   { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .link   { @apply font-semibold text-centros hover:underline; }
 .campo  { @apply h-9 min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-azul-noche focus:border-centros focus:bg-white focus:outline-none disabled:opacity-50; }
-.accion { @apply inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-azul-noche transition-colors hover:border-alumnos hover:text-alumnos-dark; }
+.accion { @apply inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-azul-noche transition-colors hover:border-alumnos hover:text-alumnos-dark; }
 </style>

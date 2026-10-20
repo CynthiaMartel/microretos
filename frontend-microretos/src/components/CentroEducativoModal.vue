@@ -798,7 +798,7 @@ function resetear() {
 .cce-btn-add-empresa {
   display: flex; align-items: center; gap: .35rem;
   font-size: .625rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
-  color: #3072AA; background: rgba(48,114,170,.08); border: none; border-radius: .75rem;
+  color: #3072AA; background: rgba(48,114,170,.08); border: none; border-radius: 9999px;
   padding: .4rem .7rem; cursor: pointer; transition: background .2s;
 }
 .cce-btn-add-empresa:hover { background: rgba(48,114,170,.16); }
@@ -822,7 +822,7 @@ function resetear() {
 .cce-btn-refresh {
   display: flex; align-items: center; gap: .3rem; flex-shrink: 0;
   font-size: .625rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
-  color: #374151; background: #fff; border: 2px solid #e5e7eb; border-radius: .75rem;
+  color: #374151; background: #fff; border: 2px solid #e5e7eb; border-radius: 9999px;
   padding: .5rem .7rem; cursor: pointer; transition: all .2s; white-space: nowrap;
 }
 .cce-btn-refresh:hover { border-color: #C7DCEC; color: #3072AA; }
@@ -830,7 +830,7 @@ function resetear() {
 .cce-input-sm { padding: .55rem .8rem; font-size: .8rem; }
 
 .cce-btn-ghost-sm, .cce-btn-green-sm {
-  padding: .55rem 1rem; border-radius: .75rem; font-size: .625rem; font-weight: 900;
+  padding: .55rem 1rem; border-radius: 9999px; font-size: .625rem; font-weight: 900;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .2s;
 }
 .cce-btn-ghost-sm { background: #fff; color: #6b7280; border: 2px solid #e5e7eb; }
@@ -841,18 +841,18 @@ function resetear() {
 
 .cce-actions { display: flex; gap: .75rem; margin-top: 2rem; }
 
-.cce-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #1F2937, #374151); color: #fff; border: none; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(31,41,55,.28); transition: all .2s; }
+.cce-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #1F2937, #374151); color: #fff; border: none; border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(31,41,55,.28); transition: all .2s; }
 .cce-btn-green:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(31,41,55,.38); }
 .cce-btn-green:active:not(:disabled) { transform: scale(.97); }
 .cce-btn-green:disabled              { opacity: .5; cursor: not-allowed; }
 
-.cce-btn-ghost { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+.cce-btn-ghost { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
 .cce-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .cce-btn-ghost:active { transform: scale(.97); }
 
 .cce-x {
   position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #f3f4f6; border: none; border-radius: .5rem; color: #9ca3af;
+  background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .cce-x:hover { background: #e5e7eb; color: #1F2937; }

@@ -9,17 +9,17 @@ import { SOLICITAR_REGISTRO } from '../config/frontoffice.js'
 import AccesoLayout from '../components/AccesoLayout.vue'
 import CampoContrasena from '../components/CampoContrasena.vue'
 import SoporteModal from '../components/SoporteModal.vue'
+import { redirectVigente } from '../utils/redirectLogin.js'
 
 const route     = useRoute()
 const router    = useRouter()
 const authStore = useAuthStore()
 const { triggerWelcome } = useUIState()
 
-// Solo rutas internas: un ?redirect=//otro-dominio.com sería un open redirect
+// Vuelve a la ruta de ?redirect si sigue vigente (ver utils/redirectLogin.js); si no,
+// al panel del rol. Empresa no tiene panel docente.
 function destinoTrasLogin(role) {
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  if (redirect.startsWith('/') && !redirect.startsWith('//')) return redirect
-  return role === ROLE_EMPRESA ? '/proyectos' : '/panel-docente'
+  return redirectVigente(route.query) ?? (role === ROLE_EMPRESA ? '/proyectos' : '/panel-docente')
 }
 
 const { form, errors, loginError, isLoading, handleLogin } = useLoginForm((data) => {
@@ -129,7 +129,7 @@ async function enviarRecuperar() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="mt-1 w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center gap-3 rounded-xl bg-acceso-azul text-white text-base font-bold shadow-[0_8px_24px_rgba(17,113,219,0.28)] transition hover:bg-acceso-azul-hover disabled:opacity-60 disabled:cursor-not-allowed"
+          class="mt-1 w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center gap-3 rounded-full bg-acceso-azul text-white text-base font-bold shadow-[0_8px_24px_rgba(17,113,219,0.28)] transition hover:bg-acceso-azul-hover disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <template v-if="!isLoading">
             Iniciar sesión
@@ -154,7 +154,7 @@ async function enviarRecuperar() {
       <!-- No hay autorregistro en la app: el alta se pide con el formulario del frontoffice -->
       <a
         :href="SOLICITAR_REGISTRO"
-        class="mt-4 sm:mt-5 [@media(min-width:1024px)_and_(max-height:820px)]:mt-3.5 w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center rounded-xl border-2 border-acceso-azul text-acceso-azul text-base font-bold transition hover:bg-primary-50"
+        class="mt-4 sm:mt-5 [@media(min-width:1024px)_and_(max-height:820px)]:mt-3.5 w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center rounded-full border-2 border-acceso-azul text-acceso-azul text-base font-bold transition hover:bg-primary-50"
       >
         Solicitar registro
       </a>
@@ -206,7 +206,7 @@ async function enviarRecuperar() {
         <button
           type="submit"
           :disabled="recuperarEnviando"
-          class="w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center gap-3 rounded-xl bg-acceso-azul text-white text-base font-bold shadow-[0_8px_24px_rgba(17,113,219,0.28)] transition hover:bg-acceso-azul-hover disabled:opacity-60 disabled:cursor-not-allowed"
+          class="w-full h-12 sm:h-13 [@media(min-width:1024px)_and_(max-height:820px)]:h-12 inline-flex items-center justify-center gap-3 rounded-full bg-acceso-azul text-white text-base font-bold shadow-[0_8px_24px_rgba(17,113,219,0.28)] transition hover:bg-acceso-azul-hover disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {{ recuperarEnviando ? 'Enviando…' : 'Enviar enlace' }}
         </button>

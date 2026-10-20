@@ -32,7 +32,7 @@ const emit = defineEmits(['activar', 'omitir'])
         <!-- Acciones -->
         <div class="space-y-3">
           <button @click="emit('activar')"
-                  class="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl
+                  class="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-full
                          bg-blue-500 hover:bg-blue-600 active:scale-[.98]
                          text-white font-black text-sm transition-all duration-150 shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

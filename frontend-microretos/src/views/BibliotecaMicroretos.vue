@@ -702,7 +702,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   <button
                     @click.stop="descargarGrupoFamilia(familia.nombre)"
                     :disabled="generandoPDFGrupo || !conteoPorFamilia[familia.nombre]"
-                    class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200"
+                    class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center border transition-all duration-200"
                     :class="generandoPDFGrupo
                       ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-wait'
                       : ['border-gray-200 text-gray-400 bg-white', paletteExtra[theme.key].hoverBorderBg5Text]"
@@ -884,10 +884,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                     {{ reto.pregunta_reto }}
                   </p>
                   <div class="mt-auto flex flex-wrap items-center gap-2">
-                    <span class="inline-block bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium truncate max-w-full shadow-sm" :title="reto.ciclo">
+                    <span class="inline-block bg-gray-50 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-full text-xs font-medium truncate max-w-full shadow-sm" :title="reto.ciclo">
                       {{ reto.ciclo }}
                     </span>
-                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0"
+                    <span v-if="reto.curso" class="inline-block bg-gray-50 text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-full text-xs font-bold shadow-sm shrink-0"
                           :title="reto.curso === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''">
                       {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos' : reto.curso + 'º curso' }}
                     </span>
@@ -966,7 +966,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>

@@ -124,7 +124,7 @@ const ir = (destino) => {
               <button
                 @click="cerrar"
                 aria-label="Cerrar"
-                class="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center
+                class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center
                        text-gray-400 hover:text-gray-600 transition-all shrink-0"
               >
                 <XMarkIcon class="w-5 h-5" />
@@ -243,7 +243,7 @@ const ir = (destino) => {
             <div class="shrink-0 px-6 sm:px-10 py-4 bg-white border-t border-gray-100">
               <button
                 @click="cerrar"
-                class="w-full sm:w-auto sm:ml-auto sm:block py-3 px-8 rounded-xl bg-centros text-white
+                class="w-full sm:w-auto sm:ml-auto sm:block py-3 px-8 rounded-full bg-centros text-white
                        font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all"
               >
                 Entendido

@@ -294,7 +294,7 @@ function formatItemFase(item) {
                            FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">{{ f.icono }}</span>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-bold text-[#1F2937] flex items-center gap-1.5">
-                <span :class="['px-1.5 py-px rounded text-[9px] font-black uppercase tracking-wide shrink-0',
+                <span :class="['px-1.5 py-px rounded-full text-[9px] font-black uppercase tracking-wide shrink-0',
                                FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">F{{ f.num }}</span>
                 {{ f.label }}
               </p>

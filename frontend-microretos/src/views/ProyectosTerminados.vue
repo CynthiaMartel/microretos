@@ -289,7 +289,7 @@ function mostrarSnack(mensaje, accion = null) {
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>

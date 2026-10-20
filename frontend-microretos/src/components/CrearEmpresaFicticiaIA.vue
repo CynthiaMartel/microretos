@@ -230,7 +230,7 @@ const resumen = computed(() => {
       <Transition name="cefi-aviso">
         <div v-if="avisoFamiliasVisible" role="note" class="relative mb-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-3 pr-9 shadow-lg shadow-amber-200/50 text-xs text-amber-900 leading-relaxed">
           <button type="button" @click="avisoFamiliasVisible = false" aria-label="Cerrar aviso"
-            class="absolute top-2 right-2 w-6 h-6 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-100">
+            class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-100">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
           <p class="font-black uppercase tracking-wide text-[11px] flex items-center gap-1.5">

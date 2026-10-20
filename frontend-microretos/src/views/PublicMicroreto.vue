@@ -146,27 +146,27 @@ const imagenFondo = computed(() => {
 
             <div class="flex flex-wrap gap-2 mt-6">
               <span class="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F2937] text-white
-                           rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                           rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
                 {{ reto.empresa_nombre || reto.empresa?.nombre_comercial }}
               </span>
               <span v-if="reto.familia"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
-                           text-[#1F2937] rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                           text-[#1F2937] rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.familia }}
               </span>
               <span v-if="reto.ciclo"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-alumnos/10 border border-alumnos/20
-                           text-alumnos-dark rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                           text-alumnos-dark rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.ciclo }}
               </span>
               <span v-if="reto.curso"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200
-                           text-indigo-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                           text-indigo-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos: 1º y 2º' : reto.curso + 'º Curso' }}
               </span>
               <span v-if="reto.duracion"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
-                           text-gray-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                           text-gray-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.duracion }}
               </span>
             </div>

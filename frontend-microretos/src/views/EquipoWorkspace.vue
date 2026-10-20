@@ -1018,7 +1018,7 @@ watch(workspace, (val) => {
       <h2 class="text-lg font-black text-azul-noche mb-2">Enlace no válido</h2>
       <p class="text-sm text-gray-500 mb-6">Este enlace no existe o ha caducado. Comprueba el código con tu docente.</p>
       <button @click="router.push({ name: 'unirse-equipo' })"
-              class="px-6 py-3 rounded-2xl bg-alumnos text-white text-sm font-black uppercase tracking-widest">
+              class="px-6 py-3 rounded-full bg-alumnos text-white text-sm font-black uppercase tracking-widest">
         Volver
       </button>
     </div>
@@ -1235,7 +1235,7 @@ watch(workspace, (val) => {
                                         focus:outline-none focus:border-emerald-400"
                                  @keydown.enter.prevent="addFortaleza(m)" />
                           <button @click="addFortaleza(m)" type="button"
-                                  class="shrink-0 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700
+                                  class="shrink-0 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700
                                          text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100">
                             + Añadir
                           </button>
@@ -1260,7 +1260,7 @@ watch(workspace, (val) => {
                                         focus:outline-none focus:border-amber-400"
                                  @keydown.enter.prevent="addPuntoMejora(m)" />
                           <button @click="addPuntoMejora(m)" type="button"
-                                  class="shrink-0 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700
+                                  class="shrink-0 px-2.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                          text-[10px] font-black uppercase tracking-wider hover:bg-amber-100">
                             + Añadir
                           </button>
@@ -1294,7 +1294,7 @@ watch(workspace, (val) => {
                     <option v-for="r in rolesOpciones" :key="r" :value="r" class="capitalize">{{ r }}</option>
                   </select>
                   <button @click="addMiembro"
-                          class="px-4 py-2 rounded-xl bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
+                          class="px-4 py-2 rounded-full bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
                     + Añadir
                   </button>
                 </div>
@@ -1310,7 +1310,7 @@ watch(workspace, (val) => {
                 <div v-else class="mt-3">
                   <button @click="confirmarNombres" type="button"
                           :disabled="confirmandoNombres || !f0.miembros.length"
-                          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
                                  bg-emerald-600 text-white text-xs font-black uppercase tracking-wider
                                  hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     {{ confirmandoNombres ? 'Confirmando...' : '🔒 Confirmar nombres del equipo' }}
@@ -1333,16 +1333,14 @@ watch(workspace, (val) => {
               </div>
 
               <!-- Acciones F0 -->
-              <div class="flex gap-3 flex-wrap">
+              <div class="fila-pasos">
                 <button @click="guardarF0" :disabled="guardando"
-                        class="flex-1 py-3 rounded-2xl bg-slate-100 border border-slate-200
-                               text-slate-700 text-sm font-black uppercase tracking-wider
-                               hover:bg-slate-200 transition-all disabled:opacity-50">
-                  Guardar borrador
+                        class="btn-paso-atras border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-700">
+                  <span class="sm:hidden">Guardar</span><span class="hidden sm:inline">Guardar borrador</span>
                 </button>
                 <button @click="onCompletarF0" :disabled="guardando"
-                        :class="['flex-1 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all',
-                                 f0Valido ? 'bg-slate-600 text-white hover:bg-slate-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']">
+                        :class="['btn-paso',
+                                 f0Valido ? 'bg-slate-600 text-white hover:bg-slate-700 shadow-slate-600/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
                   Completar fase ✓
                 </button>
               </div>
@@ -1499,7 +1497,7 @@ watch(workspace, (val) => {
                                   focus:outline-none focus:border-blue-400 bg-gray-50"
                            @keydown.enter="addHallazgo"/>
                     <button @click="addHallazgo"
-                            class="px-4 py-2 rounded-xl bg-blue-500 text-white text-xs font-black">+ Añadir</button>
+                            class="px-4 py-2 rounded-full bg-blue-500 text-white text-xs font-black">+ Añadir</button>
                   </div>
                   <div class="flex items-center gap-2 mt-1.5">
                     <div class="flex gap-1">
@@ -1532,16 +1530,15 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
-              <div class="flex gap-3">
+              <div class="fila-pasos">
                 <button @click="guardarF1" :disabled="guardando"
-                        class="flex-1 py-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700
-                               text-sm font-black uppercase tracking-wider hover:bg-blue-100 transition-all disabled:opacity-50">
+                        class="btn-paso-atras border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-200 hover:text-blue-700">
                   Guardar
                 </button>
                 <button @click="onCompletarF1" :disabled="guardando"
-                        :class="['flex-1 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all',
-                                 f1Valido ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']">
-                  Enviar para validación →
+                        :class="['btn-paso',
+                                 f1Valido ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
+                  <span class="sm:hidden">Enviar →</span><span class="hidden sm:inline">Enviar para validación →</span>
                 </button>
               </div>
               <div v-if="intentoF1 && !f1Valido" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
@@ -1679,7 +1676,7 @@ watch(workspace, (val) => {
                         <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
                       </select>
                       <button @click="addTareaGenerica" :disabled="!nuevaTareaGenerica.descripcion.trim() || cargandoTareaGenerica"
-                              class="px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-black
+                              class="px-4 py-2 rounded-full bg-amber-500 text-white text-xs font-black
                                      uppercase tracking-wider disabled:opacity-50 hover:bg-amber-600 transition-all">
                         + Tarea
                       </button>
@@ -1737,7 +1734,7 @@ watch(workspace, (val) => {
                                   focus:outline-none focus:border-violet-400 bg-gray-50"
                            @keydown.enter="addTareaCompleja"/>
                     <button @click="addTareaCompleja" :disabled="!nuevaTareaCompleja.descripcion.trim() || cargandoTareaCompleja"
-                            class="px-4 py-2 rounded-xl bg-violet-500 text-white text-xs font-black
+                            class="px-4 py-2 rounded-full bg-violet-500 text-white text-xs font-black
                                    uppercase tracking-wider disabled:opacity-50 hover:bg-violet-600 transition-all">
                       + Añadir
                     </button>
@@ -1819,7 +1816,7 @@ watch(workspace, (val) => {
 
                   <!-- Subir archivo -->
                   <div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl
+                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full
                                   border border-dashed border-amber-300 bg-amber-50 text-amber-700
                                   text-xs font-black uppercase tracking-wider hover:bg-amber-100 transition-all
                                   select-none"
@@ -1860,16 +1857,16 @@ watch(workspace, (val) => {
                   <label class="text-xs font-black text-[#1F2937] uppercase tracking-wider">Iteración</label>
                   <div class="flex items-center gap-2">
                     <button @click="f2.iteracion = Math.max(1, f2.iteracion - 1)"
-                            class="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">−</button>
+                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">−</button>
                     <span class="text-lg font-black text-[#1F2937] w-8 text-center">{{ f2.iteracion }}</span>
                     <button @click="f2.iteracion++"
-                            class="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">+</button>
+                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">+</button>
                   </div>
                   <p class="text-xs text-gray-400">¿Es la primera versión o habéis mejorado el prototipo?</p>
                 </div>
 
                 <button @click="guardarF2" :disabled="guardando"
-                        class="w-full py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700
+                        class="w-full py-2.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                text-xs font-black uppercase tracking-wider hover:bg-amber-100 transition-all disabled:opacity-50">
                   Guardar prototipo
                 </button>
@@ -1890,11 +1887,14 @@ watch(workspace, (val) => {
                 </p>
               </div>
 
-              <button @click="onCompletarF2" :disabled="guardando"
-                      :class="['w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-all',
-                               f2Valido ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']">
-                {{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}
-              </button>
+              <div class="fila-pasos">
+                <button @click="onCompletarF2" :disabled="guardando"
+                        :class="['btn-paso',
+                                 f2Valido ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
+                  <span class="sm:hidden">{{ f2Valido ? 'Ir a Entrega →' : 'Continuar →' }}</span>
+                  <span class="hidden sm:inline">{{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}</span>
+                </button>
+              </div>
               <div v-if="intentoF2 && !f2Valido" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
                 <p class="text-[10px] font-black text-red-500 uppercase tracking-wider mb-1">Falta esto para continuar:</p>
                 <p v-for="(it, idx) in f2Faltantes.filter(x => !x.ok)" :key="idx" class="text-xs text-red-600 flex items-center gap-1.5">
@@ -1971,7 +1971,7 @@ watch(workspace, (val) => {
 
                   <!-- Subir archivo -->
                   <div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl
+                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full
                                   border border-dashed border-orange-300 bg-orange-50 text-orange-700
                                   text-xs font-black uppercase tracking-wider hover:bg-orange-100 transition-all
                                   select-none"
@@ -2009,16 +2009,14 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
-              <div class="flex gap-3">
+              <div class="fila-pasos">
                 <button @click="guardarF3" :disabled="guardando"
-                        class="flex-1 py-3 rounded-2xl bg-orange-50 border border-orange-200
-                               text-orange-700 text-sm font-black uppercase tracking-wider
-                               hover:bg-orange-100 transition-all disabled:opacity-50">
+                        class="btn-paso-atras border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-200 hover:text-orange-700">
                   Guardar
                 </button>
                 <button @click="onCompletarF3" :disabled="guardando"
-                        :class="['flex-1 py-3 rounded-2xl text-sm font-black uppercase tracking-wider transition-all',
-                                 f3Valido ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']">
+                        :class="['btn-paso',
+                                 f3Valido ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-orange-500/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
                   Enviar entrega →
                 </button>
               </div>
@@ -2129,7 +2127,7 @@ watch(workspace, (val) => {
 
                 <button @click="enviarReflexion(modoReflexion)"
                         :disabled="guardandoReflexion || (modoReflexion === 'individual' && !nombreAlumno.trim())"
-                        class="w-full py-3.5 rounded-2xl bg-alumnos text-white text-sm font-black
+                        class="w-full py-3.5 rounded-full bg-alumnos text-white text-sm font-black
                                uppercase tracking-widest hover:bg-alumnos/90 transition-all disabled:opacity-50">
                   Enviar reflexión →
                 </button>
@@ -2147,7 +2145,7 @@ watch(workspace, (val) => {
                     </div>
                   </div>
                   <button v-else @click="abrirReflexion('grupal')"
-                          class="w-full py-3 rounded-2xl border-2 border-dashed border-green-200
+                          class="w-full py-3 rounded-full border-2 border-dashed border-green-200
                                  text-sm font-black text-alumnos-dark hover:bg-green-50 transition-all">
                     + Añadir reflexión grupal (portavoz)
                   </button>
@@ -2169,7 +2167,7 @@ watch(workspace, (val) => {
                     </div>
                   </div>
                   <button @click="abrirReflexion('individual')"
-                          class="w-full py-3 rounded-2xl border-2 border-dashed border-green-200
+                          class="w-full py-3 rounded-full border-2 border-dashed border-green-200
                                  text-sm font-black text-alumnos-dark hover:bg-green-50 transition-all">
                     + Añadir mi reflexión individual
                   </button>
@@ -2202,11 +2200,14 @@ watch(workspace, (val) => {
                   </p>
                 </div>
 
-                <button @click="onCompletarF4" :disabled="guardando"
-                        :class="['w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider transition-all',
-                                 f4ValidoParaCompletar ? 'bg-alumnos text-white hover:bg-alumnos/90' : 'bg-gray-100 text-gray-400 hover:bg-gray-200']">
-                  {{ f4ValidoParaCompletar ? '✓ Marcar proyecto como completado' : 'Añadid la reflexión grupal para cerrar' }}
-                </button>
+                <div class="fila-pasos">
+                  <button @click="onCompletarF4" :disabled="guardando"
+                          :class="['btn-paso',
+                                   f4ValidoParaCompletar ? 'bg-alumnos text-white hover:bg-alumnos/90 shadow-alumnos/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
+                    <span class="sm:hidden">{{ f4ValidoParaCompletar ? '✓ Completar proyecto' : 'Cerrar proyecto' }}</span>
+                    <span class="hidden sm:inline">{{ f4ValidoParaCompletar ? '✓ Marcar proyecto como completado' : 'Añadid la reflexión grupal para cerrar' }}</span>
+                  </button>
+                </div>
                 <div v-if="intentoF4 && !f4ValidoParaCompletar" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
                   <p class="text-[10px] font-black text-red-500 uppercase tracking-wider mb-1">Falta esto para continuar:</p>
                   <p v-for="(it, idx) in f4Faltantes.filter(x => !x.ok)" :key="idx" class="text-xs text-red-600 flex items-center gap-1.5">
@@ -2362,14 +2363,14 @@ watch(workspace, (val) => {
                               transition-opacity flex items-center justify-center gap-1">
                     <button v-if="img.id !== imagenPortadaId" @click="marcarPortadaImagen(img)" type="button"
                             title="Marcar como portada"
-                            class="w-5 h-5 rounded bg-white/90 flex items-center justify-center text-alumnos">
+                            class="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center text-alumnos">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                       </svg>
                     </button>
                     <button @click.stop="eliminarImagen(img)" type="button"
-                            class="w-5 h-5 rounded bg-white/90 flex items-center justify-center text-red-400">
+                            class="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center text-red-400">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                       </svg>
@@ -2378,7 +2379,7 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
-              <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+              <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
                             border-2 border-dashed border-gray-200 bg-gray-50 text-center
                             cursor-pointer hover:border-alumnos/40 hover:bg-alumnos/5 transition-all"
                      :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
@@ -2441,12 +2442,12 @@ watch(workspace, (val) => {
             </p>
             <div class="flex gap-3">
               <button @click="mostrarModalPasoF3 = false"
-                      class="flex-1 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-gray-600
+                      class="flex-1 py-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600
                              text-sm font-black uppercase tracking-wider hover:bg-gray-100 transition-all">
                 Revisar tareas
               </button>
               <button @click="confirmarPasoF3" :disabled="guardando"
-                      class="flex-1 py-3 rounded-2xl bg-orange-500 text-white text-sm font-black uppercase
+                      class="flex-1 py-3 rounded-full bg-orange-500 text-white text-sm font-black uppercase
                              tracking-wider hover:bg-orange-600 transition-all disabled:opacity-50">
                 Continuar a Fase 3 →
               </button>
@@ -2482,12 +2483,12 @@ watch(workspace, (val) => {
             </div>
             <div class="flex gap-3">
               <button @click="mostrarModalPasoF4 = false"
-                      class="flex-1 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-gray-600
+                      class="flex-1 py-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600
                              text-sm font-black uppercase tracking-wider hover:bg-gray-100 transition-all">
                 Revisar entrega
               </button>
               <button @click="confirmarPasoF4" :disabled="guardando"
-                      class="flex-1 py-3 rounded-2xl bg-alumnos text-white text-sm font-black uppercase
+                      class="flex-1 py-3 rounded-full bg-alumnos text-white text-sm font-black uppercase
                              tracking-wider hover:bg-alumnos/90 transition-all disabled:opacity-50">
                 Continuar a Fase 4 →
               </button>

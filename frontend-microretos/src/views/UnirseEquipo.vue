@@ -128,12 +128,12 @@ function continuarConEquipoGuardado() {
         <p class="text-xs text-white/40 mb-3 truncate">{{ equipoGuardado.titulo }}</p>
         <div class="flex gap-2">
           <button @click="continuarConEquipoGuardado"
-                  class="flex-1 py-2.5 rounded-2xl bg-alumnos text-white text-[11px] font-black
+                  class="flex-1 py-2.5 rounded-full bg-alumnos text-white text-[11px] font-black
                          uppercase tracking-widest hover:bg-alumnos/90 transition-all">
             Continuar →
           </button>
           <button @click="limpiarGuardado"
-                  class="px-3 py-2.5 rounded-2xl bg-white/5 border border-white/10
+                  class="px-3 py-2.5 rounded-full bg-white/5 border border-white/10
                          text-white/40 text-[10px] font-black uppercase tracking-wider
                          hover:text-white/60 transition-all">
             Otro
@@ -190,7 +190,7 @@ function continuarConEquipoGuardado() {
           @click="unirse"
           :disabled="!codigoValido || cargando"
           :class="[
-            'w-full py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-200',
+            'w-full py-4 rounded-full text-sm font-black uppercase tracking-widest transition-all duration-200',
             codigoValido && !cargando
               ? 'bg-alumnos text-white hover:bg-alumnos/90 shadow-lg shadow-alumnos/20'
               : 'bg-white/5 text-white/20 cursor-not-allowed',
@@ -253,7 +253,7 @@ function continuarConEquipoGuardado() {
           </div>
 
           <button @click="resultado = null; codigo = ''"
-                  class="w-full py-3 rounded-2xl bg-white/5 border border-white/10
+                  class="w-full py-3 rounded-full bg-white/5 border border-white/10
                          text-white/40 text-[11px] font-black uppercase tracking-widest
                          hover:text-white/60 transition-all mt-1">
             Usar otro código
@@ -278,13 +278,13 @@ function continuarConEquipoGuardado() {
           <p class="text-xl font-black text-white mb-1">{{ resultado.nombre_equipo }}</p>
           <p class="text-sm text-white/50 mb-6 leading-snug">{{ resultado.proyecto_titulo }}</p>
           <button @click="accederAlWorkspace"
-                  class="w-full py-4 rounded-2xl bg-alumnos text-white text-sm font-black
+                  class="w-full py-4 rounded-full bg-alumnos text-white text-sm font-black
                          uppercase tracking-widest hover:bg-alumnos/90 transition-all
                          shadow-lg shadow-alumnos/20">
             Acceder al workspace →
           </button>
           <button @click="resultado = null; codigo = ''"
-                  class="mt-3 w-full py-3 rounded-2xl bg-white/5 border border-white/10
+                  class="mt-3 w-full py-3 rounded-full bg-white/5 border border-white/10
                          text-white/40 text-[11px] font-black uppercase tracking-widest
                          hover:text-white/60 transition-all">
             Usar otro código

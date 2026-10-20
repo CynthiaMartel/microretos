@@ -164,6 +164,20 @@ const familiasFiltradas = computed(() => familiasDelCentro(nuevaForm.centro_educ
 
 const nuevaConfirmando = ref(false)
 const nuevaCardRef     = ref(null)
+const tabsNuevaRef     = ref(null)
+
+// Paso a paso entre fases (Datos básicos → Contacto → Ubicación) con Anterior/Siguiente.
+// No se avanza solo al rellenar el último campo: es un textarea opcional y saltaría
+// a mitad de escritura.
+const idxTabNueva       = computed(() => tabs.findIndex(t => t.id === tabNueva.value))
+const tabNuevaAnterior  = computed(() => tabs[idxTabNueva.value - 1] ?? null)
+const tabNuevaSiguiente = computed(() => tabs[idxTabNueva.value + 1] ?? null)
+
+function irATabNueva(tab) {
+  if (!tab) return
+  tabNueva.value = tab.id
+  nextTick(() => tabsNuevaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
 
 // ── Generación de datos con IA (empresa ficticia) ──
 const centroSelectRef        = ref(null)
@@ -469,12 +483,12 @@ defineExpose({ abrirTrasLogin })
             <div class="mt-5 p-4 rounded-2xl border-2 transition-colors"
               :class="nuevaForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-centros/20 bg-centros/5'">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3">¿Qué tipo de empresa es?</p>
-              <div class="flex gap-3">
+              <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   type="button"
                   @click="nuevaForm.es_simulada = false"
                   :class="!nuevaForm.es_simulada ? 'bg-centros text-white border-centros shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-centros/50'"
-                  class="flex-1 py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                  class="sm:flex-1 py-3 rounded-full border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z"/>
                   </svg>
@@ -484,7 +498,7 @@ defineExpose({ abrirTrasLogin })
                   type="button"
                   @click="nuevaForm.es_simulada = true"
                   :class="nuevaForm.es_simulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
-                  class="flex-1 py-3 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                  class="sm:flex-1 py-3 rounded-full border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                   </svg>
@@ -506,7 +520,7 @@ defineExpose({ abrirTrasLogin })
                   Si prefieres, rellena aquí los datos a mano.
                 </p>
                 <button type="button" @click="emit('crear-con-ia')"
-                  class="w-full py-2 rounded-lg border-2 border-[#1F2937] bg-[#1F2937] text-white hover:bg-[#374151] font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5">
+                  class="w-full py-2 rounded-full border-2 border-[#1F2937] bg-[#1F2937] text-white hover:bg-[#374151] font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                   </svg>
@@ -515,7 +529,7 @@ defineExpose({ abrirTrasLogin })
               </div>
             </div>
 
-            <div class="ime-tabs mt-7">
+            <div ref="tabsNuevaRef" class="ime-tabs mt-7 scroll-mt-4">
               <button v-for="tab in tabs" :key="tab.id"
                 @click="tabNueva = tab.id" class="ime-tab"
                 :class="tabNueva === tab.id ? 'ime-tab-on' : 'ime-tab-off'">
@@ -550,7 +564,7 @@ defineExpose({ abrirTrasLogin })
                     </li>
                   </ul>
                 </div>
-                <button @click="nuevaConfirmando = false" class="text-amber-400 hover:text-amber-600 shrink-0">
+                <button type="button" @click="nuevaConfirmando = false" aria-label="Cerrar aviso" class="inline-flex items-center justify-center w-9 h-9 -m-2 rounded-full shrink-0 text-amber-400 hover:text-amber-600 hover:bg-amber-100 transition-colors">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
@@ -582,7 +596,7 @@ defineExpose({ abrirTrasLogin })
                   </button>
                   <Transition name="ime-fade">
                     <div v-if="estadoDropdownNuevaAbierto"
-                      class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[250px]">
+                      class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[min(250px,calc(100vw-5rem))]">
                       <button
                         v-for="est in ESTADOS_CONTACTO" :key="est.value"
                         type="button"
@@ -753,6 +767,22 @@ defineExpose({ abrirTrasLogin })
               </div>
             </div>
 
+            <!-- Navegación entre fases -->
+            <div class="mt-6 fila-pasos">
+              <button v-if="tabNuevaAnterior" type="button" @click="irATabNueva(tabNuevaAnterior)" class="btn-paso-atras">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+                </svg>
+                <span class="sm:hidden">Anterior</span><span class="hidden sm:inline">Anterior: {{ tabNuevaAnterior.label }}</span>
+              </button>
+              <button v-if="tabNuevaSiguiente" type="button" @click="irATabNueva(tabNuevaSiguiente)" class="btn-paso">
+                <span class="sm:hidden">Siguiente</span><span class="hidden sm:inline">Siguiente: {{ tabNuevaSiguiente.label }}</span>
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+
             <Transition name="ime-fade">
               <div v-if="nuevaErrors._global" class="ime-alert-error mt-4">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -787,11 +817,11 @@ defineExpose({ abrirTrasLogin })
                     <p class="text-xs text-amber-600 font-semibold">¿Confirmas que los datos son correctos?</p>
                   </div>
                 </div>
-                <div class="flex gap-2">
-                  <button @click="nuevaConfirmando = false" class="ime-btn-ghost flex-1 !text-amber-700 !border-amber-300 hover:!bg-amber-100">
+                <div class="flex flex-col-reverse sm:flex-row gap-2">
+                  <button @click="nuevaConfirmando = false" class="ime-btn-ghost sm:flex-1 !text-amber-700 !border-amber-300 hover:!bg-amber-100">
                     Revisar datos
                   </button>
-                  <button @click="guardarNueva" :disabled="nuevaLoading" class="ime-btn-green flex-[2]">
+                  <button @click="guardarNueva" :disabled="nuevaLoading" class="ime-btn-green sm:flex-[2]">
                     <svg v-if="nuevaLoading" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
                       <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                     </svg>
@@ -802,8 +832,8 @@ defineExpose({ abrirTrasLogin })
             </Transition>
 
             <div class="ime-actions">
-              <button @click="$emit('update:mostrarNuevaEmpresa', false)" class="ime-btn-ghost flex-1">Cancelar</button>
-              <button @click="pedirConfirmacionNueva" :disabled="nuevaLoading || nuevaConfirmando" class="ime-btn-green flex-[2]">
+              <button @click="$emit('update:mostrarNuevaEmpresa', false)" class="ime-btn-ghost sm:flex-1">Cancelar</button>
+              <button @click="pedirConfirmacionNueva" :disabled="nuevaLoading || nuevaConfirmando" class="ime-btn-green sm:flex-[2]">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -870,13 +900,13 @@ defineExpose({ abrirTrasLogin })
             <div class="mt-5 p-4 rounded-2xl border-2 transition-colors"
               :class="editarForm.es_simulada ? 'border-[#1F2937]/20 bg-[#1F2937]/5' : 'border-centros/20 bg-centros/5'">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3">Tipo de empresa</p>
-              <div class="flex gap-3">
+              <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   type="button"
                   :disabled="!puedeCambiarTipoEmpresa && editarForm.es_simulada"
                   @click="puedeCambiarTipoEmpresa && (editarForm.es_simulada = false)"
                   :class="!editarForm.es_simulada ? 'bg-centros text-white border-centros shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-centros/50'"
-                  class="flex-1 py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                  class="sm:flex-1 py-2.5 rounded-full border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7z"/>
                   </svg>
@@ -887,7 +917,7 @@ defineExpose({ abrirTrasLogin })
                   :disabled="!puedeCambiarTipoEmpresa && !editarForm.es_simulada"
                   @click="puedeCambiarTipoEmpresa && (editarForm.es_simulada = true)"
                   :class="editarForm.es_simulada ? 'bg-[#1F2937] text-white border-[#1F2937] shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'"
-                  class="flex-1 py-2.5 rounded-xl border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                  class="sm:flex-1 py-2.5 rounded-full border-2 font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                   </svg>
@@ -936,7 +966,7 @@ defineExpose({ abrirTrasLogin })
                   </button>
                   <Transition name="ime-fade">
                     <div v-if="estadoDropdownEditarAbierto"
-                      class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[250px]">
+                      class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[min(250px,calc(100vw-5rem))]">
                       <button
                         v-for="est in ESTADOS_CONTACTO" :key="est.value"
                         type="button"
@@ -1087,8 +1117,8 @@ defineExpose({ abrirTrasLogin })
             </Transition>
 
             <div class="ime-actions">
-              <button @click="$emit('update:mostrarEditarEmpresa', false)" class="ime-btn-ghost flex-1">Cancelar</button>
-              <button @click="guardarEdicion" :disabled="editarLoading" class="ime-btn-dark flex-[2]">
+              <button @click="$emit('update:mostrarEditarEmpresa', false)" class="ime-btn-ghost sm:flex-1">Cancelar</button>
+              <button @click="guardarEdicion" :disabled="editarLoading" class="ime-btn-dark sm:flex-[2]">
                 <svg v-if="editarLoading" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                 </svg>
@@ -1141,20 +1171,20 @@ defineExpose({ abrirTrasLogin })
 .ime-card::-webkit-scrollbar       { width: 5px; }
 .ime-card::-webkit-scrollbar-thumb { background: #BAD5EC; border-radius: 3px; }
 
-.ime-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.ime-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; } /* hueco para la X */
 .ime-icon-box { flex-shrink: 0; width: 52px; height: 52px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .ime-title    { font-size: 1.3rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .ime-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
 
 .ime-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #f3f4f6; border: none; border-radius: .5rem; color: #9ca3af;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
+  background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .ime-x:hover { background: #e5e7eb; color: #1F2937; }
 
-.ime-tabs   { display: flex; gap: .25rem; background: #f3f4f6; padding: .3rem; border-radius: 1rem; }
-.ime-tab    { flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .6rem .75rem; border-radius: .75rem; border: none; font-size: .625rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+.ime-tabs   { display: flex; gap: .25rem; background: #f3f4f6; padding: .3rem; border-radius: 9999px; }
+.ime-tab    { flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .6rem .75rem; border-radius: 9999px; border: none; font-size: .625rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
 .ime-tab-on  { background: #fff; color: #1F2937; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 .ime-tab-off { background: transparent; color: #6b7280; }
 .ime-tab-off:hover { color: #374151; }
@@ -1181,17 +1211,26 @@ defineExpose({ abrirTrasLogin })
 
 .ime-actions { display: flex; gap: .75rem; margin-top: 2rem; }
 
-.ime-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #3072AA, #6BA4D5); color: #fff; border: none; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(48,114,170,.28); transition: all .2s; }
+/* Móvil (360px): menos relleno, pestañas sin icono y acciones apiladas para que nada desborde */
+@media (max-width: 640px) {
+  .ime-card     { padding: 1.5rem 1.25rem; }
+  .ime-x        { top: .75rem; right: .75rem; }
+  .ime-tab      { padding: .6rem .4rem; gap: .3rem; letter-spacing: .06em; }
+  .ime-tab > svg { display: none; }
+  .ime-actions  { flex-direction: column-reverse; margin-top: 1.5rem; }
+}
+
+.ime-btn-green { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #3072AA, #6BA4D5); color: #fff; border: none; border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(48,114,170,.28); transition: all .2s; }
 .ime-btn-green:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(48,114,170,.38); }
 .ime-btn-green:active:not(:disabled) { transform: scale(.97); }
 .ime-btn-green:disabled              { opacity: .5; cursor: not-allowed; }
 
-.ime-btn-dark { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: #1F2937; color: #fff; border: none; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(31,41,55,.25); transition: all .2s; }
+.ime-btn-dark { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1rem 1.5rem; background: #1F2937; color: #fff; border: none; border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(31,41,55,.25); transition: all .2s; }
 .ime-btn-dark:hover:not(:disabled)  { background: #374151; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(31,41,55,.35); }
 .ime-btn-dark:active:not(:disabled) { transform: scale(.97); }
 .ime-btn-dark:disabled              { opacity: .5; cursor: not-allowed; }
 
-.ime-btn-ghost { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+.ime-btn-ghost { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: all .2s; }
 .ime-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .ime-btn-ghost:active { transform: scale(.97); }
 

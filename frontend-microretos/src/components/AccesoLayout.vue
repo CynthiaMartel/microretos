@@ -19,8 +19,8 @@ const legales = ['Privacidad', 'Aviso legal', 'Accesibilidad']
 
 <template>
   <!-- En escritorio ocupa exactamente la ventana: se ve entera al entrar. El pie fijo (AppCredit) mide
-       ~2rem en escritorio pero App.vue reserva pb-12; el lg:-mb-4 absorbe la diferencia para que no quede una franja vacía. -->
-  <div class="min-h-[calc(100dvh-3rem)] lg:h-[calc(100dvh-2rem)] lg:-mb-4 bg-white font-sans text-[#1F2937] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+       2.5rem pero App.vue reserva pb-12 (3rem); el lg:-mb-2 absorbe la diferencia para que no quede una franja vacía. -->
+  <div class="min-h-[calc(100dvh-3rem)] lg:h-[calc(100dvh-2.5rem)] lg:-mb-2 bg-white font-sans text-[#1F2937] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
 
     <!-- ── Columna formulario ──────────────────────────────────────────── -->
     <section class="flex flex-col min-h-0 lg:overflow-y-auto px-4 sm:px-10 lg:px-12 xl:px-16 py-4 sm:py-8 lg:py-6 [@media(min-width:1024px)_and_(max-height:820px)]:py-4">

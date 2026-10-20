@@ -85,7 +85,7 @@ onUnmounted(() => clearTimeout(destacarTimeout));
 
       <div class="flex gap-2 mt-3 pt-3 border-t border-gray-50">
         <button type="button" @click.stop="$emit('ver-proceso')"
-                class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border cursor-pointer
+                class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-full border cursor-pointer
                        border-gray-200 bg-gray-50 text-gray-600 text-[10px] font-black uppercase tracking-wide
                        transition-all hover:border-gray-300 hover:bg-gray-100"
                 :class="destacarBotones && 'ring-2 ring-offset-1 ring-gray-300 scale-[1.04] border-gray-300 bg-gray-100'">
@@ -94,7 +94,7 @@ onUnmounted(() => clearTimeout(destacarTimeout));
                        bg-white text-gray-500 text-[9px] font-black border border-gray-200">{{ countEnProceso }}</span>
         </button>
         <button type="button" @click.stop="$emit('ver-completados')"
-                class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border cursor-pointer
+                class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-full border cursor-pointer
                        border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-black uppercase tracking-wide
                        transition-all hover:border-sky-300 hover:bg-sky-100"
                 :class="destacarBotones && 'ring-2 ring-offset-1 ring-sky-300 scale-[1.04] border-sky-300 bg-sky-100'">

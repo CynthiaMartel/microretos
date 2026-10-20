@@ -40,7 +40,7 @@ const visible = ref(false)
       />
       <button
         type="button"
-        class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-lg text-gray-500 hover:text-acceso-tinta"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full text-gray-500 hover:text-acceso-tinta"
         :aria-label="visible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
         @click="visible = !visible"
       >

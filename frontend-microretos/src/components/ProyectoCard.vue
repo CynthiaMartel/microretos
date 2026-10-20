@@ -121,9 +121,9 @@ function getColor(p) {
           </dt>
           <dd class="flex min-w-0 flex-wrap gap-1">
             <span v-for="m in modulos.slice(0, MAX_MODULOS)" :key="m" :title="m"
-                  class="max-w-full truncate rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-600 ring-1 ring-gray-200">{{ m }}</span>
+                  class="max-w-full truncate rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-600 ring-1 ring-gray-200">{{ m }}</span>
             <span v-if="modulos.length > MAX_MODULOS" :title="modulos.slice(MAX_MODULOS).join(', ')"
-                  class="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-gray-400">+{{ modulos.length - MAX_MODULOS }}</span>
+                  class="rounded-full px-1.5 py-0.5 text-[11px] font-bold text-gray-400">+{{ modulos.length - MAX_MODULOS }}</span>
           </dd>
         </div>
         <div v-if="fechaCreacion" class="flex items-start gap-2">
@@ -150,7 +150,7 @@ function getColor(p) {
         </div>
         <!-- Validaciones: colores del logo — empresa en verde, docente (centro) en azul -->
         <div v-if="proyecto.empresa_validado"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-empresas/5 border-empresas/30 text-empresas-dark">
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-empresas/5 border-empresas/30 text-empresas-dark">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
           </svg>
@@ -159,7 +159,7 @@ function getColor(p) {
           </span>
         </div>
         <div v-if="proyecto.docente_validado"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-centros/5 border-centros/30 text-centros">
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border bg-centros/5 border-centros/30 text-centros">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
           </svg>
@@ -175,7 +175,7 @@ function getColor(p) {
 
         <!-- Propuesta NO enviada por mail aún -->
         <div v-if="!proyecto.enviado_a_empresa_mail && !proyecto.empresa_no_valida_aun"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                     bg-violet-50 border border-violet-300 text-violet-700">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -188,7 +188,7 @@ function getColor(p) {
 
         <!-- Enviada por mail, esperando respuesta -->
         <div v-if="proyecto.enviado_a_empresa_mail && !proyecto.empresa_no_valida_aun"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                     bg-blue-50 border border-blue-200 text-blue-600">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -201,7 +201,7 @@ function getColor(p) {
 
         <!-- Empresa contestó "No validar aún" — requiere atención -->
         <div v-if="proyecto.empresa_no_valida_aun"
-             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl
+             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                     bg-red-50 border border-red-300 text-red-700">
           <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -221,7 +221,7 @@ function getColor(p) {
       <button v-if="proyecto.estado === 'completado'"
         @click="toggleVisiblePublico"
         :disabled="cambiandoVisibilidad"
-        class="py-2 px-3 rounded-xl border transition-all disabled:opacity-50"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all disabled:opacity-50"
         :class="proyecto.visible_publico
           ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100'
           : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'"
@@ -239,7 +239,7 @@ function getColor(p) {
       </button>
       <button
         @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
-        class="flex-1 py-2 rounded-xl border text-xs font-black
+        class="flex-1 py-2 rounded-full border text-xs font-black
                uppercase tracking-widest transition-all"
         :class="resaltarEditar
           ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-[0_0_0_3px_rgba(251,191,36,0.3)] animate-pulse'
@@ -249,7 +249,7 @@ function getColor(p) {
       </button>
       <button
         @click="emit('eliminar', proyecto)"
-        class="py-2 px-3 rounded-xl bg-gray-50 border border-gray-200 text-red-400
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-red-400
                hover:bg-red-50 hover:border-red-200 transition-all"
         title="Mover a papelera"
       >

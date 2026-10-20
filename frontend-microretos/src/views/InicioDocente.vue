@@ -600,12 +600,12 @@ const irA = (ruta) => router.push(ruta)
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <button @click="irA('/proyectos/crear')"
-                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
+                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
                   Nuevo proyecto
                 </button>
                 <button @click="irA('/encuentros/crear')"
-                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
+                        class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
                   Nuevo encuentro
                 </button>
@@ -756,7 +756,7 @@ const irA = (ruta) => router.push(ruta)
                     </li>
                   </ol>
                 </div>
-                <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-lg bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
+                <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-full bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
                         @click="irA('/proyectos/crear')">
                   Aún no hay proyectos en este curso · Crear proyecto →
                 </button>
@@ -1005,7 +1005,7 @@ const irA = (ruta) => router.push(ruta)
             <form class="mt-2 flex gap-2" @submit.prevent="addNota">
               <input v-model="nuevaNota" maxlength="200" placeholder="Añadir tarea personal…"
                      class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-lg bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15" :disabled="!nuevaNota.trim()">Añadir</button>
+              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15" :disabled="!nuevaNota.trim()">Añadir</button>
             </form>
           </article>
 
@@ -1058,8 +1058,8 @@ const irA = (ruta) => router.push(ruta)
               <span v-if="retoDestacado.nivel_grupo" class="rounded-full border px-2 py-0.5 font-bold" :class="nivelClase(retoDestacado.nivel_grupo)">{{ retoDestacado.nivel_grupo }}</span>
             </div>
             <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
-              <button class="rounded-lg bg-alumnos px-3 py-2 text-xs font-semibold text-white hover:bg-alumnos/90" @click="abrirReto(retoDestacado)">Ver reto</button>
-              <button class="rounded-lg px-3 py-2 text-xs font-semibold text-alumnos-dark ring-1 ring-alumnos/30 hover:bg-alumnos/5" @click="irA('/retos')">Más retos</button>
+              <button class="rounded-full bg-alumnos px-3 py-2 text-xs font-semibold text-white hover:bg-alumnos/90" @click="abrirReto(retoDestacado)">Ver reto</button>
+              <button class="rounded-full px-3 py-2 text-xs font-semibold text-alumnos-dark ring-1 ring-alumnos/30 hover:bg-alumnos/5" @click="irA('/retos')">Más retos</button>
             </div>
           </article>
         </div>
@@ -1155,5 +1155,5 @@ const irA = (ruta) => router.push(ruta)
 .interruptor  { @apply relative mt-0.5 inline-flex h-4 w-7.5 shrink-0 items-center rounded-full p-0.5 transition-colors; }
 .interruptor-bola { @apply h-3 w-3 rounded-full bg-white shadow transition-transform; }
 .font-manuscrita { font-family: 'Caveat', 'Segoe Script', cursive; font-weight: 600; }
-.cal-nav      { @apply flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-centros; }
+.cal-nav      { @apply flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
 </style>

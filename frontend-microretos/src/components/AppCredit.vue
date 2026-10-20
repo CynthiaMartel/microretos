@@ -48,13 +48,23 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
   <template v-if="verified">
 
     <!-- ── Footer strip — oscuro ─────────────────────────────────────────────── -->
-    <footer class="fixed bottom-0 left-0 right-0 z-40
+    <!-- Alto fijo de 2.5rem: el SidePanel acaba justo encima (h-[calc(100dvh-6.5rem)]) y
+         AccesoLayout lo descuenta en escritorio -->
+    <footer class="fixed bottom-0 left-0 right-0 z-40 h-10
                    bg-[#0f1720]/90 backdrop-blur-sm border-t border-white/8
-                   flex items-center justify-between
-                   px-5 py-2 text-[11px] text-white/35 select-none">
-      <span>Web app desarrollada por alumnado de prácticas de empresa</span>
+                   flex items-center justify-between gap-3
+                   px-3 sm:px-5 text-[11px] text-white/35 select-none">
+      <span class="min-w-0 truncate">
+        <span class="sm:hidden">Desarrollada por alumnado en prácticas</span>
+        <span class="hidden sm:inline">Web app desarrollada por alumnado de prácticas de empresa</span>
+      </span>
+      <!-- Acerca de: discreto, a juego con el texto del pie -->
       <button @click="abrir"
-        class="text-primary-700/70 hover:text-primary-700 transition-colors font-semibold tracking-wide">
+        class="foot-btn shrink-0 text-white/45 hover:text-white/80 hover:bg-white/5">
+        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
         Acerca de
       </button>
     </footer>
@@ -69,13 +79,14 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
                     w-full max-w-lg overflow-hidden">
 
           <!-- Cabecera -->
-          <div class="bg-[#F0FBF4] border-b border-[#BBE8D0] px-8 py-6 flex items-start justify-between">
-            <div>
+          <div class="bg-[#F0FBF4] border-b border-[#BBE8D0] px-5 sm:px-8 py-5 sm:py-6 flex items-start justify-between gap-3">
+            <div class="min-w-0">
               <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
-              <h2 class="text-2xl font-black tracking-tight text-azul-noche">Equipo de desarrollo</h2>
+              <h2 class="text-xl sm:text-2xl font-black tracking-tight text-azul-noche">Equipo de desarrollo</h2>
               <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada por alumnado de prácticas de empresa</p>
             </div>
-            <button @click="cerrar" class="text-gray-300 hover:text-gray-500 transition-colors mt-1 p-1">
+            <button @click="cerrar" aria-label="Cerrar"
+              class="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-600 transition-colors">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -83,7 +94,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
           </div>
 
           <!-- Autores -->
-          <div class="px-8 py-6 space-y-3 bg-white">
+          <div class="px-5 sm:px-8 py-5 sm:py-6 space-y-3 bg-white">
             <div v-for="(a, i) in autores" :key="i"
               class="flex items-start gap-4 p-4 rounded-2xl bg-[#F8FAFC] border border-gray-100
                      hover:border-[#BBE8D0] hover:bg-[#F0FBF4] transition-all">
@@ -119,7 +130,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
           </div>
 
           <!-- Pie -->
-          <div class="bg-gray-50 border-t border-gray-100 px-8 py-4 flex items-center justify-between">
+          <div class="bg-gray-50 border-t border-gray-100 px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
             <span class="text-[10px] text-gray-400">{{ _yr }}</span>
             <span class="text-[10px] text-gray-400">Prácticas de empresa · {{ _yr }}</span>
           </div>
@@ -135,4 +146,12 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
 .credit-fade-leave-active { transition: opacity 0.2s ease; }
 .credit-fade-enter-from,
 .credit-fade-leave-to     { opacity: 0; }
+
+/* Botón del pie: 36px de alto (objetivo táctil mínimo) dentro de sus 2.5rem */
+.foot-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  height: 2.25rem; padding: 0 0.6rem; border-radius: 9999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap; transition: background-color 150ms ease, color 150ms ease;
+}
 </style>

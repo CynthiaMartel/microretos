@@ -92,11 +92,11 @@ function continuarConEquipoGuardado() {
         <p class="text-xs text-white/40 mb-3 truncate">{{ equipoGuardado.titulo }}</p>
         <div class="flex gap-2">
           <button @click="continuarConEquipoGuardado"
-                  class="flex-1 py-2.5 rounded-xl bg-alumnos text-white text-xs font-black uppercase tracking-wider">
+                  class="flex-1 py-2.5 rounded-full bg-alumnos text-white text-xs font-black uppercase tracking-wider">
             Continuar
           </button>
           <button @click="limpiarGuardado"
-                  class="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 text-xs font-black uppercase tracking-wider">
+                  class="px-3 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-xs font-black uppercase tracking-wider">
             Otro código
           </button>
         </div>
@@ -113,7 +113,7 @@ function continuarConEquipoGuardado() {
         <p v-if="error" class="text-xs text-red-400 font-semibold text-center mb-3">{{ error }}</p>
 
         <button @click="entrar" :disabled="!codigoValido || cargando"
-                :class="['w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all',
+                :class="['w-full py-3.5 rounded-full text-sm font-black uppercase tracking-widest transition-all',
                          codigoValido ? 'bg-alumnos text-white hover:bg-alumnos/90' : 'bg-white/5 text-white/20 cursor-not-allowed']">
           {{ cargando ? 'Buscando…' : 'Ver mi flujo de trabajo →' }}
         </button>

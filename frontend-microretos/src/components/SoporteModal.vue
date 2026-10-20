@@ -97,7 +97,7 @@ const inputClase = (campo) => [
            class="relative w-[min(36rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl bg-white p-5 sm:p-8 shadow-2xl">
 
         <button type="button" aria-label="Cerrar" @click="cerrar"
-                class="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-azul-noche">
+                class="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-azul-noche">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -114,7 +114,7 @@ const inputClase = (campo) => [
             </svg>
             <span class="min-w-0 break-words">{{ enviado }} Te hemos enviado una copia de confirmación a <strong>{{ form.email }}</strong>.</span>
           </div>
-          <button type="button" class="mt-6 w-full h-12 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700" @click="cerrar">
+          <button type="button" class="mt-6 w-full h-12 rounded-full bg-primary-600 text-white font-bold hover:bg-primary-700" @click="cerrar">
             Cerrar
           </button>
         </div>
@@ -177,11 +177,11 @@ const inputClase = (campo) => [
           <p v-if="errorGeneral" role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ errorGeneral }}</p>
 
           <div class="flex flex-col-reverse sm:flex-row gap-3">
-            <button type="button" class="w-full sm:w-auto sm:flex-1 h-12 rounded-xl border-2 border-gray-200 text-gray-700 font-bold hover:border-gray-300" @click="cerrar">
+            <button type="button" class="w-full sm:w-auto sm:flex-1 h-12 rounded-full border-2 border-gray-200 text-gray-700 font-bold hover:border-gray-300" @click="cerrar">
               Cancelar
             </button>
             <button type="submit" :disabled="enviando"
-                    class="w-full sm:w-auto sm:flex-[2] h-12 rounded-xl bg-primary-600 text-white font-bold shadow-[0_8px_24px_rgba(48,114,170,0.25)] hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                    class="w-full sm:w-auto sm:flex-[2] h-12 rounded-full bg-primary-600 text-white font-bold shadow-[0_8px_24px_rgba(48,114,170,0.25)] hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed">
               {{ enviando ? 'Enviando…' : 'Enviar consulta' }}
             </button>
           </div>

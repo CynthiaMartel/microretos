@@ -27,7 +27,7 @@ defineEmits(['limpiar'])
         <input v-model="busqueda" type="search" :placeholder="placeholder" :aria-label="placeholder"
                class="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-azul-noche placeholder-gray-400 transition-colors focus:border-centros focus:bg-white focus:outline-none" />
         <button v-if="busqueda" type="button" @click="busqueda = ''" aria-label="Borrar búsqueda"
-                class="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 hover:text-gray-600">
+                class="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>

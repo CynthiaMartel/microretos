@@ -159,7 +159,7 @@ function irAPaginaCompleta() {
             <div class="flex items-center gap-2 shrink-0">
               <button v-if="proyecto"
                       @click="descargarPDF(proyecto)"
-                      class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
+                      class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest
                              text-white shadow-sm transition-all flex items-center gap-1.5"
                       :class="[theme.bg, theme.bgHover]">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,7 +170,7 @@ function irAPaginaCompleta() {
               </button>
               <button v-if="proyecto?.microreto_id"
                       @click="microretoModalId = proyecto.microreto_id"
-                      class="px-3 py-1.5 rounded-xl border-2
+                      class="px-3 py-1.5 rounded-full border-2
                              text-[10px] font-black uppercase tracking-widest
                              hover:text-white transition-all flex items-center gap-1.5"
                       :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
@@ -182,7 +182,7 @@ function irAPaginaCompleta() {
                 Ficha reto original
               </button>
               <button v-if="proyecto" @click="irAPaginaCompleta"
-                      class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
+                      class="px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              transition-all flex items-center gap-1.5"
                       :class="paletteExtra[theme.key].hoverBorderText">
@@ -282,7 +282,7 @@ function irAPaginaCompleta() {
                     <div class="flex items-center gap-2">
                       <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 min-w-0">{{ landingUrl }}</p>
                       <button @click="copiarUrl"
-                              :class="['shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
+                              :class="['shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all',
                                         urlCopiada ? [theme.bg5, theme.text, theme.border20] : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]]">
                         {{ urlCopiada ? '¡Copiado!' : 'Copiar' }}
                       </button>
@@ -466,7 +466,7 @@ function irAPaginaCompleta() {
                      class="flex flex-wrap items-center justify-between gap-2">
                   <p class="group-header !mb-0">El reto</p>
                   <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
-                          class="px-3 py-1.5 rounded-xl border-2 text-[10px] font-black
+                          class="px-3 py-1.5 rounded-full border-2 text-[10px] font-black
                                  uppercase tracking-wider hover:text-white transition-all mb-3"
                           :class="[theme.bg5, theme.border, theme.text, theme.bgHover]">
                     📎 Ver ficha reto original

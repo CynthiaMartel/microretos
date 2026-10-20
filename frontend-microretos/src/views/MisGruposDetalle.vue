@@ -332,13 +332,13 @@ onMounted(async () => {
       </div>
       <!-- name 'mis-grupos' (antes 'mis-equipos') — ver router/index.js -->
       <button @click="router.push({ name: 'mis-grupos' })"
-              class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700
+              class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                      hover:bg-violet-100 transition-colors text-xs font-black uppercase tracking-wider">
         Mis grupos
       </button>
       <button v-if="proyecto?.uuid"
               @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })"
-              class="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors
+              class="shrink-0 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors
                      text-xs font-black text-gray-600 uppercase tracking-wider">
         Ver proyecto
       </button>
@@ -473,7 +473,7 @@ onMounted(async () => {
             <template #acciones-cabecera="{ equipo: eq }">
               <button v-if="eq.fases_completas === 5"
                       @click.stop="irADiagnostico(eq)"
-                      :class="['shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors text-[10px] font-black uppercase tracking-wider',
+                      :class="['shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors text-[10px] font-black uppercase tracking-wider',
                                eq.diagnostico_final
                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                                  : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100']">
@@ -541,7 +541,7 @@ onMounted(async () => {
 
                 <button @click="enviarEvaluacion(eq)"
                         :disabled="!puedeEnviarEvaluacion(eq.id) || guardandoEval"
-                        :class="['w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all',
+                        :class="['w-full py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all',
                                  puedeEnviarEvaluacion(eq.id) ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-gray-100 text-gray-300 cursor-not-allowed']">
                   {{ eq.fases[4]?.validado_docente ? 'Actualizar evaluación' : 'Guardar evaluación' }}
                 </button>
@@ -583,13 +583,13 @@ onMounted(async () => {
                 <div class="flex flex-wrap items-center gap-2">
                   <button @click="guardarDiagnostico(eq)"
                           :disabled="guardandoDiagnostico[eq.id] || !diagnosticoForms[eq.id].resumen.trim()"
-                          class="px-3 py-1.5 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-colors
+                          class="px-3 py-1.5 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors
                                  text-[10px] font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed">
                     {{ guardandoDiagnostico[eq.id] ? 'Guardando…' : 'Guardar cambios' }}
                   </button>
                   <button @click="cancelarEdicionDiagnostico(eq)"
                           :disabled="guardandoDiagnostico[eq.id]"
-                          class="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50
+                          class="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50
                                  transition-colors text-[10px] font-black uppercase tracking-wider">
                     Cancelar
                   </button>
@@ -605,12 +605,12 @@ onMounted(async () => {
                      marcarHaloVisto/activarHalosPendientes. Sin animación con reduced-motion. -->
                 <span v-if="eq.diagnostico_final" class="relative inline-flex shrink-0"
                       v-al-ver="() => marcarHaloVisto(eq.id)">
-                  <span :class="['halo-diagnostico absolute inset-0 rounded-xl bg-emerald-400',
+                  <span :class="['halo-diagnostico absolute inset-0 rounded-full bg-emerald-400',
                                  halosActivos.has(eq.id) && !halosTerminados.has(eq.id) ? 'activo' : '']"
                         @animationend="terminarHalo(eq.id)"
                         aria-hidden="true" />
                   <button @click="verDiagnostico(eq)"
-                          class="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-200
+                          class="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-200
                                  hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -621,13 +621,13 @@ onMounted(async () => {
                 </span>
                 <button v-if="eq.diagnostico_final"
                         @click="editarDiagnostico(eq)"
-                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700
+                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                hover:bg-amber-100 transition-colors text-[10px] font-black uppercase tracking-wider">
                   ✏️ Editar manualmente
                 </button>
                 <button @click="generarDiagnostico(eq)"
                         :disabled="generandoDiagnostico[eq.id]"
-                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700
+                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                hover:bg-violet-100 transition-colors text-[10px] font-black uppercase tracking-wider
                                disabled:opacity-50 disabled:cursor-not-allowed">
                   ✨ {{ generandoDiagnostico[eq.id] ? 'La IA está redactando…' : (eq.diagnostico_final ? 'Regenerar diagnóstico con IA' : 'Generar diagnóstico con IA') }}

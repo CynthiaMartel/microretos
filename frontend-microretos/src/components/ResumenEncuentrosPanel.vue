@@ -125,7 +125,7 @@ function formatFecha(isoDate) {
                 @2xl:flex @2xl:items-center @2xl:gap-2">
       <!-- Botón Ver encuentros — prominente -->
       <button @click="router.push('/encuentros')"
-              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
                      bg-centros text-white
                      text-[10px] font-black uppercase tracking-widest
                      hover:bg-centros/90 transition-all shadow-sm mb-2
@@ -138,7 +138,7 @@ function formatFecha(isoDate) {
       </button>
       <!-- name 'mis-grupos' (antes 'mis-equipos') — ver router/index.js -->
       <button @click="router.push({ name: 'mis-grupos' })"
-              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
                      bg-violet-50 border border-violet-200 text-violet-700
                      text-[10px] font-black uppercase tracking-widest
                      hover:bg-violet-100 transition-all mb-2
@@ -150,7 +150,7 @@ function formatFecha(isoDate) {
         Mis grupos — seguimiento
       </button>
       <button @click="router.push({ name: 'startup-day-crear' })"
-              class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+              class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
                      bg-primary-400/10 border border-primary-400/20 text-primary-700
                      text-[9px] font-black uppercase tracking-widest
                      hover:bg-primary-400/20 transition-all
@@ -188,7 +188,7 @@ function formatFecha(isoDate) {
           <div class="flex gap-1">
             <button v-for="c in ['', '1º', '2º']" :key="'fc'+c"
                     @click="filtroSes.curso = c"
-                    class="flex-1 py-1 rounded-lg text-[8px] font-black uppercase border transition-all"
+                    class="flex-1 py-1 rounded-full text-[8px] font-black uppercase border transition-all"
                     :class="filtroSes.curso === c
                       ? 'bg-centros border-centros text-white'
                       : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-centros/40'">
@@ -201,7 +201,7 @@ function formatFecha(isoDate) {
           <div class="flex gap-0.5">
             <button v-for="g in ['', 'A', 'B', 'C', 'D']" :key="'fg'+g"
                     @click="filtroSes.grupo = g"
-                    class="flex-1 py-1 rounded-md text-[7px] font-black uppercase border transition-all"
+                    class="flex-1 py-1 rounded-full text-[7px] font-black uppercase border transition-all"
                     :class="filtroSes.grupo === g
                       ? 'bg-primary-400 border-primary-400 text-white'
                       : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-primary-400/40'">
@@ -277,7 +277,7 @@ function formatFecha(isoDate) {
           </div>
           <div class="flex flex-col items-end gap-1 flex-shrink-0">
             <button @click.stop="emit('eliminar', s)"
-                    class="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                    class="p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
                     title="Eliminar">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -294,7 +294,7 @@ function formatFecha(isoDate) {
          class="px-4 py-3 border-t border-gray-50 flex items-center justify-between gap-2">
       <button @click="paginaEncuentros--"
               :disabled="paginaEncuentros === 1"
-              class="p-2.5 rounded-lg border border-gray-200 text-gray-400
+              class="p-2.5 rounded-full border border-gray-200 text-gray-400
                      hover:border-centros hover:text-centros
                      disabled:opacity-30 disabled:cursor-not-allowed transition-all">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +306,7 @@ function formatFecha(isoDate) {
       </span>
       <button @click="paginaEncuentros++"
               :disabled="paginaEncuentros === totalPaginasSes"
-              class="p-2.5 rounded-lg border border-gray-200 text-gray-400
+              class="p-2.5 rounded-full border border-gray-200 text-gray-400
                      hover:border-centros hover:text-centros
                      disabled:opacity-30 disabled:cursor-not-allowed transition-all">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

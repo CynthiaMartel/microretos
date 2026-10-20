@@ -162,14 +162,14 @@ async function confirmarEliminacion() {
                   </div>
                 </div>
 
-                <div class="eem-actions mt-2">
-                  <button type="button" @click="$emit('cerrar')" class="eem-btn-ghost flex-1">Cancelar</button>
-                  <button type="button" @click="avanzarFase2" class="eem-btn-danger-outline flex-[2]">
+                <div class="fila-pasos mt-2">
+                  <button type="button" @click="$emit('cerrar')" class="btn-paso-atras">Cancelar</button>
+                  <button type="button" @click="avanzarFase2" class="btn-paso border-2 border-red-300 bg-white text-red-600 shadow-none hover:border-red-400 hover:bg-red-50">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    Entiendo, quiero eliminarla
+                    <span class="sm:hidden">Continuar</span><span class="hidden sm:inline">Entiendo, quiero eliminarla</span>
                   </button>
                 </div>
               </div>
@@ -221,8 +221,8 @@ async function confirmarEliminacion() {
                   </div>
                 </Transition>
 
-                <div class="eem-actions">
-                  <button type="button" @click="fase = 1" class="eem-btn-ghost flex-1">
+                <div class="fila-pasos">
+                  <button type="button" @click="fase = 1" class="btn-paso-atras">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -232,7 +232,7 @@ async function confirmarEliminacion() {
                     type="button"
                     @click="confirmarEliminacion"
                     :disabled="!nombreValido || eliminando"
-                    class="eem-btn-danger flex-[2]"
+                    class="btn-paso bg-red-600 shadow-red-600/30 hover:bg-red-700"
                   >
                     <svg v-if="eliminando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
@@ -241,7 +241,8 @@ async function confirmarEliminacion() {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    {{ eliminando ? 'Moviendo a papelera...' : 'Mover a papelera' }}
+                    <span class="sm:hidden">{{ eliminando ? 'Moviendo...' : 'Mover' }}</span>
+                    <span class="hidden sm:inline">{{ eliminando ? 'Moviendo a papelera...' : 'Mover a papelera' }}</span>
                   </button>
                 </div>
               </div>
@@ -328,7 +329,7 @@ async function confirmarEliminacion() {
 .eem-btn-ghost:active { transform: scale(.97); }
 .eem-x {
   position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #fef2f2; border: none; border-radius: .5rem; color: #f87171;
+  background: #fef2f2; border: none; border-radius: 9999px; color: #f87171;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }
 .eem-x:hover { background: #fee2e2; color: #dc2626; }

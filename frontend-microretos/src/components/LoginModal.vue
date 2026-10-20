@@ -281,7 +281,7 @@ const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLo
   padding: 0.95rem;
   background: linear-gradient(135deg, #3072AA, #6BA4D5);
   border: none;
-  border-radius: 12px;
+  border-radius: 9999px;
   color: white;
   font-size: 0.8rem;
   font-weight: 900;
@@ -332,7 +332,7 @@ const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLo
   right: 1.25rem;
   background: #f3f4f6;
   border: none;
-  border-radius: 8px;
+  border-radius: 9999px;
   color: #9CA3AF;
   width: 32px;
   height: 32px;

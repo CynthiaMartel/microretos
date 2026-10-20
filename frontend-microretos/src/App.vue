@@ -13,6 +13,7 @@ import { useLoginModal } from './composables/useLoginModal.js'
 import { useUIState } from './composables/useUIState.js'
 import { useRoleTheme } from './composables/useRoleTheme.js'
 import api from './api.js'
+import { queryRedirect, redirectVigente } from './utils/redirectLogin.js'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -43,7 +44,7 @@ watch(
   () => route.query.redirect,
   (redirect) => {
     if (redirect && !authStore.isAuthenticated && !isLoginRoute.value) {
-      destinoTrasLogin.value = String(redirect)
+      destinoTrasLogin.value = redirectVigente(route.query)
       showLogin.value = true
     }
   },
@@ -68,7 +69,7 @@ const handleTokenExpired = async () => {
   const currentPath = router.currentRoute.value.fullPath
   const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/')
   if (!isPublic) {
-    router.push({ path: '/', query: { redirect: currentPath } })
+    router.push({ path: '/', query: queryRedirect(currentPath) })
   }
 }
 
@@ -101,7 +102,7 @@ const handleIdle = async () => {
   const currentPath = router.currentRoute.value.fullPath
   const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/')
   if (!isPublic) {
-    router.push({ path: '/', query: { redirect: currentPath } })
+    router.push({ path: '/', query: queryRedirect(currentPath) })
   }
 }
 
@@ -238,13 +239,13 @@ const extenderDesdeToast = async () => {
 
         <div class="flex gap-3">
           <button @click="cerrarSesionIdle"
-            class="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest
+            class="flex-1 py-3 rounded-full font-bold text-xs uppercase tracking-widest
                    border border-white/10 text-white/40
                    hover:bg-white/5 hover:text-white/60 transition-all">
             Cerrar sesión
           </button>
           <button @click="seguirConectado"
-            class="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest
+            class="flex-1 py-3 rounded-full font-black text-xs uppercase tracking-widest
                    text-white transition-all shadow-md"
             :class="[theme.bg, theme.bgHover]">
             Seguir conectado
@@ -301,7 +302,7 @@ const extenderDesdeToast = async () => {
         <button
           @click="extenderDesdeToast"
           :disabled="tokenToastRefreshing"
-          class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest
+          class="flex-1 py-2 rounded-full text-xs font-black uppercase tracking-widest
                  text-white transition-all shadow-md
                  disabled:opacity-50 disabled:cursor-not-allowed"
           :class="[theme.bg, theme.bgHover]"

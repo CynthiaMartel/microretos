@@ -241,7 +241,7 @@ onMounted(cargarPapelera)
           <button
             v-if="total > 0 && !cargando"
             @click="abrirModalVaciar"
-            class="flex items-center gap-2 px-4 py-2 rounded-2xl
+            class="flex items-center gap-2 px-4 py-2 rounded-full
                    bg-red-50 border border-red-200 text-red-600
                    hover:bg-red-100 hover:border-red-300
                    font-bold text-sm transition-all duration-150"
@@ -305,7 +305,7 @@ onMounted(cargarPapelera)
         <p class="text-sm font-bold text-red-600">{{ error }}</p>
         <button
           @click="cargarPapelera"
-          class="mt-3 px-4 py-2 rounded-xl bg-red-100 text-red-700 text-sm font-bold hover:bg-red-200 transition-colors"
+          class="mt-3 px-4 py-2 rounded-full bg-red-100 text-red-700 text-sm font-bold hover:bg-red-200 transition-colors"
         >
           Reintentar
         </button>
@@ -423,7 +423,7 @@ onMounted(cargarPapelera)
             <button
               @click="restaurar(item)"
               :disabled="restaurando === item.id + item.tipo"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full
                      bg-administraciones/10 border border-administraciones/20 text-administraciones
                      hover:bg-administraciones/20 hover:border-administraciones/40
                      font-bold text-xs transition-all duration-150
@@ -444,7 +444,7 @@ onMounted(cargarPapelera)
             <!-- Eliminar permanentemente -->
             <button
               @click="abrirModalEliminar(item)"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full
                      bg-red-50 border border-red-100 text-red-500
                      hover:bg-red-100 hover:border-red-200 hover:text-red-600
                      font-bold text-xs transition-all duration-150"
@@ -506,7 +506,7 @@ onMounted(cargarPapelera)
             <button
               @click="cerrarModalEliminar"
               :disabled="eliminando"
-              class="flex-1 px-4 py-2.5 rounded-2xl border border-gray-200 text-gray-600
+              class="flex-1 px-4 py-2.5 rounded-full border border-gray-200 text-gray-600
                      font-bold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancelar
@@ -514,7 +514,7 @@ onMounted(cargarPapelera)
             <button
               @click="confirmarEliminar"
               :disabled="eliminando"
-              class="flex-1 px-4 py-2.5 rounded-2xl bg-red-500 text-white
+              class="flex-1 px-4 py-2.5 rounded-full bg-red-500 text-white
                      font-black text-sm hover:bg-red-600 transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed
                      flex items-center justify-center gap-2"
@@ -586,7 +586,7 @@ onMounted(cargarPapelera)
             <button
               @click="cerrarModalVaciar"
               :disabled="vaciando"
-              class="flex-1 px-4 py-2.5 rounded-2xl border border-gray-200 text-gray-600
+              class="flex-1 px-4 py-2.5 rounded-full border border-gray-200 text-gray-600
                      font-bold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancelar
@@ -594,7 +594,7 @@ onMounted(cargarPapelera)
             <button
               @click="confirmarVaciar"
               :disabled="confirmVaciar !== 'VACIAR' || vaciando"
-              class="flex-1 px-4 py-2.5 rounded-2xl bg-red-600 text-white
+              class="flex-1 px-4 py-2.5 rounded-full bg-red-600 text-white
                      font-black text-sm hover:bg-red-700 transition-colors
                      disabled:opacity-30 disabled:cursor-not-allowed
                      flex items-center justify-center gap-2"

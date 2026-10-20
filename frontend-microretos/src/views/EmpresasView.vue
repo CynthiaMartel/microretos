@@ -560,7 +560,7 @@ const unidadResultados = computed(() => {
               </p>
             </div>
             <button @click="mostrarEjemplo = false"
-                    class="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200
+                    class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200
                            flex items-center justify-center transition-colors">
               <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -693,7 +693,7 @@ const unidadResultados = computed(() => {
                         </svg>
                       </div>
                       <button :class="[
-                        'flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all',
+                        'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-xs font-bold transition-all',
                         modoEjemplo === 'contactar'
                           ? 'bg-empresas/8 border-empresas/25 text-empresas ring-2 ring-empresas/40 ring-offset-1'
                           : 'bg-gray-50 border-gray-200 text-gray-600'
@@ -716,7 +716,7 @@ const unidadResultados = computed(() => {
                         </svg>
                       </div>
                       <button :class="[
-                        'flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all',
+                        'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-xs font-bold transition-all',
                         modoEjemplo === 'validar'
                           ? 'bg-amber-50 border-amber-200 text-amber-700 ring-2 ring-amber-300/60 ring-offset-1'
                           : 'bg-gray-50 border-gray-200 text-gray-600'
@@ -801,7 +801,7 @@ const unidadResultados = computed(() => {
           <button type="button" @click="sectoresAbierto = !sectoresAbierto" :aria-expanded="sectoresAbierto"
                   title="Actividad económica a la que se dedica la empresa"
                   :class="[
-                    'mb-2 inline-flex min-h-9 max-w-full items-center gap-2 rounded-xl border px-3 text-left transition-colors',
+                    'mb-2 inline-flex min-h-9 max-w-full items-center gap-2 rounded-full border px-3 text-left transition-colors',
                     sectoresAbierto
                       ? 'bg-empresas/10 border-empresas/40'
                       : 'bg-empresas/5 border-empresas/25 hover:bg-empresas/10 hover:border-empresas/40'
@@ -827,7 +827,7 @@ const unidadResultados = computed(() => {
                 @click="toggleFiltroSector(s.sector)"
                 :aria-pressed="filtroSector === s.sector"
                 :class="[
-                  'inline-flex h-9 max-w-full items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors',
+                  'inline-flex h-9 max-w-full items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition-colors',
                   filtroSector === s.sector
                     ? 'bg-empresas text-white border-empresas'
                     : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-empresas/40 hover:text-empresas-dark'
@@ -1004,7 +1004,7 @@ const unidadResultados = computed(() => {
                               </p>
                               <div class="flex flex-wrap gap-1.5">
                                 <span v-for="f in empresa.familias" :key="f.id"
-                                      class="inline-flex max-w-full items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-[#1F2937]">
+                                      class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-[#1F2937]">
                                   <svg :class="['h-3.5 w-3.5 shrink-0', colorFamilia(f.nombre).icon]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path v-for="d in iconoFamilia(f.nombre)" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"/>
                                   </svg>
@@ -1119,7 +1119,7 @@ const unidadResultados = computed(() => {
                             <button
                               @click="abrirPanel('email')"
                               :class="[
-                                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border text-sm font-bold transition-all',
+                                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-sm font-bold transition-all',
                                 panelActivo === 'email'
                                   ? 'bg-empresas/8 border-empresas/25 text-empresas'
                                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:text-[#1F2937]'
@@ -1135,7 +1135,7 @@ const unidadResultados = computed(() => {
                             <button
                               @click="abrirPanel('validacion')"
                               :class="[
-                                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border text-sm font-bold transition-all',
+                                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-sm font-bold transition-all',
                                 panelActivo === 'validacion'
                                   ? 'bg-amber-50 border-amber-200 text-amber-700'
                                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:text-[#1F2937]'

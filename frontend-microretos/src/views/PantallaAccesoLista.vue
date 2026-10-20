@@ -84,7 +84,7 @@ onMounted(cargar)
         <div v-if="!encuentrosConEquipos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
           <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene grupos creados todavía.</p>
           <button @click="router.push('/encuentros')"
-                  class="px-4 py-2 rounded-xl bg-centros text-white text-xs font-black uppercase tracking-wider">
+                  class="px-4 py-2 rounded-full bg-centros text-white text-xs font-black uppercase tracking-wider">
             Ir a Crear/Ver Encuentros
           </button>
         </div>
@@ -102,7 +102,7 @@ onMounted(cargar)
               {{ (e.equipos || []).length }} grupo{{ (e.equipos || []).length === 1 ? '' : 's' }}<span v-if="resumenMiembros(e)"> · {{ resumenMiembros(e) }}</span>
             </p>
           </div>
-          <span class="shrink-0 px-3 py-1.5 rounded-xl bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-wider">
+          <span class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-wider">
             Proyectar →
           </span>
         </button>

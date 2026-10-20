@@ -418,7 +418,7 @@ async function guardarNuevoCiclo(familiaId) {
                 <button
                   v-if="!mostrarNuevaFamilia"
                   @click="mostrarNuevaFamilia = true; editFamiliaId = null"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-xl
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-full
                          border
                          font-black text-xs uppercase tracking-widest
                          transition-all duration-150"
@@ -501,7 +501,7 @@ async function guardarNuevoCiclo(familiaId) {
                     <button
                       @click.stop="abrirEditarFamilia(familia)"
                       :class="editFamiliaId === familia.id ? [theme.text, theme.bg5, theme.border20] : ['text-gray-300', paletteExtra[theme.key].hoverIconBtn]"
-                      class="w-8 h-8 rounded-xl flex items-center justify-center border border-transparent transition-all duration-150"
+                      class="w-8 h-8 rounded-full flex items-center justify-center border border-transparent transition-all duration-150"
                       title="Editar familia"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -511,7 +511,7 @@ async function guardarNuevoCiclo(familiaId) {
                     </button>
                     <button
                       @click.stop="pedirEliminarFamilia(familia)"
-                      class="w-8 h-8 rounded-xl flex items-center justify-center border border-transparent
+                      class="w-8 h-8 rounded-full flex items-center justify-center border border-transparent
                              text-gray-300 hover:text-red-500 hover:bg-red-50 hover:border-red-200
                              transition-all duration-150"
                       title="Eliminar familia"
@@ -592,7 +592,7 @@ async function guardarNuevoCiclo(familiaId) {
                           </span>
                           <button
                             @click="abrirImportarCurriculo(ciclo, familia.id)"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center border border-transparent
+                            class="w-7 h-7 rounded-full flex items-center justify-center border border-transparent
                                    text-gray-300
                                    transition-all duration-150 shrink-0"
                             :class="[paletteExtra[theme.key].hoverIconBtn, ciclo.con_datos_retos === false ? '!text-amber-500' : '']"
@@ -606,7 +606,7 @@ async function guardarNuevoCiclo(familiaId) {
                           </button>
                           <button
                             @click="abrirEditarCiclo(ciclo, familia.id)"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center border border-transparent
+                            class="w-7 h-7 rounded-full flex items-center justify-center border border-transparent
                                    text-gray-300
                                    transition-all duration-150 shrink-0"
                             :class="paletteExtra[theme.key].hoverIconBtn"
@@ -619,7 +619,7 @@ async function guardarNuevoCiclo(familiaId) {
                           </button>
                           <button
                             @click="pedirEliminarCiclo(ciclo, familia.id)"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center border border-transparent
+                            class="w-7 h-7 rounded-full flex items-center justify-center border border-transparent
                                    text-gray-300 hover:text-red-500 hover:bg-red-50 hover:border-red-200
                                    transition-all duration-150 shrink-0"
                             title="Eliminar ciclo"
@@ -770,13 +770,13 @@ async function guardarNuevoCiclo(familiaId) {
                   <div class="flex gap-2">
                     <button
                       @click="confirmElimFamilia = null; confirmNombreFamilia = ''; elimError = ''"
-                      class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                      class="flex-1 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                       Cancelar
                     </button>
                     <button
                       @click="confirmarEliminarFamilia"
                       :disabled="elimLoading || confirmElimFamilia.numCiclos > 0 || confirmNombreFamilia !== confirmElimFamilia.nombre"
-                      class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-black hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      class="flex-1 py-2.5 rounded-full bg-red-500 text-white text-sm font-black hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       {{ elimLoading ? 'Eliminando...' : 'Eliminar definitivamente' }}
                     </button>
@@ -830,13 +830,13 @@ async function guardarNuevoCiclo(familiaId) {
                   <div class="flex gap-2">
                     <button
                       @click="confirmElimCiclo = null; confirmNombreCiclo = ''; elimError = ''"
-                      class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                      class="flex-1 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                       Cancelar
                     </button>
                     <button
                       @click="confirmarEliminarCiclo"
                       :disabled="elimLoading || confirmNombreCiclo !== confirmElimCiclo.nombre"
-                      class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-black hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      class="flex-1 py-2.5 rounded-full bg-red-500 text-white text-sm font-black hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {{ elimLoading ? 'Eliminando...' : 'Eliminar definitivamente' }}
                     </button>
@@ -873,7 +873,7 @@ async function guardarNuevoCiclo(familiaId) {
 
 .gfcm-x {
   flex-shrink: 0; width: 32px; height: 32px;
-  background: #f3f4f6; border: none; border-radius: .5rem; color: #9ca3af;
+  background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: background .15s, color .15s;
 }
@@ -890,7 +890,7 @@ async function guardarNuevoCiclo(familiaId) {
 .gfcm-btn-green {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   padding: .55rem 1.1rem; background: v-bind('theme.hex'); color: #fff;
-  border: none; border-radius: .75rem; font-weight: 900; font-size: .7rem;
+  border: none; border-radius: 9999px; font-weight: 900; font-size: .7rem;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .15s;
 }
 .gfcm-btn-green:hover:not(:disabled) { filter: brightness(0.92); }
@@ -899,7 +899,7 @@ async function guardarNuevoCiclo(familiaId) {
 .gfcm-btn-dark {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   padding: .55rem 1.1rem; background: #1F2937; color: #fff;
-  border: none; border-radius: .75rem; font-weight: 900; font-size: .7rem;
+  border: none; border-radius: 9999px; font-weight: 900; font-size: .7rem;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .15s;
 }
 .gfcm-btn-dark:hover:not(:disabled) { background: #374151; }
@@ -908,7 +908,7 @@ async function guardarNuevoCiclo(familiaId) {
 .gfcm-btn-ghost {
   display: inline-flex; align-items: center; justify-content: center;
   padding: .55rem .9rem; background: #fff; color: #6b7280;
-  border: 1.5px solid #e5e7eb; border-radius: .75rem; font-weight: 900; font-size: .7rem;
+  border: 1.5px solid #e5e7eb; border-radius: 9999px; font-weight: 900; font-size: .7rem;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .15s;
 }
 .gfcm-btn-ghost:hover { border-color: #d1d5db; color: #374151; }

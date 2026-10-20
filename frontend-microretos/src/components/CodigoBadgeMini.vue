@@ -45,7 +45,7 @@ function copiar() {
       <span v-else class="w-1.5 h-1.5 rounded-full bg-centros animate-pulse shrink-0"></span>
       <span class="text-[11px] font-black tracking-widest" :class="codeTextClass">{{ code }}</span>
       <button @click.stop="copiar"
-              class="p-0.5 rounded transition-all" :class="copyBtnClass"
+              class="p-0.5 rounded-full transition-all" :class="copyBtnClass"
               title="Copiar código">
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

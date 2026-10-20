@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSidePanel } from '../composables/useSidePanel.js'
 import { useRoleTheme } from '../composables/useRoleTheme.js'
-import { useComoFunciona } from '../composables/useComoFunciona.js'
 import { LightBulbIcon } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
@@ -12,7 +11,6 @@ const route     = useRoute()
 const router    = useRouter()
 const { mobileOpen, toggleMobilePanel } = useSidePanel()
 const { theme } = useRoleTheme()
-const { abrirComoFunciona } = useComoFunciona()
 
 const irHome = () => {
   const destino = authStore.isAuthenticated && (authStore.isDocente || authStore.isAdmin)
@@ -52,6 +50,14 @@ const cerrarMenu = () => { menuAbierto.value = false }
 const alPulsarFuera = (e) => { if (menuRef.value && !menuRef.value.contains(e.target)) cerrarMenu() }
 const alPulsarTecla = (e) => { if (e.key === 'Escape') cerrarMenu() }
 
+// Conoce DUALAB (bombilla): lleva a Recursos, con el recorrido completo y el acceso a «¿Qué es DUALAB?»
+const RUTA_RECURSOS = '/seccion/recursos'
+const enRecursos = computed(() => route.path === RUTA_RECURSOS)
+const irARecursos = () => {
+  cerrarMenu()
+  if (!enRecursos.value) router.push(RUTA_RECURSOS)
+}
+
 onMounted(() => {
   document.addEventListener('click', alPulsarFuera)
   document.addEventListener('keydown', alPulsarTecla)
@@ -86,7 +92,7 @@ const cerrarSesion = async () => {
       v-if="authStore.isAuthenticated"
       @click="toggleMobilePanel"
       title="Menú"
-      class="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center shrink-0
+      class="lg:hidden w-10 h-10 rounded-full flex items-center justify-center shrink-0
              text-white/60 hover:text-white hover:bg-white/10
              transition-all duration-150"
     >
@@ -122,18 +128,22 @@ const cerrarSesion = async () => {
     <!-- ── Sesión activa ── -->
     <template v-if="authStore.isAuthenticated">
 
-      <!-- ¿Cómo funciona DUALAB? — abre ComoFuncionaModal.vue (montado en App.vue con sesión).
-           En móvil solo la bombilla; desde md se acompaña del texto. -->
+      <!-- Conoce DUALAB (bombilla): lleva a la sección Recursos (recorrido completo,
+           «¿Qué es DUALAB?», guías). Solo para quien puede abrir las secciones (no empresa).
+           En móvil solo la bombilla; desde md, con el texto. -->
       <button
+        v-if="authStore.canAccess('seccion')"
         type="button"
-        @click="abrirComoFunciona"
-        aria-label="¿Cómo funciona DUALAB?"
-        title="¿Cómo funciona DUALAB?"
-        class="flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-xl px-2.5
+        @click="irARecursos"
+        aria-label="Conoce DUALAB"
+        title="Conoce DUALAB"
+        :aria-current="enRecursos ? 'page' : undefined"
+        class="flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-full px-2.5
                text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
+        :class="enRecursos && 'bg-white/10 text-white'"
       >
         <LightBulbIcon class="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
-        <span class="hidden whitespace-nowrap text-[13px] font-bold md:inline">Cómo funciona</span>
+        <span class="hidden whitespace-nowrap text-[13px] font-bold md:inline">Conoce DUALAB</span>
       </button>
 
       <span class="h-6 w-px shrink-0 bg-white/10" aria-hidden="true" />
@@ -147,11 +157,14 @@ const cerrarSesion = async () => {
           :aria-expanded="menuAbierto"
           aria-haspopup="menu"
           title="Mi cuenta"
-          class="flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-2 sm:pr-3
+          class="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-2 sm:pr-3
                  hover:bg-white/10 transition-colors duration-150"
         >
-          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ring-2 ring-white/20"
-                :class="theme.bg">
+          <!-- Punto verde: sistema activo (antes en el pie del panel lateral) -->
+          <span class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ring-2 ring-white/20"
+                :class="theme.bg" title="Sistema activo">
+            <span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-azul-noche"
+                  aria-hidden="true" />
             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="8" r="4"/>
@@ -181,6 +194,10 @@ const cerrarSesion = async () => {
               <p class="truncate text-xs text-gray-500">
                 {{ authStore.roleLabel }}<template v-if="authStore.userCentroNombre"> · {{ authStore.userCentroNombre }}</template>
               </p>
+            </div>
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-2">
+              <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+              <span class="text-[10px] font-black uppercase tracking-widest text-emerald-700">Sistema activo</span>
             </div>
             <button type="button" role="menuitem" @click="irAMiUsuario"
                     class="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium hover:bg-gray-50">

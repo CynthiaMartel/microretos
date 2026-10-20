@@ -13,10 +13,10 @@ defineProps({
 <template>
   <div class="min-w-0 max-w-full" role="group" :aria-label="label">
     <p class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">{{ label }}</p>
-    <div class="flex max-w-full overflow-x-auto rounded-xl border border-gray-200">
+    <div class="flex max-w-full overflow-x-auto rounded-full border border-gray-200">
       <button v-for="(op, i) in opciones" :key="String(op.value)" type="button"
               @click="modelo = op.value" :aria-pressed="modelo === op.value"
-              :class="['inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-xs font-black uppercase tracking-wider transition-colors',
+              :class="['inline-flex h-9 shrink-0 rounded-full items-center gap-1.5 whitespace-nowrap px-3 text-xs font-black uppercase tracking-wider transition-colors',
                        i > 0 && 'border-l border-gray-200',
                        modelo === op.value ? 'bg-azul-noche text-white' : 'bg-gray-50 text-gray-500 hover:text-azul-noche']">
         {{ op.label }}

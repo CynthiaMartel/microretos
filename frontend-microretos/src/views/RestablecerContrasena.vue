@@ -68,7 +68,7 @@ async function enviar() {
       <p class="mt-4 text-base text-gray-600">
         Este enlace no es válido. Pide uno nuevo desde «¿Has olvidado tu contraseña?» en la página de acceso.
       </p>
-      <RouterLink to="/login" class="mt-8 w-full h-13 inline-flex items-center justify-center rounded-xl bg-primary-600 text-white text-base font-bold hover:bg-primary-700">
+      <RouterLink to="/login" class="mt-8 w-full h-13 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-base font-bold hover:bg-primary-700">
         Ir a iniciar sesión
       </RouterLink>
     </template>
@@ -80,7 +80,7 @@ async function enviar() {
         </svg>
         <span class="min-w-0">Contraseña actualizada. Se ha cerrado la sesión en todos tus dispositivos.</span>
       </div>
-      <RouterLink to="/login" class="mt-6 w-full h-13 inline-flex items-center justify-center gap-3 rounded-xl bg-primary-600 text-white text-base font-bold hover:bg-primary-700">
+      <RouterLink to="/login" class="mt-6 w-full h-13 inline-flex items-center justify-center gap-3 rounded-full bg-primary-600 text-white text-base font-bold hover:bg-primary-700">
         Iniciar sesión
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
@@ -115,7 +115,7 @@ async function enviar() {
         <button
           type="submit"
           :disabled="enviando"
-          class="mt-1 w-full h-13 inline-flex items-center justify-center rounded-xl bg-primary-600 text-white text-base font-bold shadow-[0_8px_24px_rgba(48,114,170,0.25)] transition hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          class="mt-1 w-full h-13 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-base font-bold shadow-[0_8px_24px_rgba(48,114,170,0.25)] transition hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {{ enviando ? 'Guardando…' : 'Guardar contraseña' }}
         </button>

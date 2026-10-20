@@ -16,7 +16,7 @@ const volver = () => volverAtras(props.fallback)
 
 <template>
   <button type="button" @click="volver"
-          class="group inline-flex min-h-9 items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 transition-colors hover:text-centros">
+          class="group inline-flex min-h-9 rounded-full items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 transition-colors hover:text-centros">
     <svg class="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>

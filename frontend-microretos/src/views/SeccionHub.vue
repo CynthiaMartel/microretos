@@ -118,7 +118,7 @@ const abrir = (card) => {
           </span>
           <div v-else-if="card.cta" class="mt-4 flex flex-1 items-end">
             <button type="button" @click.stop="abrir(card)"
-                    class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold"
+                    class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold"
                     :class="card.principal
                       ? 'bg-centros text-white shadow-md shadow-centros/25 hover:bg-centros/90'
                       : 'border border-centros/30 bg-white text-centros shadow-sm hover:bg-centros/5'">

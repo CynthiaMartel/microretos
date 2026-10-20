@@ -141,12 +141,12 @@ async function verificarAcceso() {
 
         <div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
           <button type="button" @click="emit('cerrar')"
-                  class="h-10 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-gray-600
+                  class="h-10 rounded-full border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-gray-600
                          transition-colors hover:border-gray-300 hover:text-[#1F2937]">
             Cancelar
           </button>
           <button type="submit" :disabled="verificando || !passwordInput"
-                  class="flex h-10 items-center justify-center gap-2 rounded-xl bg-empresas px-5 text-sm font-bold text-white
+                  class="flex h-10 items-center justify-center gap-2 rounded-full bg-empresas px-5 text-sm font-bold text-white
                          transition-colors hover:bg-empresas-dark disabled:cursor-not-allowed disabled:opacity-40">
             <svg v-if="verificando" class="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>

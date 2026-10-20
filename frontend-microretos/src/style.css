@@ -163,12 +163,53 @@ input:focus, select:focus, textarea:focus {
 --------------------------------------------------- */
 @layer components {
   .accion-principal {
-    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90;
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-5 text-sm font-semibold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90;
   }
   .accion-secundaria {
-    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm transition-colors hover:bg-centros/5;
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-5 text-sm font-semibold text-centros shadow-sm transition-colors hover:bg-centros/5;
   }
   .accion-icono {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-red-200 hover:text-red-500;
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-red-200 hover:text-red-500;
   }
+
+  /* ---------------------------------------------------
+     Botones de paso de asistentes y formularios por fases (regla de formas, CLAUDE.md)
+     Mismo alto, relleno y tipografía en toda la app; ancho según el texto (nunca
+     w-full / flex-1). Van en .fila-pasos: Volver a la izquierda, Siguiente a la
+     derecha, en la misma fila también en móvil (texto corto en móvil si hace falta).
+  --------------------------------------------------- */
+  .fila-pasos {
+    @apply flex items-center justify-between gap-3;
+  }
+  .btn-paso {
+    @apply ml-auto inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-5 text-sm font-bold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-paso-atras {
+    @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-gray-200 bg-white px-5 text-sm font-bold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+/* ---------------------------------------------------
+   Campos y etiquetas del generador de retos y sus componentes
+   (CrearEmpresaFicticiaIA, SelectorRaCeModulos). Fuera de @layer a propósito:
+   así mantienen la prioridad que tenían como estilo scoped sobre las utilidades
+   sin «!» que se combinan con ellas.
+--------------------------------------------------- */
+/* Inputs oscuros sobre fondo claro para alto contraste */
+.input-style {
+  @apply w-full border-2 rounded-2xl p-4 text-sm font-semibold outline-none transition-all shadow-inner disabled:opacity-50;
+  background-color: #f6fafc;
+  color: #1F2937;
+  border-color: #bad5ec;
+}
+.input-style::placeholder {
+  color: #9CA3AF;
+}
+.input-style:focus {
+  background-color: #dae8f5;
+  border-color: #3072AA;
+  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.15);
+}
+.label-style {
+  @apply text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-4 mb-2 block;
 }

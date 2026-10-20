@@ -34,6 +34,7 @@ import PropuestasEmpresas from '../views/PropuestasEmpresas.vue'
 import BibliotecaDiagnosticos from '../views/BibliotecaDiagnosticos.vue'
 import AlumnadoListado from '../views/AlumnadoListado.vue'
 import { SECCIONES } from '../config/navegacion.js'
+import { queryRedirect, redirectVigente } from '../utils/redirectLogin.js'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, useAuthStore } from '../stores/auth.js'
 
 const SA = ROLE_SUPERADMIN  // 1
@@ -43,6 +44,14 @@ const EM = ROLE_EMPRESA     // 3
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  // Las vistas hacen scroll sobre la ventana (App.vue no tiene contenedor con overflow):
+  // sin esto, al cambiar de vista se conservaba el scroll de la anterior. Cada navegación
+  // empieza arriba; solo atrás/adelante del navegador recupera la posición que tenía.
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash }
+    return { top: 0 }
+  },
   routes: [
     {
       // Sin sesión, la raíz muestra la misma página de acceso que /login (en producción
@@ -56,7 +65,8 @@ const router = createRouter({
       // de la home del frontoffice en dualab.es/info.dualab.es) — la raíz "/" ya
       // no está disponible como primer punto de entrada porque un carve-out de
       // Apache la reserva para esa home. Página de acceso a pantalla completa
-      // (LoginView); admite ?redirect=/ruta para volver a esa ruta tras iniciar sesión.
+      // (LoginView); admite ?redirect=/ruta para volver a esa ruta tras iniciar sesión
+      // (con caducidad, ver utils/redirectLogin.js).
       path: '/login',
       name: 'login',
       component: LoginView
@@ -301,21 +311,18 @@ const router = createRouter({
 // Guard global: verifica autenticación y permisos de rol. La sesión vive en una cookie
 // HttpOnly (Sanctum stateful) — no hay nada que leer en localStorage; en la primera
 // navegación se pregunta al backend (GET /perfil) si la cookie es válida.
-// Si no hay sesión → redirige a / con ?redirect=<ruta>
+// Si no hay sesión → redirige a / con ?redirect=<ruta>&rt=<hora>
 // Si hay sesión pero el rol no tiene acceso → redirige a /
 router.beforeEach(async (to, _from, next) => {
   // Con sesión iniciada, la home (/) y /login no tienen sentido: se va directo al panel
-  // (docente/admin/superadmin) o, en cuentas de empresa, a sus proyectos. Si llega un
-  // ?redirect interno (p. ej. desde un enlace /login?redirect=/retos/crear), se respeta.
+  // (docente/admin/superadmin) o, en cuentas de empresa, a sus proyectos. Un ?redirect
+  // interno y aún vigente (ver utils/redirectLogin.js) se respeta.
   if (to.name === 'home' || to.name === 'login') {
     const auth = useAuthStore()
     if (!auth.isInitialized) await auth.init()
     if (auth.isAuthenticated) {
-      const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : ''
-      if (redirect.startsWith('/') && !redirect.startsWith('//')) {
-        next(redirect)
-        return
-      }
+      const redirect = redirectVigente(to.query)
+      if (redirect) { next(redirect); return }
       if ([SA, AD, DO].includes(auth.userRole)) { next({ name: 'inicio-docente' }); return }
       if (auth.userRole === EM) { next({ path: '/proyectos' }); return }
     }
@@ -332,7 +339,7 @@ router.beforeEach(async (to, _from, next) => {
   if (!auth.isInitialized) await auth.init()
 
   if (!auth.isAuthenticated) {
-    next({ path: '/', query: { redirect: to.fullPath } })
+    next({ path: '/', query: queryRedirect(to.fullPath) })
     return
   }
 

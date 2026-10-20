@@ -197,7 +197,7 @@ function enviarTarea() {
       <CabeceraSeccion titulo="Mi" destacado="calendario"
                        subtitulo="Tus encuentros del mes, las notas que apuntes en cada día y las tareas que tienes pendientes.">
         <button @click="router.push('/encuentros/crear')"
-                class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
+                class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
           Nuevo encuentro
         </button>
@@ -323,7 +323,7 @@ function enviarTarea() {
             <form class="mt-3 flex shrink-0 gap-2" @submit.prevent="addNotaDia">
               <input v-model="textoDia" maxlength="1000" placeholder="Apuntar una nota en este día…"
                      class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-lg bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoDia.trim() || guardando">Añadir</button>
+              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoDia.trim() || guardando">Añadir</button>
             </form>
           </article>
       </div>
@@ -367,7 +367,7 @@ function enviarTarea() {
             <form class="mt-auto flex gap-2 pt-2" @submit.prevent="enviarTarea">
               <input v-model="nuevaTarea" maxlength="200" placeholder="Añadir tarea personal…"
                      class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-lg bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!nuevaTarea.trim()">Añadir</button>
+              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!nuevaTarea.trim()">Añadir</button>
             </form>
           </article>
 
@@ -401,7 +401,7 @@ function enviarTarea() {
             <form class="mt-auto space-y-2 pt-3" @submit.prevent="addNotaLibre">
               <textarea v-model="textoLibre" maxlength="1000" rows="2" placeholder="Escribe una nota…"
                         class="block w-full resize-none rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="w-full rounded-lg bg-centros/10 py-1.5 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoLibre.trim() || guardando">Guardar nota</button>
+              <button class="w-full rounded-full bg-centros/10 py-1.5 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoLibre.trim() || guardando">Guardar nota</button>
             </form>
           </article>
 
@@ -416,7 +416,7 @@ function enviarTarea() {
 .card        { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .card-title  { @apply font-heading text-lg font-bold text-azul-noche; }
 .link        { @apply text-sm font-semibold text-centros hover:underline; }
-.cal-nav     { @apply flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-centros; }
+.cal-nav     { @apply flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
 .interruptor { @apply relative inline-flex h-4 w-7.5 shrink-0 items-center rounded-full p-0.5 transition-colors; }
 .interruptor-bola { @apply h-3 w-3 rounded-full bg-white shadow transition-transform; }
 </style>

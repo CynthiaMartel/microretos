@@ -588,7 +588,7 @@ onMounted(async () => {
       </div>
       <button
         @click="abrirModalCrear()"
-        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-administraciones hover:bg-administraciones/90
+        class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-administraciones hover:bg-administraciones/90
                text-white font-black text-xs uppercase tracking-widest transition-all shrink-0"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -641,15 +641,15 @@ onMounted(async () => {
 
     <!-- ── Tabs + filtros ─────────────────────────────────── -->
     <div class="max-w-5xl mx-auto mb-5 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-      <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-xl">
+      <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-full">
         <button @click="cambiarVista('activos')"
           :class="vista === 'activos' ? 'bg-administraciones/20 text-administraciones border border-administraciones/40' : 'text-gray-400 hover:text-gray-600'"
-          class="px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all">
+          class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all">
           Activos
         </button>
         <button @click="cambiarVista('papelera')"
           :class="vista === 'papelera' ? 'bg-red-100 text-red-600 border border-red-300' : 'text-gray-400 hover:text-gray-600'"
-          class="px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5">
+          class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -657,7 +657,7 @@ onMounted(async () => {
           Papelera
         </button>
       </div>
-      <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-xl">
+      <div class="flex gap-1 p-1 bg-gray-100 border border-gray-200 rounded-full">
         <button v-for="f in [
             { val: 0, label: 'Todos' },
             { val: 2, label: 'Docentes' },
@@ -665,7 +665,7 @@ onMounted(async () => {
           ]"
           :key="f.val" @click="filtroRol = f.val"
           :class="filtroRol === f.val ? 'bg-white text-[#1F2937] shadow-sm' : 'text-gray-400 hover:text-gray-600'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+          class="px-3 py-1.5 rounded-full text-xs font-bold transition-all">
           {{ f.label }}
         </button>
       </div>
@@ -787,7 +787,7 @@ onMounted(async () => {
                 <button
                   :ref="el => { if (el) activarBtns[u.id] = el }"
                   @click="onActivarClick(u)"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                          uppercase tracking-wider transition-all
                          bg-orange-50 text-orange-500 border border-orange-200
                          hover:bg-orange-100"
@@ -802,7 +802,7 @@ onMounted(async () => {
 
               <!-- Editar -->
               <button @click="abrirModalEditar(u)"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                        uppercase tracking-wider bg-gray-50 text-gray-500 border border-gray-200
                        hover:bg-gray-100 hover:text-gray-700 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -814,7 +814,7 @@ onMounted(async () => {
 
               <!-- Bloquear / Desbloquear -->
               <button @click="toggleBloquear(u)"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                        uppercase tracking-wider border transition-all"
                 :class="u.is_blocked
                   ? 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100'
@@ -828,7 +828,7 @@ onMounted(async () => {
 
               <!-- Eliminar -->
               <button @click="enviarPapelera(u)"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                        uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20
                        hover:bg-red-500/20 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
@@ -843,7 +843,7 @@ onMounted(async () => {
             <!-- Acciones papelera -->
             <div v-else class="flex items-center gap-1.5 shrink-0">
               <button @click="restaurar(u)"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                        uppercase tracking-wider bg-administraciones/15 text-administraciones
                        border border-administraciones/30 hover:bg-administraciones/25 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -853,7 +853,7 @@ onMounted(async () => {
                 Restaurar
               </button>
               <button @click="destruir(u)"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black
                        uppercase tracking-wider bg-red-500/15 text-red-300
                        border border-red-500/30 hover:bg-red-500/25 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1061,7 +1061,7 @@ onMounted(async () => {
               </p>
 
               <button type="submit" :disabled="creando"
-                class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white font-black
+                class="w-full py-3 rounded-full bg-administraciones hover:bg-administraciones/90 text-white font-black
                        text-xs uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                 {{ creando ? 'Creando...' : 'Crear cuenta' }}
               </button>
@@ -1111,7 +1111,7 @@ onMounted(async () => {
             </div>
 
             <button @click="cerrarModalExito"
-              class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white
+              class="w-full py-3 rounded-full bg-administraciones hover:bg-administraciones/90 text-white
                      font-black text-xs uppercase tracking-widest transition-all">
               Entendido, ir a activar
             </button>
@@ -1130,7 +1130,7 @@ onMounted(async () => {
             <!-- Cabecera -->
             <div class="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
               <button @click="modalCentro = false"
-                class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200
+                class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200
                        flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1448,7 +1448,7 @@ onMounted(async () => {
               </p>
 
               <button type="submit" :disabled="editando"
-                class="w-full py-3 rounded-xl bg-administraciones hover:bg-administraciones/90 text-white font-black
+                class="w-full py-3 rounded-full bg-administraciones hover:bg-administraciones/90 text-white font-black
                        text-xs uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                 {{ editando ? 'Guardando...' : 'Guardar cambios' }}
               </button>
@@ -1466,7 +1466,7 @@ onMounted(async () => {
           <p class="text-sm text-gray-500 mb-6">{{ confirm.body }}</p>
           <div class="flex gap-3">
             <button @click="confirm.show = false"
-              class="flex-1 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-black
+              class="flex-1 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-black
                      uppercase tracking-widest text-gray-500 hover:bg-gray-100 transition-all">
               Cancelar
             </button>
@@ -1474,7 +1474,7 @@ onMounted(async () => {
               :class="confirm.danger
                 ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
                 : 'bg-administraciones/10 border-administraciones/30 text-administraciones hover:bg-administraciones/20'"
-              class="flex-1 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all">
+              class="flex-1 py-2.5 rounded-full border text-xs font-black uppercase tracking-widest transition-all">
               Confirmar
             </button>
           </div>

@@ -92,6 +92,25 @@ Toda vista o componente `.vue` nuevo o modificado debe funcionar en **360px (mó
 
 Antes de dar por terminada una tarea que toque layout, revisar el código contra estas reglas y proponer `/general:responsive-audit [Vista]`. Para verificarlo en el navegador hace falta una sesión: pedir credenciales de un usuario existente; nunca crear usuarios ni cambiar contraseñas (ver regla de base de datos).
 
+## Diseño — formas y botones (norma obligatoria en el frontend)
+
+Toda vista o componente `.vue` nuevo o modificado sigue estas formas. La revisa `/general:responsive-audit` junto con el responsive.
+
+- **Botones → píldora** (`rounded-full`): acciones, botones de modal, pestañas, chips y etiquetas de estado. Nunca un botón rectangular con esquinas curvas (`rounded-lg`/`xl`/`2xl`).
+- **Botones solo icono** (cerrar ✕, menú, bombilla…) → círculo (`rounded-full` con ancho = alto).
+- **Tarjetas, paneles, modales, contenedores de grid y campos** (`input`, `select`, `textarea`) → rectángulo con esquinas curvas (`rounded-xl`/`2xl`, modales `rounded-[2rem]`). Nunca con los laterales redondeados (`rounded-full`), ni siquiera los buscadores.
+- **Pestañas / controles segmentados:** cada pestaña en píldora y su carril (la franja que solo envuelve las pestañas) también en píldora.
+- **Excepciones** (no son botones de acción, son filas o tarjetas; mantienen su rectángulo curvo o su forma de lista):
+  - entradas de navegación del SidePanel (`.nav-item`);
+  - botones que son tarjetas o casillas de selección de varias líneas (icono + título + descripción, cards de hub). Un selector de una sola línea (p. ej. "Empresa real / ficticia") sí es botón: píldora;
+  - opciones de menús desplegables y filas de lista a todo el ancho.
+- Lo redondo decorativo no cambia: avatares, puntos de estado, barras de progreso, spinners.
+- **Botones de paso** (asistentes y formularios por fases): clases comunes de `style.css`.
+  - Fila `.fila-pasos`: **Volver/Anterior a la izquierda** (`.btn-paso-atras`) y **Siguiente/Continuar a la derecha** (`.btn-paso`), en la misma fila también en móvil.
+  - Mismo alto, relleno y tipografía en todos los pasos y vistas; **ancho proporcional al texto** (nunca `w-full`, `flex-1` ni `flex-[2]`).
+  - Misma posición en cada paso: al final del contenido del paso. Si el texto no cabe en 360px, versión corta en móvil (`Siguiente` en vez de `Siguiente: Contacto`), no apilar.
+- Las acciones de cabecera usan `.accion-principal`, `.accion-secundaria` y `.accion-icono` (ya en píldora/círculo).
+
 ---
 
 ## Backlog de seguridad — SECURITY_FIXES.md

@@ -535,12 +535,12 @@ function mostrarSnack(mensaje, accion = null) {
               </button>
               <div class="flex gap-2">
                 <button v-if="pasoGuia > 1" @click="retrocederPaso"
-                        class="px-3 py-1.5 rounded-xl bg-white/10 text-white text-[11px] font-black
+                        class="px-3 py-1.5 rounded-full bg-white/10 text-white text-[11px] font-black
                                hover:bg-white/20 transition-all">
                   ← Ant.
                 </button>
                 <button @click="avanzarPaso"
-                        class="px-3 py-1.5 rounded-xl text-white text-[11px] font-black
+                        class="px-3 py-1.5 rounded-full text-white text-[11px] font-black
                                transition-all" :class="[theme.bg, theme.bgHover]">
                   {{ pasoGuia < guiaPasosData.length ? 'Siguiente →' : 'Finalizar' }}
                 </button>
@@ -849,7 +849,7 @@ function mostrarSnack(mensaje, accion = null) {
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>
@@ -870,6 +870,11 @@ function mostrarSnack(mensaje, accion = null) {
   box-shadow: 0 0 0 3px v-bind('theme.hex'), 0 0 0 8px v-bind('theme.hexSoft');
   border-radius: 1rem;
   transition: box-shadow 0.3s ease;
+}
+/* Los botones resaltados por el tour conservan su forma de píldora */
+.accion-principal.tour-active,
+.accion-secundaria.tour-active {
+  border-radius: 9999px;
 }
 
 .tour-seccion-blur {

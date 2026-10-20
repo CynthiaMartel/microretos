@@ -560,7 +560,7 @@ function formatFecha(isoDate) {
         </div>
         <p class="text-sm text-gray-400 font-medium mb-4">Aún no hay encuentros registrados.</p>
         <button @click="router.push('/encuentros/crear')"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-centros text-white
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-centros text-white
                        text-xs font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
           Registrar primer encuentro
         </button>
@@ -709,7 +709,7 @@ function formatFecha(isoDate) {
                 <div @click.stop class="mt-auto px-5 py-3 border-t border-gray-100 flex flex-wrap gap-1.5">
                   <button v-if="s.puede_editar"
                           @click.stop="abrirReestructurar(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                                  bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
                                  text-[10px] font-black uppercase tracking-wide">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -720,7 +720,7 @@ function formatFecha(isoDate) {
                   </button>
                   <button v-if="s.es_propietario"
                           @click.stop="abrirCompartir(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                                  bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all
                                  text-[10px] font-black uppercase tracking-wide">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -731,7 +731,7 @@ function formatFecha(isoDate) {
                   </button>
                   <button v-if="s.microreto_id"
                           @click.stop="abrirMicroretoModal(s.microreto_id)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                                  bg-centros/10 text-centros hover:bg-centros/20 transition-all
                                  text-[10px] font-black uppercase tracking-wide">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -743,7 +743,7 @@ function formatFecha(isoDate) {
                   </button>
                   <button v-if="s.microproyecto_uuid"
                           @click.stop="abrirProyectoFicha(s.microproyecto_uuid)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                                  bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all
                                  text-[10px] font-black uppercase tracking-wide">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -753,7 +753,7 @@ function formatFecha(isoDate) {
                     Ficha del proyecto
                   </button>
                   <button v-if="s.puede_editar" @click.stop="abrirModalEliminar(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ml-auto
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full ml-auto
                                  hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all
                                  text-[10px] font-black uppercase tracking-wide">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -801,7 +801,7 @@ function formatFecha(isoDate) {
                 </h2>
               </div>
               <button @click="cerrarEncuentro"
-                      class="flex-shrink-0 p-2 rounded-xl hover:bg-gray-100 text-gray-400
+                      class="flex-shrink-0 p-2 rounded-full hover:bg-gray-100 text-gray-400
                              hover:text-gray-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -815,7 +815,7 @@ function formatFecha(isoDate) {
               <span v-if="encuentroAbierto.num_alumnos" class="tag tag-gray">{{ encuentroAbierto.num_alumnos }} alumnos</span>
             </div>
             <button @click="irAAccesoAlumnado"
-                    class="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                    class="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
                            bg-centros/10 border border-centros/20 text-centros
                            text-[10px] font-black uppercase tracking-widest hover:bg-centros/20 transition-all">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -897,7 +897,7 @@ function formatFecha(isoDate) {
               <span class="w-2 h-2 rounded-full bg-centros animate-pulse shrink-0"></span>
               <span class="text-lg font-black tracking-[0.2em] text-[#1F2937] flex-1">{{ encuentroAbierto.codigo_clase }}</span>
               <button @click="copiarCodigo(encuentroAbierto.codigo_clase)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-centros text-white
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-centros text-white
                              text-[10px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -908,7 +908,7 @@ function formatFecha(isoDate) {
               <button v-if="encuentroAbierto.puede_editar"
                       @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
                       title="Vuelve a generar grupos desde cero — bloqueado si ya hay progreso real"
-                      class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
+                      class="px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              hover:bg-gray-200 transition-all disabled:opacity-50">
                 Regen.
@@ -916,7 +916,7 @@ function formatFecha(isoDate) {
             </div>
             <div v-if="encuentroAbierto.puede_editar" class="mt-2">
               <button @click="abrirReestructurar(encuentroAbierto)"
-                      class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                      class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
                              bg-violet-50 border border-violet-200 text-violet-600
                              text-[10px] font-black uppercase tracking-widest hover:bg-violet-100 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -928,7 +928,7 @@ function formatFecha(isoDate) {
             </div>
             <div v-if="!encuentroAbierto.codigo_clase && encuentroAbierto.puede_editar">
               <button @click="crearCodigo(encuentroAbierto)" :disabled="creandoCodigo[encuentroAbierto.id]"
-                      class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
+                      class="w-full flex items-center justify-center gap-2 py-3 rounded-full
                              border border-dashed border-centros/30 text-centros text-xs font-black
                              uppercase tracking-widest hover:bg-centros/5 transition-all disabled:opacity-50">
                 <svg class="w-4 h-4" :class="creandoCodigo[encuentroAbierto.id] ? 'animate-spin' : ''"
@@ -958,7 +958,7 @@ function formatFecha(isoDate) {
               <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0"></span>
               <span class="text-lg font-black tracking-[0.2em] text-orange-700 flex-1">{{ encuentroAbierto.codigo_ia }}</span>
               <button @click="copiarCodigo(encuentroAbierto.codigo_ia)"
-                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 text-white
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-600 text-white
                              text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -969,14 +969,14 @@ function formatFecha(isoDate) {
               <button v-if="encuentroAbierto.puede_editar"
                       @click="crearCodigoIa(encuentroAbierto)" :disabled="creandoCodigoIa[encuentroAbierto.id]"
                       title="Genera un código nuevo — los grupos que ya lo desbloquearon siguen desbloqueados"
-                      class="px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200
+                      class="px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              hover:bg-gray-200 transition-all disabled:opacity-50">
                 Regen.
               </button>
             </div>
             <button v-else-if="encuentroAbierto.puede_editar" @click="crearCodigoIa(encuentroAbierto)" :disabled="creandoCodigoIa[encuentroAbierto.id]"
-                    class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
+                    class="w-full flex items-center justify-center gap-2 py-3 rounded-full
                            border border-dashed border-orange-300 text-orange-600 text-xs font-black
                            uppercase tracking-widest hover:bg-orange-50 transition-all disabled:opacity-50">
               <svg class="w-4 h-4" :class="creandoCodigoIa[encuentroAbierto.id] ? 'animate-spin' : ''"
@@ -1003,7 +1003,7 @@ function formatFecha(isoDate) {
             <div class="grid grid-cols-2 gap-1.5">
               <button v-if="encuentroAbierto.puede_editar"
                       @click="abrirReestructurar(encuentroAbierto)"
-                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full
                              bg-violet-50 text-violet-600 hover:bg-violet-100 transition-all
                              text-[10px] font-black uppercase tracking-wide">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1014,7 +1014,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.es_propietario"
                       @click="abrirCompartir(encuentroAbierto)"
-                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full
                              bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all
                              text-[10px] font-black uppercase tracking-wide">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1025,7 +1025,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.microreto_id"
                       @click="abrirMicroretoModal(encuentroAbierto.microreto_id)"
-                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full
                              bg-centros/10 text-centros hover:bg-centros/20 transition-all
                              text-[10px] font-black uppercase tracking-wide">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1037,7 +1037,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.microproyecto_uuid"
                       @click="abrirProyectoFicha(encuentroAbierto.microproyecto_uuid)"
-                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full
                              bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all
                              text-[10px] font-black uppercase tracking-wide">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1049,7 +1049,7 @@ function formatFecha(isoDate) {
             </div>
             <div v-if="encuentroAbierto.puede_editar" class="flex justify-end">
               <button @click="abrirModalEliminar(encuentroAbierto)"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
                              hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all
                              text-[10px] font-black uppercase tracking-wide">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1064,7 +1064,7 @@ function formatFecha(isoDate) {
             <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
               <button v-if="encuentroAbierto.microproyecto_uuid"
                       @click="router.push({ name: 'mis-grupos-detalle', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
-                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-200
+                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-blue-200
                              bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-widest
                              hover:bg-blue-100 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1075,7 +1075,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.codigo_clase && encuentroAbierto.microproyecto_uuid"
                       @click="router.push({ name: 'pantalla-acceso', params: { uuid: encuentroAbierto.microproyecto_uuid } }); cerrarEncuentro()"
-                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-violet-200
+                      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-violet-200
                              bg-violet-50 text-violet-700 text-xs font-black uppercase tracking-widest
                              hover:bg-violet-100 transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1137,7 +1137,7 @@ function formatFecha(isoDate) {
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>

@@ -5,7 +5,6 @@ import { useAuthStore, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth'
 import { useUiHighlightStore } from '../stores/uiHighlight'
 import { useUIState } from '../composables/useUIState.js'
 import { useCredits } from '../composables/useCredits.js'
-import { useComoFunciona } from '../composables/useComoFunciona.js'
 import { useSidePanel } from '../composables/useSidePanel.js'
 import { useRoleTheme } from '../composables/useRoleTheme.js'
 import { GRUPOS_NAV, ICONOS_NAV } from '../config/navegacion.js'
@@ -16,7 +15,6 @@ const { theme } = useRoleTheme()
 const uiHighlight = useUiHighlightStore()
 const { tourActivo, showWelcome, welcomeRole, welcomeName } = useUIState()
 const { abrirCreditos } = useCredits()
-const { abrirComoFunciona } = useComoFunciona()
 const { mobileOpen, closeMobilePanel } = useSidePanel()
 
 // Mostrar autoría una vez tras cerrar el modal de bienvenida
@@ -41,7 +39,12 @@ const gruposVisibles = computed(() =>
 const tooltip = ref({ visible: false, text: '', top: 0, left: 0 })
 let tooltipTimer = null
 
+// Solo con ratón: en táctil el toque dispara mouseenter y el tooltip saldría fuera del
+// cajón (cortado a 360px) y se quedaría flotando tras navegar
+const conRaton = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
+
 const showTooltip = (event) => {
+  if (!conRaton) return
   const text = event.currentTarget.dataset.tip
   if (!text) return
   const rect = event.currentTarget.getBoundingClientRect()
@@ -63,7 +66,7 @@ const irA = (ruta) => {
 }
 
 // En móvil/tablet el panel es un cajón (drawer): se cierra solo al navegar
-watch(() => route.fullPath, closeMobilePanel)
+watch(() => route.fullPath, () => { closeMobilePanel(); hideTooltip() })
 
 // Badge de notificaciones sin leer: se actualiza al navegar (como mucho cada 30 s,
 // ver useNotificaciones). Solo para roles con acceso: empresa recibiría un 403.
@@ -86,7 +89,7 @@ watch(() => route.fullPath, () => {
   <!-- Panel lateral (también oculto durante el tour) — cajón deslizante en móvil/tablet, fijo en lg+ -->
   <aside
       v-if="!tourActivo"
-      class="fixed top-16 left-0 h-[calc(100dvh-6rem)] w-72 max-w-[85vw] z-40 flex flex-col
+      class="fixed top-16 left-0 h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] z-40 flex flex-col
              bg-azul-noche border-r border-azul-noche-border
              shadow-[6px_0_32px_rgba(0,0,0,0.25)]
              transition-transform duration-300 ease-in-out
@@ -96,7 +99,7 @@ watch(() => route.fullPath, () => {
       <!-- ── Navegación ── -->
       <!-- Cada entrada lleva a una sección (hub con cards) o a una pantalla directa;
            la estructura vive en config/navegacion.js -->
-      <nav class="flex-1 min-h-0 px-3 py-3 overflow-y-auto overscroll-contain" @scroll.passive="hideTooltip">
+      <nav class="flex-1 min-h-0 flex flex-col px-3 py-3 overflow-y-auto overscroll-contain" @scroll.passive="hideTooltip">
 
         <!-- ═══ DOCENTE / ADMIN / SUPERADMIN ═══ -->
         <template v-if="!authStore.isEmpresa">
@@ -240,52 +243,29 @@ watch(() => route.fullPath, () => {
           </div>
         </template>
 
-      </nav>
-
-      <!-- ── Footer: sesión + info + sistema ── -->
-      <div class="px-4 py-3 border-t border-white/10 space-y-2 shrink-0">
-
-        <!-- Acerca de — equipo de desarrollo -->
-        <button
-          @click="abrirCreditos"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-xl
-                 bg-white/5 border border-white/10 text-white/40
-                 hover:text-white/70 hover:bg-white/8 hover:border-white/20
-                 font-bold text-[10px] uppercase tracking-widest
-                 transition-all duration-150"
-        >
-          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-          </svg>
-          Acerca de
-        </button>
-
-        <!-- Botón de información -->
-        <button
-          @click="abrirComoFunciona"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-xl
-                 bg-white/5 border border-white/10 text-white/40
-                 hover:text-white/70 hover:bg-white/8 hover:border-white/20
-                 font-bold text-[10px] uppercase tracking-widest
-                 transition-all duration-150"
-        >
-          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          ¿Qué es DUALAB?
-        </button>
-
-        <!-- Indicador sistema activo -->
-        <div class="flex items-center gap-2 px-3 py-2 rounded-2xl border"
-             :class="[theme.bgSoft, theme.border20]">
-          <span class="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" :class="theme.bg" />
-          <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.textDark">
-            Sistema activo
-          </span>
+        <!-- Banner de marca (como en el moodboard): al fondo del nav, sobre el pie.
+             Se oculta en pantallas muy bajas para no robar alto a la navegación -->
+        <div class="mt-auto pt-4 shrink-0 [@media(max-height:600px)]:hidden" aria-hidden="true">
+          <div class="relative h-24 sm:h-28 overflow-hidden rounded-2xl border border-white/15 px-4 py-3
+                      bg-gradient-to-br from-[#2E5F8F] via-[#24486E] to-[#1B3553]
+                      shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+            <!-- Ondas de marca (naranja y turquesa) en la base -->
+            <svg class="absolute inset-x-0 bottom-0 w-full h-12" viewBox="0 0 240 48" preserveAspectRatio="none">
+              <path d="M0 30 C60 14 120 46 240 22 V48 H0Z" fill="#FF8920" opacity="0.85" />
+              <path d="M0 38 C70 26 140 50 240 34 V48 H0Z" fill="#3FC7C8" opacity="0.9" />
+              <path d="M0 44 C80 38 160 52 240 44 V48 H0Z" fill="#ffffff" opacity="0.35" />
+            </svg>
+            <img src="../assets/logo_colores.png" alt=""
+                 class="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 h-16 sm:h-20 w-auto object-contain
+                        drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" />
+            <p class="relative text-white font-black text-base tracking-wide">DUALAB</p>
+            <p class="relative mt-1 max-w-[8.5rem] text-white/85 text-xs font-semibold leading-snug">
+              Un ecosistema de oportunidades
+            </p>
+          </div>
         </div>
-      </div>
+
+      </nav>
 
   </aside>
 
@@ -304,14 +284,14 @@ watch(() => route.fullPath, () => {
   <Transition name="welcome-overlay">
     <div
       v-if="showWelcome"
-      class="fixed inset-0 z-[10000] flex items-center justify-center p-6
+      class="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6
              bg-black/25 backdrop-blur-sm"
       @click.self="showWelcome = false"
     >
       <Transition name="welcome-card" appear>
         <div
           v-if="showWelcome"
-          class="relative rounded-3xl p-10 max-w-sm w-full text-center
+          class="relative rounded-3xl p-6 pt-10 sm:p-10 max-w-sm w-full text-center
                  bg-white border border-gray-100 shadow-xl"
         >
           <!-- Icono -->
@@ -334,7 +314,7 @@ watch(() => route.fullPath, () => {
           <h2 class="text-azul-noche text-xl font-bold leading-snug">
             ¡Te damos la bienvenida<br>a DUALAB para
           </h2>
-          <p class="text-4xl font-black tracking-tight mt-2 mb-1" :class="theme.text">
+          <p class="text-3xl sm:text-4xl font-black tracking-tight mt-2 mb-1" :class="theme.text">
             {{ welcomeRole === ROLE_DOCENTE ? 'docentes' : welcomeRole === ROLE_EMPRESA ? 'empresas' : 'admin' }}
           </p>
           <p class="text-[#121212] text-xl font-bold">!</p>
@@ -350,7 +330,7 @@ watch(() => route.fullPath, () => {
           <!-- Botón cerrar -->
           <button
             @click="showWelcome = false"
-            class="mt-6 w-full py-3 rounded-xl text-white
+            class="mt-6 w-full py-3 rounded-full text-white
                    font-black text-xs uppercase tracking-widest
                    transition-colors duration-200"
             :class="[theme.bg, theme.bgHover]"
@@ -361,7 +341,7 @@ watch(() => route.fullPath, () => {
           <!-- X esquina -->
           <button
             @click="showWelcome = false"
-            class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-gray-100
+            class="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 rounded-full bg-gray-100
                    hover:bg-gray-200 flex items-center justify-center
                    text-gray-400 hover:text-gray-600 transition-all"
           >

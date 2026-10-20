@@ -764,13 +764,13 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <div class="flex items-center gap-2">
               <button @click="avanzarPaso"
-                      class="flex-1 py-1.5 rounded-xl bg-administraciones text-white
+                      class="flex-1 py-1.5 rounded-full bg-administraciones text-white
                              text-[9px] font-black uppercase tracking-widest
                              hover:bg-administraciones/90 transition-all">
                 {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
-                      class="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10
+                      class="px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
                              text-white/40 text-[9px] font-black uppercase tracking-widest
                              hover:text-white/60 transition-all">
                 Saltar
@@ -814,7 +814,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <button
                 @click="zonaPeligroAbierta = !zonaPeligroAbierta"
                 :disabled="cargando"
-                class="flex items-center gap-2 px-3.5 py-2 rounded-2xl font-black text-xs
+                class="flex items-center gap-2 px-3.5 py-2 rounded-full font-black text-xs
                        border border-red-200 bg-red-50 text-red-500
                        hover:bg-red-100 hover:border-red-300
                        transition-all duration-200
@@ -893,7 +893,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               ref="refCrearNuevoCentro"
               @click="pedirNuevoCentro"
               :disabled="cargando"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
+              class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
                      bg-white text-[#1F2937] border border-gray-200
                      hover:border-administraciones hover:text-administraciones transition-all duration-200 shadow-sm
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -910,7 +910,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               ref="refNuevaEmpresa"
               @click="pedirNuevaEmpresa"
               :disabled="cargando"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
+              class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
                      bg-administraciones text-white
                      hover:bg-administraciones/90 transition-all duration-200 shadow-sm
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -926,7 +926,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             <button
               @click="pedirFicticiaIA"
               :disabled="cargando"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-sm
+              class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
                      bg-[#1F2937] text-white hover:bg-[#374151] transition-all duration-200 shadow-sm
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -941,7 +941,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             <button
               @click="cargarDatos"
               :disabled="cargando"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm
+              class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm
                      bg-white text-[#1F2937] border border-gray-200
                      hover:border-gray-300 hover:text-gray-700 transition-all duration-200
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1008,7 +1008,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           <button
             ref="refBtnInfoBoe"
             @click="abrirCatalogoBoe"
-            class="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-200
+            class="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-full border border-indigo-200
                    shadow-sm text-indigo-600 text-xs font-black uppercase tracking-wider
                    hover:bg-indigo-100 hover:border-indigo-300 transition-all"
           >
@@ -1022,7 +1022,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           <!-- Botón Activar Guía -->
           <button
             @click="modoGuia = true; pasoGuia = 1"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100
+            class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full border border-blue-100
                    shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
                    hover:bg-blue-100 hover:border-blue-200 transition-all"
           >
@@ -1036,7 +1036,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           <!-- Botón Papelera -->
           <button
             @click="router.push({ name: 'papelera' })"
-            class="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-200
+            class="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-full border border-amber-200
                    shadow-sm text-amber-600 text-xs font-black uppercase tracking-wider
                    hover:bg-amber-100 hover:border-amber-300 transition-all"
             title="Ver elementos eliminados en la papelera"
@@ -1105,7 +1105,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <button
           v-if="busqueda || filtroFamilia || filtroCentro"
           @click="busqueda = ''; filtroFamilia = ''; filtroCentro = ''"
-          class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-200
+          class="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-red-200
                  bg-red-50 text-red-500 text-sm font-bold hover:bg-red-100 transition-all shrink-0"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1131,7 +1131,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <p class="text-red-700 font-bold mb-2">Error al cargar</p>
         <p class="text-red-500 text-sm mb-4">{{ errorCarga }}</p>
         <button @click="cargarDatos"
-                class="px-5 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-all">
+                class="px-5 py-2 bg-red-500 text-white rounded-full font-bold text-sm hover:bg-red-600 transition-all">
           Reintentar
         </button>
       </div>
@@ -1199,7 +1199,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <div class="relative group/edit-tip shrink-0">
                 <button
                   @click.stop="pedirEditarCentro(centro)"
-                  class="w-9 h-9 rounded-xl flex items-center justify-center
+                  class="w-9 h-9 rounded-full flex items-center justify-center
                          text-gray-300 hover:text-administraciones hover:bg-administraciones/10
                          border border-transparent hover:border-administraciones/30
                          transition-all duration-150"
@@ -1224,7 +1224,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <button
                 @click.stop="pedirEliminarCentro(centro)"
                 title="Eliminar centro educativo"
-                class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center
+                class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center
                        text-gray-300 hover:text-red-500 hover:bg-red-50
                        border border-transparent hover:border-red-200
                        transition-all duration-150"
@@ -1438,7 +1438,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       <button
                         @click="pedirEdicion(empresa)"
                         title="Modificar empresa"
-                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl
+                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
                                bg-administraciones/10 border border-administraciones/20 text-administraciones
                                hover:bg-administraciones/20 hover:border-administraciones/40
                                font-bold text-xs transition-all duration-150"
@@ -1452,7 +1452,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       <button
                         @click="pedirEliminacion(empresa)"
                         title="Eliminar empresa"
-                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl
+                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
                                bg-red-50 border border-red-200 text-red-500
                                hover:bg-red-100 hover:border-red-300
                                font-bold text-xs transition-all duration-150"
@@ -1819,9 +1819,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               </div>
               <div class="flex gap-2 shrink-0">
                 <button @click="pedirEdicion(empresa)"
-                  class="px-4 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Editar</button>
+                  class="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all">Editar</button>
                 <button @click="pedirEliminacion(empresa)"
-                  class="px-4 py-2 rounded-xl border border-red-200 bg-white text-xs font-bold text-red-500 hover:bg-red-50 transition-all">Eliminar</button>
+                  class="px-4 py-2 rounded-full border border-red-200 bg-white text-xs font-bold text-red-500 hover:bg-red-50 transition-all">Eliminar</button>
               </div>
             </div>
           </div>
@@ -1943,7 +1943,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   <button
                     @click="pedirEdicion(empresa)"
                     title="Editar y reasignar centro"
-                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl
+                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
                            bg-amber-100 border border-amber-300 text-amber-700
                            hover:bg-amber-200 hover:border-amber-400
                            font-bold text-xs transition-all duration-150"
@@ -1957,7 +1957,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   <button
                     @click="pedirEliminacion(empresa)"
                     title="Eliminar empresa"
-                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl
+                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
                            bg-red-50 border border-red-200 text-red-500
                            hover:bg-red-100 hover:border-red-300
                            font-bold text-xs transition-all duration-150"
@@ -2060,11 +2060,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             </div>
             <div class="flex gap-3">
               <button @click="mostrarConfirmNuevaEmpresa = false"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                class="flex-1 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                 Cancelar
               </button>
               <button @click="confirmarNuevaEmpresa"
-                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-full bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Continuar
               </button>
             </div>
@@ -2099,11 +2099,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             </div>
             <div class="flex gap-3">
               <button @click="mostrarConfirmNuevoCentro = false"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                class="flex-1 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                 Cancelar
               </button>
               <button @click="confirmarNuevoCentro"
-                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-full bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Continuar
               </button>
             </div>
@@ -2139,11 +2139,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             </div>
             <div class="flex gap-3">
               <button @click="mostrarConfirmEditarCentro = false"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                class="flex-1 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                 Cancelar
               </button>
               <button @click="confirmarEditarCentro"
-                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
+                class="flex-1 py-2.5 rounded-full bg-administraciones text-white text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Abrir editor
               </button>
             </div>
@@ -2182,14 +2182,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             <div class="flex gap-3">
               <button
                 @click="mostrarConfirmEdit = false"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                class="flex-1 py-2.5 rounded-full border border-gray-200
                        text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
               >
                 Cancelar
               </button>
               <button
                 @click="confirmarEdicion"
-                class="flex-1 py-2.5 rounded-xl
+                class="flex-1 py-2.5 rounded-full
                        bg-administraciones text-white text-sm font-black
                        hover:bg-administraciones/90 transition-all shadow-sm"
               >
@@ -2274,7 +2274,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             <div class="flex gap-3">
               <button
                 @click="mostrarConfirmCatalogo = false; passwordCatalogo = ''; passwordCatalogoErr = ''"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                class="flex-1 py-2.5 rounded-full border border-gray-200
                        text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
               >
                 Cancelar
@@ -2282,7 +2282,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <button
                 @click="verificarPasswordCatalogo"
                 :disabled="passwordCatalogoLoad || !passwordCatalogo.trim()"
-                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white text-sm font-black
+                class="flex-1 py-2.5 rounded-full bg-administraciones text-white text-sm font-black
                        hover:bg-administraciones/90 transition-all shadow-sm
                        disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -2408,12 +2408,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <div class="flex gap-3">
               <button @click="cancelarConfirmEstado"
-                class="flex-1 py-2.5 rounded-xl border border-gray-200
+                class="flex-1 py-2.5 rounded-full border border-gray-200
                        text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                 No, cancelar
               </button>
               <button @click="confirmarEditarEstado"
-                class="flex-1 py-2.5 rounded-xl bg-administraciones text-white
+                class="flex-1 py-2.5 rounded-full bg-administraciones text-white
                        text-sm font-black hover:bg-administraciones/90 transition-all shadow-sm">
                 Sí, modificar
               </button>
@@ -2455,7 +2455,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <button
           v-if="snackbar.accion"
           @click="snackbar.accion.fn(); snackbar.visible = false"
-          class="ml-1 shrink-0 px-3 py-1.5 rounded-xl bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+          class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
         >
           {{ snackbar.accion.label }}
         </button>

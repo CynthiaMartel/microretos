@@ -204,12 +204,12 @@ async function quitarColaborador(colaborador) {
 }
 .cem-toggle {
   font-size: .65rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em;
-  padding: .35rem .6rem; border-radius: .6rem; background: #f3f4f6; color: #6b7280;
+  padding: .35rem .6rem; border-radius: 9999px; background: #f3f4f6; color: #6b7280;
   border: none; cursor: pointer; white-space: nowrap; transition: all .15s;
 }
 .cem-toggle-on { background: #d1fae5; color: #047857; }
 .cem-remove {
-  width: 26px; height: 26px; border-radius: .5rem; background: #fef2f2; color: #f87171;
+  width: 26px; height: 26px; border-radius: 9999px; background: #fef2f2; color: #f87171;
   border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s;
 }
 .cem-remove:hover { background: #fee2e2; color: #dc2626; }
@@ -225,7 +225,7 @@ async function quitarColaborador(colaborador) {
 .cem-btn-primary {
   display: flex; align-items: center; justify-content: center; gap: .5rem;
   padding: .9rem 1.5rem; background: #f59e0b; color: #fff; border: none;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .12em;
+  border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .12em;
   text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(245,158,11,.25); transition: all .2s;
 }
 .cem-btn-primary:hover:not(:disabled)  { background: #d97706; transform: translateY(-1px); }
@@ -235,7 +235,7 @@ async function quitarColaborador(colaborador) {
 
 .cem-x {
   position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #fffbeb; border: none; border-radius: .5rem; color: #f59e0b;
+  background: #fffbeb; border: none; border-radius: 9999px; color: #f59e0b;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }
 .cem-x:hover { background: #fef3c7; color: #d97706; }

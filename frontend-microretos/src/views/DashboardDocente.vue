@@ -580,13 +580,13 @@ function formatFecha(isoDate) {
 
             <div class="flex items-center gap-2">
               <button @click="avanzarGuia"
-                      class="flex-1 py-1.5 rounded-xl bg-centros text-white
+                      class="flex-1 py-1.5 rounded-full bg-centros text-white
                              text-[9px] font-black uppercase tracking-widest
                              hover:bg-centros/90 transition-all">
                 {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
-                      class="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10
+                      class="px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
                              text-white/40 text-[9px] font-black uppercase tracking-widest
                              hover:text-white/60 transition-all">
                 Saltar
@@ -674,7 +674,7 @@ function formatFecha(isoDate) {
               </p>
               <button v-if="!mostrarBuscadorProy && !proyectoSeleccionado"
                       @click="abrirBuscadorProy"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
                              bg-primary-400/10 border border-primary-400/20 text-primary-700
                              text-[10px] font-black uppercase tracking-widest
                              hover:bg-primary-400/20 transition-all">
@@ -719,13 +719,13 @@ function formatFecha(isoDate) {
                 </div>
                 <div class="flex flex-col gap-1.5 flex-shrink-0">
                   <button @click="abrirProyectoModal(proyectoSeleccionado.uuid)"
-                          class="px-3 py-1.5 rounded-xl bg-primary-400/10 border border-primary-400/20
+                          class="px-3 py-1.5 rounded-full bg-primary-400/10 border border-primary-400/20
                                  text-[10px] font-black uppercase tracking-widest text-primary-700
                                  hover:bg-primary-400/20 transition-all">
                     Ver →
                   </button>
                   <button @click="limpiarProyecto"
-                          class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200
+                          class="px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200
                                  text-[10px] font-black uppercase tracking-widest text-gray-400
                                  hover:border-primary-400 hover:text-primary-700 transition-all">
                     Cambiar
@@ -772,7 +772,7 @@ function formatFecha(isoDate) {
                       <button v-for="op in [{ val: '', label: 'Todos' }, { val: '1º', label: '1º' }, { val: '2º', label: '2º' }]"
                               :key="op.val"
                               @click="filtroProyCurso = op.val"
-                              class="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest
+                              class="flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest
                                      border transition-all"
                               :class="filtroProyCurso === op.val
                                 ? 'bg-primary-400 border-primary-400 text-white'
@@ -881,7 +881,7 @@ function formatFecha(isoDate) {
                   </p>
                 </div>
                 <button @click="abrirBuscadorProy"
-                        class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                        class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
                                border border-primary-400/30 bg-primary-400/5 text-primary-700
                                text-[10px] font-black uppercase tracking-widest
                                hover:bg-primary-400/10 transition-all">
@@ -952,7 +952,7 @@ function formatFecha(isoDate) {
                     <div class="flex gap-2 mt-1">
                       <button v-for="c in ['1º', '2º']" :key="c"
                               @click="form.curso = c"
-                              class="flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest
+                              class="flex-1 py-2 rounded-full text-xs font-black uppercase tracking-widest
                                      border transition-all"
                               :class="form.curso === c
                                 ? 'bg-centros border-centros text-white shadow-sm'
@@ -966,7 +966,7 @@ function formatFecha(isoDate) {
                     <div class="flex gap-1.5 mt-1 flex-wrap">
                       <button v-for="g in ['A', 'B', 'C', 'D']" :key="g"
                               @click="form.grupo = g"
-                              class="flex-1 min-w-[2rem] py-2 rounded-xl text-xs font-black uppercase
+                              class="flex-1 min-w-[2rem] py-2 rounded-full text-xs font-black uppercase
                                      border transition-all"
                               :class="form.grupo === g
                                 ? 'bg-primary-400 border-primary-400 text-white shadow-sm'
@@ -988,13 +988,13 @@ function formatFecha(isoDate) {
                   <div class="flex items-center gap-2 mt-1">
                     <button @click="form.num_equipos = Math.max(1, (form.num_equipos || 3) - 1)"
                             :disabled="!fechaEstablecida"
-                            class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200
+                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200
                                    text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">−</button>
                     <span class="w-8 text-center text-base font-black text-[#1F2937]">{{ form.num_equipos || 3 }}</span>
                     <button @click="form.num_equipos = Math.min(20, (form.num_equipos || 3) + 1)"
                             :disabled="!fechaEstablecida"
-                            class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200
+                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200
                                    text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                     <span class="text-[10px] text-gray-400 font-medium ml-1">grupos · se crearán al generar el código</span>
@@ -1040,7 +1040,7 @@ function formatFecha(isoDate) {
                     </select>
                     <button @click="addAlumnadoEncuentro"
                             :disabled="limiteAlcanzado || !fechaEstablecida"
-                            class="shrink-0 px-3 py-2 bg-centros text-white rounded-xl
+                            class="shrink-0 px-3 py-2 bg-centros text-white rounded-full
                                    text-xs font-black hover:bg-centros/90 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">
                       + Añadir
@@ -1174,7 +1174,7 @@ function formatFecha(isoDate) {
               </p>
               <button @click="guardarEncuentro"
                       :disabled="!formularioValido || guardando"
-                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
+                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full
                              text-xs font-black uppercase tracking-widest
                              transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       :class="guardadoOk
@@ -1251,7 +1251,7 @@ function formatFecha(isoDate) {
                 </p>
               </div>
               <button @click="cerrarEncuentroModal()"
-                      class="flex-shrink-0 p-2 rounded-xl hover:bg-gray-100 text-gray-400
+                      class="flex-shrink-0 p-2 rounded-full hover:bg-gray-100 text-gray-400
                              hover:text-gray-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1308,7 +1308,7 @@ function formatFecha(isoDate) {
             <div class="flex flex-wrap items-center gap-2">
               <button v-if="encuentroAbierto.microreto_id"
                       @click="abrirMicroretoModal(encuentroAbierto.microreto_id)"
-                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
                              hover:border-centros hover:text-centros transition-all">
@@ -1320,7 +1320,7 @@ function formatFecha(isoDate) {
               </button>
               <button v-if="encuentroAbierto.microproyecto_uuid"
                       @click="abrirProyectoModal(encuentroAbierto.microproyecto_uuid)"
-                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
                              hover:border-centros hover:text-centros transition-all">
@@ -1331,7 +1331,7 @@ function formatFecha(isoDate) {
                 Ver ficha proyecto
               </button>
               <button @click="router.push({ path: '/encuentros', query: { id: encuentroAbierto.id } }); cerrarEncuentroModal()"
-                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full
                              bg-white border border-gray-200 text-gray-500
                              text-xs font-black uppercase tracking-widest
                              hover:border-centros hover:text-centros transition-all">
@@ -1342,7 +1342,7 @@ function formatFecha(isoDate) {
                 Ver más detalle de este encuentro
               </button>
               <button @click="router.push('/encuentros'); cerrarEncuentroModal()"
-                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-centros text-white
+                      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-centros text-white
                              text-xs font-black uppercase tracking-widest hover:bg-centros/90
                              transition-all shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1414,7 +1414,7 @@ function formatFecha(isoDate) {
         <span>{{ snackbar.mensaje }}</span>
         <button v-if="snackbar.accion"
                 @click="snackbar.accion.fn(); snackbar.visible = false"
-                class="ml-2 px-3 py-1 rounded-lg bg-amber-400 text-amber-900
+                class="ml-2 px-3 py-1 rounded-full bg-amber-400 text-amber-900
                        text-xs font-black uppercase tracking-wider hover:bg-amber-300 transition-colors">
           {{ snackbar.accion.label }}
         </button>

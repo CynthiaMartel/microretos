@@ -97,7 +97,7 @@ function labelFase(numero) {
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button @click="descargar"
-                      class="px-3 py-1.5 rounded-xl bg-administraciones text-[10px] font-black uppercase tracking-widest
+                      class="px-3 py-1.5 rounded-full bg-administraciones text-[10px] font-black uppercase tracking-widest
                              text-white shadow-sm hover:bg-[#009048] transition-all flex items-center gap-1.5">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -149,13 +149,13 @@ function labelFase(numero) {
               <div class="flex flex-wrap gap-2 pt-2">
                 <button v-if="equipo.proyecto?.microreto_id"
                         @click="microretoModalId = equipo.proyecto.microreto_id"
-                        class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-[10px] font-black
+                        class="px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-[10px] font-black
                                uppercase tracking-wider text-gray-500 hover:border-administraciones hover:text-administraciones transition-all">
                   📎 Ficha del reto
                 </button>
                 <button v-if="equipo.proyecto?.uuid"
                         @click="proyectoModalUuid = equipo.proyecto.uuid"
-                        class="px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-[10px] font-black
+                        class="px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-[10px] font-black
                                uppercase tracking-wider text-gray-500 hover:border-administraciones hover:text-administraciones transition-all">
                   📎 Ficha del proyecto
                 </button>

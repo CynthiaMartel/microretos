@@ -216,7 +216,7 @@ function cancelar() {
   display: flex; align-items: center; justify-content: center; gap: .5rem;
   padding: 1rem 1.5rem;
   background: linear-gradient(135deg, #19A7A8, rgba(25,167,168,.7)); color: #fff;
-  border: none; border-radius: 1rem;
+  border: none; border-radius: 9999px;
   font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
   cursor: pointer; box-shadow: 0 6px 20px rgba(25,167,168,.25); transition: all .2s;
 }
@@ -227,7 +227,7 @@ function cancelar() {
 .dsm-btn-ghost {
   display: flex; align-items: center; justify-content: center;
   padding: 1rem 1.5rem;
-  background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 1rem;
+  background: #fff; color: #6b7280; border: 2px solid #e5e7eb; border-radius: 9999px;
   font-weight: 900; font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
   cursor: pointer; transition: all .2s;
 }
@@ -236,7 +236,7 @@ function cancelar() {
 
 .dsm-x {
   position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #f3f4f6; border: none; border-radius: .5rem; color: #9ca3af;
+  background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .dsm-x:hover { background: #e5e7eb; color: #1F2937; }

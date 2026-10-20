@@ -109,7 +109,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
             <p class="text-xs text-gray-400">Familias · Ciclos · Módulos · Resultados de Aprendizaje · Criterios de Evaluación</p>
           </div>
           <button @click="cerrar"
-                  class="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center
+                  class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center
                          text-gray-400 hover:text-gray-600 transition-all shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -367,7 +367,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
             </div>
           </div>
           <button @click="cerrar"
-                  class="px-5 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-black
+                  class="px-5 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-black
                          uppercase tracking-widest hover:bg-gray-200 transition-all">
             Cerrar
           </button>

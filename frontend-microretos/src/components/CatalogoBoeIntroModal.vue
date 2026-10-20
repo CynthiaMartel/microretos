@@ -94,12 +94,12 @@ function siguiente() { emit('update:show', false); emit('siguiente') }
         <!-- Botones -->
         <div class="px-8 pb-8 flex items-center gap-3">
           <button @click="cerrar"
-                  class="flex-1 px-5 py-3 rounded-xl bg-gray-100 text-gray-500 text-sm font-black
+                  class="flex-1 px-5 py-3 rounded-full bg-gray-100 text-gray-500 text-sm font-black
                          uppercase tracking-widest hover:bg-gray-200 transition-all">
             Cancelar
           </button>
           <button @click="siguiente"
-                  class="flex-1 px-5 py-3 rounded-xl text-white text-sm font-black
+                  class="flex-1 px-5 py-3 rounded-full text-white text-sm font-black
                          uppercase tracking-widest transition-all
                          flex items-center justify-center gap-2"
                   :class="[theme.bg, theme.bgHover]">

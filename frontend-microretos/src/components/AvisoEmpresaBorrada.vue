@@ -71,7 +71,7 @@ const visible = computed(() => props.estado === 'papelera' || props.estado === '
           </ul>
 
           <button type="button" @click="abierto = false"
-            class="mt-5 w-full min-h-[40px] rounded-xl bg-azul-noche text-white text-sm font-bold hover:opacity-90 transition-opacity">
+            class="mt-5 w-full min-h-[40px] rounded-full bg-azul-noche text-white text-sm font-bold hover:opacity-90 transition-opacity">
             Entendido
           </button>
         </div>

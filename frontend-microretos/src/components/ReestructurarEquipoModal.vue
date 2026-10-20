@@ -141,11 +141,11 @@ async function guardar() {
               <label class="req-label">Número de grupos</label>
               <div class="flex items-center gap-2 mt-1">
                 <button type="button" @click="numEquipos = Math.max(1, numEquipos - 1)"
-                        class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 text-gray-600
+                        class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-600
                                font-black text-sm hover:bg-gray-200 transition-all">−</button>
                 <span class="w-8 text-center text-base font-black text-[#1F2937]">{{ numEquipos }}</span>
                 <button type="button" @click="numEquipos = Math.min(30, numEquipos + 1)"
-                        class="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 text-gray-600
+                        class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-600
                                font-black text-sm hover:bg-gray-200 transition-all">+</button>
               </div>
             </div>
@@ -162,7 +162,7 @@ async function guardar() {
                   <option v-for="n in numEquipos" :key="n" :value="n">Grupo {{ n }}</option>
                 </select>
                 <button type="button" @click="addAlumno"
-                        class="shrink-0 px-3 py-2 bg-violet-500 text-white rounded-xl
+                        class="shrink-0 px-3 py-2 bg-violet-500 text-white rounded-full
                                text-xs font-black hover:bg-violet-600 transition-all">
                   + Añadir
                 </button>
@@ -308,7 +308,7 @@ async function guardar() {
 .req-btn-primary {
   display: flex; align-items: center; justify-content: center; gap: .5rem;
   padding: 1rem 1.5rem; background: #7c3aed; color: #fff; border: none;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
+  border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
   text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(124,58,237,.3); transition: all .2s;
 }
 .req-btn-primary:hover:not(:disabled)  { background: #6d28d9; transform: translateY(-1px); }
@@ -317,14 +317,14 @@ async function guardar() {
 .req-btn-ghost {
   display: flex; align-items: center; justify-content: center; gap: .4rem;
   padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
+  border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
   text-transform: uppercase; cursor: pointer; transition: all .2s;
 }
 .req-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .req-btn-ghost:active { transform: scale(.97); }
 .req-x {
   position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
-  background: #f5f3ff; border: none; border-radius: .5rem; color: #a78bfa;
+  background: #f5f3ff; border: none; border-radius: 9999px; color: #a78bfa;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }
 .req-x:hover { background: #ede9fe; color: #7c3aed; }
