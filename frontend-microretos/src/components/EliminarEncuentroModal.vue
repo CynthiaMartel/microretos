@@ -248,7 +248,7 @@ async function confirmarEliminacion() {
 }
 .esm-card {
   position: relative; background: #fff; border: 1px solid #fecaca;
-  border-radius: 2rem; padding: 2.25rem; width: 100%; max-width: 520px;
+  border-radius: 2rem; padding: 1.5rem; width: 100%; max-width: 520px;
   max-height: 90vh; overflow-y: auto;
   box-shadow: 0 0 0 1px rgba(220,38,38,.08), 0 24px 48px rgba(0,0,0,.2), 0 0 80px rgba(220,38,38,.06);
   scrollbar-width: thin; scrollbar-color: #fecaca transparent;
@@ -256,7 +256,10 @@ async function confirmarEliminacion() {
 .esm-card::-webkit-scrollbar { width: 5px; }
 .esm-card::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 3px; }
 
-.esm-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.esm-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; /* hueco para el ✕ */ }
+@media (min-width: 640px) {
+  .esm-card { padding: 2.25rem; }
+}
 .esm-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .esm-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .esm-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -306,7 +309,7 @@ async function confirmarEliminacion() {
 .esm-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .esm-btn-ghost:active { transform: scale(.97); }
 .esm-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px;
   background: #fef2f2; border: none; border-radius: 9999px; color: #f87171;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }

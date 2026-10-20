@@ -7,6 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class EncuentroResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $user           = $request->user();
@@ -26,9 +27,9 @@ class EncuentroResource extends JsonResource
             'num_alumnos'        => $this->num_alumnos,
             'notas'              => $this->notas,
             'num_equipos'        => $this->num_equipos,
-            // Protección de datos: snapshot del reparto sin nombres reales (los antiguos los
-            // guardaban; se limpian con `alumnado:anonimizar`).
-            'alumnados'          => collect($this->alumnados ?? [])->map(fn($a) => [
+            // Protección de datos: snapshot del reparto con lista blanca de campos (solo alias,
+            // grupo y rol)
+            'alumnados'          => collect((array) ($this->alumnados ?? []))->map(fn($a) => [
                 'alias'      => $a['alias'] ?? null,
                 'equipo_num' => $a['equipo_num'] ?? null,
                 'rol'        => $a['rol'] ?? null,

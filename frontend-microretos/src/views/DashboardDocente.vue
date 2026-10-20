@@ -276,6 +276,7 @@ onMounted(async () => {
 onUnmounted(() => {
   tourActivo.value = false
   window.removeEventListener('scroll', onScrollGuia)
+  window.removeEventListener('resize', onScrollGuia)
 })
 
 // ─── Guardar encuentro ─────────────────────────────────────────────────────────
@@ -446,10 +447,12 @@ watch(modoGuia, async (v) => {
   tourActivo.value = v
   if (v) {
     window.addEventListener('scroll', onScrollGuia, { passive: true })
+    window.addEventListener('resize', onScrollGuia, { passive: true })
     await nextTick()
     scrollYRecalcular()
   } else {
     window.removeEventListener('scroll', onScrollGuia)
+    window.removeEventListener('resize', onScrollGuia)
   }
 })
 
@@ -585,14 +588,14 @@ function formatFecha(isoDate) {
 
             <div class="flex items-center gap-2">
               <button @click="avanzarGuia"
-                      class="flex-1 py-1.5 rounded-full bg-centros text-white
-                             text-[9px] font-black uppercase tracking-widest
+                      class="flex-1 py-2.5 rounded-full bg-centros text-white
+                             text-[10px] font-black uppercase tracking-widest
                              hover:bg-centros/90 transition-all">
                 {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
               <button @click="saltarGuia"
-                      class="px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
-                             text-white/40 text-[9px] font-black uppercase tracking-widest
+                      class="px-3 py-2.5 rounded-full bg-white/5 border border-white/10
+                             text-white/40 text-[10px] font-black uppercase tracking-widest
                              hover:text-white/60 transition-all">
                 Saltar
               </button>
@@ -673,7 +676,7 @@ function formatFecha(isoDate) {
 
           <!-- ══ PROPUESTA-PROYECTO ASOCIADO ═══════════════════════════════════ -->
           <div class="overflow-hidden border-b border-gray-100">
-            <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-2">
               <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
                 Propuesta-Proyecto asociado
               </p>
@@ -690,7 +693,7 @@ function formatFecha(isoDate) {
               </button>
             </div>
 
-            <div class="px-6 py-5">
+            <div class="px-4 sm:px-6 py-5">
 
               <!-- Proyecto seleccionado -->
               <div v-if="proyectoSeleccionado && !mostrarBuscadorProy"
@@ -763,7 +766,7 @@ function formatFecha(isoDate) {
                 </div>
 
                 <!-- Filtros Ciclo + Curso -->
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label class="field-label">Ciclo formativo</label>
                     <select v-model="filtroProyCiclo" class="field-input">
@@ -800,12 +803,12 @@ function formatFecha(isoDate) {
                   <div class="flex gap-3">
                     <button v-if="filtroProyCurso || filtroProyCiclo || filtroProyEstado || busquedaProy"
                             @click="filtroProyCurso = ''; filtroProyCiclo = ''; filtroProyEstado = ''; busquedaProy = ''"
-                            class="text-[10px] font-black uppercase tracking-widest text-gray-400
+                            class="px-2 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400
                                    hover:text-red-400 transition-colors">
                       Limpiar
                     </button>
                     <button @click="cerrarBuscadorProy"
-                            class="text-[10px] font-black uppercase tracking-widest text-gray-400
+                            class="px-2 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400
                                    hover:text-gray-600 transition-colors">
                       Cancelar
                     </button>
@@ -902,12 +905,12 @@ function formatFecha(isoDate) {
 
           <!-- ══ DATOS DEL ENCUENTRO ══════════════════════════════════════════ -->
           <div :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'datos' }">
-            <div class="px-6 py-4 border-b border-gray-50">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-50">
               <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
                 Datos del encuentro
               </p>
             </div>
-            <div class="px-6 py-5 space-y-4">
+            <div class="px-4 sm:px-6 py-5 space-y-4">
 
               <div ref="refCampoFecha" :class="{ 'tour-active': tourTargetActivo === 'refCampoFecha' }"
                    class="rounded-xl transition-all">
@@ -951,7 +954,7 @@ function formatFecha(isoDate) {
 
               <div ref="refCampoAlumnado" class="space-y-4 rounded-xl transition-all"
                    :class="{ 'tour-active': tourTargetActivo === 'refCampoAlumnado' }">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="field-label">Curso <span class="text-red-400">*</span></label>
                     <div class="flex gap-2 mt-1">
@@ -984,7 +987,7 @@ function formatFecha(isoDate) {
                 <div>
                   <label class="field-label">Número de alumnos</label>
                   <input v-model="form.num_alumnos" type="number" min="1" max="99"
-                         placeholder="Ej. 24" class="field-input w-32" />
+                         placeholder="Ej. 24" class="field-input !w-32" />
                 </div>
 
                 <!-- Número de equipos -->
@@ -993,13 +996,13 @@ function formatFecha(isoDate) {
                   <div class="flex items-center gap-2 mt-1">
                     <button @click="form.num_equipos = Math.max(1, (form.num_equipos || 3) - 1)"
                             :disabled="!fechaEstablecida"
-                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200
+                            class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200
                                    text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">−</button>
                     <span class="w-8 text-center text-base font-black text-[#1F2937]">{{ form.num_equipos || 3 }}</span>
                     <button @click="form.num_equipos = Math.min(20, (form.num_equipos || 3) + 1)"
                             :disabled="!fechaEstablecida"
-                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200
+                            class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200
                                    text-gray-600 font-black text-sm hover:bg-gray-200 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                     <span class="text-[10px] text-gray-400 font-medium ml-1">grupos · se crearán al generar el código</span>
@@ -1140,7 +1143,7 @@ function formatFecha(isoDate) {
             </div>
 
             <div v-if="requisitosFaltantes.length || errorGuardado"
-                 class="px-6 py-3 bg-amber-50 border-t border-amber-100">
+                 class="px-4 sm:px-6 py-3 bg-amber-50 border-t border-amber-100">
               <ul class="space-y-0.5">
                 <li v-for="(msg, i) in requisitosFaltantes" :key="i"
                     class="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
@@ -1153,7 +1156,7 @@ function formatFecha(isoDate) {
             </div>
 
             <div ref="refBtnGuardar"
-                 class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4 transition-all"
+                 class="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col-reverse items-end gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 transition-all"
                  :class="{ 'tour-active': tourTargetActivo === 'refBtnGuardar' }">
               <p class="text-[10px] text-gray-400 font-medium">
                 El encuentro se guarda en la base de datos.
@@ -1190,7 +1193,7 @@ function formatFecha(isoDate) {
              :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'encuentros' }">
 
           <div ref="refEncuentros"
-               class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden sticky top-[4.5rem]"
+               class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto"
                :class="{ 'tour-active': tourTargetActivo === 'refEncuentros' }">
 
             <ResumenEncuentrosPanel :encuentros="encuentros" :cargando="cargandoEncuentros"
@@ -1215,7 +1218,7 @@ function formatFecha(isoDate) {
              class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
         <!-- Panel -->
-        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-2xl w-full max-h-[92vh]
+        <div class="relative bg-white rounded-[2rem] shadow-2xl max-w-2xl w-full max-h-[92vh]
                     overflow-hidden border border-gray-100 flex flex-col">
 
           <!-- Cabecera -->
@@ -1325,7 +1328,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
-                Ver más detalle de este encuentro
+                <span class="sm:hidden">Más detalle</span><span class="hidden sm:inline">Ver más detalle de este encuentro</span>
               </button>
               <button @click="router.push('/encuentros'); cerrarEncuentroModal()"
                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-centros text-white
@@ -1387,7 +1390,7 @@ function formatFecha(isoDate) {
   <Teleport to="body">
     <Transition name="dd-snack">
       <div v-if="snackbar.visible"
-           class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999]
+           class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-max max-w-[calc(100vw-2rem)]
                   flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl
                   bg-[#1F2937] text-white text-sm font-medium">
         <svg v-if="snackbar.accion" class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

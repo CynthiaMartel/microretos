@@ -12,7 +12,7 @@ const emit = defineEmits(['activar', 'omitir'])
     <div v-if="show"
          @click.self="emit('omitir')"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div class="relative bg-white border border-gray-200 rounded-[2rem] shadow-2xl max-w-sm w-full p-8">
+      <div class="relative bg-white border border-gray-200 rounded-[2rem] shadow-2xl max-w-sm w-full p-6 sm:p-8">
 
         <!-- Icono + título -->
         <div class="flex flex-col items-center text-center gap-4 mb-6">

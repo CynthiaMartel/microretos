@@ -13,6 +13,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class EquipoProgresoResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $proyecto = $this->microproyecto;
@@ -46,11 +47,11 @@ class EquipoProgresoResource extends JsonResource
                 $fase = $this->fases->firstWhere('numero_fase', $n);
                 return [
                     'numero_fase'           => $n,
-                    'completada'            => $fase?->completada ?? false,
-                    'validado_docente'      => $fase?->validado_docente ?? false,
+                    'completada'            => $fase->completada ?? false,
+                    'validado_docente'      => $fase->validado_docente ?? false,
                     'nota_docente'          => $fase?->nota_docente,
                     'observaciones_docente' => $fase?->observaciones_docente,
-                    'datos'                 => $fase?->datosSinNombres(),
+                    'datos'                 => $fase?->datos,
                     'fecha_completada'      => $fase?->fecha_completada,
                 ];
             }),

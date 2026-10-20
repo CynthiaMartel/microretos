@@ -172,23 +172,23 @@ function formatFecha(isoDate) {
           <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
         </svg>
         <input v-model="filtroSes.titulo" type="text" placeholder="Buscar encuentro..."
-               class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-7 pr-3 py-1.5
+               class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-7 pr-3 py-1.5
                       text-xs font-medium text-gray-700 placeholder-gray-300
                       focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
       </div>
       <!-- Fecha -->
       <input v-model="filtroSes.fecha" type="date"
-             class="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5
+             class="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5
                     text-xs font-medium text-gray-600
                     focus:outline-none focus:border-centros/50 focus:ring-1 focus:ring-centros/20" />
       <!-- Curso + Grupo -->
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <p class="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-1">Curso</p>
+          <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Curso</p>
           <div class="flex gap-1">
             <button v-for="c in ['', '1º', '2º']" :key="'fc'+c"
                     @click="filtroSes.curso = c"
-                    class="flex-1 py-1 rounded-full text-[8px] font-black uppercase border transition-all"
+                    class="flex-1 min-w-[1.75rem] py-1.5 rounded-full text-[10px] font-black uppercase border transition-all"
                     :class="filtroSes.curso === c
                       ? 'bg-centros border-centros text-white'
                       : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-centros/40'">
@@ -197,11 +197,11 @@ function formatFecha(isoDate) {
           </div>
         </div>
         <div>
-          <p class="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-1">Clase</p>
-          <div class="flex gap-0.5">
+          <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Clase</p>
+          <div class="flex flex-wrap gap-0.5">
             <button v-for="g in ['', 'A', 'B', 'C', 'D']" :key="'fg'+g"
                     @click="filtroSes.grupo = g"
-                    class="flex-1 py-1 rounded-full text-[7px] font-black uppercase border transition-all"
+                    class="flex-1 min-w-[1.75rem] py-1.5 rounded-full text-[10px] font-black uppercase border transition-all"
                     :class="filtroSes.grupo === g
                       ? 'bg-primary-400 border-primary-400 text-white'
                       : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-primary-400/40'">
@@ -277,7 +277,7 @@ function formatFecha(isoDate) {
           </div>
           <div class="flex flex-col items-end gap-1 flex-shrink-0">
             <button @click.stop="emit('eliminar', s)"
-                    class="p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                    class="p-2 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
                     title="Eliminar">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

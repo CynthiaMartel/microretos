@@ -22,7 +22,7 @@ const valor = computed({
   <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-500">
     <span class="whitespace-nowrap">Curso académico</span>
     <select v-model="valor"
-            class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-centros/40">
+            class="h-9 rounded-xl border border-gray-200 bg-white px-3 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-centros/40">
       <option v-if="permitirTodos" value="todos">Todos los cursos</option>
       <option v-for="y in opciones" :key="y" :value="y">{{ etiquetaCurso(y) }}</option>
     </select>

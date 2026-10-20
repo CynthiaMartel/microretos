@@ -321,7 +321,7 @@ class EncuentroController extends Controller
     {
         $encuentro = Encuentro::where('id', $id)->editablesPara($request->user())->firstOrFail();
 
-        $miembro = EquipoMiembro::with('equipo')->findOrFail($miembroId);
+        $miembro = EquipoMiembro::with('equipo')->findOrFail((int) $miembroId);
         if (!$miembro->equipo || $miembro->equipo->encuentro_id !== $encuentro->id) {
             abort(404);
         }
@@ -348,6 +348,7 @@ class EncuentroController extends Controller
     // Protección de datos: solo alias, nunca nombre real. El alias de un miembro existente no
     // se toca aquí (va por actualizarAliasMiembro, de escritura inmediata); uno nuevo recibe
     // el alias que generó el docente si es válido y está libre en la clase, o uno generado.
+    /** @param \Illuminate\Support\Collection<int, array<string, mixed>> $alumnados */
     private function sincronizarMiembros(Equipo $equipo, \Illuminate\Support\Collection $alumnados): void
     {
         $existentes        = $equipo->miembros()->get();
@@ -387,13 +388,14 @@ class EncuentroController extends Controller
      */
     private function snapshotAlumnados(Encuentro $encuentro): array
     {
-        return $encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get()
-            ->flatMap(fn($e) => $e->miembros->map(fn($m) => [
-                'alias'      => $m->alias,
-                'equipo_num' => (int) $e->numero_equipo,
-                'rol'        => $m->rol,
-            ]))
-            ->values()->all();
+        $snapshot = [];
+        foreach ($encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get() as $e) {
+            foreach ($e->miembros as $m) {
+                $snapshot[] = ['alias' => (string) $m->alias, 'equipo_num' => (int) $e->numero_equipo, 'rol' => $m->rol];
+            }
+        }
+
+        return $snapshot;
     }
 
     /**

@@ -41,7 +41,7 @@ async function verificarCodigo() {
     @click.self="!exitoso && $emit('cerrar')"
   >
     <div class="relative bg-[#1a2332] border border-white/10 rounded-[2rem]
-                shadow-2xl max-w-sm w-full p-8 text-white">
+                shadow-2xl max-w-sm w-full p-6 sm:p-8 text-white">
 
       <div class="flex justify-center mb-6">
         <div class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500"

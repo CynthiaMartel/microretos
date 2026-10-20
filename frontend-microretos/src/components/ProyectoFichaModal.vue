@@ -138,7 +138,7 @@ function irAPaginaCompleta() {
 
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrar" />
 
-        <div class="relative z-10 bg-[#f4f6fa] rounded-3xl shadow-2xl w-full max-w-4xl my-4
+        <div class="relative z-10 bg-[#f4f6fa] rounded-[2rem] shadow-2xl w-full max-w-4xl my-4
                     max-h-[92vh] flex flex-col overflow-hidden">
 
           <!-- Barra superior sticky -->
@@ -536,7 +536,7 @@ function irAPaginaCompleta() {
 
                   <div v-if="proyecto.diseno_microproyecto?.clases?.length" class="card-section sm:col-span-2">
                     <p class="section-label">Cronograma — hitos por fase</p>
-                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-2">
+                    <div class="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-5 gap-3 mt-2">
                       <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3" :class="COLOR_MAP_FASES[f.color]">
                         <div class="flex items-center gap-1.5 mb-1">
                           <span class="text-base leading-none">{{ f.icono }}</span>
@@ -621,7 +621,7 @@ function irAPaginaCompleta() {
                             <div v-for="(v, i) in videos" :key="i"
                                  class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
                                         hover:border-blue-200 hover:bg-blue-50/40 transition-colors group/vid">
-                              <button @click="abrirRecurso(v)" class="w-7 h-7 rounded-lg bg-blue-50 shrink-0 flex items-center justify-center group-hover/vid:bg-blue-100 transition-colors">
+                              <button @click="abrirRecurso(v)" class="w-8 h-8 rounded-full bg-blue-50 shrink-0 flex items-center justify-center group-hover/vid:bg-blue-100 transition-colors">
                                 <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
@@ -641,7 +641,7 @@ function irAPaginaCompleta() {
                                  class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
                                         transition-colors group/doc"
                                  :class="paletteExtra[theme.key].hoverBorderBgDoc">
-                              <button @click="abrirRecurso(d)" class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center transition-colors"
+                              <button @click="abrirRecurso(d)" class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center transition-colors"
                                       :class="[theme.bg5, paletteExtra[theme.key].groupHoverBgDoc]">
                                 <svg class="w-3.5 h-3.5" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -929,7 +929,10 @@ function irAPaginaCompleta() {
 }
 
 @media (max-width: 640px) {
-  .notebook-page { padding: 1.5rem 1rem 2rem 4.5rem; }
+  /* Margen del "cuaderno" más estrecho: con 4.5rem el contenido se quedaba en ~200px a 360px */
+  .notebook-page { padding: 1.5rem 1rem 2rem 3rem; }
+  .notebook-margin { left: 2.4rem; }
+  .notebook-holes { left: .55rem; }
   .meta-cell { flex: 1 0 100%; border-right: none; border-bottom: 1px solid #dde3ed; }
   .meta-cell:last-child { border-bottom: none; }
 }

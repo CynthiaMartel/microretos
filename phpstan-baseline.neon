@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarEmpresas\:\:peticion\(\) has parameter \$datos with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarEmpresas.php
-
-		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
 			identifier: argument.templateType
 			count: 2
@@ -79,18 +73,6 @@ parameters:
 			path: app/Console/Commands/DemoGenerarEncuentrosEquipos.php
 
 		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarEncuentrosEquipos\:\:nombreAleatorio\(\) has parameter \$usados with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarEncuentrosEquipos.php
-
-		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarEncuentrosEquipos\:\:peticion\(\) has parameter \$datos with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarEncuentrosEquipos.php
-
-		-
 			message: '#^Parameter \#2 \$max of function random_int expects int, float given\.$#'
 			identifier: argument.type
 			count: 1
@@ -152,12 +134,6 @@ parameters:
 
 		-
 			message: '#^Method App\\Console\\Commands\\DemoGenerarEntregablesF3\:\:llamarOpenAiTexto\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarEntregablesF3.php
-
-		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarEntregablesF3\:\:peticion\(\) has parameter \$datos with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Console/Commands/DemoGenerarEntregablesF3.php
@@ -241,12 +217,6 @@ parameters:
 			path: app/Console/Commands/DemoGenerarProyectos.php
 
 		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarProyectos\:\:peticion\(\) has parameter \$datos with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarProyectos.php
-
-		-
 			message: '#^Parameter \#1 \$proyecto of method App\\Console\\Commands\\DemoGenerarProyectos\:\:avanzarAValidado\(\) expects App\\Models\\Microproyecto, App\\Models\\Microproyecto\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Models\\Microproyecto\>\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -302,12 +272,6 @@ parameters:
 
 		-
 			message: '#^Method App\\Console\\Commands\\DemoGenerarRetos\:\:llamarConReintento\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Console/Commands/DemoGenerarRetos.php
-
-		-
-			message: '#^Method App\\Console\\Commands\\DemoGenerarRetos\:\:peticion\(\) has parameter \$datos with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Console/Commands/DemoGenerarRetos.php
@@ -835,12 +799,6 @@ parameters:
 			path: app/Http/Controllers/DatosFPController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\DatosFPController\:\:getFamilias\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Http/Controllers/DatosFPController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\DatosFPController\:\:getFamiliasPorEmpresa\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -849,6 +807,12 @@ parameters:
 		-
 			message: '#^Method App\\Http\\Controllers\\DatosFPController\:\:getFamiliasPorEmpresa\(\) has parameter \$idEmpresa with no type specified\.$#'
 			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/DatosFPController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DatosFPController\:\:getFamilias\(\) has no return type specified\.$#'
+			identifier: missingType.return
 			count: 1
 			path: app/Http/Controllers/DatosFPController.php
 
@@ -1129,24 +1093,6 @@ parameters:
 			path: app/Http/Controllers/EncuentroColaboradorController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\EquipoMiembro\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Models\\EquipoMiembro\>\:\:\$alias\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\EquipoMiembro\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Models\\EquipoMiembro\>\:\:\$equipo\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
-			message: '#^Call to an undefined method App\\Models\\EquipoMiembro\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Models\\EquipoMiembro\>\:\:update\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
 			message: '#^Cannot access property \$centroEducativo on App\\Models\\User\|null\.$#'
 			identifier: property.nonObject
 			count: 4
@@ -1279,19 +1225,13 @@ parameters:
 			path: app/Http/Controllers/EncuentroController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\EncuentroController\:\:sincronizarMiembrosPorNombre\(\) has parameter \$alumnados with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\EncuentroController\:\:store\(\) has no return type specified\.$#'
+			message: '#^Method App\\Http\\Controllers\\EncuentroController\:\:storeLote\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: app/Http/Controllers/EncuentroController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\EncuentroController\:\:storeLote\(\) has no return type specified\.$#'
+			message: '#^Method App\\Http\\Controllers\\EncuentroController\:\:store\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: app/Http/Controllers/EncuentroController.php
@@ -1359,18 +1299,6 @@ parameters:
 		-
 			message: '#^Unable to resolve the template type TValue in call to function collect$#'
 			identifier: argument.templateType
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>completada" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/EncuentroController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>validado_docente" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/EncuentroController.php
 
@@ -1789,18 +1717,6 @@ parameters:
 			path: app/Http/Controllers/MicroproyectoController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:show\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Http/Controllers/MicroproyectoController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:show\(\) has parameter \$uuid with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: app/Http/Controllers/MicroproyectoController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:showByToken\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1808,6 +1724,18 @@ parameters:
 
 		-
 			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:showByToken\(\) has parameter \$token with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/MicroproyectoController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:show\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/MicroproyectoController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\MicroproyectoController\:\:show\(\) has parameter \$uuid with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: app/Http/Controllers/MicroproyectoController.php
@@ -2533,6 +2461,30 @@ parameters:
 			path: app/Http/Requests/VerificarCodigoIaRequest.php
 
 		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AlumnoParticipacionResource\:\:\$alias\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/AlumnoParticipacionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AlumnoParticipacionResource\:\:\$equipo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AlumnoParticipacionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AlumnoParticipacionResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/AlumnoParticipacionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AlumnoParticipacionResource\:\:\$rol\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AlumnoParticipacionResource.php
+
+		-
 			message: '#^Method App\\Http\\Resources\\EmpresaDashboardResource\:\:toArray\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -2543,12 +2495,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Resources/EmpresaResource.php
-
-		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\EncuentroResource\:\:\$alumnados\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/EncuentroResource.php
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\EncuentroResource\:\:\$centro_educativo\.$#'
@@ -2625,7 +2571,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\EncuentroResource\:\:\$microproyecto\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 5
 			path: app/Http/Resources/EncuentroResource.php
 
 		-
@@ -2653,10 +2599,82 @@ parameters:
 			path: app/Http/Resources/EncuentroResource.php
 
 		-
-			message: '#^Method App\\Http\\Resources\\EncuentroResource\:\:toArray\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$codigo_acceso\.$#'
+			identifier: property.notFound
 			count: 1
-			path: app/Http/Resources/EncuentroResource.php
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$diagnostico_final\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$diagnostico_generado_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$fase_actual\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$fases\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$microproyecto\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$miembros\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$nombre\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$prototipos\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$reflexiones\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$token\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Resources\\EquipoProgresoResource\:\:aliasDe\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Resources/EquipoProgresoResource.php
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoResolucionPublicaResource\:\:\$diagnostico_final\.$#'
@@ -3055,18 +3073,6 @@ parameters:
 			path: app/Models/EquipoPrototipo.php
 
 		-
-			message: '#^Method App\\Models\\EquipoReflexion\:\:equipo\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Models/EquipoReflexion.php
-
-		-
-			message: '#^Method App\\Models\\EquipoTarea\:\:equipo\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Models/EquipoTarea.php
-
-		-
 			message: '#^Method App\\Models\\Microproyecto\:\:docente\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -3209,9 +3215,3 @@ parameters:
 			identifier: argument.templateType
 			count: 1
 			path: app/Services/RaCeCatalogoService.php
-
-		-
-			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Support/AliasGenerator.php

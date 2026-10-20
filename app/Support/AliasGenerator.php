@@ -77,8 +77,9 @@ class AliasGenerator
      */
     public static function nombreDePila(?string $texto): ?string
     {
-        $primera = preg_split('/\s+/u', trim((string) $texto))[0] ?? '';
-        $limpia = trim(preg_replace("/[^\\p{L}'-]/u", '', $primera), "'-");
+        $palabras = preg_split('/\s+/u', trim((string) $texto)) ?: [];
+        $primera = $palabras[0] ?? '';
+        $limpia = trim((string) preg_replace("/[^\\p{L}'-]/u", '', $primera), "'-");
         if ($limpia === '' || !preg_match(self::PATRON_NOMBRE, $limpia)) {
             return null;
         }
@@ -110,7 +111,7 @@ class AliasGenerator
         $ocupado = in_array(self::normalizar($alias), array_map([self::class, 'normalizar'], $usados), true);
 
         if (self::esValido($alias) && !$ocupado) {
-            return trim($alias);
+            return trim((string) $alias);
         }
 
         return self::generar(self::nombreDeAlias($alias), $usados);
@@ -133,6 +134,6 @@ class AliasGenerator
 
     public static function normalizar(?string $texto): string
     {
-        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $texto)));
+        return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', (string) $texto)));
     }
 }

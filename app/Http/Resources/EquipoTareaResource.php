@@ -8,9 +8,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Tarea de un equipo en el workspace del alumnado (rutas públicas /equipo/{token}/…).
  * Mismos campos que formatWorkspace() en EquipoPublicoController.
+ *
+ * @mixin \App\Models\EquipoTarea
  */
 class EquipoTareaResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         return [

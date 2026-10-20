@@ -85,7 +85,7 @@ class EquipoGestionController extends Controller
 
         // Se fusiona con lo que ya guardó el equipo en F4 (organización de la exposición):
         // sustituir 'datos' entero lo borraba.
-        $datosF4 = EquipoFase::where('equipo_id', $equipo->id)->where('numero_fase', 4)->first()?->datos ?? [];
+        $datosF4 = EquipoFase::where('equipo_id', $equipo->id)->where('numero_fase', 4)->first()->datos ?? [];
 
         $fase = EquipoFase::updateOrCreate(
             ['equipo_id' => $equipo->id, 'numero_fase' => 4],

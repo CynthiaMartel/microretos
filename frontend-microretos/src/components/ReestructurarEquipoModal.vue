@@ -155,11 +155,11 @@ async function guardar() {
               <label class="req-label">Número de grupos</label>
               <div class="flex items-center gap-2 mt-1">
                 <button type="button" @click="numEquipos = Math.max(1, numEquipos - 1)"
-                        class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-600
+                        class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 text-gray-600
                                font-black text-sm hover:bg-gray-200 transition-all">−</button>
                 <span class="w-8 text-center text-base font-black text-[#1F2937]">{{ numEquipos }}</span>
                 <button type="button" @click="numEquipos = Math.min(30, numEquipos + 1)"
-                        class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-600
+                        class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 text-gray-600
                                font-black text-sm hover:bg-gray-200 transition-all">+</button>
               </div>
             </div>
@@ -273,8 +273,9 @@ async function guardar() {
 }
 .req-card {
   position: relative; background: #fff; border: 1px solid #ddd6fe;
-  border-radius: 2rem; padding: 2.25rem; width: 100%; max-width: 560px;
-  max-height: 90vh; overflow-y: auto;
+  border-radius: 2rem; padding: 1.25rem; width: 100%; max-width: 560px;
+  /* dvh: en móvil descuenta la barra del navegador */
+  max-height: 90vh; max-height: 90dvh; overflow-y: auto; overflow-x: hidden;
   box-shadow: 0 0 0 1px rgba(139,92,246,.08), 0 24px 48px rgba(0,0,0,.2), 0 0 80px rgba(139,92,246,.06);
   scrollbar-width: thin; scrollbar-color: #ddd6fe transparent;
 }
@@ -295,7 +296,12 @@ async function guardar() {
 
 .req-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 
-.req-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
+.req-actions { display: flex; flex-direction: column-reverse; gap: .75rem; margin-top: 1.5rem; }
+/* Móvil: botones apilados (Guardar arriba) para que "Guardar reparto" no se parta en dos líneas */
+@media (min-width: 640px) {
+  .req-card { padding: 2.25rem; }
+  .req-actions { flex-direction: row; }
+}
 .req-btn-primary {
   display: flex; align-items: center; justify-content: center; gap: .5rem;
   padding: 1rem 1.5rem; background: #7c3aed; color: #fff; border: none;
@@ -314,7 +320,7 @@ async function guardar() {
 .req-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .req-btn-ghost:active { transform: scale(.97); }
 .req-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px;
   background: #f5f3ff; border: none; border-radius: 9999px; color: #a78bfa;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }

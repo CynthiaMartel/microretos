@@ -15,6 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class AlumnoParticipacionResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $equipo    = $this->equipo;
@@ -27,8 +28,8 @@ class AlumnoParticipacionResource extends JsonResource
 
         $fasesCompletas = $equipo->fases->filter(fn ($f) => $f->completada)->count();
         $fase4          = $equipo->getFase(4);
-        $evaluacion     = $fase4?->datos['evaluacion_docente'] ?? null;
-        $notaFinal      = $fase4?->nota_docente ?? ($evaluacion['nota_opcional'] ?? null);
+        $evaluacion     = $fase4->datos['evaluacion_docente'] ?? null;
+        $notaFinal      = $fase4->nota_docente ?? ($evaluacion['nota_opcional'] ?? null);
         $tareas         = $equipo->tareas->filter(fn ($t) => $esSuyo($t->responsable));
 
         return [
@@ -53,8 +54,8 @@ class AlumnoParticipacionResource extends JsonResource
                     $fase = $equipo->getFase($n);
                     return [
                         'numero_fase'      => $n,
-                        'completada'       => $fase?->completada ?? false,
-                        'validado_docente' => $fase?->validado_docente ?? false,
+                        'completada'       => $fase->completada ?? false,
+                        'validado_docente' => $fase->validado_docente ?? false,
                         'nota_docente'     => $fase?->nota_docente,
                         'fecha_completada' => $fase?->fecha_completada,
                     ];
@@ -62,7 +63,7 @@ class AlumnoParticipacionResource extends JsonResource
                 'nota_final'            => $notaFinal !== null ? (float) $notaFinal : null,
                 'observaciones_docente' => $fase4?->observaciones_docente,
                 // Nº de RA por nivel en la evaluación curricular final (no el detalle)
-                'niveles_ra' => collect($evaluacion['ras'] ?? [])->countBy('nivel'),
+                'niveles_ra' => collect((array) ($evaluacion['ras'] ?? []))->countBy('nivel'),
                 'tiene_diagnostico' => !empty($equipo->diagnostico_final),
             ],
 

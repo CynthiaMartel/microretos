@@ -11,15 +11,10 @@ class EquipoMiembro extends Model
     protected $table = 'equipo_miembros';
 
     // Protección de datos: el alumnado solo existe por su alias ("NombreDePila Animal Color", ver
-    // AliasGenerator), único dentro de su encuentro. `nombre` es el nombre real completo de los
-    // miembros antiguos: ya no se escribe (fuera de $fillable), nunca se serializa ($hidden)
-    // y se vacía con `alumnado:anonimizar` antes de eliminar la columna.
+    // AliasGenerator), único dentro de su encuentro. No hay columna con el nombre completo.
     protected $fillable = ['equipo_id', 'alias', 'rol', 'fortalezas', 'puntos_mejora'];
 
-    protected $hidden = ['nombre'];
-
     protected $casts = [
-        'nombre'        => 'encrypted',
         'fortalezas'    => 'array',
         'puntos_mejora' => 'array',
     ];

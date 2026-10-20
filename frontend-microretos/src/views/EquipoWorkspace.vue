@@ -1218,7 +1218,7 @@ watch(workspace, (val) => {
                         <p class="text-[10px] font-black uppercase tracking-wider text-emerald-600 mb-1.5">Puntos fuertes</p>
                         <div class="flex gap-1.5 mb-2">
                           <input v-model="m.nuevaFortaleza" type="text" placeholder="Escribe tus puntos fuertes…" maxlength="40"
-                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white
+                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white
                                         focus:outline-none focus:border-emerald-400"
                                  @keydown.enter.prevent="addFortaleza(m)" />
                           <button @click="addFortaleza(m)" type="button"
@@ -1233,7 +1233,8 @@ watch(workspace, (val) => {
                                        text-xs font-semibold px-2.5 py-1 rounded-full">
                             {{ pf }}
                             <button @click="m.fortalezas.splice(pi, 1)" type="button"
-                                    class="text-emerald-400 hover:text-emerald-700 font-black">✕</button>
+                                    aria-label="Quitar punto fuerte"
+                                    class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full font-black text-emerald-400 hover:bg-emerald-100 hover:text-emerald-700">✕</button>
                           </span>
                         </div>
                       </div>
@@ -1243,7 +1244,7 @@ watch(workspace, (val) => {
                         <p class="text-[10px] font-black uppercase tracking-wider text-amber-600 mb-1.5">Puntos a mejorar</p>
                         <div class="flex gap-1.5 mb-2">
                           <input v-model="m.nuevoPuntoMejora" type="text" placeholder="Escribe tus puntos a mejorar…" maxlength="40"
-                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white
+                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white
                                         focus:outline-none focus:border-amber-400"
                                  @keydown.enter.prevent="addPuntoMejora(m)" />
                           <button @click="addPuntoMejora(m)" type="button"
@@ -1258,7 +1259,8 @@ watch(workspace, (val) => {
                                        text-xs font-semibold px-2.5 py-1 rounded-full">
                             {{ pm }}
                             <button @click="m.puntosMejora.splice(pmi, 1)" type="button"
-                                    class="text-amber-400 hover:text-amber-700 font-black">✕</button>
+                                    aria-label="Quitar punto a mejorar"
+                                    class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full font-black text-amber-400 hover:bg-amber-100 hover:text-amber-700">✕</button>
                           </span>
                         </div>
                       </div>
@@ -1450,7 +1452,7 @@ watch(workspace, (val) => {
                     Generad un ejemplo con IA a partir del reto y añadid al menos 3 hallazgos propios más
                     <span class="font-black text-red-500">(mínimo 4 en total, obligatorio para continuar)</span>.
                   </p>
-                  <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2 flex items-start gap-1.5">
+                  <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 mb-2 flex items-start gap-1.5">
                     <span class="shrink-0">⚠️</span>
                     <span><strong>Revisa las sugerencias de la IA. Ten criterio propio.</strong></span>
                   </p>
@@ -1471,7 +1473,7 @@ watch(workspace, (val) => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                           </svg>
                         </button>
-                        <button @click="removeHallazgo(i)" class="text-gray-300 hover:text-red-400 font-black text-xs shrink-0">✕</button>
+                        <button @click="removeHallazgo(i)" aria-label="Quitar hallazgo" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-gray-300 hover:bg-red-50 hover:text-red-400">✕</button>
                       </div>
                       <div v-if="hallazgoAbierto === i" class="px-3 pb-3">
                         <textarea v-model="f1.hallazgos[i]" rows="3" :maxlength="HALLAZGO_MAXLEN"
@@ -1484,7 +1486,7 @@ watch(workspace, (val) => {
                   </div>
                   <div class="flex gap-2">
                     <input v-model="nuevoHallazgo" type="text" placeholder="Añadir hallazgo..." :maxlength="HALLAZGO_MAXLEN"
-                           class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                           class="flex-1 min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2
                                   focus:outline-none focus:border-blue-400 bg-gray-50"
                            @keydown.enter="addHallazgo"/>
                     <button @click="addHallazgo"
@@ -1595,14 +1597,15 @@ watch(workspace, (val) => {
 
                   <div class="space-y-2 mb-4">
                     <template v-for="t in tareasGenericas" :key="t.id">
-                      <div class="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                      <!-- En móvil el estado va en su propia línea: la descripción no se queda en ~130px -->
+                      <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 p-3 rounded-xl border transition-all"
                            :class="{
                              'border-green-200 bg-green-50': t.estado === 'realizado',
                              'border-amber-200 bg-amber-50': t.estado === 'en_progreso',
                              'border-gray-100 bg-gray-50':   t.estado === 'pendiente',
                            }">
                         <select :value="t.estado" @change="cambiarEstadoTarea(t, $event.target.value)"
-                                class="text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
+                                class="basis-full sm:basis-auto text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
                                        focus:outline-none cursor-pointer"
                                 :class="{
                                   'text-green-600': t.estado === 'realizado',
@@ -1630,7 +1633,7 @@ watch(workspace, (val) => {
                             <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
                           </select>
                         </div>
-                        <button v-if="!t.obligatoria" @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
+                        <button v-if="!t.obligatoria" @click="eliminarTarea(t)" aria-label="Eliminar tarea" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400">✕</button>
                       </div>
 
                       <!-- Explicación de QA: por qué importa, para que el alumnado lo entienda de verdad -->
@@ -1655,13 +1658,13 @@ watch(workspace, (val) => {
                     <div class="flex gap-2">
                       <input v-model="nuevaTareaGenerica.descripcion" type="text"
                              placeholder="Añadir tarea (ej. Buscar más referencias)…"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                             class="flex-1 min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2
                                     focus:outline-none focus:border-amber-400 bg-gray-50"
                              @keydown.enter="addTareaGenerica"/>
                     </div>
                     <div class="flex gap-2">
                       <select v-model="nuevaTareaGenerica.responsable"
-                             class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                             class="flex-1 min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2
                                     focus:outline-none focus:border-amber-400 bg-gray-50 cursor-pointer">
                         <option value="">Responsable…</option>
                         <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
@@ -1700,7 +1703,7 @@ watch(workspace, (val) => {
                 <p class="text-[11px] text-gray-400 mb-2">
                   No son tareas a marcar como hechas — son ideas a valorar en equipo. Generadlas con IA o añadid las vuestras.
                 </p>
-                <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-4 flex items-start gap-1.5">
+                <p class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 mb-4 flex items-start gap-1.5">
                   <span class="shrink-0">⚠️</span>
                   <span><strong>Revisa las sugerencias de la IA. Ten criterio propio.</strong></span>
                 </p>
@@ -1709,8 +1712,8 @@ watch(workspace, (val) => {
                   <div v-for="t in tareasComplejas" :key="t.id"
                        class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
                     <span class="text-lg shrink-0">💡</span>
-                    <p class="flex-1 text-sm font-semibold text-[#1F2937] leading-snug">{{ t.descripcion }}</p>
-                    <button @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
+                    <p class="flex-1 min-w-0 break-words text-sm font-semibold text-[#1F2937] leading-snug">{{ t.descripcion }}</p>
+                    <button @click="eliminarTarea(t)" aria-label="Eliminar tarea" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400">✕</button>
                   </div>
                   <p v-if="!tareasComplejas.length" class="text-sm text-gray-400 text-center py-6">
                     Generad sugerencias con IA o añadid las vuestras
@@ -1721,7 +1724,7 @@ watch(workspace, (val) => {
                   <div class="flex gap-2">
                     <input v-model="nuevaTareaCompleja.descripcion" type="text"
                            placeholder="Añadir vuestra propia sugerencia de solución…"
-                           class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
+                           class="flex-1 min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2
                                   focus:outline-none focus:border-violet-400 bg-gray-50"
                            @keydown.enter="addTareaCompleja"/>
                     <button @click="addTareaCompleja" :disabled="!nuevaTareaCompleja.descripcion.trim() || cargandoTareaCompleja"
@@ -1838,22 +1841,22 @@ watch(workspace, (val) => {
                         <p class="text-[10px] text-gray-400">{{ formatBytes(p.size) }}</p>
                       </div>
                       <button @click="eliminarPrototipo(p)"
-                              class="shrink-0 text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
-                              title="Eliminar archivo">×</button>
+                              class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400"
+                              title="Eliminar archivo" aria-label="Eliminar archivo">×</button>
                     </li>
                   </ul>
                 </div>
 
-                <div class="flex items-center gap-4">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <label class="text-xs font-black text-[#1F2937] uppercase tracking-wider">Iteración</label>
                   <div class="flex items-center gap-2">
                     <button @click="f2.iteracion = Math.max(1, f2.iteracion - 1)"
-                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">−</button>
+                            class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">−</button>
                     <span class="text-lg font-black text-[#1F2937] w-8 text-center">{{ f2.iteracion }}</span>
                     <button @click="f2.iteracion++"
-                            class="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">+</button>
+                            class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 font-black text-gray-500 hover:bg-gray-200 transition-all">+</button>
                   </div>
-                  <p class="text-xs text-gray-400">¿Es la primera versión o habéis mejorado el prototipo?</p>
+                  <p class="basis-full sm:basis-auto text-xs text-gray-400">¿Es la primera versión o habéis mejorado el prototipo?</p>
                 </div>
 
                 <button @click="guardarF2" :disabled="guardando"
@@ -1993,8 +1996,8 @@ watch(workspace, (val) => {
                         <p class="text-[10px] text-gray-400">{{ formatBytes(p.size) }}</p>
                       </div>
                       <button @click="eliminarArchivoEntregable(p)"
-                              class="shrink-0 text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
-                              title="Eliminar archivo">×</button>
+                              class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400"
+                              title="Eliminar archivo" aria-label="Eliminar archivo">×</button>
                     </li>
                   </ul>
                 </div>
@@ -2089,7 +2092,8 @@ watch(workspace, (val) => {
                     {{ modoReflexion === 'individual' ? '👤 Reflexión individual' : '👥 Reflexión grupal' }}
                   </p>
                   <button @click="modoReflexion = ''"
-                          class="text-gray-300 hover:text-gray-500 font-black text-sm">✕</button>
+                          aria-label="Cerrar reflexión"
+                          class="-my-1.5 inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-black text-gray-300 hover:bg-gray-100 hover:text-gray-500">✕</button>
                 </div>
 
                 <AvisoSinNombresReales para="alumnado" />
@@ -2352,18 +2356,18 @@ watch(workspace, (val) => {
                   <span v-if="img.id === imagenPortadaId"
                         class="absolute top-0.5 left-0.5 bg-alumnos text-white text-[7px] font-black
                                uppercase tracking-wider px-1 py-0.5 rounded-full">Portada</span>
-                  <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100
+                  <div class="absolute inset-0 bg-black/50 opacity-100 lg:opacity-0 lg:group-hover/img:opacity-100
                               transition-opacity flex items-center justify-center gap-1">
                     <button v-if="img.id !== imagenPortadaId" @click="marcarPortadaImagen(img)" type="button"
-                            title="Marcar como portada"
-                            class="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center text-alumnos">
+                            title="Marcar como portada" aria-label="Marcar como portada"
+                            class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-alumnos">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                       </svg>
                     </button>
-                    <button @click.stop="eliminarImagen(img)" type="button"
-                            class="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center text-red-400">
+                    <button @click.stop="eliminarImagen(img)" type="button" title="Eliminar imagen" aria-label="Eliminar imagen"
+                            class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-red-400">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                       </svg>
@@ -2418,7 +2422,7 @@ watch(workspace, (val) => {
                   leave-active-class="transition-all duration-200" leave-to-class="opacity-0">
         <div v-if="mostrarModalPasoF3" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div @click="mostrarModalPasoF3 = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <div class="relative z-10 w-full max-w-lg bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
+          <div class="relative z-10 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
             <p class="text-[10px] font-black uppercase tracking-[0.18em] text-orange-500 mb-3">Antes de continuar</p>
             <h2 class="text-xl font-black text-azul-noche mb-3 leading-snug">
               Vais a pasar a la fase de Entrega de la solución
@@ -2433,16 +2437,13 @@ watch(workspace, (val) => {
             <p class="text-sm text-gray-600 leading-relaxed mb-6">
               Antes de pasar a Fase 3, revisad que habéis completado las tareas.
             </p>
-            <div class="flex gap-3">
-              <button @click="mostrarModalPasoF3 = false"
-                      class="flex-1 py-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600
-                             text-sm font-black uppercase tracking-wider hover:bg-gray-100 transition-all">
-                Revisar tareas
+            <div class="fila-pasos">
+              <button @click="mostrarModalPasoF3 = false" class="btn-paso-atras">
+                <span class="sm:hidden">Revisar</span><span class="hidden sm:inline">Revisar tareas</span>
               </button>
               <button @click="confirmarPasoF3" :disabled="guardando"
-                      class="flex-1 py-3 rounded-full bg-orange-500 text-white text-sm font-black uppercase
-                             tracking-wider hover:bg-orange-600 transition-all disabled:opacity-50">
-                Continuar a Fase 3 →
+                      class="btn-paso bg-orange-500 shadow-orange-500/25 hover:bg-orange-600">
+                <span class="sm:hidden">Continuar →</span><span class="hidden sm:inline">Continuar a Fase 3 →</span>
               </button>
             </div>
           </div>
@@ -2456,7 +2457,7 @@ watch(workspace, (val) => {
                   leave-active-class="transition-all duration-200" leave-to-class="opacity-0">
         <div v-if="mostrarModalPasoF4" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div @click="mostrarModalPasoF4 = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <div class="relative z-10 w-full max-w-lg bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
+          <div class="relative z-10 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-[2rem] shadow-2xl border border-gray-200 p-6 sm:p-8">
             <p class="text-[10px] font-black uppercase tracking-[0.18em] text-green-600 mb-3">Antes de continuar</p>
             <h2 class="text-xl font-black text-azul-noche mb-3 leading-snug">
               Vais a pasar a la fase de Presentación
@@ -2474,16 +2475,13 @@ watch(workspace, (val) => {
                 Habrá una reflexión final, individual y de equipo.
               </p>
             </div>
-            <div class="flex gap-3">
-              <button @click="mostrarModalPasoF4 = false"
-                      class="flex-1 py-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600
-                             text-sm font-black uppercase tracking-wider hover:bg-gray-100 transition-all">
-                Revisar entrega
+            <div class="fila-pasos">
+              <button @click="mostrarModalPasoF4 = false" class="btn-paso-atras">
+                <span class="sm:hidden">Revisar</span><span class="hidden sm:inline">Revisar entrega</span>
               </button>
               <button @click="confirmarPasoF4" :disabled="guardando"
-                      class="flex-1 py-3 rounded-full bg-alumnos text-white text-sm font-black uppercase
-                             tracking-wider hover:bg-alumnos/90 transition-all disabled:opacity-50">
-                Continuar a Fase 4 →
+                      class="btn-paso bg-alumnos shadow-alumnos/25 hover:bg-alumnos/90">
+                <span class="sm:hidden">Continuar →</span><span class="hidden sm:inline">Continuar a Fase 4 →</span>
               </button>
             </div>
           </div>

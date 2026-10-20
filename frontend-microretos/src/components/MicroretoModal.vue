@@ -75,7 +75,7 @@ function cerrar() {
 
         <!-- Panel scrollable -->
         <div class="relative z-10 w-full max-w-4xl my-6 bg-[#F8FAFC] rounded-[2rem]
-                    shadow-2xl border border-gray-200 overflow-hidden font-sans text-[#1F2937]">
+                    shadow-2xl border border-gray-200 overflow-clip font-sans text-[#1F2937]">
 
           <!-- ── Barra superior fija con botón cerrar ── -->
           <div class="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100
@@ -85,7 +85,7 @@ function cerrar() {
             </p>
             <div class="flex items-center gap-2">
               <button v-if="reto" @click="descargarPDF(reto)"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                      class="inline-flex h-9 items-center gap-1.5 px-3 py-1.5 rounded-full
                              bg-gray-50 border border-gray-200 text-[10px] font-black uppercase
                              tracking-widest text-gray-500 hover:border-centros hover:text-centros
                              transition-all">
@@ -96,7 +96,7 @@ function cerrar() {
                 PDF
               </button>
               <button @click="cerrar"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                      class="inline-flex h-9 items-center gap-1.5 px-3 py-1.5 rounded-full
                              bg-[#1F2937] text-white text-[10px] font-black uppercase tracking-widest
                              hover:bg-black transition-all">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,7 +109,7 @@ function cerrar() {
           </div>
 
           <!-- ── Cargando ── -->
-          <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
+          <div v-if="cargando" class="flex flex-col items-center justify-center py-16 sm:py-32">
             <svg class="animate-spin w-10 h-10 text-centros mb-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
             </svg>
@@ -119,7 +119,7 @@ function cerrar() {
           </div>
 
           <!-- ── Error ── -->
-          <div v-else-if="error" class="text-center py-24">
+          <div v-else-if="error" class="text-center py-12 sm:py-24">
             <div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg class="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

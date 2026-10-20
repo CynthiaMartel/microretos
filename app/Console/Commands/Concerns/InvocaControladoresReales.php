@@ -48,6 +48,7 @@ trait InvocaControladoresReales
      *
      * @template T of Request
      * @param class-string<T> $clase
+     * @param array<string, mixed> $datos
      * @return T
      */
     protected function peticion(string $clase, array $datos, ?User $usuario = null): Request

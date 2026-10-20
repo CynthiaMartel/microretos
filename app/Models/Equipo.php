@@ -47,9 +47,8 @@ class Equipo extends Model
 
     /**
      * Alias del miembro al que se refiere un texto guardado como responsable de tarea o
-     * autor de reflexión. Hoy se guarda el alias, pero los registros anteriores guardan el
-     * nombre real: se traduce al alias para no exponerlo hasta que `alumnado:anonimizar`
-     * limpie esos datos. Sin coincidencia devuelve null (nunca el texto original).
+     * autor de reflexión. Sin coincidencia con un miembro del equipo devuelve null: nunca
+     * se expone el texto guardado tal cual (protección de datos).
      */
     public function aliasDe(?string $texto): ?string
     {
@@ -58,8 +57,7 @@ class Equipo extends Model
             return null;
         }
 
-        $miembro = $this->miembros->first(fn ($m) => AliasGenerator::normalizar($m->alias) === $buscado)
-            ?? $this->miembros->first(fn ($m) => AliasGenerator::normalizar($m->nombre) === $buscado);
+        $miembro = $this->miembros->first(fn ($m) => AliasGenerator::normalizar($m->alias) === $buscado);
 
         return $miembro?->alias;
     }

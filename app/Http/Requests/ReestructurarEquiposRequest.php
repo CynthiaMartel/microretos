@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Support\AliasGenerator;
+use App\Rules\AliasAlumnado;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ReestructurarEquiposRequest extends FormRequest
@@ -40,14 +40,7 @@ class ReestructurarEquiposRequest extends FormRequest
             'num_equipos'            => 'required|integer|min:1|max:30',
             'alumnados'              => 'required|array|min:1|max:200',
             'alumnados.*.id'         => 'nullable|integer',
-            // Sin AliasAlumnado: los miembros antiguos conservan su alias de antes hasta
-            // `alumnado:anonimizar`; los nuevos (sin id) sí tienen que traer uno generado.
-            'alumnados.*.alias'      => ['required', 'string', 'max:255', 'distinct:ignore_case'],
-            'alumnados.*'            => [function ($attribute, $value, $fail) {
-                if (empty($value['id']) && !AliasGenerator::esValido($value['alias'] ?? null)) {
-                    $fail('El alias tiene que ser el nombre de pila (una sola palabra, sin apellidos) seguido del animal y el color generados.');
-                }
-            }],
+            'alumnados.*.alias'      => ['required', 'string', 'distinct:ignore_case', new AliasAlumnado()],
             'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
                 if ($numEquipos > 0 && $value > $numEquipos) {
                     $fail("El grupo asignado ({$value}) supera el número de grupos ({$numEquipos}).");

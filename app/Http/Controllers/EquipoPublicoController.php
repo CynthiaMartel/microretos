@@ -953,7 +953,7 @@ class EquipoPublicoController extends Controller
 
         return [
             'numero_fase'              => $fase->numero_fase,
-            'datos'                    => $fase->datosSinNombres(),
+            'datos'                    => $fase->datos,
             'completada'               => $fase->completada,
             'fecha_completada'         => $fase->fecha_completada,
             'validado_docente'         => $fase->validado_docente,

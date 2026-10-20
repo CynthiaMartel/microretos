@@ -95,7 +95,7 @@ class DiagnosticoFinalService
             }
             $ctx .= "completada\n";
             if (!empty($fase->datos)) {
-                $ctx .= self::resumenFase($fase->datosSinNombres());
+                $ctx .= self::resumenFase($fase->datos);
             }
             if ($n !== 4 && $fase->nota_docente !== null) {
                 $ctx .= "Nota docente en esta fase: {$fase->nota_docente}/10\n";

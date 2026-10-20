@@ -120,6 +120,7 @@ class DemoEncuentrosFuturos extends Command
     }
 
     /** Alumnado ficticio repartido en equipos de 3–5 (el primero de cada equipo, portavoz). */
+    /** @return array{0: array<int, array{alias: string, equipo_num: int, rol: string}>, 1: int} */
     private function alumnado(int $numEquipos): array
     {
         // Protección de datos: solo alias "Nombre Animal Color", nunca apellidos

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EquipoReflexion extends Model
 {
@@ -16,7 +17,8 @@ class EquipoReflexion extends Model
         'autor_nombre' => 'encrypted',
     ];
 
-    public function equipo()
+    /** @return BelongsTo<Equipo, $this> */
+    public function equipo(): BelongsTo
     {
         return $this->belongsTo(Equipo::class);
     }

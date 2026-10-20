@@ -269,13 +269,13 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
               </span>
               <span class="block truncate text-xs text-gray-500">{{ a.clase || 'Sin clase' }}</span>
               <span class="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
-                <span :class="['rounded-full px-2 py-0.5 text-[10px] font-bold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
+                <span :class="['max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-bold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
               </span>
             </span>
 
             <span class="hidden min-w-0 max-w-[16rem] flex-col items-end gap-1 sm:flex">
               <span class="max-w-full truncate text-xs font-semibold text-gray-600">{{ a.reciente.proyecto?.titulo || 'Sin proyecto' }}</span>
-              <span :class="['rounded-full px-2 py-0.5 text-[10px] font-bold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
+              <span :class="['max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-bold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
             </span>
 
             <span class="hidden w-20 shrink-0 text-center md:block" :title="`${a.participaciones.length} proyecto(s), ${a.completados} completado(s)`">
@@ -284,7 +284,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
             </span>
 
             <span class="w-14 shrink-0 text-center">
-              <span v-if="a.notaMedia !== null" class="block rounded-lg bg-administraciones/10 px-2 py-1 font-heading text-sm font-bold text-[#0F7273]"
+              <span v-if="a.notaMedia !== null" class="block rounded-full bg-administraciones/10 px-2 py-1 font-heading text-sm font-bold text-[#0F7273]"
                     :title="a.completados > 1 ? 'Nota media de sus proyectos completados' : 'Nota final'">{{ formatNota(a.notaMedia) }}</span>
               <span v-else class="block text-xs text-gray-300" title="Sin nota final todavía">—</span>
             </span>
@@ -308,7 +308,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 <div class="flex shrink-0 items-center gap-2">
                   <span :class="['rounded-full px-2 py-0.5 text-[10px] font-bold', estadoBadge(p).cls]">{{ estadoBadge(p).label }}</span>
                   <span v-if="estadoDe(p) === 'completado'"
-                        :class="['rounded-lg px-2.5 py-1 font-heading text-base font-bold', p.equipo.nota_final !== null ? 'bg-administraciones/10 text-[#0F7273]' : 'bg-amber-50 text-xs text-amber-700']">
+                        :class="['rounded-full px-2.5 py-1 font-heading text-base font-bold', p.equipo.nota_final !== null ? 'bg-administraciones/10 text-[#0F7273]' : 'bg-amber-50 text-xs text-amber-700']">
                     {{ p.equipo.nota_final !== null ? formatNota(p.equipo.nota_final) : 'Sin nota' }}
                   </span>
                 </div>
@@ -334,7 +334,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                     <span aria-hidden="true">{{ f.icono }}</span>F{{ f.num }}
                     <span class="hidden font-semibold lg:inline">{{ f.label }}</span>
                     <span v-if="p.equipo.fases[f.num]?.nota_docente !== null && p.equipo.fases[f.num]?.nota_docente !== undefined && f.num !== 4"
-                          class="rounded bg-white/60 px-1">{{ formatNota(p.equipo.fases[f.num].nota_docente) }}</span>
+                          class="rounded-full bg-white/60 px-1">{{ formatNota(p.equipo.fases[f.num].nota_docente) }}</span>
                   </span>
                 </div>
               </div>
@@ -398,5 +398,5 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 .card   { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .link   { @apply font-semibold text-centros hover:underline; }
 .campo  { @apply h-9 min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 text-xs font-bold text-azul-noche focus:border-centros focus:bg-white focus:outline-none disabled:opacity-50; }
-.accion { @apply inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-azul-noche transition-colors hover:border-alumnos hover:text-alumnos-dark; }
+.accion { @apply inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-azul-noche transition-colors hover:border-alumnos hover:text-alumnos-dark; }
 </style>
