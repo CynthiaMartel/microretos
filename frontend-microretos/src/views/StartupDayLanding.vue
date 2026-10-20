@@ -425,17 +425,6 @@ function youtubeId(url) {
               </div>
             </div>
 
-            <!-- Equipo -->
-            <div v-if="proyecto.equipo?.alumnos?.length">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Equipo</p>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
-                      class="text-xs bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-gray-600">
-                  {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
-                </span>
-              </div>
-            </div>
-
             <!-- Módulos FP -->
             <div v-if="proyecto.modulos_seleccionados?.length">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Módulos profesionales</p>

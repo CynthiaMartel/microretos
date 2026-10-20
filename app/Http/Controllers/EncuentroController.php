@@ -12,6 +12,7 @@ use App\Models\Equipo;
 use App\Models\EquipoMiembro;
 use App\Models\Microproyecto;
 use App\Models\Encuentro;
+use App\Support\AliasGenerator;
 use App\Support\CodigoLegible;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -174,21 +175,21 @@ class EncuentroController extends Controller
             ]);
 
             foreach ($alumnados as $a) {
-                if ((int) ($a['equipo_num'] ?? 0) === $n && !empty($a['nombre'])) {
-                    // Si el docente ya eligió/regeneró un alias al crear el encuentro (snapshot
-                    // `alumnados`), se respeta; si no, EquipoMiembro::booted() lo autogenera.
-                    $alias = trim((string) ($a['alias'] ?? ''));
+                if ((int) ($a['equipo_num'] ?? 0) === $n) {
+                    // Protección de datos: solo el alias que el docente generó al crear el
+                    // encuentro (snapshot `alumnados`). Si no es válido o choca con otro de la
+                    // clase, se genera otro conservando su nombre de pila.
                     $equipo->miembros()->create([
-                        'nombre' => $a['nombre'],
-                        'alias'  => $alias !== '' ? mb_substr($alias, 0, 255) : null,
-                        'rol'    => $a['rol'] ?? null,
+                        'alias' => AliasGenerator::libre($a['alias'] ?? '', EquipoMiembro::aliasDelEncuentro($equipo->id)),
+                        'rol'   => $a['rol'] ?? null,
                     ]);
                 }
             }
         }
 
         $codigo = $this->generarCodigoClase();
-        $encuentro->update(['codigo_clase' => $codigo]);
+        // El snapshot queda con los alias reales de los miembros (los antiguos podían traer nombre)
+        $encuentro->update(['codigo_clase' => $codigo, 'alumnados' => $this->snapshotAlumnados($encuentro)]);
 
         $equipos = $encuentro->equipos()->with('miembros')->get()->map(fn($e) => [
             'id'       => $e->id,
@@ -196,7 +197,6 @@ class EncuentroController extends Controller
             'token'    => $e->token,
             'miembros' => $e->miembros->map(fn($m) => [
                 'id'     => $m->id,
-                'nombre' => $m->nombre,
                 'alias'  => $m->alias,
                 'rol'    => $m->rol,
             ]),
@@ -238,7 +238,7 @@ class EncuentroController extends Controller
     /**
      * PATCH /api/encuentros/{id}/reestructurar-equipos
      * Actualiza el reparto de alumnado/equipos de un encuentro ya creado, SIN borrar y
-     * recrear: hace upsert por nombre dentro de cada equipo, para no perder el progreso ya
+     * recrear: hace upsert por id/alias dentro de cada equipo, para no perder el progreso ya
      * hecho (tareas, reflexiones, fortalezas/puntos de mejora ya escritos, etc.). Si reducir
      * el número de equipos obligaría a eliminar uno con progreso real, bloquea la operación.
      */
@@ -286,10 +286,10 @@ class EncuentroController extends Controller
             }
 
             $alumnadosDelEquipo = collect($alumnados)->filter(fn($a) => (int) $a['equipo_num'] === $n);
-            $this->sincronizarMiembrosPorNombre($equipo, $alumnadosDelEquipo);
+            $this->sincronizarMiembros($equipo, $alumnadosDelEquipo);
         }
 
-        $encuentro->update(['num_equipos' => $numEquipos, 'alumnados' => $alumnados]);
+        $encuentro->update(['num_equipos' => $numEquipos, 'alumnados' => $this->snapshotAlumnados($encuentro)]);
 
         $equipos = $encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get()->map(fn($e) => [
             'id'            => $e->id,
@@ -300,7 +300,6 @@ class EncuentroController extends Controller
             'nombres_confirmados' => $e->nombres_confirmados,
             'miembros' => $e->miembros->map(fn($m) => [
                 'id'     => $m->id,
-                'nombre' => $m->nombre,
                 'alias'  => $m->alias,
                 'rol'    => $m->rol,
             ]),
@@ -327,46 +326,74 @@ class EncuentroController extends Controller
             abort(404);
         }
 
-        $miembro->update(['alias' => $request->validated('alias')]);
+        if ($miembro->equipo->nombres_confirmados) {
+            return response()->json(['error' => 'El grupo ya confirmó sus alias y no se pueden cambiar.'], 422);
+        }
+
+        $alias = $request->validated('alias');
+        if ($miembro->aliasRepetidoEnEncuentro($alias)) {
+            return response()->json(['error' => 'Ese alias ya lo tiene otra persona de la clase. Genera otro con el dado.'], 422);
+        }
+
+        $miembro->update(['alias' => $alias]);
+        $encuentro->update(['alumnados' => $this->snapshotAlumnados($encuentro)]);
 
         return response()->json(['alias' => $miembro->alias]);
     }
 
-    // Upsert por id cuando el frontend lo manda (permite renombrar sin perder el progreso
-    // ya asociado a ese equipo_miembro: fortalezas, puntos de mejora, alias). Si no viene id
-    // (alta nueva desde el modal, o llamadas antiguas) cae a upsert por nombre como antes.
+    // Upsert por id cuando el frontend lo manda (conserva el progreso ya asociado a ese
+    // equipo_miembro: fortalezas, puntos de mejora). Si no viene id (alta nueva desde el
+    // modal, o un alumno movido desde otro grupo) cae a upsert por alias.
     //
-    // Nombre bloqueado una vez el equipo confirma nombres en su F0 (paso explícito, no basta
-    // con guardar/completar la fase): a partir de ahí el docente ya no puede cambiarlo desde
-    // "Editar equipo" (solo mover de equipo o cambiar el rol).
-    private function sincronizarMiembrosPorNombre(Equipo $equipo, \Illuminate\Support\Collection $alumnados): void
+    // Protección de datos: solo alias, nunca nombre real. El alias de un miembro existente no
+    // se toca aquí (va por actualizarAliasMiembro, de escritura inmediata); uno nuevo recibe
+    // el alias que generó el docente si es válido y está libre en la clase, o uno generado.
+    private function sincronizarMiembros(Equipo $equipo, \Illuminate\Support\Collection $alumnados): void
     {
-        $nombreBloqueado     = $equipo->nombres_confirmados;
-        $existentesPorId     = $equipo->miembros()->get()->keyBy('id');
-        $existentesPorNombre = $equipo->miembros()->get()->keyBy(fn($m) => mb_strtolower(trim($m->nombre)));
+        $existentes        = $equipo->miembros()->get();
+        $existentesPorId   = $existentes->keyBy('id');
+        $existentesPorAlias = $existentes->keyBy(fn($m) => AliasGenerator::normalizar($m->alias));
         $conservados = [];
 
         foreach ($alumnados as $a) {
             $existente = !empty($a['id']) ? $existentesPorId->get((int) $a['id']) : null;
-            if (!$existente) {
-                $existente = $existentesPorNombre->get(mb_strtolower(trim($a['nombre'])));
-            }
+            $existente ??= $existentesPorAlias->get(AliasGenerator::normalizar($a['alias'] ?? ''));
 
             if ($existente) {
-                $existente->update([
-                    'nombre' => $nombreBloqueado ? $existente->nombre : $a['nombre'],
-                    'rol'    => $a['rol'] ?? $existente->rol,
-                ]);
+                $existente->update(['rol' => $a['rol'] ?? $existente->rol]);
                 $conservados[] = $existente->id;
-            } else {
-                $conservados[] = $equipo->miembros()->create([
-                    'nombre' => $a['nombre'],
-                    'rol'    => $a['rol'] ?? null,
-                ])->id;
+                continue;
             }
+
+            $alias = $a['alias'] ?? '';
+            // Un alumno movido desde otro grupo aún figura allí: su alias se conserva tal cual
+            $alias = !empty($a['id']) && AliasGenerator::esValido($alias)
+                ? $alias
+                : AliasGenerator::libre($alias, EquipoMiembro::aliasDelEncuentro($equipo->id));
+            $conservados[] = $equipo->miembros()->create([
+                'alias' => $alias,
+                'rol'   => $a['rol'] ?? null,
+            ])->id;
         }
 
         $equipo->miembros()->whereNotIn('id', $conservados)->delete();
+    }
+
+    /**
+     * Snapshot plano del reparto (encuentros.alumnados) a partir de los miembros reales:
+     * solo alias, grupo y rol — nunca nombres.
+     *
+     * @return array<int, array{alias: string, equipo_num: int, rol: ?string}>
+     */
+    private function snapshotAlumnados(Encuentro $encuentro): array
+    {
+        return $encuentro->equipos()->with('miembros')->orderBy('numero_equipo')->get()
+            ->flatMap(fn($e) => $e->miembros->map(fn($m) => [
+                'alias'      => $m->alias,
+                'equipo_num' => (int) $e->numero_equipo,
+                'rol'        => $m->rol,
+            ]))
+            ->values()->all();
     }
 
     /**

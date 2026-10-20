@@ -69,25 +69,6 @@ function makeRenderer(doc) {
       if (emp.descripcion) addParagraph(emp.descripcion);
     }
 
-    // ── EQUIPO ───────────────────────────────────────────────────────────────
-    if (p.equipo?.alumnos?.length) {
-      addSectionTitle(`Equipo (${p.equipo.alumnos.length} personas)`, DARK);
-      p.equipo.alumnos.forEach(a => {
-        checkBreak(6);
-        const nombre = a.nombre || '';
-        const rol    = a.rol ? ` · ${a.rol}` : '';
-        setFont(8.5, 'normal', LGRAY);
-        doc.text(`• ${nombre}`, MARGIN, s.y);
-        if (a.rol) {
-          const nw = doc.getTextWidth(`• ${nombre}`);
-          setFont(8, 'normal', GRAY);
-          doc.text(rol, MARGIN + nw, s.y);
-        }
-        s.y += 4.8;
-      });
-      s.y += 2;
-    }
-
     // ── EL RETO ──────────────────────────────────────────────────────────────
     const reto = p.diseno_reto;
     if (reto?.descripcion || reto?.pregunta_reto) {

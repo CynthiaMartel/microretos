@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\AliasAlumnado;
 use Illuminate\Foundation\Http\FormRequest;
 
 // Sin sesión Sanctum — el acceso lo protege el token del equipo en la URL (ver
@@ -24,7 +25,8 @@ class ActualizarAliasMiembroPublicoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'alias' => 'required|string|max:60',
+            // Solo alias generados: un texto libre permitiría escribir el nombre real
+            'alias' => ['required', 'string', new AliasAlumnado()],
         ];
     }
 

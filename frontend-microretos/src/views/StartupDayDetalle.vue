@@ -650,16 +650,6 @@ async function completar() {
             </div>
           </div>
 
-          <!-- Equipo -->
-          <div v-if="proyecto.equipo?.alumnos?.length" class="card-section sm:col-span-2">
-            <p class="section-label">Grupo ({{ proyecto.equipo.alumnos.length }} personas)</p>
-            <div class="flex flex-wrap gap-1.5">
-              <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
-                    class="text-xs bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
-                {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
-              </span>
-            </div>
-          </div>
         </div>
 
         <!-- ═══ Currículo ═══ -->

@@ -34,9 +34,9 @@ class EquipoProgresoResource extends JsonResource
             'fases_completas' => $this->fases->filter(fn ($f) => $f->completada)->count(),
             'diagnostico_final'       => $this->diagnostico_final,
             'diagnostico_generado_en' => $this->diagnostico_generado_en,
+            // Protección de datos: del alumnado solo se expone el alias
             'miembros'        => $this->miembros->map(fn ($m) => [
                 'id'         => $m->id,
-                'nombre'     => $m->nombre,
                 'alias'      => $m->alias,
                 'rol'        => $m->rol,
                 'fortalezas' => $m->fortalezas,
@@ -50,7 +50,7 @@ class EquipoProgresoResource extends JsonResource
                     'validado_docente'      => $fase?->validado_docente ?? false,
                     'nota_docente'          => $fase?->nota_docente,
                     'observaciones_docente' => $fase?->observaciones_docente,
-                    'datos'                 => $fase?->datos,
+                    'datos'                 => $fase?->datosSinNombres(),
                     'fecha_completada'      => $fase?->fecha_completada,
                 ];
             }),
@@ -68,7 +68,7 @@ class EquipoProgresoResource extends JsonResource
             'reflexiones'     => $this->reflexiones->map(fn ($r) => [
                 'id'           => $r->id,
                 'tipo'         => $r->tipo,
-                'autor_nombre' => $r->autor_nombre,
+                'autor_nombre' => $this->aliasDe($r->autor_nombre),
                 'respuestas'   => $r->respuestas,
                 'created_at'   => $r->created_at,
             ]),

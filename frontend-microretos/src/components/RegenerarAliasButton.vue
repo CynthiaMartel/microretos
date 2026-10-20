@@ -1,20 +1,23 @@
 <script setup>
-import { generarAliasAleatorio } from '../utils/alias.js'
+import { generarAliasAleatorio, nombreDeAlias } from '../utils/alias.js'
 
 const props = defineProps({
-  nombre: { type: String, default: '' },
+  // Alias actual: se conserva su nombre de pila y solo cambian animal y color
+  alias: { type: String, default: '' },
+  // Alias ya usados en la clase, para no repetir ninguno
+  usados: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['generado'])
 
 function generar() {
-  emit('generado', generarAliasAleatorio(props.nombre))
+  emit('generado', generarAliasAleatorio(nombreDeAlias(props.alias), props.usados))
 }
 </script>
 
 <template>
   <span class="dice-wrap">
-    <button @click="generar" type="button" title="Generador de alias"
-            class="dice-btn" aria-label="Generador de alias">
+    <button @click="generar" type="button"
+            class="dice-btn" aria-label="Generador de alias: cambia el animal y el color">
       <span class="dice-emoji">🎲</span>
     </button>
     <span class="dice-tooltip" role="tooltip">Generador de alias</span>
@@ -28,6 +31,7 @@ function generar() {
   flex-shrink: 0;
 }
 .dice-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,9 +45,19 @@ function generar() {
   cursor: pointer;
   transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s ease;
 }
-.dice-btn:hover {
-  transform: scale(1.35) rotate(-10deg);
-  box-shadow: 0 4px 14px rgba(5, 150, 105, .55);
+/* Área táctil de 36px sin cambiar el tamaño visible (28px) */
+.dice-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+}
+/* Solo con ratón: en táctil el :hover se queda "pegado" tras el toque */
+@media (hover: hover) {
+  .dice-btn:hover {
+    transform: scale(1.35) rotate(-10deg);
+    box-shadow: 0 4px 14px rgba(5, 150, 105, .55);
+  }
 }
 .dice-btn:active {
   transform: scale(1.1) rotate(6deg);
@@ -68,7 +82,10 @@ function generar() {
   border-radius: .4rem;
   pointer-events: none;
   opacity: 0;
-  transition: opacity .12s ease, transform .12s ease;
+  /* Oculto de verdad (no solo transparente): si no, ocupa sitio y crea scroll horizontal
+     en contenedores estrechos */
+  visibility: hidden;
+  transition: opacity .12s ease, transform .12s ease, visibility .12s;
   z-index: 20;
 }
 .dice-tooltip::after {
@@ -80,9 +97,16 @@ function generar() {
   border: 4px solid transparent;
   border-top-color: #1F2937;
 }
-.dice-wrap:hover .dice-tooltip,
+@media (hover: hover) {
+  .dice-wrap:hover .dice-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+}
 .dice-btn:focus-visible ~ .dice-tooltip {
   opacity: 1;
+  visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
 </style>

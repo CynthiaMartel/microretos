@@ -80,9 +80,9 @@ function makeRenderer(doc) {
       equipo.miembros.forEach(m => {
         checkBreak(6);
         setFont(8.5, 'normal', LGRAY);
-        doc.text(`• ${m.nombre}`, MARGIN, s.y);
+        doc.text(`• ${m.alias}`, MARGIN, s.y);
         if (m.rol) {
-          const nw = doc.getTextWidth(`• ${m.nombre}`);
+          const nw = doc.getTextWidth(`• ${m.alias}`);
           setFont(8, 'normal', GRAY);
           doc.text(` · ${m.rol}`, MARGIN + nw, s.y);
         }

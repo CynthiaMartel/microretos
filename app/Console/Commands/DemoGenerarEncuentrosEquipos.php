@@ -18,6 +18,7 @@ use App\Models\EquipoReflexion;
 use App\Models\EquipoTarea;
 use App\Models\Microproyecto;
 use App\Models\User;
+use App\Support\AliasGenerator;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -75,17 +76,12 @@ class DemoGenerarEncuentrosEquipos extends Command
         'Equipo autónomo, ha sabido priorizar bien las tareas de cada fase.',
     ];
 
-    private const NOMBRES = [
+    // Nombres de pila inventados para el alias ("Nombre Animal Color") — nunca apellidos
+    private const NOMBRES_PILA = [
         'María', 'Lucía', 'Sofía', 'Martina', 'Paula', 'Daniela', 'Alba', 'Noa', 'Carla', 'Julia',
         'Valeria', 'Marta', 'Laura', 'Sara', 'Elena', 'Carmen', 'Nerea', 'Claudia', 'Irene', 'Andrea',
         'Alejandro', 'Daniel', 'Pablo', 'Hugo', 'Mateo', 'Martín', 'Lucas', 'Adrián', 'David', 'Javier',
         'Diego', 'Iker', 'Marcos', 'Álvaro', 'Rubén', 'Sergio', 'Jorge', 'Óscar', 'Raúl', 'Nicolás',
-    ];
-
-    private const APELLIDOS = [
-        'García', 'Rodríguez', 'Martínez', 'López', 'Sánchez', 'Pérez', 'González', 'Fernández',
-        'Gómez', 'Díaz', 'Ruiz', 'Hernández', 'Jiménez', 'Moreno', 'Muñoz', 'Álvarez', 'Romero',
-        'Alonso', 'Gutiérrez', 'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos', 'Gil', 'Serrano',
     ];
 
     private const LETRAS_GRUPO = ['A', 'B', 'C', 'D'];
@@ -292,20 +288,25 @@ class DemoGenerarEncuentrosEquipos extends Command
     }
 
     /**
-     * @return array{0: array<int, array{nombre:string,equipo_num:int,rol:string}>, 1: int}
+     * Protección de datos: el alumnado solo existe por su alias ("Nombre Animal Color", único
+     * en el encuentro), igual que en la app real — nunca apellidos, ni siquiera inventados.
+     *
+     * @return array{0: array<int, array{alias:string,equipo_num:int,rol:string}>, 1: int}
      */
     private function generarAlumnado(int $numEquipos): array
     {
         $alumnados = [];
         $total     = 0;
-        $usados    = []; // evita repetir el mismo nombre completo dos veces en el mismo encuentro
+        $usados    = [];
 
         for ($eq = 1; $eq <= $numEquipos; $eq++) {
             $n = random_int(3, 5);
             for ($m = 1; $m <= $n; $m++) {
                 $rol = $m === 1 ? 'portavoz' : self::ROLES_ROTACION[($m - 2) % count(self::ROLES_ROTACION)];
+                $alias = AliasGenerator::generar(self::NOMBRES_PILA[array_rand(self::NOMBRES_PILA)], $usados);
+                $usados[] = $alias;
                 $alumnados[] = [
-                    'nombre'     => $this->nombreAleatorio($usados),
+                    'alias'      => $alias,
                     'equipo_num' => $eq,
                     'rol'        => $rol,
                 ];
@@ -314,23 +315,6 @@ class DemoGenerarEncuentrosEquipos extends Command
         }
 
         return [$alumnados, $total];
-    }
-
-    /**
-     * Nombre y apellido inventados (nunca "Alumno/a N.M") — es lo que ve el docente en
-     * `EquipoMiembro.nombre` (columna `encrypted`) y de lo que deriva el alias público
-     * ("Nombre Animal", ver AliasGenerator) que ve el propio alumnado en su workspace.
-     */
-    private function nombreAleatorio(array &$usados): string
-    {
-        for ($intento = 0; $intento < 10; $intento++) {
-            $nombre = self::NOMBRES[array_rand(self::NOMBRES)] . ' ' . self::APELLIDOS[array_rand(self::APELLIDOS)];
-            if (!in_array($nombre, $usados, true)) {
-                $usados[] = $nombre;
-                return $nombre;
-            }
-        }
-        return $nombre; // 10 intentos sin nombre libre (grupo muy grande) — se acepta la repetición
     }
 
     /**
@@ -538,7 +522,7 @@ class DemoGenerarEncuentrosEquipos extends Command
 
                 $reqIndiv = $this->peticion(StoreEquipoReflexionRequest::class, [
                     'tipo'         => 'individual',
-                    'autor_nombre' => $miembro->nombre,
+                    'autor_nombre' => $miembro->alias,
                     'respuestas'   => $respuestasIndiv,
                 ]);
                 app(EquipoPublicoController::class)->storeReflexion($reqIndiv, $equipo->token);
@@ -813,7 +797,7 @@ class DemoGenerarEncuentrosEquipos extends Command
 
             $reqIndiv = $this->peticion(StoreEquipoReflexionRequest::class, [
                 'tipo'         => 'individual',
-                'autor_nombre' => $miembro->nombre,
+                'autor_nombre' => $miembro->alias,
                 'respuestas'   => $respuestasIndiv,
             ]);
             app(EquipoPublicoController::class)->storeReflexion($reqIndiv, $token);

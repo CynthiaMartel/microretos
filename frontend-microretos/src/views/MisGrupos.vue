@@ -653,7 +653,7 @@ onMounted(cargar)
                   <div class="flex flex-wrap gap-1 mt-1">
                     <span v-for="m in equipo.miembros" :key="m.id"
                           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
-                      {{ m.nombre }}
+                      {{ m.alias }}
                       <span v-if="m.rol" :class="['px-1.5 py-px rounded-full text-[9px] font-black', ROLES[m.rol]?.color]">
                         {{ ROLES[m.rol]?.label }}
                       </span>

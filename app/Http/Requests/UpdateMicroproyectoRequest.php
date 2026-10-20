@@ -22,6 +22,12 @@ class UpdateMicroproyectoRequest extends FormRequest
             }
         }
 
+        // Protección de datos: del equipo solo se guarda el docente responsable. Antes admitía
+        // cualquier array (p. ej. 'alumnos' con nombres reales del alumnado), que se descarta.
+        if ($this->has('equipo') && is_array($this->input('equipo'))) {
+            $sanitized['equipo'] = array_intersect_key($this->input('equipo'), array_flip(['docente_responsable']));
+        }
+
         if ($this->has('evaluacion_oficial') && is_array($this->input('evaluacion_oficial'))) {
             $sanitized['evaluacion_oficial'] = $this->sanitizeRecursively($this->input('evaluacion_oficial'));
         }
@@ -60,6 +66,7 @@ class UpdateMicroproyectoRequest extends FormRequest
             'datos_empresa'        => 'sometimes|nullable|array',
             'datos_centro'         => 'sometimes|nullable|array',
             'equipo'               => 'sometimes|nullable|array',
+            'equipo.docente_responsable' => 'nullable|string|max:255',
             'modulos_seleccionados'=> 'sometimes|nullable|array',
             'ra_ce'                => 'sometimes|nullable|string|max:50000',
             'evaluacion_oficial'              => 'sometimes|nullable|array',

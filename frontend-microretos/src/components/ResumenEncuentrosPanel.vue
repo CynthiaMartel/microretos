@@ -71,12 +71,12 @@ watch(totalPaginasSes, (t) => { if (paginaEncuentros.value > Math.max(t, 1)) pag
 function alumnadosDeEquipoEn(encuentro, n) {
   const equipo = (encuentro?.equipos || []).find(e => e.numero_equipo === n)
   if (equipo) {
-    return equipo.miembros.map(m => m.alias ? `${m.nombre} (${m.alias})` : m.nombre)
+    return equipo.miembros.map(m => m.alias)
   }
-  // Encuentros sin equipos cargados todavía (o antiguos): snapshot plano, sin alias.
+  // Encuentros sin equipos cargados todavía: snapshot plano del reparto (solo alias).
   return (encuentro?.alumnados || [])
-    .filter(a => a.equipo_num === n)
-    .map(a => a.nombre)
+    .filter(a => a.equipo_num === n && a.alias)
+    .map(a => a.alias)
 }
 
 function formatFecha(isoDate) {

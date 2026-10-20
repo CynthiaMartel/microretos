@@ -2,6 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import api from '../api.js'
 import RegenerarAliasButton from './RegenerarAliasButton.vue'
+import AvisoSinNombresReales from './AvisoSinNombresReales.vue'
+import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
 
 const props = defineProps({
   visible:   { type: Boolean, default: false },
@@ -12,6 +14,7 @@ const emit = defineEmits(['cerrar', 'actualizado', 'alias-actualizado'])
 const numEquipos      = ref(3)
 const alumnados       = ref([])
 const nuevoNombre     = ref('')
+const errorNuevo      = ref('')
 const nuevoEquipo     = ref(1)
 const guardando       = ref(false)
 const error           = ref('')
@@ -21,21 +24,28 @@ watch(() => props.visible, (v) => {
     numEquipos.value  = props.encuentro.num_equipos || 3
     // Copia propia — no se toca el objeto del padre hasta guardar con éxito.
     // Se parte de encuentro.equipos (tiene el id real de equipo_miembros, necesario
-    // para poder renombrar sin que el backend lo trate como borrar+crear) y, si un
-    // encuentro antiguo no lo trae, se cae al snapshot plano `alumnados` (sin id).
+    // para mover/cambiar de rol sin que el backend lo trate como borrar+crear) y, si el
+    // encuentro aún no tiene equipos, se cae al snapshot plano `alumnados` (sin id).
+    // Protección de datos: solo alias "NombreDePila Animal Color", nunca apellidos.
     const equipos = props.encuentro.equipos
     if (equipos?.length) {
       alumnados.value = equipos.flatMap(e =>
         e.miembros.map(m => ({
-          id: m.id, nombre: m.nombre, alias: m.alias, equipo_num: e.numero_equipo, rol: m.rol,
-          // El equipo ya pulsó "Confirmar nombres" en su F0: el nombre real ya no se puede tocar aquí.
+          id: m.id, alias: m.alias, equipo_num: e.numero_equipo, rol: m.rol,
+          // El grupo ya pulsó "Confirmar alias" en su F0: el alias ya no se puede cambiar.
           bloqueado: !!e.nombres_confirmados,
         }))
       )
     } else {
-      alumnados.value = (props.encuentro.alumnados || []).map(a => ({ ...a, bloqueado: false }))
+      const usados = []
+      alumnados.value = (props.encuentro.alumnados || []).map(a => {
+        const alias = a.alias || generarAliasAleatorio('', usados)
+        usados.push(alias)
+        return { alias, equipo_num: a.equipo_num, rol: a.rol, bloqueado: false }
+      })
     }
     nuevoNombre.value = ''
+    errorNuevo.value  = ''
     nuevoEquipo.value = 1
     error.value       = ''
     guardando.value   = false
@@ -45,9 +55,11 @@ watch(() => props.visible, (v) => {
 // Escritura inmediata al backend, fuera del payload de "Guardar reparto" — así nunca
 // pisa con un valor obsoleto el alias que el alumnado haya cambiado mientras tanto
 // desde su workspace (ver EncuentroController::actualizarAliasMiembro).
-async function guardarAliasMiembro(i, alias) {
+async function cambiarAlias(i, alias) {
   const item = alumnados.value[i]
-  if (!item?.id) return
+  if (!item) return
+  // Alumno/a aún no guardado: el alias viaja en el payload de "Guardar reparto"
+  if (!item.id) { item.alias = alias; return }
   const anterior = item.alias
   item.alias = alias
   try {
@@ -59,10 +71,14 @@ async function guardarAliasMiembro(i, alias) {
   }
 }
 
+const aliasUsados = computed(() => alumnados.value.map(a => a.alias))
+
+// Protección de datos: solo el nombre de pila (sin apellidos) + animal y color generados,
+// único en la clase
 function addAlumno() {
-  const nombre = nuevoNombre.value.trim()
-  if (!nombre) return
-  alumnados.value.push({ nombre, equipo_num: nuevoEquipo.value })
+  errorNuevo.value = errorNombrePila(nuevoNombre.value)
+  if (errorNuevo.value) return
+  alumnados.value.push({ alias: generarAliasAleatorio(nuevoNombre.value, aliasUsados.value), equipo_num: nuevoEquipo.value })
   nuevoNombre.value = ''
 }
 function removeAlumno(i) { alumnados.value.splice(i, 1) }
@@ -130,10 +146,8 @@ async function guardar() {
               guardado explicando cuál.
             </div>
 
-            <div class="mt-2 px-4 py-2.5 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-700 flex items-start gap-2">
-              <span class="shrink-0">🔒</span>
-              <span>Creamos un alias automático para cada alumno/a (protección de datos) — el
-              nombre real que escribas aquí no se muestra fuera del grupo ni del panel docente.</span>
+            <div class="mt-2">
+              <AvisoSinNombresReales para="docente" />
             </div>
 
             <!-- Número de equipos -->
@@ -155,8 +169,10 @@ async function guardar() {
               <label class="req-label">Alumnado por grupos</label>
 
               <div class="flex flex-wrap gap-2">
-                <input v-model="nuevoNombre" type="text" placeholder="Nombre del alumno/a"
-                       class="req-input flex-1 min-w-32 !text-sm"
+                <input v-model="nuevoNombre" type="text" maxlength="30"
+                       placeholder="Nombre de pila (sin apellidos)" aria-label="Nombre de pila del alumno/a"
+                       class="req-input flex-1 min-w-0 basis-40 !text-sm"
+                       @input="errorNuevo = ''"
                        @keyup.enter="addAlumno" />
                 <select v-model="nuevoEquipo" class="req-input !w-auto pr-8 cursor-pointer !text-sm">
                   <option v-for="n in numEquipos" :key="n" :value="n">Grupo {{ n }}</option>
@@ -164,11 +180,12 @@ async function guardar() {
                 <button type="button" @click="addAlumno"
                         class="shrink-0 px-3 py-2 bg-violet-500 text-white rounded-full
                                text-xs font-black hover:bg-violet-600 transition-all">
-                  + Añadir
+                  + Añadir alumno/a
                 </button>
               </div>
+              <p v-if="errorNuevo" class="text-[11px] font-semibold text-red-500">{{ errorNuevo }}</p>
 
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div v-for="n in numEquipos" :key="n"
                      class="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                   <div class="flex items-center gap-1.5 mb-2">
@@ -180,27 +197,14 @@ async function guardar() {
                     <span class="text-[9px] text-gray-400 flex-shrink-0">{{ alumnadosDeEquipo(n).length }}</span>
                   </div>
                   <div v-if="alumnadosDeEquipo(n).length" class="space-y-1.5">
-                    <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="text-xs">
-                      <div class="flex items-center gap-1">
-                        <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
-                              class="shrink-0 text-gray-300">🔒</span>
-                        <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
-                               :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
-                               class="flex-1 min-w-0 truncate font-medium text-[#1F2937] bg-transparent
-                                      border border-transparent hover:border-gray-200 focus:border-violet-300
-                                      focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
-                                      disabled:text-gray-400 disabled:hover:border-transparent disabled:cursor-not-allowed" />
-                        <button type="button" @click="removeAlumno(a._i)"
-                                class="text-gray-300 hover:text-red-400 font-black transition-colors
-                                       text-sm leading-none flex-shrink-0">×</button>
-                      </div>
-                      <div class="flex items-center gap-1 pl-0.5 mt-0.5">
-                        <span class="flex-1 min-w-0 truncate text-[10px] text-gray-400">
-                          {{ alumnados[a._i].alias || (alumnados[a._i].id ? '' : 'se genera al guardar') }}
-                        </span>
-                        <RegenerarAliasButton v-if="alumnados[a._i].id" :nombre="alumnados[a._i].nombre"
-                                               @generado="alias => guardarAliasMiembro(a._i, alias)" />
-                      </div>
+                    <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="flex items-center gap-2 text-xs">
+                      <span v-if="a.bloqueado" title="El grupo ya confirmó sus alias en el workspace — no se pueden cambiar"
+                            class="shrink-0 text-gray-300">🔒</span>
+                      <span class="flex-1 min-w-0 truncate font-medium text-[#1F2937]">{{ a.alias }}</span>
+                      <RegenerarAliasButton v-if="!a.bloqueado" :alias="a.alias" :usados="aliasUsados"
+                                             @generado="alias => cambiarAlias(a._i, alias)" />
+                      <button type="button" @click="removeAlumno(a._i)" :aria-label="`Quitar a ${a.alias}`"
+                              class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black leading-none text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400">×</button>
                     </div>
                   </div>
                   <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>
@@ -213,27 +217,14 @@ async function guardar() {
                   Sin grupo asignado
                 </p>
                 <div class="space-y-1.5">
-                  <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">
-                    <div class="flex items-center gap-1">
-                      <span v-if="a.bloqueado" title="Ya confirmó su nombre en el workspace — no se puede editar"
-                            class="shrink-0 text-amber-300">🔒</span>
-                      <input v-model="alumnados[a._i].nombre" type="text" maxlength="100" :disabled="a.bloqueado"
-                             :title="a.bloqueado ? 'Ya confirmó su nombre en el workspace — no se puede editar' : ''"
-                             class="flex-1 min-w-0 truncate font-medium text-amber-700 bg-transparent
-                                    border border-transparent hover:border-amber-200 focus:border-amber-400
-                                    focus:bg-white rounded px-1 py-0.5 outline-none transition-colors
-                                    disabled:text-amber-400/60 disabled:hover:border-transparent disabled:cursor-not-allowed" />
-                      <button type="button" @click="removeAlumno(a._i)"
-                              class="text-amber-300 hover:text-red-400 font-black transition-colors
-                                     text-sm leading-none flex-shrink-0">×</button>
-                    </div>
-                    <div class="flex items-center gap-1 pl-0.5 mt-0.5">
-                      <span class="flex-1 min-w-0 truncate text-[10px] text-amber-400/80">
-                        {{ alumnados[a._i].alias || (alumnados[a._i].id ? '' : 'se genera al guardar') }}
-                      </span>
-                      <RegenerarAliasButton v-if="alumnados[a._i].id" :nombre="alumnados[a._i].nombre"
-                                             @generado="alias => guardarAliasMiembro(a._i, alias)" />
-                    </div>
+                  <div v-for="a in alumnadosSinEquipo" :key="a._i" class="flex items-center gap-2 text-xs">
+                    <span v-if="a.bloqueado" title="El grupo ya confirmó sus alias en el workspace — no se pueden cambiar"
+                          class="shrink-0 text-amber-300">🔒</span>
+                    <span class="flex-1 min-w-0 truncate font-medium text-amber-700">{{ a.alias }}</span>
+                    <RegenerarAliasButton v-if="!a.bloqueado" :alias="a.alias" :usados="aliasUsados"
+                                           @generado="alias => cambiarAlias(a._i, alias)" />
+                    <button type="button" @click="removeAlumno(a._i)" :aria-label="`Quitar a ${a.alias}`"
+                            class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black leading-none text-amber-300 transition-colors hover:bg-red-50 hover:text-red-400">×</button>
                   </div>
                 </div>
               </div>

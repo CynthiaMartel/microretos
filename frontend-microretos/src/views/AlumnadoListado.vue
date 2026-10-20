@@ -4,9 +4,10 @@
      Biblioteca de diagnósticos son por grupo, así que el trabajo del workspace, la
      validación de fases y el diagnóstico no se repiten aquí: se enlazan.
 
-     No existe entidad "alumno" en BD (solo miembros de grupo con nombre cifrado), así que
-     un alumno se identifica por nombre + ciclo + curso + clase del encuentro: dos alumnos
-     homónimos de la misma clase aparecerían juntos. -->
+     Protección de datos: la plataforma no guarda nombres reales, solo el alias del alumno/a
+     ("NombreDePila Animal Color", único en su encuentro). No existe entidad "alumno" en BD (solo miembros
+     de grupo), así que un alumno se identifica por alias + centro + ciclo + curso + clase:
+     si el docente reutiliza el mismo alias en otro encuentro de esa clase, se agrupan. -->
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -55,7 +56,7 @@ const NIVELES_RA = [
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 const fecha = (iso) => iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
-const iniciales = (nombre) => String(nombre ?? '').trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+const iniciales = (alias) => String(alias ?? '').trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
 const formatNota = (n) => (n === null || n === undefined) ? '' : Number(n).toLocaleString('es-ES', { maximumFractionDigits: 2 })
 
 // Mismo criterio que Mis grupos: completado = las 5 fases del grupo completas
@@ -107,7 +108,7 @@ const OPCIONES_ESTADO = [
   { value: 'completado', label: 'Completados' }, { value: 'sin_iniciar', label: 'Sin iniciar' },
 ]
 const OPCIONES_ORDEN = [
-  { value: 'nombre', label: 'Nombre' }, { value: 'nota', label: 'Nota media' }, { value: 'reciente', label: 'Más reciente' },
+  { value: 'nombre', label: 'Alias' }, { value: 'nota', label: 'Nota media' }, { value: 'reciente', label: 'Más reciente' },
 ]
 
 const hayFiltros = computed(() => !!(busqueda.value || filtroEstado.value || filtroProyecto.value || filtroClase.value || fechaDesde.value || fechaHasta.value))
@@ -117,7 +118,7 @@ function limpiarFiltros() {
 }
 
 // Filtros que actúan sobre cada participación (proyecto, clase, fechas del encuentro, estado);
-// la búsqueda por nombre se aplica después, sobre el alumno agrupado.
+// la búsqueda por alias se aplica después, sobre el alumno agrupado.
 const participacionesFiltradas = computed(() => delCurso.value.filter(p =>
   (!filtroProyecto.value || p.proyecto?.uuid === filtroProyecto.value) &&
   (!filtroClase.value    || claseDe(p) === filtroClase.value) &&
@@ -127,23 +128,20 @@ const participacionesFiltradas = computed(() => delCurso.value.filter(p =>
 ))
 
 // ── Agrupación por alumno ───────────────────────────────────────────────────
-const claveAlumno = (p) => [p.nombre, p.encuentro.ciclo_formativo, p.encuentro.curso, p.encuentro.grupo].map(norm).join('|')
+const claveAlumno = (p) => [p.alias, p.encuentro.centro_educativo, p.encuentro.ciclo_formativo, p.encuentro.curso, p.encuentro.grupo].map(norm).join('|')
 
 function agrupar(lista) {
   const mapa = new Map()
   for (const p of lista) {
     const k = claveAlumno(p)
-    if (!mapa.has(k)) mapa.set(k, { clave: k, nombre: p.nombre, alias: new Set(), clase: claseDe(p), participaciones: [] })
-    const a = mapa.get(k)
-    if (p.alias) a.alias.add(p.alias)
-    a.participaciones.push(p)
+    if (!mapa.has(k)) mapa.set(k, { clave: k, alias: p.alias, clase: claseDe(p), participaciones: [] })
+    mapa.get(k).participaciones.push(p)
   }
   return [...mapa.values()].map(a => {
     a.participaciones.sort((x, y) => (y.encuentro.fecha || '').localeCompare(x.encuentro.fecha || ''))
     const notas = a.participaciones.filter(p => estadoDe(p) === 'completado' && p.equipo.nota_final !== null).map(p => p.equipo.nota_final)
     return {
       ...a,
-      alias: [...a.alias],
       reciente: a.participaciones[0],
       completados: a.participaciones.filter(p => estadoDe(p) === 'completado').length,
       notaMedia: notas.length ? notas.reduce((t, n) => t + n, 0) / notas.length : null,
@@ -154,8 +152,8 @@ function agrupar(lista) {
 const alumnos = computed(() => {
   const q = norm(busqueda.value)
   const lista = agrupar(participacionesFiltradas.value)
-    .filter(a => !q || norm(a.nombre).includes(q) || a.alias.some(al => norm(al).includes(q)))
-  const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, 'es')
+    .filter(a => !q || norm(a.alias).includes(q))
+  const porNombre = (a, b) => String(a.alias ?? '').localeCompare(String(b.alias ?? ''), 'es')
   if (orden.value === 'nota')     return lista.sort((a, b) => (b.notaMedia ?? -1) - (a.notaMedia ?? -1) || porNombre(a, b))
   if (orden.value === 'reciente') return lista.sort((a, b) => (b.reciente.encuentro.fecha || '').localeCompare(a.reciente.encuentro.fecha || '') || porNombre(a, b))
   return lista.sort(porNombre)
@@ -220,7 +218,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
       </div>
 
       <!-- Búsqueda y filtros -->
-      <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar alumno por nombre o alias…"
+      <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar alumno por alias…"
                     :resultados="alumnos.length" :unidad="['alumno', 'alumnos']"
                     :hay-activos="hayFiltros" @limpiar="limpiarFiltros">
         <template #curso>
@@ -263,12 +261,11 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
           <button type="button" @click="toggle(a.clave)" :aria-expanded="abiertos.has(a.clave)"
                   class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-alumnos/15 text-sm font-bold text-alumnos-dark">
-              {{ iniciales(a.nombre) }}
+              {{ iniciales(a.alias) }}
             </span>
             <span class="min-w-0 flex-1">
               <span class="block truncate font-semibold">
-                {{ a.nombre }}
-                <span v-if="a.alias.length" class="font-normal text-gray-400">· {{ a.alias.join(', ') }}</span>
+                {{ a.alias }}
               </span>
               <span class="block truncate text-xs text-gray-500">{{ a.clase || 'Sin clase' }}</span>
               <span class="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
@@ -322,7 +319,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 <span class="rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white">{{ nombreGrupo(p.equipo) }}</span>
                 <span v-if="p.rol && ROLES[p.rol]" :class="['rounded-full px-2 py-0.5 font-bold', ROLES[p.rol].cls]">{{ ROLES[p.rol].label }}</span>
                 <span v-if="p.equipo.companeros.length" class="text-gray-400">con</span>
-                <span v-for="c in p.equipo.companeros" :key="c.id" class="rounded-full bg-gray-100 px-2 py-0.5 font-semibold text-gray-600">{{ c.nombre }}</span>
+                <span v-for="c in p.equipo.companeros" :key="c.id" class="rounded-full bg-gray-100 px-2 py-0.5 font-semibold text-gray-600">{{ c.alias }}</span>
               </div>
 
               <!-- Fases del workspace (estado + nota de fase si la hay) -->

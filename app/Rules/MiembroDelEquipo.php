@@ -7,13 +7,11 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * El valor tiene que ser el nombre de un miembro del propio equipo (rutas públicas
+ * El valor tiene que ser el alias de un miembro del propio equipo (rutas públicas
  * /equipo/{token}/…): responsable de una tarea o autor de una reflexión individual.
  * EquipoWorkspace.vue los elige en un desplegable con los miembros; aquí se impide
- * que llegue cualquier otro texto. Vacío = sin valor (lo decide required/nullable).
- *
- * La comparación se hace en PHP: equipo_miembros.nombre está cifrado y no se puede
- * filtrar en SQL.
+ * que llegue cualquier otro texto — en particular un nombre real. Vacío = sin valor
+ * (lo decide required/nullable).
  */
 class MiembroDelEquipo implements ValidationRule
 {
@@ -35,7 +33,7 @@ class MiembroDelEquipo implements ValidationRule
         }
 
         $valor = trim((string) $value);
-        if (!$equipo->miembros->contains(fn ($m) => trim((string) $m->nombre) === $valor)) {
+        if (!$equipo->miembros->contains(fn ($m) => trim((string) $m->alias) === $valor)) {
             $fail('Elige un miembro del equipo.');
         }
     }

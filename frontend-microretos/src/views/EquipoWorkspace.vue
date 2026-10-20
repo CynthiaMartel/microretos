@@ -5,6 +5,8 @@ import api from '../api.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import DesbloquearIaModal from '../components/DesbloquearIaModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
+import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
+import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
 import {
   MegaphoneIcon,
   ClockIcon,
@@ -190,6 +192,7 @@ function mostrarError(msg) {
 // ── F0: Formularios de equipo ───────────────────────────────────────────────
 const f0 = ref({ contrato_firmado: false, miembros: [] })
 const nuevoMiembro = ref({ nombre: '', rol: '' })
+const errorNuevoMiembro = ref('')
 const rolesOpciones = ['portavoz', 'tiempos', 'documentacion', 'foco']
 const rolesInfo = {
   portavoz: {
@@ -261,42 +264,48 @@ function inicializarF0() {
     contrato_firmado: datos.contrato_firmado ?? false,
     miembros: (equipo.value?.miembros ?? []).map(m => ({
       id:               m.id,
-      nombre:           m.nombre ?? '',
       alias:            m.alias ?? '',
       rol:              m.rol ?? '',
       fortalezas:       Array.isArray(m.fortalezas) ? m.fortalezas : [],
       puntosMejora:     Array.isArray(m.puntos_mejora) ? m.puntos_mejora : [],
       nuevaFortaleza:   '',
       nuevoPuntoMejora: '',
-      editandoAlias:    false,
     })),
   }
 }
 
+// Protección de datos: un integrante nuevo escribe solo su nombre de pila (sin apellidos) y
+// recibe animal + color: "Adrián Águila Amarillo". El nombre no se guarda aparte, solo el
+// alias (el backend lo valida y, si chocara con otro de la clase, cambia animal y color).
+const aliasUsadosF0 = computed(() => f0.value.miembros.map(m => m.alias))
+
 function addMiembro() {
-  if (!nuevoMiembro.value.nombre.trim()) return
+  errorNuevoMiembro.value = errorNombrePila(nuevoMiembro.value.nombre)
+  if (errorNuevoMiembro.value) return
   f0.value.miembros.push({
-    ...nuevoMiembro.value,
-    alias: '',
+    rol: nuevoMiembro.value.rol,
+    alias: generarAliasAleatorio(nuevoMiembro.value.nombre, aliasUsadosF0.value),
     fortalezas: [],
     puntosMejora: [],
     nuevaFortaleza: '',
     nuevoPuntoMejora: '',
-    editandoAlias: false,
   })
   nuevoMiembro.value = { nombre: '', rol: '' }
 }
 function removeMiembro(i) { f0.value.miembros.splice(i, 1) }
 
 // Escritura inmediata al backend, fuera del guardado de fase — así el alias queda
-// persistido al instante (dado o edición manual) y no depende de que el equipo llegue
-// a pulsar "Guardar"/"Siguiente" en la F0. Si el docente lo cambia mientras tanto desde
-// "Editar equipo", gana quien guarde último (ver EncuentroController::actualizarAliasMiembro).
-async function guardarAliasMiembro(m) {
-  if (!m.id || !m.alias.trim()) return
+// persistido al instante y no depende de que el equipo llegue a pulsar "Guardar"/"Siguiente"
+// en la F0. Si el docente lo cambia mientras tanto desde "Editar equipo", gana quien guarde
+// último (ver EncuentroController::actualizarAliasMiembro). Solo alias generados (dado).
+async function cambiarAliasMiembro(m, alias) {
+  const anterior = m.alias
+  m.alias = alias
+  if (!m.id) return // integrante aún no guardado: viaja con la F0
   try {
-    await api.put(`/equipo/${token}/miembros/${m.id}/alias`, { alias: m.alias })
+    await api.put(`/equipo/${token}/miembros/${m.id}/alias`, { alias })
   } catch (e) {
+    m.alias = anterior
     mostrarError(e.response?.data?.error || 'No se pudo actualizar el alias.')
   }
 }
@@ -323,7 +332,7 @@ const f0Valido = computed(() =>
 function serializarF0() {
   return {
     contrato_firmado: f0.value.contrato_firmado,
-    miembros: f0.value.miembros.map(({ nuevaFortaleza, nuevoPuntoMejora, puntosMejora, editandoAlias, ...m }) => ({
+    miembros: f0.value.miembros.map(({ nuevaFortaleza, nuevoPuntoMejora, puntosMejora, ...m }) => ({
       ...m,
       puntos_mejora: puntosMejora,
     })),
@@ -357,9 +366,9 @@ async function confirmarNombres() {
     await guardarF0()
     await api.post(`/equipo/${token}/fase/0/confirmar-nombres`)
     nombresConfirmados.value = true
-    mostrarOk('Nombres confirmados. Ya no se pueden editar.')
+    mostrarOk('Alias confirmados. Ya no se pueden cambiar.')
   } catch (e) {
-    errorConfirmarNombres.value = e.response?.data?.error || 'Error al confirmar los nombres.'
+    errorConfirmarNombres.value = e.response?.data?.error || 'Error al confirmar los alias.'
   } finally {
     confirmandoNombres.value = false
   }
@@ -1053,7 +1062,7 @@ watch(workspace, (val) => {
             <p class="text-sm sm:text-base font-black text-alumnos truncate">{{ equipo.nombre }}</p>
             <p v-if="equipo.miembros?.length"
                class="text-[11px] text-gray-400 mt-0.5 leading-relaxed sm:leading-normal truncate sm:whitespace-normal">
-              {{ equipo.miembros.slice(0, 4).map(m => m.nombre.split(' ')[0]).join(' · ') }}
+              {{ equipo.miembros.slice(0, 4).map(m => m.alias).join(' · ') }}
             </p>
             <p v-if="proyecto.centro_nombre" class="text-[11px] text-gray-500 mt-0.5 truncate">
               {{ proyecto.centro_nombre }}<span v-if="proyecto.curso"> · {{ proyecto.curso }}</span>
@@ -1106,7 +1115,7 @@ watch(workspace, (val) => {
                   leave-active-class="transition-all duration-200" leave-to-class="opacity-0 -translate-y-2">
         <div v-if="msgOk"
              class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-alumnos text-white
-                    px-5 py-2.5 rounded-full shadow-lg text-sm font-bold whitespace-nowrap">
+                    w-max max-w-[calc(100vw-2rem)] px-5 py-2.5 rounded-2xl shadow-lg text-sm font-bold text-center break-words">
           ✓ {{ msgOk }}
         </div>
       </Transition>
@@ -1116,7 +1125,7 @@ watch(workspace, (val) => {
                   leave-active-class="transition-all duration-200" leave-to-class="opacity-0 -translate-y-2">
         <div v-if="msgError"
              class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white
-                    px-5 py-2.5 rounded-full shadow-lg text-sm font-bold whitespace-nowrap">
+                    w-max max-w-[calc(100vw-2rem)] px-5 py-2.5 rounded-2xl shadow-lg text-sm font-bold text-center break-words">
           ✕ {{ msgError }}
         </div>
       </Transition>
@@ -1185,44 +1194,22 @@ watch(workspace, (val) => {
                   </div>
                 </div>
 
-                <div class="px-3 py-2 mb-3 bg-emerald-50 rounded-xl border border-emerald-100
-                            text-[11px] text-emerald-700 flex items-start gap-1.5">
-                  <span class="shrink-0">🔒</span>
-                  <span>Creamos un alias para tu protección de datos — es lo que verán fuera del
-                  equipo. Puedes cambiarlo cuando quieras.</span>
+                <div class="mb-3">
+                  <AvisoSinNombresReales para="alumnado" />
                 </div>
 
                 <div class="space-y-2 mb-4">
                   <div v-for="(m, i) in f0.miembros" :key="i"
                        class="bg-slate-50 rounded-xl px-3 py-2.5 space-y-2">
                     <div class="flex items-center gap-2">
-                      <span class="flex-1 text-sm font-bold text-[#1F2937]">{{ m.nombre }}</span>
+                      <span class="flex-1 min-w-0 truncate text-sm font-bold text-[#1F2937]">{{ m.alias }}</span>
+                      <RegenerarAliasButton v-if="!nombresConfirmados" :alias="m.alias" :usados="aliasUsadosF0"
+                                             @generado="alias => cambiarAliasMiembro(m, alias)" />
                       <span class="text-[10px] text-slate-500 capitalize bg-white border border-slate-200 px-2 py-0.5 rounded-full">
                         {{ m.rol || 'sin rol' }}
                       </span>
-                      <button v-if="!nombresConfirmados" @click="removeMiembro(i)"
-                              class="text-gray-300 hover:text-red-400 transition-colors text-xs font-black">✕</button>
-                    </div>
-
-                    <!-- Alias: lo que se mostrará fuera del equipo (informes, empresas...) en vez
-                         del nombre real. Se genera solo; el alumnado puede cambiarlo si quiere. -->
-                    <div class="flex items-center gap-2 pl-0.5">
-                      <span class="text-[10px] font-black uppercase tracking-wider text-alumnos-dark">Alias</span>
-                      <template v-if="m.editandoAlias">
-                        <input v-model="m.alias" type="text" maxlength="60" placeholder="Alias visible fuera del equipo"
-                               class="flex-1 min-w-0 text-xs border border-emerald-300 rounded-lg px-2 py-1 bg-white
-                                      focus:outline-none focus:border-emerald-500"
-                               @keydown.enter.prevent="m.editandoAlias = false; guardarAliasMiembro(m)" />
-                        <RegenerarAliasButton :nombre="m.nombre"
-                                               @generado="alias => { m.alias = alias; guardarAliasMiembro(m) }" />
-                        <button @click="m.editandoAlias = false; guardarAliasMiembro(m)" type="button"
-                                class="text-[10px] font-black text-emerald-600 uppercase">Listo</button>
-                      </template>
-                      <template v-else>
-                        <span class="flex-1 text-xs text-gray-600">{{ m.alias || 'se genera al guardar' }}</span>
-                        <button @click="m.editandoAlias = true" type="button"
-                                class="text-[10px] font-black text-gray-400 hover:text-emerald-600 uppercase">Editar</button>
-                      </template>
+                      <button v-if="!nombresConfirmados" @click="removeMiembro(i)" :aria-label="`Quitar a ${m.alias}`"
+                              class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400">✕</button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
@@ -1283,9 +1270,11 @@ watch(workspace, (val) => {
                 </div>
 
                 <div v-if="!nombresConfirmados" class="flex gap-2 flex-wrap">
-                  <input v-model="nuevoMiembro.nombre" type="text" placeholder="Nombre del alumno/a"
-                         class="flex-1 min-w-32 text-sm border border-gray-200 rounded-xl px-3 py-2
+                  <input v-model="nuevoMiembro.nombre" type="text" maxlength="30"
+                         placeholder="Nombre de pila (sin apellidos)" aria-label="Nombre de pila del integrante"
+                         class="flex-1 min-w-0 basis-40 text-sm border border-gray-200 rounded-xl px-3 py-2
                                 focus:outline-none focus:border-slate-400 bg-gray-50"
+                         @input="errorNuevoMiembro = ''"
                          @keydown.enter="addMiembro" />
                   <select v-model="nuevoMiembro.rol"
                           class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50
@@ -1295,28 +1284,30 @@ watch(workspace, (val) => {
                   </select>
                   <button @click="addMiembro"
                           class="px-4 py-2 rounded-full bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
-                    + Añadir
+                    + Añadir integrante
                   </button>
                 </div>
+                <p v-if="errorNuevoMiembro" class="mt-1.5 text-[11px] font-semibold text-red-500">{{ errorNuevoMiembro }}</p>
 
-                <!-- Confirmar nombres: paso explícito, distinto de guardar/completar la fase.
-                     A partir de aquí el nombre real queda bloqueado (el alias sigue editable). -->
+                <!-- Confirmar alias: paso explícito, distinto de guardar/completar la fase.
+                     A partir de aquí los alias quedan fijos (el docente los usa para saber
+                     quién es quién). La ruta y la variable conservan el nombre antiguo. -->
                 <div v-if="nombresConfirmados"
                      class="mt-3 px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200
                             text-xs font-bold text-emerald-700 flex items-center gap-2">
                   <span>✅</span>
-                  <span>Nombres confirmados — ya no se pueden añadir, quitar ni cambiar (el docente tampoco puede).</span>
+                  <span>Alias confirmados — ya no se pueden añadir, quitar ni cambiar (el docente tampoco puede).</span>
                 </div>
-                <div v-else class="mt-3">
+                <div v-else class="mt-3 text-center">
                   <button @click="confirmarNombres" type="button"
                           :disabled="confirmandoNombres || !f0.miembros.length"
-                          class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
+                          class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full
                                  bg-emerald-600 text-white text-xs font-black uppercase tracking-wider
                                  hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    {{ confirmandoNombres ? 'Confirmando...' : '🔒 Confirmar nombres del equipo' }}
+                    {{ confirmandoNombres ? 'Confirmando...' : '🔒 Confirmar alias del equipo' }}
                   </button>
                   <p class="text-[10px] text-gray-400 mt-1.5 text-center">
-                    Comprobad que todos los nombres están bien escritos: después no se podrán cambiar.
+                    Comprobad que cada persona sabe cuál es su alias: después no se podrá cambiar.
                   </p>
                   <p v-if="errorConfirmarNombres" class="text-xs text-red-500 font-medium mt-1.5 text-center">
                     {{ errorConfirmarNombres }}
@@ -1636,7 +1627,7 @@ watch(workspace, (val) => {
                                  class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
                                         border-gray-200 focus:outline-none focus:border-amber-400 px-0 py-0.5 cursor-pointer">
                             <option value="">+ responsable</option>
-                            <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                            <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
                           </select>
                         </div>
                         <button v-if="!t.obligatoria" @click="eliminarTarea(t)" class="text-gray-200 hover:text-red-400 transition-colors font-black text-xs shrink-0">✕</button>
@@ -1673,7 +1664,7 @@ watch(workspace, (val) => {
                              class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
                                     focus:outline-none focus:border-amber-400 bg-gray-50 cursor-pointer">
                         <option value="">Responsable…</option>
-                        <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                        <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
                       </select>
                       <button @click="addTareaGenerica" :disabled="!nuevaTareaGenerica.descripcion.trim() || cargandoTareaGenerica"
                               class="px-4 py-2 rounded-full bg-amber-500 text-white text-xs font-black
@@ -2101,15 +2092,17 @@ watch(workspace, (val) => {
                           class="text-gray-300 hover:text-gray-500 font-black text-sm">✕</button>
                 </div>
 
+                <AvisoSinNombresReales para="alumnado" />
+
                 <div v-if="modoReflexion === 'individual'">
-                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">Tu nombre <span class="text-red-400">*</span></label>
+                  <label class="block text-xs font-black text-[#1F2937] uppercase tracking-wider mb-1.5">Tu alias <span class="text-red-400">*</span></label>
                   <!-- Desplegable con los miembros del equipo (no texto libre): el backend
                        solo acepta como autor a un miembro del propio equipo -->
                   <select v-model="nombreAlumno"
                           class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2
                                  focus:outline-none focus:border-green-400 bg-gray-50 cursor-pointer">
-                    <option value="">Elige tu nombre…</option>
-                    <option v-for="m in miembrosEquipo" :key="m.id" :value="m.nombre">{{ m.nombre }}</option>
+                    <option value="">Elige tu alias…</option>
+                    <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
                   </select>
                 </div>
 
@@ -2291,10 +2284,10 @@ watch(workspace, (val) => {
                   <div :style="{ backgroundColor: avatarColor(i) }"
                        class="w-9 h-9 rounded-full flex items-center justify-center
                               text-white font-black text-sm shrink-0 select-none">
-                    {{ initials(m.nombre) }}
+                    {{ initials(m.alias) }}
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-semibold text-[#1F2937] truncate">{{ m.nombre }}</p>
+                    <p class="text-sm font-semibold text-[#1F2937] truncate">{{ m.alias }}</p>
                     <p class="text-[11px] text-gray-400 capitalize">{{ m.rol || 'Miembro' }}</p>
                   </div>
                 </div>

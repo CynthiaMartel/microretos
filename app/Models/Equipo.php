@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use App\Models\Encuentro;
+use App\Support\AliasGenerator;
 use App\Support\CodigoLegible;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +23,8 @@ class Equipo extends Model
         'ia_desbloqueada'         => 'boolean',
         'diagnostico_final'       => 'array',
         'diagnostico_generado_en' => 'datetime',
+        // El equipo confirmó sus alias en F0: desde ahí no se pueden cambiar (el docente
+        // los usa para su correspondencia alias → alumno/a). Antes bloqueaba el nombre real.
         'nombres_confirmados'     => 'boolean',
     ];
 
@@ -40,6 +43,25 @@ class Equipo extends Model
     private static function generarCodigo(): string
     {
         return CodigoLegible::generar(fn($codigo) => static::where('codigo_acceso', $codigo)->exists());
+    }
+
+    /**
+     * Alias del miembro al que se refiere un texto guardado como responsable de tarea o
+     * autor de reflexión. Hoy se guarda el alias, pero los registros anteriores guardan el
+     * nombre real: se traduce al alias para no exponerlo hasta que `alumnado:anonimizar`
+     * limpie esos datos. Sin coincidencia devuelve null (nunca el texto original).
+     */
+    public function aliasDe(?string $texto): ?string
+    {
+        $buscado = AliasGenerator::normalizar($texto);
+        if ($buscado === '') {
+            return null;
+        }
+
+        $miembro = $this->miembros->first(fn ($m) => AliasGenerator::normalizar($m->alias) === $buscado)
+            ?? $this->miembros->first(fn ($m) => AliasGenerator::normalizar($m->nombre) === $buscado);
+
+        return $miembro?->alias;
     }
 
     // ── Relaciones ────────────────────────────────────────────────────────────

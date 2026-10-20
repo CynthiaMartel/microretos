@@ -142,7 +142,7 @@ function labelFase(numero) {
               <div v-if="equipo.miembros?.length" class="flex flex-wrap gap-1.5 pt-1">
                 <span v-for="m in equipo.miembros" :key="m.id"
                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600 text-[10px] font-semibold">
-                  {{ m.nombre }}<span v-if="m.rol" class="text-gray-400"> · {{ m.rol }}</span>
+                  {{ m.alias }}<span v-if="m.rol" class="text-gray-400"> · {{ m.rol }}</span>
                 </span>
               </div>
               <!-- Fichas adjuntas -->

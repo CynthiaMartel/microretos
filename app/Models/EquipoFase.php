@@ -25,6 +25,39 @@ class EquipoFase extends Model
         'nota_docente'             => 'decimal:2',
     ];
 
+    /**
+     * Datos de la fase sin nombres reales del alumnado: los F0 antiguos guardaban
+     * datos.miembros[].nombre en claro. Hoy GuardarFaseEquipoRequest ya no lo deja pasar,
+     * pero hasta que `alumnado:anonimizar` limpie los registros antiguos se quita al leer.
+     */
+    public function datosSinNombres(): ?array
+    {
+        $datos = $this->datos;
+        if (!is_array($datos) || !isset($datos['miembros']) || !is_array($datos['miembros'])) {
+            return $datos;
+        }
+
+        $datos['miembros'] = array_map(function ($m) {
+            if (is_array($m)) {
+                unset($m['nombre']);
+            }
+            return $m;
+        }, $datos['miembros']);
+
+        return $datos;
+    }
+
+    // Defensa en profundidad: cualquier serialización del modelo sale sin nombres reales.
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        if (array_key_exists('datos', $array)) {
+            $array['datos'] = $this->datosSinNombres();
+        }
+
+        return $array;
+    }
+
     /** @return BelongsTo<Equipo, $this> */
     public function equipo(): BelongsTo
     {

@@ -15,6 +15,8 @@ use App\Http\Requests\StoreEquipoPrototipoRequest;
 use App\Http\Requests\StoreImagenProyectoRequest;
 use App\Http\Requests\SugerirHallazgoRequest;
 use App\Http\Requests\VerificarCodigoIaRequest;
+use App\Http\Resources\EquipoReflexionResource;
+use App\Http\Resources\EquipoTareaResource;
 use App\Http\Resources\MicroretoFichaResource;
 use App\Models\Equipo;
 use App\Models\EquipoFase;
@@ -26,6 +28,7 @@ use App\Models\Encuentro;
 use App\Models\MicroproyectoRecurso;
 use App\Services\MicroretoFichaService;
 use App\Services\NotificacionDocenteService;
+use App\Support\AliasGenerator;
 
 class EquipoPublicoController extends Controller
 {
@@ -77,7 +80,8 @@ class EquipoPublicoController extends Controller
                 'id'       => $e->id,
                 'nombre'   => $e->nombre,
                 'token'    => $e->token,
-                'miembros' => $e->miembros->pluck('nombre'),
+                // Protección de datos: solo alias (endpoint público, sin login)
+                'miembros' => $e->miembros->pluck('alias'),
             ]),
         ]);
     }
@@ -182,10 +186,12 @@ class EquipoPublicoController extends Controller
 
         $validated = $request->validated();
 
-        $fase = EquipoFase::updateOrCreate(
-            ['equipo_id' => $equipo->id, 'numero_fase' => $numeroFase],
-            ['datos' => $validated['datos']]
-        );
+        // Se fusiona con lo ya guardado en vez de sustituirlo: el request solo deja pasar los
+        // campos del alumnado, así que las claves que escribe el docente en la misma fase
+        // (p. ej. 'evaluacion_docente' en F4) se conservan.
+        $fase = EquipoFase::firstOrNew(['equipo_id' => $equipo->id, 'numero_fase' => $numeroFase]);
+        $fase->datos = array_merge($fase->datos ?? [], $validated['datos']);
+        $fase->save();
 
         // Sincronizar miembros si vienen en F0
         if ($numeroFase === 0 && isset($validated['datos']['miembros'])) {
@@ -239,16 +245,17 @@ class EquipoPublicoController extends Controller
     /**
      * POST /api/equipo/{token}/fase/0/confirmar-nombres
      * Paso explícito de F0, distinto de guardar/completar la fase: a partir de aquí el
-     * nombre real de cada miembro queda bloqueado (ni el equipo ni el docente pueden
-     * cambiarlo desde "Editar equipo" — ver sincronizarMiembros() aquí y
-     * EncuentroController::sincronizarMiembrosPorNombre()).
+     * alias de cada miembro queda bloqueado (ni el equipo ni el docente pueden cambiarlo),
+     * porque el docente lo usa para su correspondencia alias → alumno/a fuera de la
+     * plataforma. La ruta y la columna conservan el nombre de cuando se confirmaban
+     * nombres reales.
      */
     public function confirmarNombres($token): JsonResponse
     {
         $equipo = Equipo::where('token', $token)->firstOrFail();
 
         if ($equipo->miembros()->count() === 0) {
-            return response()->json(['error' => 'Añade al menos un integrante antes de confirmar los nombres.'], 422);
+            return response()->json(['error' => 'Añade al menos un integrante antes de confirmar los alias.'], 422);
         }
 
         $equipo->update(['nombres_confirmados' => true]);
@@ -292,7 +299,7 @@ class EquipoPublicoController extends Controller
         $equipo = Equipo::where('token', $token)->firstOrFail();
         $creadas = $this->crearTareasGenericasFaltantes($equipo);
 
-        return response()->json($creadas->values(), 201);
+        return response()->json(EquipoTareaResource::collection($creadas->each->setRelation('equipo', $equipo)->values()), 201);
     }
 
     private function crearTareasGenericasFaltantes(Equipo $equipo): \Illuminate\Support\Collection
@@ -510,7 +517,7 @@ class EquipoPublicoController extends Controller
             ]);
         });
 
-        return response()->json($creadas->values(), 201);
+        return response()->json(EquipoTareaResource::collection($creadas->each->setRelation('equipo', $equipo)->values()), 201);
     }
 
     private function contextoMicroreto(?\App\Models\Microreto $mr): string
@@ -539,8 +546,8 @@ class EquipoPublicoController extends Controller
         $data['equipo_id'] = $equipo->id;
         $data['orden']     = EquipoTarea::where('equipo_id', $equipo->id)->count();
 
-        $tarea = EquipoTarea::create($data);
-        return response()->json($tarea, 201);
+        $tarea = EquipoTarea::create($data)->setRelation('equipo', $equipo);
+        return response()->json(new EquipoTareaResource($tarea), 201);
     }
 
     public function updateTarea(UpdateEquipoTareaRequest $request, $token, int $tareaId)
@@ -551,7 +558,7 @@ class EquipoPublicoController extends Controller
         $data = $request->validated();
 
         $tarea->update($data);
-        return response()->json($tarea);
+        return response()->json(new EquipoTareaResource($tarea->setRelation('equipo', $equipo)));
     }
 
     public function destroyTarea($token, int $tareaId)
@@ -587,7 +594,7 @@ class EquipoPublicoController extends Controller
             'respuestas'   => $data['respuestas'],
         ]);
 
-        return response()->json($reflexion, 201);
+        return response()->json(new EquipoReflexionResource($reflexion->setRelation('equipo', $equipo)), 201);
     }
 
     // ── Prototipos — archivos subidos a Cloudinary ───────────────────────────
@@ -815,8 +822,8 @@ class EquipoPublicoController extends Controller
 
     /**
      * PUT /api/equipo/{token}/miembros/{miembroId}/alias
-     * El alumnado puede fijar/regenerar su alias en cualquier momento desde el workspace,
-     * fuera del guardado de fase — escritura inmediata, igual que el docente en
+     * El alumnado puede regenerar su alias desde el workspace hasta que el equipo confirma
+     * los alias en F0 — escritura inmediata, igual que el docente en
      * EncuentroController::actualizarAliasMiembro. Sea cual sea el último en guardar
      * (alumnado aquí o docente desde "Editar equipo"), esa es la única fuente de verdad,
      * sin copia en ningún otro sitio.
@@ -826,7 +833,16 @@ class EquipoPublicoController extends Controller
         $equipo  = Equipo::where('token', $token)->firstOrFail();
         $miembro = EquipoMiembro::where('id', $miembroId)->where('equipo_id', $equipo->id)->firstOrFail();
 
-        $miembro->update(['alias' => $request->validated('alias')]);
+        if ($equipo->nombres_confirmados) {
+            return response()->json(['error' => 'Los alias ya están confirmados y no se pueden cambiar.'], 422);
+        }
+
+        $alias = $request->validated('alias');
+        if ($miembro->aliasRepetidoEnEncuentro($alias)) {
+            return response()->json(['error' => 'Ese alias ya lo tiene otra persona de la clase. Genera otro con el dado.'], 422);
+        }
+
+        $miembro->update(['alias' => $alias]);
 
         return response()->json(['alias' => $miembro->alias]);
     }
@@ -846,9 +862,9 @@ class EquipoPublicoController extends Controller
                 'fase_actual'   => $equipo->fase_actual,
                 'nombres_confirmados' => $equipo->nombres_confirmados,
                 'ia_desbloqueada' => $equipo->ia_desbloqueada,
+                // Protección de datos: del alumnado solo se expone el alias
                 'miembros'      => $equipo->miembros->map(fn($m) => [
                     'id'         => $m->id,
-                    'nombre'     => $m->nombre,
                     'alias'      => $m->alias,
                     'rol'        => $m->rol,
                     'fortalezas'    => $m->fortalezas,
@@ -894,14 +910,14 @@ class EquipoPublicoController extends Controller
                 'descripcion' => $t->descripcion,
                 'tipo'        => $t->tipo,
                 'obligatoria' => $t->obligatoria,
-                'responsable' => $t->responsable,
+                'responsable' => $equipo->aliasDe($t->responsable),
                 'estado'      => $t->estado,
             ]),
             // Reflexiones F4
             'reflexiones' => $equipo->reflexiones->map(fn($r) => [
                 'id'           => $r->id,
                 'tipo'         => $r->tipo,
-                'autor_nombre' => $r->autor_nombre,
+                'autor_nombre' => $equipo->aliasDe($r->autor_nombre),
                 'respuestas'   => $r->respuestas,
                 'created_at'   => $r->created_at,
             ]),
@@ -937,7 +953,7 @@ class EquipoPublicoController extends Controller
 
         return [
             'numero_fase'              => $fase->numero_fase,
-            'datos'                    => $fase->datos,
+            'datos'                    => $fase->datosSinNombres(),
             'completada'               => $fase->completada,
             'fecha_completada'         => $fase->fecha_completada,
             'validado_docente'         => $fase->validado_docente,
@@ -951,45 +967,34 @@ class EquipoPublicoController extends Controller
     // al crear el encuentro (ver EncuentroController::crearCodigo()). Un delete()+create()
     // completo aquí borraría ese reparto en cuanto el equipo guardara F0 la primera vez.
     //
-    // Nombre bloqueado una vez el equipo pulsa "Confirmar nombres" en su F0 — a partir de
-    // ahí ni el propio equipo ni el docente (ver EncuentroController) pueden cambiarlo.
+    // Protección de datos: un miembro se identifica por id; uno nuevo (sin id) recibe un
+    // alias generado — nunca se guarda un nombre real (GuardarFaseEquipoRequest ya los quita).
     //
     // El alias es de escritura inmediata (ver actualizarAliasMiembro, y el equivalente del
     // docente EncuentroController::actualizarAliasMiembro): para un miembro EXISTENTE nunca
     // se toca aquí, para no pisar con el valor cacheado en el navegador desde que se cargó la
     // página un cambio más reciente hecho por el otro lado. Solo se fija al crear un miembro
-    // nuevo (o se autogenera si viene vacío, vía EquipoMiembro::booted()).
+    // nuevo, si viene uno generado válido y libre en la clase (si no, lo genera booted()).
     private function sincronizarMiembros(Equipo $equipo, array $miembros): void
     {
-        $nombreBloqueado = $equipo->nombres_confirmados;
         $existentes  = $equipo->miembros()->pluck('id')->all();
         $conservados = [];
 
         foreach ($miembros as $m) {
-            if (empty($m['nombre'])) {
-                continue;
-            }
-
             $datos = [
-                'nombre'        => $m['nombre'],
                 'rol'           => $m['rol'] ?? null,
                 'fortalezas'    => $m['fortalezas'] ?? [],
                 'puntos_mejora' => $m['puntos_mejora'] ?? [],
             ];
 
             if (!empty($m['id']) && in_array($m['id'], $existentes, true)) {
-                if ($nombreBloqueado) {
-                    unset($datos['nombre']);
-                }
-                $equipo->miembros()->whereKey($m['id'])->update($datos);
+                EquipoMiembro::whereKey($m['id'])->first()?->update($datos);
                 $conservados[] = $m['id'];
-            } else {
-                $alias = trim((string) ($m['alias'] ?? ''));
-                if ($alias !== '') {
-                    $datos['alias'] = mb_substr($alias, 0, 255);
-                }
-                $conservados[] = $equipo->miembros()->create($datos)->id;
+                continue;
             }
+
+            $datos['alias'] = AliasGenerator::libre($m['alias'] ?? '', EquipoMiembro::aliasDelEncuentro($equipo->id));
+            $conservados[] = $equipo->miembros()->create($datos)->id;
         }
 
         // Solo se borran los miembros que el equipo quitó explícitamente de su lista.

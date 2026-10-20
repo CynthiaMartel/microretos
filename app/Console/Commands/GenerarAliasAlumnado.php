@@ -7,7 +7,7 @@ use App\Support\AliasGenerator;
 use Illuminate\Console\Command;
 
 /**
- * Rellena el alias ("Nombre Adjetivo") de los miembros de equipo dados de alta ANTES
+ * Rellena el alias ("NombreDePila Animal Color") de los miembros de equipo dados de alta ANTES
  * de que existiera esta columna. Los miembros nuevos ya reciben alias automáticamente
  * (ver EquipoMiembro::booted()); este comando es solo el backfill de los históricos.
  *
@@ -34,9 +34,9 @@ class GenerarAliasAlumnado extends Command
         $total = 0;
 
         foreach ($pendientes as $equipoId => $miembros) {
-            foreach ($miembros->values() as $posicion => $miembro) {
-                $alias = AliasGenerator::generar($miembro->nombre, $posicion);
-                $this->line("Equipo {$equipoId} · miembro {$miembro->id}: \"{$miembro->nombre}\" -> \"{$alias}\"");
+            foreach ($miembros->values() as $miembro) {
+                $alias = AliasGenerator::generar(AliasGenerator::nombreDePila($miembro->nombre), EquipoMiembro::aliasDelEncuentro($miembro->equipo_id));
+                $this->line("Equipo {$equipoId} · miembro {$miembro->id} -> \"{$alias}\"");
 
                 if ($commit) {
                     $miembro->alias = $alias;

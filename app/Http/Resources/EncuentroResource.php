@@ -26,18 +26,23 @@ class EncuentroResource extends JsonResource
             'num_alumnos'        => $this->num_alumnos,
             'notas'              => $this->notas,
             'num_equipos'        => $this->num_equipos,
-            'alumnados'          => $this->alumnados,
+            // Protección de datos: snapshot del reparto sin nombres reales (los antiguos los
+            // guardaban; se limpian con `alumnado:anonimizar`).
+            'alumnados'          => collect($this->alumnados ?? [])->map(fn($a) => [
+                'alias'      => $a['alias'] ?? null,
+                'equipo_num' => $a['equipo_num'] ?? null,
+                'rol'        => $a['rol'] ?? null,
+            ])->values(),
             'equipos'            => $this->whenLoaded('equipos', fn() => $this->equipos->map(fn($e) => [
                 'id'            => $e->id,
                 'numero_equipo' => $e->numero_equipo,
                 'nombre'        => $e->nombre,
                 'fase_actual'   => $e->fase_actual,
-                // El equipo confirmó nombres en su F0 (paso explícito) — el frontend usa esto
-                // para bloquear el nombre en "Editar equipo".
+                // El equipo confirmó sus alias en F0 (paso explícito) — el frontend usa esto
+                // para bloquear el alias en "Editar equipo".
                 'nombres_confirmados' => $e->nombres_confirmados,
                 'miembros'      => $e->miembros->map(fn($m) => [
                     'id'     => $m->id,
-                    'nombre' => $m->nombre,
                     'alias'  => $m->alias,
                     'rol'    => $m->rol,
                 ]),

@@ -83,10 +83,14 @@ class EquipoGestionController extends Controller
 
         $data = $request->validated();
 
+        // Se fusiona con lo que ya guardó el equipo en F4 (organización de la exposición):
+        // sustituir 'datos' entero lo borraba.
+        $datosF4 = EquipoFase::where('equipo_id', $equipo->id)->where('numero_fase', 4)->first()?->datos ?? [];
+
         $fase = EquipoFase::updateOrCreate(
             ['equipo_id' => $equipo->id, 'numero_fase' => 4],
             [
-                'datos'                    => ['evaluacion_docente' => $data['evaluacion']],
+                'datos'                    => array_merge($datosF4, ['evaluacion_docente' => $data['evaluacion']]),
                 'validado_docente'         => true,
                 'fecha_validacion_docente' => now(),
                 'nota_docente'             => $data['nota_docente'] ?? null,

@@ -142,7 +142,7 @@ function irAPaginaCompleta() {
                     max-h-[92vh] flex flex-col overflow-hidden">
 
           <!-- Barra superior sticky -->
-          <div class="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 shrink-0">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 bg-white border-b border-gray-100 shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
               <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                    :class="[theme.bg5, theme.border20]">
@@ -150,13 +150,15 @@ function irAPaginaCompleta() {
                 <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Proyecto</span>
               </div>
               <span v-if="proyecto"
-                    :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
+                    :class="['hidden sm:inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
                 <span :class="['w-1.5 h-1.5 rounded-full shrink-0', getEstadoBadge(proyecto).dot]" />
                 {{ getEstadoBadge(proyecto).label }}
               </span>
               <p v-if="proyecto" class="font-black text-[#1F2937] text-sm truncate">{{ proyecto.titulo }}</p>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
+            <!-- En móvil, "Ficha reto original" y "Página completa" quedan solo con icono (círculo)
+                 para que el ✕ nunca se salga de la barra -->
+            <div class="flex items-center gap-2 shrink-0 ml-auto">
               <button v-if="proyecto"
                       @click="descargarPDF(proyecto)"
                       class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest
@@ -170,30 +172,31 @@ function irAPaginaCompleta() {
               </button>
               <button v-if="proyecto?.microreto_id"
                       @click="microretoModalId = proyecto.microreto_id"
-                      class="px-3 py-1.5 rounded-full border-2
+                      class="w-9 h-9 justify-center sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full border-2
                              text-[10px] font-black uppercase tracking-widest
                              hover:text-white transition-all flex items-center gap-1.5"
                       :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
+                      aria-label="Ficha reto original"
                       title="Ver la ficha del reto original del que deriva este proyecto">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
-                Ficha reto original
+                <span class="hidden sm:inline">Ficha reto original</span>
               </button>
-              <button v-if="proyecto" @click="irAPaginaCompleta"
-                      class="px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200
+              <button v-if="proyecto" @click="irAPaginaCompleta" aria-label="Página completa"
+                      class="w-9 h-9 justify-center sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full bg-gray-50 border border-gray-200
                              text-[10px] font-black uppercase tracking-widest text-gray-500
                              transition-all flex items-center gap-1.5"
                       :class="paletteExtra[theme.key].hoverBorderText">
-                Página completa
+                <span class="hidden sm:inline">Página completa</span>
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
               </button>
-              <button @click="cerrar"
-                      class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+              <button @click="cerrar" aria-label="Cerrar"
+                      class="w-9 h-9 shrink-0 rounded-full bg-gray-100 flex items-center justify-center
                              text-gray-400 hover:bg-gray-200 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -406,15 +409,6 @@ function irAPaginaCompleta() {
                     </div>
                   </div>
 
-                  <div v-if="proyecto.equipo?.alumnos?.length" class="card-section sm:col-span-2">
-                    <p class="section-label">Grupo ({{ proyecto.equipo.alumnos.length }} personas)</p>
-                    <div class="flex flex-wrap gap-1.5">
-                      <span v-for="a in proyecto.equipo.alumnos" :key="a.nombre"
-                            class="text-xs bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full text-gray-600">
-                        {{ a.nombre }}<span v-if="a.rol" class="text-gray-400"> · {{ a.rol }}</span>
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 <!-- ═══ Currículo ═══ -->
@@ -743,7 +737,7 @@ function irAPaginaCompleta() {
                   </div>
                 </div>
 
-                <div v-if="!proyecto.datos_empresa?.nombre && !proyecto.equipo?.alumnos?.length && !raCeBlocks.length
+                <div v-if="!proyecto.datos_empresa?.nombre && !raCeBlocks.length
                             && !proyecto.diseno_reto?.descripcion && !proyecto.objetivos?.lista?.length"
                      class="text-center py-6 text-gray-400">
                   <p class="text-xs">Este proyecto aún no tiene secciones rellenas.</p>

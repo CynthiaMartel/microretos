@@ -40,7 +40,8 @@ class DiagnosticoFinalService
 
         $ctx .= "\n=== EQUIPO ===\n";
         $ctx .= "Nombre del equipo: {$equipo->nombre}\n";
-        $miembros = $equipo->miembros->map(fn($m) => $m->nombre . ($m->rol ? " ({$m->rol})" : ''))->implode(', ');
+        // Protección de datos: a la IA solo le llegan alias, nunca nombres reales
+        $miembros = $equipo->miembros->map(fn($m) => $m->alias . ($m->rol ? " ({$m->rol})" : ''))->implode(', ');
         $ctx .= 'Participantes: ' . ($miembros ?: 'sin registrar') . "\n";
 
         if ($proyecto) {
@@ -94,7 +95,7 @@ class DiagnosticoFinalService
             }
             $ctx .= "completada\n";
             if (!empty($fase->datos)) {
-                $ctx .= self::resumenFase($fase->datos);
+                $ctx .= self::resumenFase($fase->datosSinNombres());
             }
             if ($n !== 4 && $fase->nota_docente !== null) {
                 $ctx .= "Nota docente en esta fase: {$fase->nota_docente}/10\n";
@@ -157,6 +158,11 @@ class DiagnosticoFinalService
             if (array_is_list($valor)) {
                 if ($valor && is_array($valor[0]) && isset($valor[0]['pregunta'])) {
                     $items = array_map(fn($item) => "{$item['pregunta']} → " . ($item['respuesta'] ?? 'sin responder'), $valor);
+                    return implode('; ', $items);
+                }
+                // Miembros de F0: se identifican por alias (sin nombre real)
+                if ($valor && is_array($valor[0]) && isset($valor[0]['alias'])) {
+                    $items = array_map(fn($item) => ($item['alias'] ?? '') . (!empty($item['rol']) ? " ({$item['rol']})" : ''), $valor);
                     return implode('; ', $items);
                 }
                 if ($valor && is_array($valor[0]) && isset($valor[0]['nombre'])) {

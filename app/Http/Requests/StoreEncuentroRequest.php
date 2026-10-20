@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Microproyecto;
+use App\Rules\AliasAlumnado;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreEncuentroRequest extends FormRequest
@@ -23,15 +24,16 @@ class StoreEncuentroRequest extends FormRequest
             }
         }
 
+        // Protección de datos: del alumnado solo se recibe el alias (lista blanca de campos;
+        // un 'nombre' que llegue se descarta aquí y nunca se guarda).
         if ($this->has('alumnados') && is_array($this->input('alumnados'))) {
             $sanitized['alumnados'] = collect($this->input('alumnados'))
+                ->filter(fn($a) => is_array($a))
                 ->map(fn($a) => [
-                    'nombre'     => isset($a['nombre'])     ? strip_tags($a['nombre'])     : '',
+                    'alias'      => isset($a['alias'])      ? trim(strip_tags((string) $a['alias'])) : '',
                     'equipo_num' => isset($a['equipo_num']) ? (int) $a['equipo_num']       : null,
-                    'rol'        => isset($a['rol'])        ? strip_tags($a['rol'])        : null,
-                    'alias'      => isset($a['alias'])      ? strip_tags($a['alias'])      : null,
+                    'rol'        => isset($a['rol'])        ? strip_tags((string) $a['rol']) : null,
                 ])
-                ->filter(fn($a) => !empty($a['nombre']))
                 ->values()
                 ->toArray();
         }
@@ -72,14 +74,13 @@ class StoreEncuentroRequest extends FormRequest
             'notas'                  => 'nullable|string|max:5000',
             'num_equipos'            => 'required|integer|min:1|max:30',
             'alumnados'              => 'required|array|min:1|max:200',
-            'alumnados.*.nombre'     => 'required|string|max:100',
+            'alumnados.*.alias'      => ['required', 'string', 'distinct:ignore_case', new AliasAlumnado()],
             'alumnados.*.equipo_num' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($numEquipos) {
                 if ($numEquipos > 0 && $value > $numEquipos) {
                     $fail("El grupo asignado ({$value}) supera el número de grupos del encuentro ({$numEquipos}).");
                 }
             }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
-            'alumnados.*.alias'      => 'nullable|string|max:60',
         ];
     }
 
@@ -93,6 +94,8 @@ class StoreEncuentroRequest extends FormRequest
             'alumnados.required'        => 'Reparte el alumnado en grupos antes de guardar el encuentro.',
             'alumnados.min'             => 'Reparte el alumnado en grupos antes de guardar el encuentro.',
             'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un grupo asignado.',
+            'alumnados.*.alias.required'      => 'Todos los alumnos necesitan un alias.',
+            'alumnados.*.alias.distinct'      => 'Hay dos alumnos con el mismo alias. Genera otro con el dado.',
         ];
     }
 }

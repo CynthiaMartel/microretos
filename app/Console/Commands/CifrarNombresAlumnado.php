@@ -30,6 +30,11 @@ class CifrarNombresAlumnado extends Command
         foreach (EquipoMiembro::all() as $miembro) {
             $valor = $miembro->getRawOriginal('nombre');
 
+            // Miembros solo con alias (protección de datos): no hay nada que cifrar
+            if ($valor === null || $valor === '') {
+                continue;
+            }
+
             if ($this->pareceCifrado($valor)) {
                 $yaCifrados++;
                 continue;

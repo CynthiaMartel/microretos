@@ -46,7 +46,7 @@ function formatFecha(fecha) {
 function resumenMiembros(encuentro) {
   const miembros = (encuentro.equipos || []).flatMap(eq => eq.miembros || [])
   if (!miembros.length) return ''
-  const nombres = miembros.map(m => m.alias || m.nombre).filter(Boolean)
+  const nombres = miembros.map(m => m.alias).filter(Boolean)
   const max = 3
   const resto = nombres.length - max
   return resto > 0 ? `${nombres.slice(0, max).join(', ')} +${resto} más` : nombres.join(', ')

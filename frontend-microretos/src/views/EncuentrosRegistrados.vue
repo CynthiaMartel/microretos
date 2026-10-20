@@ -275,12 +275,12 @@ function irAAccesoAlumnado() {
 function alumnadosDelEquipoAbierto(n) {
   const equipo = (encuentroAbierto.value?.equipos || []).find(e => e.numero_equipo === n)
   if (equipo) {
-    return equipo.miembros.map(m => ({ nombre: m.nombre, alias: m.alias }))
+    return equipo.miembros.map(m => ({ alias: m.alias }))
   }
-  // Encuentros sin equipos cargados todavía (o antiguos): snapshot plano, sin alias.
+  // Encuentros sin equipos cargados todavía: snapshot plano del reparto (solo alias).
   return (encuentroAbierto.value?.alumnados || [])
-    .filter(a => a.equipo_num === n)
-    .map(a => ({ nombre: a.nombre, alias: null }))
+    .filter(a => a.equipo_num === n && a.alias)
+    .map(a => ({ alias: a.alias }))
 }
 
 // ─── Reestructurar equipo ──────────────────────────────────────────────────────

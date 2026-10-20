@@ -158,6 +158,7 @@ function formatItemFase(item) {
   if (Array.isArray(item)) return item.map(formatItemFase).filter(Boolean).join(', ')
   if (typeof item === 'object') {
     if ('pregunta' in item) return `${item.pregunta}: ${item.respuesta || '—'}`
+    if ('alias' in item)    return item.rol ? `${item.alias} (${item.rol})` : item.alias
     if ('nombre' in item)   return item.rol ? `${item.nombre} (${item.rol})` : item.nombre
     return Object.values(item).filter(x => typeof x === 'string' && x).join(' · ')
   }
@@ -200,7 +201,7 @@ function formatItemFase(item) {
         <div class="flex flex-wrap gap-1.5 mt-1.5">
           <span v-for="m in equipo.miembros" :key="m.id"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-sm font-bold">
-            {{ m.nombre }}
+            {{ m.alias }}
             <span v-if="m.rol" :class="['px-1.5 py-px rounded-full text-[9px] font-black', ROLES[m.rol]?.color]">
               {{ ROLES[m.rol]?.label }}
             </span>
@@ -418,7 +419,7 @@ function formatItemFase(item) {
         </div>
       </div>
 
-      <!-- Reflexiones individuales — su propio bloque, con el nombre del alumno/a en
+      <!-- Reflexiones individuales — su propio bloque, con el alias del alumno/a en
            grande: antes se mezclaban con la grupal en una lista plana donde solo se
            distinguían por una etiqueta diminuta, y quedaban fácilmente desapercibidas. -->
       <div v-if="reflexionesIndividuales.length" class="mt-2">

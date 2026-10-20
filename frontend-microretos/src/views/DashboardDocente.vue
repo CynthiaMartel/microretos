@@ -11,7 +11,8 @@ import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
 import ResumenEncuentrosPanel from '../components/ResumenEncuentrosPanel.vue'
 import TourPromptModal from '../components/TourPromptModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
-import { generarAliasAleatorio } from '../utils/alias.js'
+import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
+import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
 import { useUIState } from '../composables/useUIState.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -145,6 +146,7 @@ function estadoProyectoBadge(proyectoOEstado) {
 
 // ─── Alumnado por equipos ─────────────────────────────────────────────────────
 const nuevoAlumnadoNombre = ref('')
+const errorNuevoAlumnado  = ref('')
 const nuevoAlumnadoEquipo = ref(1)
 
 const limiteAlumnados = computed(() => {
@@ -156,17 +158,20 @@ const limiteAlcanzado = computed(() =>
   limiteAlumnados.value !== null && form.value.alumnados.length >= limiteAlumnados.value
 )
 
+// Protección de datos: del alumno/a solo se pide el nombre de pila (una palabra, sin
+// apellidos) y se le añade animal + color: "Adrián Águila Amarillo", único en la clase.
+// El docente lo ve y puede cambiar animal y color con el dado antes de crear el encuentro;
+// viaja en el snapshot `alumnados` y se aplica al crear los equipo_miembros reales en
+// EncuentroController::crearCodigo().
+const aliasUsados = computed(() => form.value.alumnados.map(a => a.alias))
+
 function addAlumnadoEncuentro() {
-  const nombre = nuevoAlumnadoNombre.value.trim()
-  if (!nombre) return
   if (limiteAlcanzado.value) return
-  // Alias generado ya al añadir el alumno/a (no al guardar): el docente lo ve y puede
-  // regenerarlo antes de crear el encuentro. Viaja en el snapshot `alumnados` y se
-  // aplica al crear los equipo_miembros reales en EncuentroController::crearCodigo().
+  errorNuevoAlumnado.value = errorNombrePila(nuevoAlumnadoNombre.value)
+  if (errorNuevoAlumnado.value) return
   form.value.alumnados.push({
-    nombre,
     equipo_num: nuevoAlumnadoEquipo.value,
-    alias: generarAliasAleatorio(nombre),
+    alias: generarAliasAleatorio(nuevoAlumnadoNombre.value, aliasUsados.value),
   })
   nuevoAlumnadoNombre.value = ''
 }
@@ -491,12 +496,12 @@ function cerrarEncuentroModal() {
 function alumnadosDeEquipoEn(encuentro, n) {
   const equipo = (encuentro?.equipos || []).find(e => e.numero_equipo === n)
   if (equipo) {
-    return equipo.miembros.map(m => m.alias ? `${m.nombre} (${m.alias})` : m.nombre)
+    return equipo.miembros.map(m => m.alias)
   }
-  // Encuentros sin equipos cargados todavía (o antiguos): snapshot plano, sin alias.
+  // Encuentros sin equipos cargados todavía: snapshot plano del reparto.
   return (encuentro?.alumnados || [])
-    .filter(a => a.equipo_num === n)
-    .map(a => a.nombre)
+    .filter(a => a.equipo_num === n && a.alias)
+    .map(a => a.alias)
 }
 
 function alumnadosDelEquipoAbierto(n) {
@@ -1017,19 +1022,15 @@ function formatFecha(isoDate) {
                     </span>
                   </label>
 
-                  <div class="px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100
-                              text-[11px] text-emerald-700 flex items-start gap-1.5">
-                    <span class="shrink-0">🔒</span>
-                    <span>Creamos un alias automático para cada alumno/a (por protección de datos).
-                    Podrás modificarlo aquí, en Biblioteca de Encuentros, o el alumnado podrá
-                    modificarlo en su workflow.</span>
-                  </div>
+                  <AvisoSinNombresReales para="docente" />
 
-                  <!-- Formulario añadir alumno/a -->
+                  <!-- Formulario añadir alumno/a: nombre de pila + grupo; animal y color se generan -->
                   <div class="flex flex-wrap gap-2">
-                    <input v-model="nuevoAlumnadoNombre" type="text" placeholder="Nombre del alumno/a"
-                           class="field-input flex-1 min-w-32 !text-sm"
+                    <input v-model="nuevoAlumnadoNombre" type="text" maxlength="30"
+                           placeholder="Nombre de pila (sin apellidos)" aria-label="Nombre de pila del alumno/a"
+                           class="field-input flex-1 min-w-0 basis-40 !text-sm"
                            :disabled="!fechaEstablecida"
+                           @input="errorNuevoAlumnado = ''"
                            @keyup.enter="addAlumnadoEncuentro" />
                     <select v-model="nuevoAlumnadoEquipo"
                             class="field-input !w-auto pr-8 cursor-pointer !text-sm"
@@ -1043,12 +1044,13 @@ function formatFecha(isoDate) {
                             class="shrink-0 px-3 py-2 bg-centros text-white rounded-full
                                    text-xs font-black hover:bg-centros/90 transition-all
                                    disabled:opacity-40 disabled:cursor-not-allowed">
-                      + Añadir
+                      + Añadir alumno/a
                     </button>
                   </div>
+                  <p v-if="errorNuevoAlumnado" class="text-[11px] font-semibold text-red-500">{{ errorNuevoAlumnado }}</p>
 
                   <!-- Grid de equipos -->
-                  <div class="grid grid-cols-2 gap-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div v-for="n in (form.num_equipos || 3)" :key="n"
                          class="rounded-xl border p-3 transition-all"
                          :class="Number(nuevoAlumnadoEquipo) === n
@@ -1074,20 +1076,12 @@ function formatFecha(isoDate) {
                         </span>
                       </div>
                       <div v-if="alumnadosDeEquipo(n).length" class="space-y-1.5">
-                        <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="text-xs">
-                          <div class="flex items-center gap-1">
-                            <span class="flex-1 truncate font-medium text-[#1F2937]">{{ a.nombre }}</span>
-                            <button @click="removeAlumnadoEncuentro(a._i)"
-                                    class="text-gray-300 hover:text-red-400 font-black transition-colors
-                                           text-sm leading-none flex-shrink-0">×</button>
-                          </div>
-                          <div class="flex items-center gap-1 pl-0.5 mt-0.5">
-                            <span class="flex-1 min-w-0 truncate text-[10px] text-gray-400">
-                              {{ form.alumnados[a._i].alias }}
-                            </span>
-                            <RegenerarAliasButton :nombre="form.alumnados[a._i].nombre"
-                                                   @generado="alias => (form.alumnados[a._i].alias = alias)" />
-                          </div>
+                        <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="flex items-center gap-2 text-xs">
+                          <span class="flex-1 min-w-0 truncate font-medium text-[#1F2937]">{{ a.alias }}</span>
+                          <RegenerarAliasButton :alias="a.alias" :usados="aliasUsados"
+                                                 @generado="alias => (form.alumnados[a._i].alias = alias)" />
+                          <button @click="removeAlumnadoEncuentro(a._i)" :aria-label="`Quitar a ${a.alias}`"
+                                  class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black leading-none text-gray-300 transition-colors hover:bg-red-50 hover:text-red-400">×</button>
                         </div>
                       </div>
                       <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>
@@ -1101,20 +1095,12 @@ function formatFecha(isoDate) {
                       Sin grupo asignado
                     </p>
                     <div class="space-y-1.5">
-                      <div v-for="a in alumnadosSinEquipo" :key="a._i" class="text-xs">
-                        <div class="flex items-center gap-1">
-                          <span class="flex-1 truncate font-medium text-amber-700">{{ a.nombre }}</span>
-                          <button @click="removeAlumnadoEncuentro(a._i)"
-                                  class="text-amber-300 hover:text-red-400 font-black transition-colors
-                                         text-sm leading-none flex-shrink-0">×</button>
-                        </div>
-                        <div class="flex items-center gap-1 pl-0.5 mt-0.5">
-                          <span class="flex-1 min-w-0 truncate text-[10px] text-amber-400/80">
-                            {{ form.alumnados[a._i].alias }}
-                          </span>
-                          <RegenerarAliasButton :nombre="form.alumnados[a._i].nombre"
-                                                 @generado="alias => (form.alumnados[a._i].alias = alias)" />
-                        </div>
+                      <div v-for="a in alumnadosSinEquipo" :key="a._i" class="flex items-center gap-2 text-xs">
+                        <span class="flex-1 min-w-0 truncate font-medium text-amber-700">{{ a.alias }}</span>
+                        <RegenerarAliasButton :alias="a.alias" :usados="aliasUsados"
+                                               @generado="alias => (form.alumnados[a._i].alias = alias)" />
+                        <button @click="removeAlumnadoEncuentro(a._i)" :aria-label="`Quitar a ${a.alias}`"
+                                class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-black leading-none text-amber-300 transition-colors hover:bg-red-50 hover:text-red-400">×</button>
                       </div>
                     </div>
                   </div>
@@ -1126,7 +1112,7 @@ function formatFecha(isoDate) {
                    :class="{ 'tour-active': tourTargetActivo === 'refCampoNotas' }">
                 <label class="field-label">Notas adicionales</label>
                 <textarea v-model="form.notas" rows="3"
-                          placeholder="Observaciones, adaptaciones realizadas, valoración..."
+                          placeholder="Observaciones, adaptaciones realizadas, valoración... (sin nombres reales del alumnado)"
                           class="field-input resize-none" />
               </div>
 
