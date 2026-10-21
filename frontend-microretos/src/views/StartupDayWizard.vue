@@ -621,12 +621,18 @@ async function cargarCatalogoRaCe() {
     // podrán marcar nada aquí — no están en ningún catálogo, por definición.
     const ceIdsDeEsteProyecto = new Set()
     form.value.evaluacion_oficial.forEach(e => (e.ce_ids || []).forEach(id => ceIdsDeEsteProyecto.add(id)))
+    // Entradas sin ce_ids (antiguas o copiadas de un reto): sus CE se marcan por texto
+    const textosPorRa = new Map()
+    form.value.evaluacion_oficial.forEach(e => {
+      if (e.ra_id) textosPorRa.set(e.ra_id, new Set((e.ce || []).map(normalizarTexto)))
+    })
 
     catalogoRaCe.value.forEach(mod => {
       mod.ras.forEach(ra => {
         raExpandido.value[ra.id] = true
         ra.criterios.forEach(ce => {
           ceChecked.value[ce.id] = ceIdsDeEsteProyecto.has(ce.id)
+            || !!textosPorRa.get(ra.id)?.has(normalizarTexto(ce.descripcion))
         })
         raChecked.value[ra.id] = ra.criterios.length > 0 && ra.criterios.every(ce => ceChecked.value[ce.id])
       })
@@ -644,11 +650,15 @@ function sincronizarRa(ra, mod) {
   const ces = ra.criterios.filter(ce => ceChecked.value[ce.id])
   const lista = form.value.evaluacion_oficial
   const idx = lista.findIndex(e => e.ra_id === ra.id)
-  if (!ces.length) {
+  // CE de la entrada que no están en el catálogo de este RA (texto sin id): las casillas no
+  // los controlan, así que se conservan siempre
+  const delCatalogo = new Set(ra.criterios.map(c => normalizarTexto(c.descripcion)))
+  const ajenos = idx >= 0 ? (lista[idx].ce || []).filter(t => !delCatalogo.has(normalizarTexto(t))) : []
+  if (!ces.length && !ajenos.length) {
     if (idx >= 0) lista.splice(idx, 1)
   } else if (idx >= 0) {
     lista[idx].ce_ids = ces.map(c => c.id)
-    lista[idx].ce     = ces.map(c => c.descripcion)
+    lista[idx].ce     = [...ces.map(c => c.descripcion), ...ajenos]
   } else {
     lista.push({ modulo: mod.modulo, ra_id: ra.id, ra: ra.descripcion,
                  ce_ids: ces.map(c => c.id), ce: ces.map(c => c.descripcion), aplicacion: '' })
@@ -1112,13 +1122,16 @@ onMounted(async () => {
 });
 
 // ── Guardar ───────────────────────────────────────────────────────────────────
-function marcarGuardado(data) {
-  sinGuardar.value = false;
+// `enviado`: foto del formulario al empezar a guardar. Si se escribió algo mientras se
+// guardaba, ese cambio no viajó en la petición: sigue «Sin guardar» (y avisa al salir).
+function marcarGuardado(data, enviado) {
+  sinGuardar.value = JSON.stringify(form.value) !== enviado;
   ultimaModificacion.value = data?.updated_at || new Date().toISOString();
 }
 
 async function guardar(siguientePaso) {
   guardando.value = true; errorMsg.value = '';
+  const enviado = JSON.stringify(form.value);
   try {
     const limpiar = lista => (lista || []).map(t => String(t).trim()).filter(Boolean);
     const payload = {
@@ -1131,7 +1144,7 @@ async function guardar(siguientePaso) {
       const res = await api.put(`/startup/proyectos/${uuid.value}`, payload);
       proyectoValidado.value = !!res.data.empresa_validado;
       if (res.data.token_empresa) tokenEmpresa.value = res.data.token_empresa;
-      marcarGuardado(res.data);
+      marcarGuardado(res.data, enviado);
     } else {
       const res = await api.post('/startup/proyectos', {
         titulo:       form.value.titulo,
@@ -1141,7 +1154,7 @@ async function guardar(siguientePaso) {
       const upd = await api.put(`/startup/proyectos/${uuid.value}`, payload);
       proyectoValidado.value = !!upd.data.empresa_validado;
       if (upd.data.token_empresa) tokenEmpresa.value = upd.data.token_empresa;
-      marcarGuardado(upd.data);
+      marcarGuardado(upd.data, enviado);
       router.replace({ name: 'startup-day-editar', params: { uuid: uuid.value } });
     }
     paso.value = siguientePaso;
@@ -1299,7 +1312,8 @@ async function sugerirDesdePanel() {
 const sinGuardar         = ref(false)
 const ultimaModificacion = ref(null)
 const seguimientoActivo  = ref(false)
-watch(form, () => { if (seguimientoActivo.value && !guardando.value) sinGuardar.value = true }, { deep: true })
+// También mientras se guarda: marcarGuardado() decide al terminar si ese cambio llegó a enviarse
+watch(form, () => { if (seguimientoActivo.value) sinGuardar.value = true }, { deep: true })
 const horaGuardado = computed(() => {
   if (!ultimaModificacion.value) return ''
   const d = new Date(ultimaModificacion.value)
