@@ -1251,9 +1251,9 @@ const tipoEmpresa = computed(() => {
 const estadoResumen = computed(() => {
   const e = form.value.estado
   if (e === 'propuesta') return proyectoValidado.value
-    ? { label: 'Validada por la empresa', clase: 'bg-emerald-50 text-emerald-800' }
+    ? { label: 'Validada por la empresa', clase: 'bg-empresas/10 text-empresas-dark' }
     : { label: 'Pendiente de validar', clase: 'bg-amber-50 text-amber-800' }
-  if (e === 'validado')   return { label: 'Validado', clase: 'bg-emerald-50 text-emerald-800' }
+  if (e === 'validado')   return { label: 'Validado', clase: 'bg-empresas/10 text-empresas-dark' }
   if (e === 'completado') return { label: 'Completado', clase: 'bg-sky-50 text-sky-800' }
   if (e === 'archivado')  return { label: 'Archivado', clase: 'bg-gray-100 text-gray-700' }
   return { label: 'Borrador', clase: 'bg-gray-100 text-gray-700' }
@@ -1390,7 +1390,7 @@ onUnmounted(() => { tourActivo.value = false; });
 </script>
 
 <template>
-  <div class="min-h-screen font-sans text-[#1F2937] pt-16 md:pt-16"
+  <div class="min-h-screen font-sans text-azul-noche pt-16 md:pt-16"
        :class="isLoaded ? 'opacity-100' : 'opacity-0 translate-y-3'"
        style="transition: opacity 0.4s ease, translate 0.4s ease">
 
@@ -1406,7 +1406,7 @@ onUnmounted(() => { tourActivo.value = false; });
       leave-to-class="opacity-0 scale-95">
       <div v-if="modoGuia" class="fixed inset-0 z-[9990] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/55 pointer-events-auto" />
-        <div class="relative pointer-events-auto w-full max-w-md bg-[#1a2332] border border-white/15
+        <div class="relative pointer-events-auto w-full max-w-md bg-azul-noche border border-white/15
                     rounded-3xl shadow-2xl p-7 text-white"
              @click.stop>
           <!-- Cabecera con progreso -->
@@ -1495,15 +1495,15 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- Estado de guardado (se guarda al pulsar Siguiente) -->
         <span class="inline-flex items-center gap-1.5 px-1 text-[13px]" role="status" aria-live="polite">
           <template v-if="guardando">
-            <svg class="h-4 w-4 animate-spin text-gray-500" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
-            <span class="text-gray-600">Guardando…</span>
+            <svg class="h-4 w-4 animate-spin text-texto-secundario" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
+            <span class="text-texto-secundario">Guardando…</span>
           </template>
           <template v-else-if="sinGuardar">
             <span class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
             <span class="font-medium text-amber-800">Sin guardar · se guarda al pulsar Siguiente</span>
           </template>
           <template v-else-if="horaGuardado">
-            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <svg class="h-4 w-4 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span class="text-texto-secundario">Última modificación: {{ horaGuardado }}</span>
           </template>
         </span>
@@ -1589,8 +1589,8 @@ onUnmounted(() => { tourActivo.value = false; });
                     </svg>
                   </div>
                   <div>
-                    <p class="text-xs font-bold text-[#121212]">Reto <span class="text-red-500">*</span></p>
-                    <p class="text-xs text-gray-400 mt-0.5">Selecciona el reto de la biblioteca al que responde esta propuesta.</p>
+                    <p class="text-xs font-bold text-azul-noche">Reto <span class="text-red-500">*</span></p>
+                    <p class="text-xs text-texto-secundario mt-0.5">Selecciona el reto de la biblioteca al que responde esta propuesta.</p>
                   </div>
                 </div>
               </div>
@@ -1600,7 +1600,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
                 <!-- Buscador -->
                 <div class="relative">
-                  <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
+                  <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-texto-secundario pointer-events-none"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
@@ -1612,34 +1612,34 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Filtros -->
                 <div class="flex flex-wrap gap-2">
                   <select v-model="retoFiltroFamilia"
-                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-gray-200
-                                 bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
+                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
+                                 bg-white text-texto-secundario hover:border-gray-300 transition-colors focus:outline-none
                                  focus:ring-1 focus:ring-rol/40">
                     <option value="">Familia</option>
                     <option v-for="f in familiasFiltroRetos" :key="f" :value="f">{{ f }}</option>
                   </select>
                   <select v-model="retoFiltroCiclo"
-                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-gray-200
-                                 bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
+                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
+                                 bg-white text-texto-secundario hover:border-gray-300 transition-colors focus:outline-none
                                  focus:ring-1 focus:ring-rol/40">
                     <option value="">Ciclo</option>
                     <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
                   </select>
-                  <div class="flex rounded-full border border-gray-200 overflow-hidden text-xs font-bold uppercase tracking-widest">
+                  <div class="flex rounded-full border border-borde overflow-hidden text-xs font-bold uppercase tracking-widest">
                     <button v-for="op in ['', '1º', '2º', 'ambos_cursos']" :key="op"
                             @click="retoFiltroCurso = op"
                             :title="op === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''"
                             :class="['px-3 py-1.5 rounded-full transition-colors',
                                      retoFiltroCurso === op
                                        ? 'bg-rol-fuerte text-white'
-                                       : 'bg-white text-gray-400 hover:bg-gray-50']">
+                                       : 'bg-white text-texto-secundario hover:bg-gray-50']">
                       {{ op === '' ? 'Todos' : op === 'ambos_cursos' ? 'Ambos Cursos' : op }}
                     </button>
                   </div>
                   <button v-if="retoBusqueda || retoFiltroFamilia || retoFiltroCiclo || retoFiltroCurso"
                           @click="retoBusqueda = ''; retoFiltroFamilia = ''; retoFiltroCiclo = ''; retoFiltroCurso = ''"
                           class="text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full
-                                 border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400
+                                 border border-borde text-texto-secundario hover:border-red-200 hover:text-red-400
                                  transition-colors">
                     Limpiar
                   </button>
@@ -1649,16 +1649,16 @@ onUnmounted(() => { tourActivo.value = false; });
                 <button type="button" @click="retosAbiertos = !retosAbiertos"
                         :aria-expanded="retosAbiertos"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl
-                               bg-white border border-gray-200 hover:border-rol/40
+                               bg-white border border-borde hover:border-rol/40
                                transition-colors text-left">
-                  <span class="text-xs font-bold text-[#1F2937]">
+                  <span class="text-xs font-bold text-azul-noche">
                     {{ retosAbiertos ? 'Ocultar retos' : 'Ver retos de la biblioteca' }}
                     <span class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full
                                  bg-rol/10 text-rol-fuerte border border-rol/20">
                       {{ retosFiltrados.length }}
                     </span>
                   </span>
-                  <svg :class="['w-4 h-4 text-gray-400 transition-transform', retosAbiertos && 'rotate-180']"
+                  <svg :class="['w-4 h-4 text-texto-secundario transition-transform', retosAbiertos && 'rotate-180']"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                   </svg>
@@ -1667,20 +1667,20 @@ onUnmounted(() => { tourActivo.value = false; });
                 <template v-if="retosAbiertos">
                 <!-- Sin resultados -->
                 <p v-if="!retosFiltrados.length"
-                   class="text-xs text-gray-400 font-medium text-center py-8">
+                   class="text-xs text-texto-secundario font-medium text-center py-8">
                   Sin resultados para los filtros actuales.
                 </p>
 
                 <!-- Grid de miniaturas -->
                 <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   <div v-for="mr in retosFiltrados" :key="mr.id"
-                       class="relative rounded-2xl border border-gray-100 bg-white
+                       class="relative rounded-2xl border border-borde bg-white
                               hover:border-rol/40 hover:bg-rol/5 hover:shadow-sm
                               transition-all group">
                     <button @click="seleccionarReto(mr)"
                             class="text-left w-full px-4 pt-3.5 pb-10">
                       <div class="flex items-start justify-between gap-2 mb-1.5">
-                        <p class="text-sm font-bold text-[#1F2937] leading-snug line-clamp-2
+                        <p class="text-sm font-bold text-azul-noche leading-snug line-clamp-2
                                   group-hover:text-rol-fuerte transition-colors">
                           {{ mr.titulo }}
                         </p>
@@ -1691,7 +1691,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         </span>
                       </div>
                       <p v-if="mr.pregunta_reto"
-                         class="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-2">
+                         class="text-xs text-texto-secundario leading-relaxed line-clamp-2 mb-2">
                         {{ mr.pregunta_reto }}
                       </p>
                       <div class="flex flex-wrap gap-1">
@@ -1704,7 +1704,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     <button @click.stop="microretoModalId = mr.id"
                             class="absolute bottom-2.5 right-3 flex items-center gap-1
                                    text-xs font-bold uppercase tracking-widest
-                                   text-gray-400 hover:text-rol-fuerte transition-colors">
+                                   text-texto-secundario hover:text-rol-fuerte transition-colors">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -1722,10 +1722,10 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
-              <div class="pb-3 border-b border-gray-100">
-                <p class="text-xs font-bold text-[#121212]">Datos de la propuesta</p>
-                <p class="text-xs text-gray-400 mt-0.5">Completa la información básica de tu propuesta.</p>
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-5">
+              <div class="pb-3 border-b border-borde">
+                <p class="text-xs font-bold text-azul-noche">Datos de la propuesta</p>
+                <p class="text-xs text-texto-secundario mt-0.5">Completa la información básica de tu propuesta.</p>
               </div>
               <div>
                 <label class="field-label">Título de la propuesta *</label>
@@ -1746,8 +1746,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   </label>
                   <div v-if="microretoVinculado"
                        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                              border border-gray-100 text-sm font-medium text-[#1F2937]">
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              border border-borde text-sm font-medium text-azul-noche">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -1771,8 +1771,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   </label>
                   <div v-if="centroBloqueado"
                        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                              border border-gray-100 text-sm font-medium text-[#1F2937]">
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              border border-borde text-sm font-medium text-azul-noche">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -1796,8 +1796,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   </label>
                   <div v-if="microretoVinculado"
                        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                              border border-gray-100 text-sm font-medium text-[#1F2937]">
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              border border-borde text-sm font-medium text-azul-noche">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -1821,8 +1821,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   </label>
                   <div v-if="microretoVinculado"
                        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                              border border-gray-100 text-sm font-medium text-[#1F2937]">
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              border border-borde text-sm font-medium text-azul-noche">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -1846,8 +1846,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   </label>
                   <div v-if="microretoVinculado"
                        class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                              border border-gray-100 text-sm font-medium text-[#1F2937]">
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              border border-borde text-sm font-medium text-azul-noche">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
@@ -1860,8 +1860,8 @@ onUnmounted(() => { tourActivo.value = false; });
                 </div>
 
                 <!-- Datos de Docente Responsable -->
-                <div class="sm:col-span-2 pt-3 mt-1 border-t border-gray-100">
-                  <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Datos de Docente Responsable</p>
+                <div class="sm:col-span-2 pt-3 mt-1 border-t border-borde">
+                  <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Datos de Docente Responsable</p>
                 </div>
                 <div>
                   <label class="field-label">Docente responsable</label>
@@ -1876,16 +1876,16 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Aviso: composición del equipo de alumnado -->
-            <div class="bg-[#F8FAFC] rounded-3xl border border-blue-100/60 px-5 py-4 mt-4 flex items-start gap-3">
-              <svg class="w-4 h-4 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-[#F8FAFC] rounded-3xl border border-rol/20/60 px-5 py-4 mt-4 flex items-start gap-3">
+              <svg class="w-4 h-4 text-rol-fuerte shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <p class="text-xs text-gray-500 leading-relaxed">
+              <p class="text-xs text-texto-secundario leading-relaxed">
                 El número de grupos y el alumnado se configura en el
-                <strong class="text-[#1F2937]">registro de sesión</strong>
+                <strong class="text-azul-noche">registro de sesión</strong>
                 del dashboard. Desde
-                <strong class="text-[#1F2937]">Sesiones registradas</strong>
+                <strong class="text-azul-noche">Sesiones registradas</strong>
                 podrás generar el código de acceso una vez la propuesta sea validada y se convierta en proyecto.
               </p>
             </div>
@@ -1902,7 +1902,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 2: Empresa ═══ -->
         <div v-if="paso === 2">
 
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
 
             <!-- Cabecera "Del reto" cuando es read-only -->
             <div v-if="empresaDesdeReto"
@@ -1931,8 +1931,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   <div>
                     <p class="field-label">{{ label }}</p>
                     <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50
-                                border border-gray-100 text-sm text-[#1F2937] min-h-[2.5rem]">
-                      <svg class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                border border-borde text-sm text-azul-noche min-h-[2.5rem]">
+                      <svg class="w-3 h-3 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                       </svg>
@@ -1943,8 +1943,8 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
               <div v-if="form.datos_empresa.descripcion">
                 <p class="field-label">Descripción breve</p>
-                <div class="px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100
-                            text-sm text-[#1F2937] leading-relaxed">
+                <div class="px-3 py-2.5 rounded-xl bg-gray-50 border border-borde
+                            text-sm text-azul-noche leading-relaxed">
                   {{ form.datos_empresa.descripcion }}
                 </div>
               </div>
@@ -1979,7 +1979,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- ═══ PASO 3: Módulos y RA/CE ═══ -->
         <div v-if="paso === 3">
-          <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+          <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6">
 
             <!-- Cabecera de la tarjeta -->
             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1997,7 +1997,7 @@ onUnmounted(() => { tourActivo.value = false; });
               <button type="button" @click="sugerirRaCeConIa"
                       :disabled="cargandoIaRaCe || !form.modulos_seleccionados.length"
                       :title="form.modulos_seleccionados.length ? 'La IA propone RA y CE del catálogo oficial' : 'Marca al menos un módulo'"
-                      class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50">
+                      class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-alumnos/30 bg-alumnos/10 px-4 text-sm font-semibold text-azul-noche transition-colors hover:bg-alumnos/15 disabled:cursor-not-allowed disabled:opacity-50">
                 <svg v-if="cargandoIaRaCe" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
                 <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                 {{ cargandoIaRaCe ? 'Analizando currículo…' : 'Sugerir con IA' }}
@@ -2024,13 +2024,13 @@ onUnmounted(() => { tourActivo.value = false; });
 
               <!-- Aviso: la IA ha añadido RA/CE -->
               <div v-if="sugerenciaIaPendienteRevision"
-                   class="flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 sm:flex-row sm:items-center">
-                <p class="min-w-0 flex-1 text-sm text-violet-900">
+                   class="flex flex-col gap-3 rounded-xl border border-alumnos/30 bg-alumnos/10 px-4 py-3 sm:flex-row sm:items-center">
+                <p class="min-w-0 flex-1 text-sm text-azul-noche">
                   La IA ha marcado nuevos RA/CE con la etiqueta <strong class="font-semibold">Sugerencia IA</strong>.
                   Revísalos y desmarca los que no encajen.
                 </p>
                 <button type="button" @click="marcarSugerenciasRevisadas"
-                        class="inline-flex h-9 shrink-0 items-center self-start rounded-full bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800 sm:self-auto">
+                        class="inline-flex h-9 shrink-0 items-center self-start rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white hover:bg-rol-fuerte/90 sm:self-auto">
                   Ya los he revisado
                 </button>
               </div>
@@ -2047,7 +2047,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     </p>
                   </div>
                   <button v-if="raCeDivergeDelReto && raCeDelReto.length" type="button" @click="restaurarRaCeDelReto"
-                          class="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full px-3 text-sm font-semibold text-gray-600 hover:bg-white hover:text-rol-fuerte">
+                          class="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full px-3 text-sm font-semibold text-texto-secundario hover:bg-white hover:text-rol-fuerte">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
                     Restaurar los del reto
                   </button>
@@ -2061,7 +2061,7 @@ onUnmounted(() => { tourActivo.value = false; });
                                      :textos-ia="textosIa"
                                      @quitar-entrada="i => { quitarEntradaRaCe(i); marcarCasillasDesdeProyecto() }"
                                      @quitar-ce="(i, j) => { quitarCeDeEntrada(i, j); marcarCasillasDesdeProyecto() }" />
-                <p v-else class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-600">
+                <p v-else class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-texto-secundario">
                   <template v-if="microretoVinculado && !raCeDelReto.length">
                     El reto no tiene RA/CE oficiales asignados (probablemente su módulo aún no tiene el currículo del BOE cargado).
                     Añádelos desde el catálogo o a mano.
@@ -2094,19 +2094,19 @@ onUnmounted(() => { tourActivo.value = false; });
               <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <label for="buscar-ra-ce-modal" class="sr-only">Buscar resultado de aprendizaje o criterio</label>
                 <div class="relative min-w-0 flex-1">
-                  <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+                  <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
                   <input id="buscar-ra-ce-modal" v-model="busquedaRaCe" type="search" autofocus
                          placeholder="Buscar resultado de aprendizaje o criterio…"
                          class="w-full rounded-xl py-2 pl-9 pr-3 text-sm" />
                 </div>
                 <div class="flex items-center gap-1.5">
                   <button type="button" @click="arbolModal?.plegarTodo()"
-                          class="inline-flex h-9 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                          class="inline-flex h-9 items-center gap-1 rounded-full border border-borde bg-white px-3 text-sm font-semibold text-azul-noche hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                     Plegar todo
                   </button>
                   <button type="button" @click="arbolModal?.desplegarTodo()"
-                          class="inline-flex h-9 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                          class="inline-flex h-9 items-center gap-1 rounded-full border border-borde bg-white px-3 text-sm font-semibold text-azul-noche hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     Desplegar
                   </button>
@@ -2150,7 +2150,7 @@ onUnmounted(() => { tourActivo.value = false; });
                        subtitulo="Para resultados de aprendizaje y criterios que no están en el catálogo oficial del módulo."
                        ancho="w-[min(40rem,calc(100vw-2rem))]" @cerrar="modalRaCe = ''">
             <div class="space-y-3">
-                                    <p v-if="!form.modulos_seleccionados.length" class="text-sm text-gray-700">
+                                    <p v-if="!form.modulos_seleccionados.length" class="text-sm text-azul-noche">
                     Marca antes un módulo en «Seleccionar otros».
                   </p>
                   <template v-else>
@@ -2173,7 +2173,7 @@ onUnmounted(() => { tourActivo.value = false; });
                           <input v-model="nuevoRaManual.ces[i]" type="text" :placeholder="`Criterio ${i + 1}…`"
                                  :aria-label="`Criterio ${i + 1}`" class="field-input flex-1" />
                           <button v-if="nuevoRaManual.ces.length > 1" type="button" @click="removeCeManualField(i)"
-                                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-red-50 hover:text-red-600"
                                   :aria-label="`Quitar criterio ${i + 1}`">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                           </button>
@@ -2204,14 +2204,14 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 4">
 
           <div class="space-y-4">
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Fundamentación</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fundamentación</p>
                 <button @click="sugerirFundamentacion" :disabled="sugiriendoFundamentacion"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                               bg-violet-50 border border-violet-200 text-violet-700
+                               bg-alumnos/10 border border-alumnos/30 text-azul-noche
                                text-xs font-bold uppercase tracking-wider
-                               hover:bg-violet-100 transition-all active:scale-95
+                               hover:bg-alumnos/15 transition-all active:scale-95
                                disabled:opacity-60 disabled:cursor-not-allowed">
                   <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugiriendoFundamentacion }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2232,8 +2232,8 @@ onUnmounted(() => { tourActivo.value = false; });
                           placeholder="¿Qué tiene de innovador esta propuesta?" /></div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Diseño del reto</p>
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+              <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Diseño del reto</p>
               <div><label class="field-label">Descripción del reto *</label>
                 <textarea v-model="form.diseno_reto.descripcion" rows="3" class="field-input resize-none" required
                           placeholder="Describe el reto al que se enfrenta el grupo…" /></div>
@@ -2259,18 +2259,18 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 5">
 
           <div class="space-y-4">
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Fases de la propuesta</p>
-                <p class="text-xs text-gray-400 mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fases de la propuesta</p>
+                <p class="text-xs text-texto-secundario mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
               </div>
               <div class="space-y-2">
                 <div v-for="f in FASES_PROYECTO" :key="f.num"
                      class="rounded-2xl border p-3 sm:p-4 flex items-center gap-3 sm:gap-4" :class="colorMapFases[f.color]">
                   <span class="text-lg leading-none shrink-0">{{ f.icono }}</span>
                   <div class="flex-1 min-w-0">
-                    <p class="font-bold text-sm text-[#1F2937]">F{{ f.num }} - {{ f.label }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ f.descLarga }}</p>
+                    <p class="font-bold text-sm text-azul-noche">F{{ f.num }} - {{ f.label }}</p>
+                    <p class="text-xs text-texto-secundario mt-0.5">{{ f.descLarga }}</p>
                   </div>
                   <span class="text-xs font-bold uppercase tracking-wide opacity-80 shrink-0 whitespace-nowrap">
                     {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
@@ -2278,16 +2278,16 @@ onUnmounted(() => { tourActivo.value = false; });
                 </div>
               </div>
 
-              <div class="pt-2 border-t border-gray-100">
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Modificar duración de cada fase</p>
-                <p class="text-xs text-gray-400 mt-1 mb-3">Marca qué fase(s) se trabajan en cada sesión — una misma sesión puede cubrir varias fases.</p>
+              <div class="pt-2 border-t border-borde">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Modificar duración de cada fase</p>
+                <p class="text-xs text-texto-secundario mt-1 mb-3">Marca qué fase(s) se trabajan en cada sesión — una misma sesión puede cubrir varias fases.</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div v-for="(c, i) in form.diseno_microproyecto.clases" :key="i"
-                       class="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+                       class="rounded-2xl border border-borde bg-white p-4 space-y-3">
                     <div class="flex items-center justify-between">
-                      <p class="text-sm font-bold text-[#1F2937]">Sesión {{ i + 1 }}</p>
+                      <p class="text-sm font-bold text-azul-noche">Sesión {{ i + 1 }}</p>
                       <button @click="removeSesion(i)" type="button"
-                              class="text-gray-300 hover:text-red-500 font-bold text-sm leading-none">×</button>
+                              class="text-texto-secundario hover:text-red-500 font-bold text-sm leading-none">×</button>
                     </div>
                     <div class="space-y-1.5">
                       <button v-for="f in FASES_PROYECTO" :key="f.num" type="button"
@@ -2295,9 +2295,9 @@ onUnmounted(() => { tourActivo.value = false; });
                               class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 border-2 transition-all text-left"
                               :class="c.fases.includes(f.num)
                                 ? colorMapFases[f.color] + ' border-current shadow-sm'
-                                : 'border-transparent bg-gray-50 text-gray-300 hover:bg-gray-100'">
+                                : 'border-transparent bg-gray-50 text-texto-secundario hover:bg-gray-100'">
                         <span class="text-lg leading-none shrink-0">{{ f.icono }}</span>
-                        <span class="text-xs font-bold flex-1" :class="c.fases.includes(f.num) ? 'text-[#1F2937]' : 'text-gray-400'">
+                        <span class="text-xs font-bold flex-1" :class="c.fases.includes(f.num) ? 'text-azul-noche' : 'text-texto-secundario'">
                           F{{ f.num }} - {{ f.label }}
                         </span>
                         <span v-if="c.fases.includes(f.num)" class="text-rol-fuerte font-bold text-sm shrink-0">✓</span>
@@ -2310,27 +2310,27 @@ onUnmounted(() => { tourActivo.value = false; });
                                text-xs font-bold uppercase tracking-widest hover:bg-rol/5 transition-all">
                   + Añadir sesión
                 </button>
-                <p class="text-xs font-bold text-[#1F2937] mt-3">Total: {{ form.diseno_microproyecto.clases.length }} sesión(es)</p>
+                <p class="text-xs font-bold text-azul-noche mt-3">Total: {{ form.diseno_microproyecto.clases.length }} sesión(es)</p>
               </div>
             </div>
 
             <!-- Cronograma general — hitos derivados de las fases + el calendario de arriba -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Cronograma general</p>
-                <p class="text-xs text-gray-400 mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Cronograma general</p>
+                <p class="text-xs text-texto-secundario mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div v-for="f in FASES_PROYECTO" :key="f.num"
                      class="rounded-2xl border p-3 space-y-1" :class="colorMapFases[f.color]">
                   <div class="flex items-center gap-1.5">
                     <span class="text-base leading-none">{{ f.icono }}</span>
-                    <p class="font-bold text-xs text-[#1F2937]">{{ f.label }}</p>
+                    <p class="font-bold text-xs text-azul-noche">{{ f.label }}</p>
                   </div>
                   <p class="text-xs font-bold uppercase tracking-wide opacity-70">
                     {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
                   </p>
-                  <p class="text-xs text-gray-600 leading-snug">🎯 {{ f.desc }}</p>
+                  <p class="text-xs text-texto-secundario leading-snug">🎯 {{ f.desc }}</p>
                 </div>
               </div>
               <div class="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
@@ -2340,14 +2340,14 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Metodología y resumen ejecutivo</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Metodología y resumen ejecutivo</p>
                 <button @click="sugerirMetodologia" :disabled="sugiriendoMetodologia"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                               bg-violet-50 border border-violet-200 text-violet-700
+                               bg-alumnos/10 border border-alumnos/30 text-azul-noche
                                text-xs font-bold uppercase tracking-wider
-                               hover:bg-violet-100 transition-all active:scale-95
+                               hover:bg-alumnos/15 transition-all active:scale-95
                                disabled:opacity-60 disabled:cursor-not-allowed">
                   <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugiriendoMetodologia }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2383,7 +2383,7 @@ onUnmounted(() => { tourActivo.value = false; });
           <div class="space-y-4">
 
             <!-- Objetivos del proyecto -->
-            <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
+            <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
               <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
                   <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte sm:h-12 sm:w-12" aria-hidden="true">
@@ -2395,7 +2395,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   </div>
                 </div>
                 <button type="button" @click="sugerirObjetivos" :disabled="sugiriendoObjetivos"
-                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60">
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-alumnos/30 bg-alumnos/10 px-4 text-sm font-semibold text-azul-noche transition-colors hover:bg-alumnos/15 disabled:cursor-not-allowed disabled:opacity-60">
                   <svg class="h-4 w-4" :class="{ 'animate-spin': sugiriendoObjetivos }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                   {{ sugiriendoObjetivos ? 'Generando…' : 'Sugerir con IA' }}
                 </button>
@@ -2417,22 +2417,22 @@ onUnmounted(() => { tourActivo.value = false; });
             </section>
 
             <!-- Indicadores de éxito -->
-            <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-kpis">
+            <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-kpis">
               <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
-                  <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 sm:h-12 sm:w-12" aria-hidden="true">
+                  <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-empresas/10 text-empresas-dark sm:h-12 sm:w-12" aria-hidden="true">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0h6m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v14"/></svg>
                   </span>
                   <div class="min-w-0">
                     <h2 id="titulo-kpis" class="text-lg font-bold text-azul-noche">
                       Indicadores de éxito (KPIs)
-                      <span class="ml-1 align-middle text-xs font-semibold uppercase tracking-wide text-gray-500">Opcional</span>
+                      <span class="ml-1 align-middle text-xs font-semibold uppercase tracking-wide text-texto-secundario">Opcional</span>
                     </h2>
                     <p class="mt-0.5 text-sm text-texto-secundario">Define cómo se medirá el cumplimiento de los objetivos. Puedes añadir varios indicadores.</p>
                   </div>
                 </div>
                 <button type="button" @click="sugerirKpis" :disabled="sugirendoKpis"
-                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60">
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-alumnos/30 bg-alumnos/10 px-4 text-sm font-semibold text-azul-noche transition-colors hover:bg-alumnos/15 disabled:cursor-not-allowed disabled:opacity-60">
                   <svg class="h-4 w-4" :class="{ 'animate-spin': sugirendoKpis }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                   {{ sugirendoKpis ? 'Generando…' : 'Sugerir con IA' }}
                 </button>
@@ -2475,7 +2475,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
             <div>
               <h2 class="text-2xl font-bold text-azul-noche">¡Propuesta lista!</h2>
-              <p class="text-gray-500 text-sm mt-1.5 max-w-sm mx-auto">
+              <p class="text-texto-secundario text-sm mt-1.5 max-w-sm mx-auto">
                 El enlace de validación ya está listo. Puedes enviárselo a la empresa por correo para que valide la propuesta.
                 Cuando la valide, pasará a llamarse <strong>proyecto</strong>.
               </p>
@@ -2501,58 +2501,58 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <template v-else>
           <div class="mb-6">
-            <p class="text-gray-600 text-sm">
-              Márcala como <strong class="text-[#1F2937]">Propuesta</strong> para generar el enlace de validación
+            <p class="text-texto-secundario text-sm">
+              Márcala como <strong class="text-azul-noche">Propuesta</strong> para generar el enlace de validación
               y enviárselo a la empresa colaboradora. La empresa accederá al enlace, revisará la propuesta
               y decidirá si la valida o no.
             </p>
           </div>
 
           <!-- Nota fija: fase de propuesta -->
-          <div class="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 mb-4">
-            <svg class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="flex items-start gap-2.5 bg-rol/5 border border-rol/20 rounded-2xl px-4 py-3 mb-4">
+            <svg class="w-4 h-4 text-rol-fuerte shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p class="text-xs text-blue-700 leading-relaxed">
+            <p class="text-xs text-azul-noche leading-relaxed">
               Esto es, de momento, una <strong>propuesta</strong>. Cuando la publiques y la empresa (o el docente) la valide,
               pasará a llamarse <strong>proyecto</strong>.
             </p>
           </div>
 
           <!-- Resumen -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
-            <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">Resumen de la propuesta</p>
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 mb-4">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario mb-4">Resumen de la propuesta</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Título</p>
-                <p class="font-bold text-[#1F2937]">{{ form.titulo || '—' }}</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Título</p>
+                <p class="font-bold text-azul-noche">{{ form.titulo || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Empresa</p>
-                <p class="font-bold text-[#1F2937]">{{ form.datos_empresa.nombre || '—' }}</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Empresa</p>
+                <p class="font-bold text-azul-noche">{{ form.datos_empresa.nombre || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Docente</p>
-                <p class="font-bold text-[#1F2937]">{{ form.datos_centro.docente_nombre || '—' }}</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Docente</p>
+                <p class="font-bold text-azul-noche">{{ form.datos_centro.docente_nombre || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Módulos</p>
-                <p class="font-bold text-[#1F2937]">{{ form.modulos_seleccionados.length }} seleccionado(s)</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Módulos</p>
+                <p class="font-bold text-azul-noche">{{ form.modulos_seleccionados.length }} seleccionado(s)</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Objetivos</p>
-                <p class="font-bold text-[#1F2937]">{{ form.objetivos.lista.length }} definido(s)</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Objetivos</p>
+                <p class="font-bold text-azul-noche">{{ form.objetivos.lista.length }} definido(s)</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Calendario</p>
-                <p class="font-bold text-[#1F2937]">{{ form.diseno_microproyecto.clases?.length || 0 }} sesión(es)</p>
+                <p class="text-xs text-texto-secundario uppercase tracking-wider font-bold mb-1">Calendario</p>
+                <p class="font-bold text-azul-noche">{{ form.diseno_microproyecto.clases?.length || 0 }} sesión(es)</p>
               </div>
             </div>
           </div>
 
           <!-- Recursos: vídeos y documentos para la empresa (almacenados en Cloudinary) -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 mb-4">
             <div class="flex items-center gap-3 mb-1">
               <div class="w-8 h-8 rounded-xl bg-rol/10 border border-rol/20
                           flex items-center justify-center shrink-0">
@@ -2563,7 +2563,7 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
               <div>
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-rol-fuerte">Recursos para la empresa</p>
-                <p class="text-xs text-gray-400 mt-0.5">
+                <p class="text-xs text-texto-secundario mt-0.5">
                   Los archivos se suben a <strong>Cloudinary</strong>. La empresa los verá al abrir el enlace de validación.
                 </p>
               </div>
@@ -2578,24 +2578,24 @@ onUnmounted(() => { tourActivo.value = false; });
 
               <!-- ── VÍDEOS ─────────────────────────────────────────── -->
               <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Vídeos</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-texto-secundario mb-3">Vídeos</p>
 
                 <!-- Lista -->
                 <div v-if="videosLocales.length" class="space-y-2 mb-3">
                   <div v-for="(v, i) in videosLocales" :key="i"
-                       class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
-                              hover:border-blue-200 hover:bg-blue-50/40 transition-colors group/vid">
+                       class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-borde
+                              hover:border-rol/20 hover:bg-rol/5/40 transition-colors group/vid">
                     <button @click="abrirRecurso(v)"
-                            class="w-7 h-7 rounded-full bg-blue-50 shrink-0 flex items-center justify-center
-                                   group-hover/vid:bg-blue-100 transition-colors">
-                      <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-7 h-7 rounded-full bg-rol/5 shrink-0 flex items-center justify-center
+                                   group-hover/vid:bg-rol/10 transition-colors">
+                      <svg class="w-3.5 h-3.5 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
                       </svg>
                     </button>
                     <button @click="abrirRecurso(v)" class="flex-1 min-w-0 text-left">
-                      <p class="text-xs font-bold text-gray-700 truncate group-hover/vid:text-blue-600 transition-colors">{{ v.label || v.filename }}</p>
-                      <p class="text-xs text-blue-400/80 truncate">Cloudinary · {{ v.filename }}</p>
+                      <p class="text-xs font-bold text-azul-noche truncate group-hover/vid:text-rol-fuerte transition-colors">{{ v.label || v.filename }}</p>
+                      <p class="text-xs text-rol-fuerte/80 truncate">Cloudinary · {{ v.filename }}</p>
                     </button>
                     <button @click.stop="removeVideo(i)"
                             class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
@@ -2609,17 +2609,17 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Uploader -->
                 <div class="flex gap-2 items-center">
                   <input v-model="labelVideo" type="text" placeholder="Nombre del vídeo (opcional)"
-                         class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-rol-fuerte transition-colors"/>
+                         class="w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
+                                text-azul-noche placeholder-gray-500 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
-                                border-2 border-dashed border-gray-200 bg-gray-50
+                                border-2 border-dashed border-borde bg-gray-50
                                 cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                          :class="subiendoVideo ? 'opacity-50 pointer-events-none' : ''">
-                    <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    <span class="text-xs text-gray-400 font-medium">
+                    <span class="text-xs text-texto-secundario font-medium">
                       {{ subiendoVideo ? 'Subiendo vídeo...' : 'Seleccionar vídeo (MP4, MOV, AVI, WebM...)' }}
                     </span>
                     <input type="file" accept="video/*"
@@ -2630,8 +2630,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
               <!-- ── BANCO DE IMÁGENES ─────────────────────────────────── -->
               <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Banco de imágenes</p>
-                <p class="text-xs text-gray-400 mb-3">
+                <p class="text-xs font-bold uppercase tracking-wider text-texto-secundario mb-1">Banco de imágenes</p>
+                <p class="text-xs text-texto-secundario mb-3">
                   También puede subir imágenes el alumnado desde su workspace. La primera
                   se marca como portada automáticamente; puedes cambiarla cuando quieras.
                 </p>
@@ -2640,7 +2640,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-if="imagenesLocales.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
                   <div v-for="(img, i) in imagenesLocales" :key="img.id"
                        class="relative group/img rounded-xl overflow-hidden border-2"
-                       :class="img.id === imagenPortadaId ? 'border-rol-fuerte' : 'border-gray-100'">
+                       :class="img.id === imagenPortadaId ? 'border-rol-fuerte' : 'border-borde'">
                     <img :src="img.url" :alt="img.label || img.filename" class="w-full h-20 object-cover" />
                     <span v-if="img.id === imagenPortadaId"
                           class="absolute top-1 left-1 bg-rol-fuerte text-white text-xs font-bold
@@ -2668,30 +2668,30 @@ onUnmounted(() => { tourActivo.value = false; });
 
                 <!-- Uploader -->
                 <label class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
-                              border-2 border-dashed border-gray-200 bg-gray-50
+                              border-2 border-dashed border-borde bg-gray-50
                               cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                        :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
-                  <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                   </svg>
-                  <span class="text-xs text-gray-400 font-medium">
+                  <span class="text-xs text-texto-secundario font-medium">
                     {{ subiendoImagen ? 'Subiendo imagen...' : 'Seleccionar imagen (PNG, JPG, GIF, WEBP)' }}
                   </span>
                   <input type="file" accept="image/png,image/jpeg,image/gif,image/webp"
                          class="sr-only" @change="subirArchivo('imagen', $event)" :disabled="subiendoImagen"/>
                 </label>
-                <p class="text-xs text-gray-300 mt-1.5 pl-1">Máx. 8 MB por imagen.</p>
+                <p class="text-xs text-texto-secundario mt-1.5 pl-1">Máx. 8 MB por imagen.</p>
               </div>
 
               <!-- ── DOCUMENTOS ─────────────────────────────────────── -->
               <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Documentos, otros archivos...</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-texto-secundario mb-3">Documentos, otros archivos...</p>
 
                 <!-- Lista -->
                 <div v-if="documentosLocales.length" class="space-y-2 mb-3">
                   <div v-for="(d, i) in documentosLocales" :key="i"
-                       class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
+                       class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-borde
                               hover:border-rol/30 hover:bg-rol/5 transition-colors group/doc">
                     <button @click="abrirRecurso(d)"
                             class="w-7 h-7 rounded-full bg-rol/10 shrink-0 flex items-center justify-center
@@ -2702,8 +2702,8 @@ onUnmounted(() => { tourActivo.value = false; });
                       </svg>
                     </button>
                     <button @click="abrirRecurso(d)" class="flex-1 min-w-0 text-left">
-                      <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-rol-fuerte transition-colors">{{ d.label || d.filename }}</p>
-                      <p class="text-xs text-blue-400/80 truncate">Cloudinary · {{ d.filename }}</p>
+                      <p class="text-xs font-bold text-azul-noche truncate group-hover/doc:text-rol-fuerte transition-colors">{{ d.label || d.filename }}</p>
+                      <p class="text-xs text-rol-fuerte/80 truncate">Cloudinary · {{ d.filename }}</p>
                     </button>
                     <button @click.stop="removeDocumento(i)"
                             class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
@@ -2717,17 +2717,17 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Uploader -->
                 <div class="flex gap-2 items-center">
                   <input v-model="labelDocumento" type="text" placeholder="Nombre del documento (opcional)"
-                         class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-rol-fuerte transition-colors"/>
+                         class="w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
+                                text-azul-noche placeholder-gray-500 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
-                                border-2 border-dashed border-gray-200 bg-gray-50
+                                border-2 border-dashed border-borde bg-gray-50
                                 cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                          :class="subiendoDoc ? 'opacity-50 pointer-events-none' : ''">
-                    <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-texto-secundario shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    <span class="text-xs text-gray-400 font-medium">
+                    <span class="text-xs text-texto-secundario font-medium">
                       {{ subiendoDoc ? 'Subiendo archivo...' : 'Seleccionar archivo (PDF, Word, Excel, imagen...)' }}
                     </span>
                     <input type="file"
@@ -2735,7 +2735,7 @@ onUnmounted(() => { tourActivo.value = false; });
                            class="sr-only" @change="subirArchivo('documento', $event)" :disabled="subiendoDoc"/>
                   </label>
                 </div>
-                <p class="text-xs text-gray-300 mt-1.5 pl-1">Máx. 20 MB por archivo · Los archivos se alojan en Cloudinary. La BD no almacena ningún fichero.</p>
+                <p class="text-xs text-texto-secundario mt-1.5 pl-1">Máx. 20 MB por archivo · Los archivos se alojan en Cloudinary. La BD no almacena ningún fichero.</p>
               </div>
 
             </div>
@@ -2747,7 +2747,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <p class="text-sm text-[#1F2937] leading-relaxed">
+              <p class="text-sm text-azul-noche leading-relaxed">
                 La propuesta se guarda como <strong>En edición</strong> por defecto. Usa el desplegable <strong>Estado del proyecto</strong> para cambiar el estado.
                 Selecciona <strong>Propuesta</strong> para generar el enlace de validación empresa o para validar directamente como docente.
                 Pasará a llamarse <strong>proyecto</strong> y quedará <strong>Validado</strong> cuando lo valide la empresa, el docente, o ambos.
@@ -2785,7 +2785,7 @@ onUnmounted(() => { tourActivo.value = false; });
                             leave-active-class="transition-all duration-100 ease-in"
                             leave-to-class="opacity-0 scale-95 -translate-y-1">
                   <div v-if="dropdownEstadoAbierto"
-                       class="absolute bottom-full right-0 mb-2 bg-white border border-gray-100
+                       class="absolute bottom-full right-0 mb-2 bg-white border border-borde
                               rounded-2xl shadow-xl p-2 min-w-[190px] z-20">
 
                     <!-- En edición -->
@@ -2806,31 +2806,31 @@ onUnmounted(() => { tourActivo.value = false; });
                     <button @click="seleccionarEstado('archivado')"
                             :class="['w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-colors',
                                      form.estado === 'archivado'
-                                       ? 'bg-gray-100 text-gray-600'
-                                       : 'text-gray-500 hover:bg-gray-50']">
+                                       ? 'bg-gray-100 text-texto-secundario'
+                                       : 'text-texto-secundario hover:bg-gray-50']">
                       <span class="w-2 h-2 rounded-full bg-gray-400 shrink-0" />
                       Archivar
-                      <svg v-if="form.estado === 'archivado'" class="w-3.5 h-3.5 ml-auto text-gray-400"
+                      <svg v-if="form.estado === 'archivado'" class="w-3.5 h-3.5 ml-auto text-texto-secundario"
                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                       </svg>
                     </button>
 
-                    <div class="my-1 border-t border-gray-100" />
+                    <div class="my-1 border-t border-borde" />
 
                     <!-- Propuesta + sub-estado + (i) -->
                     <div class="flex items-center gap-1 px-1">
                       <button @click="seleccionarEstado('propuesta')"
                               :class="['flex-1 flex flex-col gap-0.5 px-2 py-2.5 rounded-xl text-xs font-bold text-left transition-colors',
                                        form.estado === 'propuesta'
-                                         ? (form.enviado_a_empresa_mail ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700')
-                                         : 'text-violet-700 hover:bg-violet-50']">
+                                         ? (form.enviado_a_empresa_mail ? 'bg-rol/5 text-azul-noche' : 'bg-alumnos/10 text-azul-noche')
+                                         : 'text-azul-noche hover:bg-alumnos/10']">
                         <span class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full shrink-0"
                                 :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-rol-fuerte' : 'bg-violet-400'" />
                           Propuesta
                           <svg v-if="form.estado === 'propuesta'" class="w-3.5 h-3.5 ml-auto"
-                               :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-violet-400'"
+                               :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-alumnos'"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                           </svg>
@@ -2838,7 +2838,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <!-- Sub-estado visible solo cuando está en propuesta -->
                         <span v-if="form.estado === 'propuesta'"
                               class="text-xs font-bold uppercase tracking-wider pl-4"
-                              :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-violet-500'">
+                              :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-alumnos'">
                           {{ form.enviado_a_empresa_mail ? '✅ SÍ enviada por mail' : '✉ NO enviada por mail' }}
                         </span>
                       </button>
@@ -2846,16 +2846,16 @@ onUnmounted(() => { tourActivo.value = false; });
                       <div class="relative group/info shrink-0">
                         <button type="button" aria-label="Qué significa marcarla como Propuesta"
                                 class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
-                          <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-3 h-3 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                           </svg>
                         </button>
                         <div role="tooltip" class="absolute hidden group-hover/info:block group-focus-within/info:block bottom-full right-0 mb-2
-                                    bg-[#1a2332] text-white text-xs rounded-xl p-3 w-60 z-30
+                                    bg-azul-noche text-white text-xs rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
                           Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-rol-fuerte">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
-                          <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-[#1a2332] rotate-45" />
+                          <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-azul-noche rotate-45" />
                         </div>
                       </div>
                     </div>
@@ -2951,7 +2951,7 @@ onUnmounted(() => { tourActivo.value = false; });
           Propuesta en edición
         </h3>
 
-        <p class="text-sm text-gray-600 leading-relaxed text-center">
+        <p class="text-sm text-texto-secundario leading-relaxed text-center">
           Esta propuesta está <strong>En edición</strong> — aún no se ha enviado a validar.
           Cuando esté lista, usa el desplegable <strong>Estado del proyecto</strong> y selecciona
           <strong>Propuesta</strong> para enviarla a la empresa o validarla como docente.
@@ -2997,7 +2997,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- Badge estado -->
         <div class="flex justify-center mb-4">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-                       bg-violet-50 border border-violet-200 text-violet-700
+                       bg-alumnos/10 border border-alumnos/30 text-azul-noche
                        text-xs font-bold uppercase tracking-widest">
             <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
             Propuesta · Pendiente de validar
@@ -3007,17 +3007,17 @@ onUnmounted(() => { tourActivo.value = false; });
         <h3 class="text-xl font-bold text-azul-noche text-center mb-2">
           Propuesta pendiente de validar
         </h3>
-        <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
+        <p class="text-sm text-texto-secundario text-center mb-5 leading-relaxed">
           Elige cómo validar la propuesta — puedes usar una vía o las dos.
         </p>
 
         <!-- Vía A: Validación empresa -->
-        <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-3">
-          <p class="text-xs font-bold uppercase tracking-widest text-blue-500 mb-3">
+        <div class="bg-rol/5 border border-rol/20 rounded-2xl p-4 mb-3">
+          <p class="text-xs font-bold uppercase tracking-widest text-rol-fuerte mb-3">
             Vía A · Validación empresa
           </p>
           <div class="flex items-center gap-2 mb-3">
-            <p class="flex-1 text-xs text-blue-400 truncate font-mono bg-white border border-blue-200
+            <p class="flex-1 text-xs text-rol-fuerte truncate font-mono bg-white border border-rol/20
                        rounded-xl px-3 py-2 min-w-0">
               {{ landingUrl || '—' }}
             </p>
@@ -3025,7 +3025,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     :class="['shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all',
                              urlCopiadaModal
                                ? 'bg-rol/10 text-rol-fuerte border-rol/20'
-                               : 'bg-white text-gray-500 border-gray-200 hover:border-rol-fuerte hover:text-rol-fuerte']">
+                               : 'bg-white text-texto-secundario border-borde hover:border-rol-fuerte hover:text-rol-fuerte']">
               {{ urlCopiadaModal ? '¡Copiado!' : 'Copiar' }}
             </button>
           </div>
@@ -3034,16 +3034,16 @@ onUnmounted(() => { tourActivo.value = false; });
           <div v-if="form.empresa_id" class="mb-3">
             <button @click="infoEmpresaAbierta = !infoEmpresaAbierta"
                     class="w-full flex items-center justify-between px-3 py-2 rounded-xl
-                           bg-white border border-blue-200 text-xs font-bold text-blue-700
+                           bg-white border border-rol/20 text-xs font-bold text-azul-noche
                            hover:border-rol/40 hover:text-rol-fuerte transition-all">
               <span class="flex items-center gap-2">
-                <svg class="w-3.5 h-3.5 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 text-rol-fuerte shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
                 {{ form.datos_empresa?.nombre || 'Ver info de la empresa' }}
               </span>
-              <svg class="w-3.5 h-3.5 transition-transform duration-200 text-blue-300 shrink-0"
+              <svg class="w-3.5 h-3.5 transition-transform duration-200 text-rol-fuerte shrink-0"
                    :class="infoEmpresaAbierta ? 'rotate-180' : ''"
                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -3058,24 +3058,24 @@ onUnmounted(() => { tourActivo.value = false; });
               leave-to-class="opacity-0 max-h-0"
             >
               <div v-if="infoEmpresaAbierta"
-                   class="mt-2 px-3 py-3 bg-white border border-blue-100 rounded-xl space-y-1.5">
+                   class="mt-2 px-3 py-3 bg-white border border-rol/20 rounded-xl space-y-1.5">
                 <p v-if="form.datos_empresa?.sector"
-                   class="text-xs text-gray-400">
+                   class="text-xs text-texto-secundario">
                   <span class="font-bold uppercase tracking-wider">Sector:</span>
                   {{ form.datos_empresa.sector }}
                 </p>
                 <p v-if="form.datos_empresa?.persona_contacto"
-                   class="text-xs text-gray-400">
+                   class="text-xs text-texto-secundario">
                   <span class="font-bold uppercase tracking-wider">Contacto:</span>
                   {{ form.datos_empresa.persona_contacto }}
                 </p>
                 <p v-if="form.datos_empresa?.email"
-                   class="text-xs text-gray-400">
+                   class="text-xs text-texto-secundario">
                   <span class="font-bold uppercase tracking-wider">Email:</span>
                   {{ form.datos_empresa.email }}
                 </p>
                 <p v-if="form.datos_empresa?.descripcion"
-                   class="text-xs text-gray-500 leading-relaxed pt-1 border-t border-gray-100">
+                   class="text-xs text-texto-secundario leading-relaxed pt-1 border-t border-borde">
                   {{ form.datos_empresa.descripcion }}
                 </p>
               </div>
@@ -3088,7 +3088,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     @click="abrirConfirmEnvio"
                     :class="form.enviado_a_empresa_mail
                       ? 'bg-rol/10 border-rol/30 text-rol-fuerte hover:bg-rol/20'
-                      : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'"
+                      : 'bg-rol/5 border-rol/20 text-azul-noche hover:bg-rol/10'"
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5
                            border rounded-full text-xs font-bold transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3099,7 +3099,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </button>
             <button @click="router.push({ name: 'empresas' }); modalPropuestaAviso = false"
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5
-                           bg-white border border-blue-200 text-blue-600 rounded-full
+                           bg-white border border-rol/20 text-rol-fuerte rounded-full
                            text-xs font-bold hover:border-rol/40 hover:text-rol-fuerte transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3111,11 +3111,11 @@ onUnmounted(() => { tourActivo.value = false; });
         </div>
 
         <!-- Vía B: Validación docente -->
-        <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
-          <p class="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-3">
+        <div class="bg-empresas/10 border border-empresas/30 rounded-2xl p-4 mb-6">
+          <p class="text-xs font-bold uppercase tracking-widest text-empresas-dark mb-3">
             Vía B · Validación docente
           </p>
-          <p class="text-xs text-gray-600 leading-relaxed mb-3">
+          <p class="text-xs text-texto-secundario leading-relaxed mb-3">
             Puedes validar la propuesta directamente sin esperar a la empresa.
             <span class="text-amber-600 font-bold">Esto no sustituye la validación empresa</span>
             — ambas son independientes y complementarias.
@@ -3123,18 +3123,18 @@ onUnmounted(() => { tourActivo.value = false; });
           <button v-if="!form.docente_validado"
                   @click="modalValidarDocente = true; cerrarModalPropuestaAviso()"
                   class="w-full flex items-center justify-center gap-2 px-4 py-2.5
-                         bg-emerald-600 text-white rounded-full
-                         text-xs font-bold hover:bg-emerald-700 transition-all">
+                         bg-empresas-dark text-white rounded-full
+                         text-xs font-bold hover:bg-empresas-dark transition-all">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
             Validar como docente
           </button>
-          <div v-else class="flex items-center gap-2 px-3 py-2 bg-emerald-100 rounded-xl">
-            <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-else class="flex items-center gap-2 px-3 py-2 bg-empresas/10 rounded-xl">
+            <svg class="w-4 h-4 text-empresas-dark shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
-            <p class="text-xs font-bold text-emerald-700">Ya has validado esta propuesta como docente</p>
+            <p class="text-xs font-bold text-empresas-dark">Ya has validado esta propuesta como docente</p>
           </div>
         </div>
 
@@ -3143,7 +3143,7 @@ onUnmounted(() => { tourActivo.value = false; });
           <button
             @click="cerrarModalPropuestaAviso()"
             class="flex-1 inline-flex items-center justify-center
-                   px-5 py-3 bg-gray-100 text-[#1F2937] rounded-full
+                   px-5 py-3 bg-gray-100 text-azul-noche rounded-full
                    text-xs font-bold uppercase tracking-widest
                    hover:bg-gray-200 transition-all active:scale-95"
           >
@@ -3195,12 +3195,12 @@ onUnmounted(() => { tourActivo.value = false; });
         <h3 class="text-xl font-bold text-azul-noche text-center mb-1">
           Confirmar envío
         </h3>
-        <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
+        <p class="text-sm text-texto-secundario text-center mb-5 leading-relaxed">
           Estás a punto de abrir el panel de envío del enlace de validación para:
         </p>
 
         <!-- Tarjeta empresa -->
-        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
+        <div class="bg-gray-50 border border-borde rounded-2xl p-4 mb-5">
           <div class="flex items-center gap-2 mb-2">
             <div class="w-8 h-8 rounded-xl bg-rol/10 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3208,21 +3208,21 @@ onUnmounted(() => { tourActivo.value = false; });
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
               </svg>
             </div>
-            <p class="font-bold text-sm text-[#121212]">
+            <p class="font-bold text-sm text-azul-noche">
               {{ form.datos_empresa?.nombre || '—' }}
             </p>
           </div>
           <div class="space-y-1 pl-10">
-            <p v-if="form.datos_empresa?.sector" class="text-xs text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Sector:</span>
+            <p v-if="form.datos_empresa?.sector" class="text-xs text-texto-secundario">
+              <span class="font-bold text-texto-secundario uppercase tracking-wider text-xs">Sector:</span>
               {{ form.datos_empresa.sector }}
             </p>
-            <p v-if="form.datos_empresa?.persona_contacto" class="text-xs text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Contacto:</span>
+            <p v-if="form.datos_empresa?.persona_contacto" class="text-xs text-texto-secundario">
+              <span class="font-bold text-texto-secundario uppercase tracking-wider text-xs">Contacto:</span>
               {{ form.datos_empresa.persona_contacto }}
             </p>
-            <p v-if="form.datos_empresa?.email" class="text-xs text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Email:</span>
+            <p v-if="form.datos_empresa?.email" class="text-xs text-texto-secundario">
+              <span class="font-bold text-texto-secundario uppercase tracking-wider text-xs">Email:</span>
               {{ form.datos_empresa.email }}
             </p>
           </div>
@@ -3230,8 +3230,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Campo de seguridad: escribe "enviar" -->
         <div class="mb-5">
-          <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
-            Escribe <span class="font-bold text-[#1F2937] normal-case tracking-normal">enviar</span> para confirmar
+          <label class="block text-xs font-bold uppercase tracking-widest text-texto-secundario mb-2">
+            Escribe <span class="font-bold text-azul-noche normal-case tracking-normal">enviar</span> para confirmar
           </label>
           <input
             v-model="confirmEnvioTexto"
@@ -3244,7 +3244,7 @@ onUnmounted(() => { tourActivo.value = false; });
               ? 'border-red-300 bg-red-50 text-red-700 focus:ring-2 focus:ring-red-200'
               : confirmEnvioTexto && confirmEnvioValido
                 ? 'border-rol/50 bg-rol/5 text-rol-fuerte focus:ring-2 focus:ring-rol/20'
-                : 'border-gray-200 bg-white focus:border-gray-400 focus:ring-2 focus:ring-gray-100'"
+                : 'border-borde bg-white focus:border-gray-400 focus:ring-2 focus:ring-gray-100'"
           />
           <p v-if="confirmEnvioTexto && !confirmEnvioValido"
              class="mt-1.5 text-xs text-red-500 font-semibold">
@@ -3261,7 +3261,7 @@ onUnmounted(() => { tourActivo.value = false; });
           <button
             @click="modalConfirmEnvio = false"
             class="flex-1 inline-flex items-center justify-center
-                   px-4 py-2.5 bg-gray-100 text-[#1F2937] rounded-full
+                   px-4 py-2.5 bg-gray-100 text-azul-noche rounded-full
                    text-xs font-bold uppercase tracking-widest
                    hover:bg-gray-200 transition-all active:scale-95"
           >
@@ -3275,7 +3275,7 @@ onUnmounted(() => { tourActivo.value = false; });
                    transition-all active:scale-95"
             :class="confirmEnvioValido
               ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-300 cursor-not-allowed'"
+              : 'bg-gray-100 text-texto-secundario cursor-not-allowed'"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3289,7 +3289,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <button
           @click="router.push({ name: 'empresas' }); modalConfirmEnvio = false; modalPropuestaAviso = false"
           class="w-full inline-flex items-center justify-center gap-2
-                 px-4 py-2.5 bg-white border border-gray-200 text-gray-500 rounded-full
+                 px-4 py-2.5 bg-white border border-borde text-texto-secundario rounded-full
                  text-xs font-bold hover:border-rol/40 hover:text-rol-fuerte transition-all"
         >
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3322,11 +3322,11 @@ onUnmounted(() => { tourActivo.value = false; });
                   flex flex-col max-h-[90vh]">
 
         <!-- Cabecera -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <p class="text-sm font-bold text-[#121212] truncate pr-4">{{ modalRecurso.label }}</p>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-borde shrink-0">
+          <p class="text-sm font-bold text-azul-noche truncate pr-4">{{ modalRecurso.label }}</p>
           <button @click="modalRecurso = null"
                   class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-                         text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all shrink-0">
+                         text-texto-secundario hover:bg-gray-200 hover:text-texto-secundario transition-all shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -3356,12 +3356,12 @@ onUnmounted(() => { tourActivo.value = false; });
           <!-- Otro (enlace externo) -->
           <div v-else class="flex flex-col items-center gap-4 p-10 text-center">
             <div class="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center">
-              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                       d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
               </svg>
             </div>
-            <p class="text-gray-400 text-sm">Este tipo de archivo no se puede previsualizar</p>
+            <p class="text-gray-300 text-sm">Este tipo de archivo no se puede previsualizar</p>
             <a :href="modalRecurso.url" target="_blank" rel="noopener"
                class="inline-flex items-center gap-2 px-5 py-2.5 bg-rol-fuerte text-white
                       rounded-full text-xs font-bold uppercase tracking-widest
@@ -3411,7 +3411,7 @@ onUnmounted(() => { tourActivo.value = false; });
           Sobre la publicación de la propuesta
         </h3>
 
-        <p class="text-sm text-gray-600 leading-relaxed text-center">
+        <p class="text-sm text-texto-secundario leading-relaxed text-center">
           Esta propuesta se guarda como <strong>borrador</strong> por defecto.
           Puedes modificar esta opción, pero se aconseja validar con la empresa
           previamente enviándoles el enlace, antes de marcarla como validada.

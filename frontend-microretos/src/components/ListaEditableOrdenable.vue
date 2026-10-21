@@ -89,7 +89,7 @@ function inicioArrastre(i, ev) {
 
         <!-- Asa: arrastrar (escritorio) o ↑/↓ con el teclado -->
         <button type="button" data-asa draggable="true"
-                class="hidden h-9 w-7 shrink-0 cursor-grab items-center justify-center rounded-full text-gray-400 hover:text-gray-600 active:cursor-grabbing sm:inline-flex"
+                class="hidden h-9 w-7 shrink-0 cursor-grab items-center justify-center rounded-full text-texto-secundario hover:text-texto-secundario active:cursor-grabbing sm:inline-flex"
                 :aria-label="`Mover ${nombre} ${i + 1} (flechas arriba y abajo)`"
                 :title="`Arrastra para reordenar`"
                 @dragstart="inicioArrastre(i, $event)"
@@ -106,12 +106,12 @@ function inicioArrastre(i, ev) {
         <!-- ↑↓ en móvil -->
         <div class="flex shrink-0 flex-col sm:hidden">
           <button type="button" :disabled="i === 0" @click="mover(i, i - 1)"
-                  class="inline-flex h-5 w-7 items-center justify-center rounded-full text-gray-400 disabled:opacity-30"
+                  class="inline-flex h-5 w-7 items-center justify-center rounded-full text-texto-secundario disabled:opacity-30"
                   :aria-label="`Subir ${nombre} ${i + 1}`">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
           </button>
           <button type="button" :disabled="i === modelValue.length - 1" @click="mover(i, i + 1)"
-                  class="inline-flex h-5 w-7 items-center justify-center rounded-full text-gray-400 disabled:opacity-30"
+                  class="inline-flex h-5 w-7 items-center justify-center rounded-full text-texto-secundario disabled:opacity-30"
                   :aria-label="`Bajar ${nombre} ${i + 1}`">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
           </button>
@@ -130,12 +130,12 @@ function inicioArrastre(i, ev) {
             Eliminar
           </button>
           <button type="button" @click="confirmando = null"
-                  class="inline-flex h-9 items-center rounded-full border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 hover:bg-gray-50">
+                  class="inline-flex h-9 items-center rounded-full border border-borde bg-white px-3 text-xs font-bold text-texto-secundario hover:bg-gray-50">
             No
           </button>
         </div>
         <button v-else type="button" @click="pedirBorrado(i)"
-                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-texto-secundario transition-colors hover:bg-red-50 hover:text-red-600"
                 :aria-label="`Eliminar ${nombre} ${i + 1}`" :title="`Eliminar ${nombre}`">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -144,7 +144,7 @@ function inicioArrastre(i, ev) {
         </button>
       </li>
     </ul>
-    <p v-else-if="vacio" class="px-1 text-sm text-gray-500">{{ vacio }}</p>
+    <p v-else-if="vacio" class="px-1 text-sm text-texto-secundario">{{ vacio }}</p>
 
     <button type="button" @click="anadir"
             class="inline-flex h-9 items-center gap-1.5 rounded-full bg-rol/10 px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol/15">
@@ -156,9 +156,9 @@ function inicioArrastre(i, ev) {
 
     <!-- Sugerencias de la IA pendientes de revisar -->
     <div v-if="sugerencias.length"
-         class="mt-3 rounded-xl border border-violet-200 bg-violet-50/60 p-3 sm:p-4">
+         class="mt-3 rounded-xl border border-alumnos/30 bg-alumnos/5 p-3 sm:p-4">
       <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-violet-800">
+        <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-azul-noche">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
@@ -166,22 +166,22 @@ function inicioArrastre(i, ev) {
           Sugerencias IA · revisa antes de añadir
         </p>
         <button type="button" @click="emit('aceptar-todas')"
-                class="inline-flex h-8 items-center rounded-full bg-violet-700 px-3 text-xs font-bold text-white hover:bg-violet-800">
+                class="inline-flex h-8 items-center rounded-full bg-rol-fuerte px-3 text-xs font-bold text-white hover:bg-rol-fuerte/90">
           Añadir todas
         </button>
       </div>
       <ul class="space-y-1.5">
         <li v-for="(s, i) in sugerencias" :key="s"
-            class="flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-sm text-gray-700">
+            class="flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-sm text-azul-noche">
           <span class="min-w-0 flex-1 break-words">{{ s }}</span>
           <button type="button" @click="emit('aceptar', i)"
-                  class="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-violet-200 px-3 text-xs font-bold text-violet-800 hover:bg-violet-100"
+                  class="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-alumnos/30 px-3 text-xs font-bold text-azul-noche hover:bg-alumnos/15"
                   :aria-label="`Añadir sugerencia: ${s}`">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
             Añadir
           </button>
           <button type="button" @click="emit('descartar', i)"
-                  class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 hover:text-texto-secundario"
                   :aria-label="`Descartar sugerencia: ${s}`" title="Descartar">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>

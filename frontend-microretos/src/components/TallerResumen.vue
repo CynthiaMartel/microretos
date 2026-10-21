@@ -55,7 +55,7 @@ const ICONOS = {
          aria-label="Resumen del proyecto">
 
     <!-- 1 · Resumen del proyecto (+ «Antes de continuar» dentro) -->
-    <section class="rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm">
+    <section class="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
       <div class="mb-2.5 flex items-center gap-2">
         <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen del proyecto</h2>
         <button v-if="hayReto" type="button" @click="emit('ver-ficha')"
@@ -96,10 +96,10 @@ const ICONOS = {
         <ul v-if="datos.length" class="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-1 text-xs xl:grid-cols-2">
           <li v-for="d in datos" :key="d.icono + d.valor" class="flex min-w-0 items-center gap-1.5"
               :class="d.ancho ? 'xl:col-span-2' : ''" :title="d.valor">
-            <svg class="h-3.5 w-3.5 shrink-0" :class="ICONOS[d.icono]?.[1] || 'text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg class="h-3.5 w-3.5 shrink-0" :class="ICONOS[d.icono]?.[1] || 'text-texto-secundario'" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="ICONOS[d.icono]?.[0]"/>
             </svg>
-            <span class="min-w-0 truncate text-gray-700">{{ d.valor }}</span>
+            <span class="min-w-0 truncate text-azul-noche">{{ d.valor }}</span>
           </li>
         </ul>
 
@@ -140,7 +140,7 @@ const ICONOS = {
     </button>
 
     <!-- 3 · Recursos de apoyo (los de /seccion/recursos) en cuadrícula 2×2 -->
-    <section class="rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm" aria-labelledby="titulo-recursos-apoyo">
+    <section class="rounded-2xl border border-borde bg-white p-3.5 shadow-sm" aria-labelledby="titulo-recursos-apoyo">
       <div class="mb-2 flex items-center gap-2">
         <svg class="h-4 w-4 shrink-0 text-rol-fuerte" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M3 6.5A2.5 2.5 0 015.5 4h4.1a2 2 0 011.6.8l1 1.3a1 1 0 00.8.4h5.5A2.5 2.5 0 0121 9v8.5a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5v-11z"/>
@@ -157,7 +157,7 @@ const ICONOS = {
         <li v-for="r in recursos" :key="r.titulo">
           <button type="button" :disabled="r.proximamente" @click="ACCIONES[r.accion]?.()"
                   :title="r.proximamente ? `${r.titulo} · próximamente` : r.desc"
-                  class="flex h-full w-full min-w-0 items-center gap-2 rounded-xl border border-gray-100 px-2 py-2 text-left transition-colors enabled:hover:border-rol/30 enabled:hover:bg-rol/5 disabled:cursor-default">
+                  class="flex h-full w-full min-w-0 items-center gap-2 rounded-xl border border-borde px-2 py-2 text-left transition-colors enabled:hover:border-rol/30 enabled:hover:bg-rol/5 disabled:cursor-default">
             <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white"
                   :class="[r.tile, r.proximamente ? 'opacity-40' : '']" aria-hidden="true">
               <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -165,8 +165,8 @@ const ICONOS = {
               </svg>
             </span>
             <span class="min-w-0 break-words">
-              <span class="block text-xs font-semibold leading-tight" :class="r.proximamente ? 'text-gray-500' : 'text-azul-noche'">{{ r.titulo }}</span>
-              <span v-if="r.proximamente" class="block text-xs leading-tight text-gray-500">Pronto</span>
+              <span class="block text-xs font-semibold leading-tight" :class="r.proximamente ? 'text-texto-secundario' : 'text-azul-noche'">{{ r.titulo }}</span>
+              <span v-if="r.proximamente" class="block text-xs leading-tight text-texto-secundario">Pronto</span>
             </span>
           </button>
         </li>

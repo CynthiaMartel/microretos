@@ -56,17 +56,17 @@ onBeforeUnmount(cerrarConcepto)
         <!-- Con concepto: nombre destacado, tooltip con la pregunta y toast al pulsar -->
         <span v-if="fase.concepto" class="group relative">
           <button type="button"
-                  class="flex items-center gap-1.5 rounded-md font-heading text-lg font-black uppercase tracking-wider underline decoration-current/40 decoration-dashed decoration-2 underline-offset-4 transition hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 sm:text-xl"
+                  class="flex items-center gap-1.5 rounded-md font-heading text-lg font-bold uppercase tracking-wider underline decoration-current/40 decoration-dashed decoration-2 underline-offset-4 transition hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 sm:text-xl"
                   :aria-label="fase.concepto.pregunta" @click="abrirConcepto(fase.concepto)">
             {{ fase.nombre }}
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-current/15 text-[11px] no-underline" aria-hidden="true">?</span>
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-current/15 text-xs no-underline" aria-hidden="true">?</span>
           </button>
           <span role="tooltip"
-                class="pointer-events-none absolute bottom-full left-0 z-20 mb-2 whitespace-nowrap rounded-lg bg-azul-noche px-2.5 py-1 text-xs font-semibold normal-case tracking-normal text-white opacity-0 shadow-md transition group-hover:opacity-100 group-focus-within:opacity-100">
+                class="pointer-events-none absolute bottom-full left-0 z-20 mb-2 w-max max-w-[min(18rem,calc(100vw-2rem))] whitespace-normal rounded-lg bg-azul-noche px-2.5 py-1 text-xs font-semibold normal-case tracking-normal text-white opacity-0 shadow-md transition group-hover:opacity-100 group-focus-within:opacity-100">
             {{ fase.concepto.pregunta }}
           </span>
         </span>
-        <span v-else class="text-[11px] font-black uppercase tracking-widest">{{ fase.nombre }}</span>
+        <span v-else class="text-xs font-bold uppercase tracking-widest">{{ fase.nombre }}</span>
         <span class="mb-1.5 h-px flex-1 bg-current opacity-25" />
       </div>
 
@@ -80,7 +80,7 @@ onBeforeUnmount(cerrarConcepto)
             <span v-if="paso.n < totalPasos"
                   class="relative my-2 w-0 flex-1 border-l-2 border-dashed border-gray-300 lg:mx-3 lg:my-0 lg:h-0 lg:border-l-0 lg:border-t-2">
               <span v-if="conectorDe(fase, fi, pi)"
-                    class="absolute inset-x-0 bottom-1.5 hidden px-1 text-center text-[11px] italic leading-tight text-gray-500 lg:block">
+                    class="absolute inset-x-0 bottom-1.5 hidden px-1 text-center text-xs italic leading-tight text-texto-secundario lg:block">
                 {{ conectorDe(fase, fi, pi) }}
               </span>
             </span>
@@ -88,8 +88,8 @@ onBeforeUnmount(cerrarConcepto)
           <!-- Texto del paso -->
           <div class="min-w-0 pb-5 pt-1 lg:pb-0 lg:pr-6 lg:pt-3">
             <p class="text-sm font-semibold leading-snug">{{ paso.titulo }}</p>
-            <p class="mt-1 text-xs leading-snug text-gray-500">{{ paso.desc }}</p>
-            <p v-if="conectorDe(fase, fi, pi)" class="mt-2 text-[11px] italic text-gray-500 lg:hidden">↓ {{ conectorDe(fase, fi, pi) }}</p>
+            <p class="mt-1 text-xs leading-snug text-texto-secundario">{{ paso.desc }}</p>
+            <p v-if="conectorDe(fase, fi, pi)" class="mt-2 text-xs italic text-texto-secundario lg:hidden">↓ {{ conectorDe(fase, fi, pi) }}</p>
           </div>
         </li>
       </ol>
@@ -103,7 +103,7 @@ onBeforeUnmount(cerrarConcepto)
       <div v-if="conceptoAbierto" role="status" aria-live="polite"
            class="fixed bottom-4 left-1/2 z-[60] max-h-[70vh] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-xl">
         <ConceptoClave class="pr-10" :color="conceptoAbierto.color" :segmentos="conceptoAbierto.segmentos" />
-        <button type="button" class="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-700"
+        <button type="button" class="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-black/5 hover:text-azul-noche"
                 aria-label="Cerrar" @click="cerrarConcepto">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

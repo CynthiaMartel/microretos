@@ -62,19 +62,19 @@ defineExpose({ subir })
              class="relative flex max-h-[min(90dvh,56rem)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl outline-none"
              :class="ancho" @keydown="alTeclear">
 
-          <header class="flex items-start gap-3 border-b border-gray-100 px-5 pb-4 pt-5 sm:px-6">
+          <header class="flex items-start gap-3 border-b border-borde px-5 pb-4 pt-5 sm:px-6">
             <div class="min-w-0 flex-1">
               <h2 :id="idTitulo" class="text-lg font-bold text-azul-noche sm:text-xl">{{ titulo }}</h2>
               <p v-if="subtitulo" class="mt-0.5 text-sm text-texto-secundario">{{ subtitulo }}</p>
             </div>
             <button type="button" @click="emit('cerrar')"
-                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100"
                     aria-label="Cerrar">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </header>
 
-          <div v-if="$slots.barra" class="border-b border-gray-100 bg-gray-50/70 px-5 py-3 sm:px-6">
+          <div v-if="$slots.barra" class="border-b border-borde bg-gray-50/70 px-5 py-3 sm:px-6">
             <slot name="barra" />
           </div>
 
@@ -82,7 +82,7 @@ defineExpose({ subir })
             <slot />
           </div>
 
-          <footer v-if="$slots.pie" class="border-t border-gray-100 px-5 py-3 sm:px-6">
+          <footer v-if="$slots.pie" class="border-t border-borde px-5 py-3 sm:px-6">
             <slot name="pie" />
           </footer>
 

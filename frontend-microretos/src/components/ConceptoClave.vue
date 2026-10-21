@@ -35,12 +35,12 @@ const esEnlace = (s) => s.ruta && (!s.routeName || authStore.canAccess(s.routeNa
 // Opcional: fuera de SeccionHub no hay nada que resaltar
 const rutaResaltada = inject('rutaResaltada', null)
 const resaltar = (ruta) => { if (rutaResaltada) rutaResaltada.value = ruta }
-const claseTexto = (s) => [s.b && 'font-black', (s.b || esEnlace(s)) && (COLORES[s.color] ?? c).fuerte]
+const claseTexto = (s) => [s.b && 'font-bold', (s.b || esEnlace(s)) && (COLORES[s.color] ?? c).fuerte]
 </script>
 
 <template>
   <div class="rounded-2xl border-2 p-3 shadow-sm sm:p-4" :class="c.caja">
-    <p class="text-[13px] leading-relaxed text-gray-900 break-words sm:text-sm">
+    <p class="text-[13px] leading-relaxed text-azul-noche break-words sm:text-sm">
       <template v-for="(s, i) in segmentos" :key="i"><span v-if="s.br" class="block h-2" aria-hidden="true" /><span v-else-if="esEnlace(s)" class="cc-enlace"><router-link
             :to="s.ruta" :aria-label="s.tip ? `${s.t} — ${s.tip}` : undefined"
             class="underline decoration-2 underline-offset-2 hover:opacity-80" :class="claseTexto(s)"
@@ -58,7 +58,7 @@ const claseTexto = (s) => [s.b && 'font-black', (s.b || esEnlace(s)) && (COLORES
   width: max-content; max-width: min(14rem, 70vw); text-align: center;
   pointer-events: none; z-index: 30;
   padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
-  background: #1F2937; color: #fff; opacity: 0; transition: opacity 120ms ease;
+  background: #17283E; color: #fff; opacity: 0; transition: opacity 120ms ease;
 }
 .cc-enlace:hover .cc-tip,
 .cc-enlace:focus-within .cc-tip { opacity: 1; }

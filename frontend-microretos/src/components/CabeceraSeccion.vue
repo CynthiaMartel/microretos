@@ -27,12 +27,12 @@ defineProps({
          :class="plano ? 'items-start py-1 sm:flex-nowrap' : 'items-end p-5 sm:p-6'">
       <div class="min-w-0" :class="plano ? 'flex-1' : ''">
         <BotonVolver v-if="volver" :fallback="volver" :label="volverLabel" class="-mt-1 mb-2" />
-        <p v-if="antetitulo" class="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-gray-600">{{ antetitulo }}</p>
+        <p v-if="antetitulo" class="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-texto-secundario">{{ antetitulo }}</p>
         <h1 class="font-heading text-2xl font-bold tracking-tight text-azul-noche"
             :class="plano ? 'sm:text-4xl' : 'sm:text-3xl'">
           {{ titulo }} <span v-if="destacado" :class="color">{{ destacado }}</span>
         </h1>
-        <p v-if="subtitulo" class="mt-2 max-w-2xl text-gray-600" :class="plano ? 'text-sm sm:text-base' : 'text-sm'">{{ subtitulo }}</p>
+        <p v-if="subtitulo" class="mt-2 max-w-2xl text-texto-secundario" :class="plano ? 'text-sm sm:text-base' : 'text-sm'">{{ subtitulo }}</p>
       </div>
       <slot />
     </div>

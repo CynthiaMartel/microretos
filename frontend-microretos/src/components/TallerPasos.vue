@@ -15,6 +15,11 @@ const props = defineProps({
   maximo:  { type: Number, required: true }, // último paso alcanzado
   // Si se puede saltar a un paso (además de haberlo alcanzado): el wizard exige reto vinculado.
   puedeIr: { type: Function, default: () => true },
+  // Nombre accesible del indicador.
+  etiqueta: { type: String, default: 'Pasos del Taller de Ideas' },
+  // 'tarjeta' (crear_proyecto.png) · 'linea': círculos unidos por una línea y nombre
+  // debajo, sin tarjeta (crear_encuentro.png). En móvil, las dos usan la barra de tramos.
+  variante: { type: String, default: 'tarjeta' },
 })
 const emit = defineEmits(['ir'])
 
@@ -33,8 +38,8 @@ function ir(num) {
 </script>
 
 <template>
-  <nav aria-label="Pasos del Taller de Ideas"
-       class="rounded-2xl border border-gray-100 bg-white px-3 pt-3 shadow-sm sm:px-4">
+  <nav :aria-label="etiqueta"
+       :class="variante === 'tarjeta' ? 'rounded-2xl border border-borde bg-white px-3 pt-3 shadow-sm sm:px-4' : ''">
 
     <!-- Móvil -->
     <div class="pb-1 md:hidden">
@@ -51,7 +56,7 @@ function ir(num) {
                   class="flex h-9 w-full items-center disabled:cursor-default">
             <span class="block h-1.5 w-full rounded-full"
                   :class="{
-                    'bg-emerald-600': estado(p.num) === 'hecho',
+                    'bg-empresas-dark': estado(p.num) === 'hecho',
                     'bg-rol-fuerte': estado(p.num) === 'actual',
                     'bg-gray-200': ['alcanzado', 'pendiente'].includes(estado(p.num)),
                   }" />
@@ -60,8 +65,46 @@ function ir(num) {
       </ol>
     </div>
 
-    <!-- md en adelante -->
-    <ol class="hidden gap-1 md:flex">
+    <!-- md en adelante · variante «línea» -->
+    <ol v-if="variante === 'linea'" class="hidden md:flex">
+      <li v-for="(p, i) in pasos" :key="p.num" class="relative min-w-0 flex-1">
+        <span v-if="i > 0" aria-hidden="true"
+              class="absolute left-0 right-1/2 top-[1.125rem] h-0.5 -translate-y-1/2"
+              :class="p.num <= Math.max(actual, maximo) ? 'bg-rol-fuerte' : 'bg-gray-200'" />
+        <span v-if="i < pasos.length - 1" aria-hidden="true"
+              class="absolute left-1/2 right-0 top-[1.125rem] h-0.5 -translate-y-1/2"
+              :class="p.num < Math.max(actual, maximo) ? 'bg-rol-fuerte' : 'bg-gray-200'" />
+        <button type="button" :disabled="!navegable(p.num)" @click="ir(p.num)"
+                :aria-current="p.num === actual ? 'step' : undefined"
+                class="group relative mx-auto flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pb-1 text-center disabled:cursor-default">
+          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-4 ring-[#F4F7FA]"
+                :class="{
+                  'bg-empresas-dark text-white': estado(p.num) === 'hecho',
+                  'bg-rol-fuerte text-white shadow-md shadow-rol-fuerte/30': estado(p.num) === 'actual',
+                  'border-2 border-gray-300 bg-white text-texto-secundario': estado(p.num) === 'alcanzado',
+                  'border-2 border-borde bg-white text-texto-secundario': estado(p.num) === 'pendiente',
+                }">
+            <svg v-if="estado(p.num) === 'hecho'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+            <template v-else>{{ p.num }}</template>
+          </span>
+          <span class="whitespace-nowrap text-xs leading-tight xl:text-sm"
+                :class="{
+                  'font-semibold text-rol-fuerte': estado(p.num) === 'actual',
+                  'font-medium text-azul-noche': estado(p.num) === 'hecho',
+                  'text-texto-secundario': estado(p.num) === 'alcanzado',
+                  'text-texto-secundario': estado(p.num) === 'pendiente',
+                }">
+            {{ p.label }}
+            <span v-if="estado(p.num) === 'hecho'" class="sr-only">(completado)</span>
+          </span>
+        </button>
+      </li>
+    </ol>
+
+    <!-- md en adelante · variante «tarjeta» -->
+    <ol v-else class="hidden gap-1 md:flex">
       <li v-for="p in pasos" :key="p.num" class="flex min-w-0 flex-1 flex-col">
         <button type="button"
                 :disabled="!navegable(p.num)"
@@ -71,10 +114,10 @@ function ir(num) {
                 :class="navegable(p.num) ? 'hover:bg-gray-50' : ''">
           <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                 :class="{
-                  'bg-emerald-600 text-white': estado(p.num) === 'hecho',
+                  'bg-empresas-dark text-white': estado(p.num) === 'hecho',
                   'bg-rol-fuerte text-white': estado(p.num) === 'actual',
-                  'border-2 border-gray-300 text-gray-500': estado(p.num) === 'alcanzado',
-                  'border-2 border-gray-200 text-gray-400': estado(p.num) === 'pendiente',
+                  'border-2 border-gray-300 text-texto-secundario': estado(p.num) === 'alcanzado',
+                  'border-2 border-borde text-texto-secundario': estado(p.num) === 'pendiente',
                 }">
             <svg v-if="estado(p.num) === 'hecho'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -84,9 +127,9 @@ function ir(num) {
           <span class="whitespace-nowrap text-xs leading-tight"
                 :class="{
                   'font-semibold text-rol-fuerte': estado(p.num) === 'actual',
-                  'font-medium text-gray-700': estado(p.num) === 'hecho',
-                  'text-gray-600': estado(p.num) === 'alcanzado',
-                  'text-gray-500': estado(p.num) === 'pendiente',
+                  'font-medium text-azul-noche': estado(p.num) === 'hecho',
+                  'text-texto-secundario': estado(p.num) === 'alcanzado',
+                  'text-texto-secundario': estado(p.num) === 'pendiente',
                 }">
             <span class="hidden 2xl:inline">{{ p.num }}. </span>{{ p.label }}
             <span v-if="estado(p.num) === 'hecho'" class="sr-only">(completado)</span>
@@ -94,7 +137,7 @@ function ir(num) {
         </button>
         <span aria-hidden="true" class="block h-1 rounded-full"
               :class="{
-                'bg-emerald-600': estado(p.num) === 'hecho',
+                'bg-empresas-dark': estado(p.num) === 'hecho',
                 'bg-rol-fuerte': estado(p.num) === 'actual',
                 'bg-gray-100': ['alcanzado', 'pendiente'].includes(estado(p.num)),
               }" />

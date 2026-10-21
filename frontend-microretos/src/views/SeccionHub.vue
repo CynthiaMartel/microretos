@@ -106,9 +106,9 @@ const abrir = (card) => {
             <div class="min-w-0 flex-1">
               <h2 class="card-title flex flex-wrap items-center gap-2">
                 {{ card.titulo }}
-                <span v-if="card.proximamente" class="rounded-full bg-gray-100 px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wider text-gray-500">Próximamente</span>
+                <span v-if="card.proximamente" class="rounded-full bg-gray-100 px-2 py-0.5 font-sans text-xs font-bold uppercase tracking-wider text-texto-secundario">Próximamente</span>
               </h2>
-              <p class="mt-1 text-sm leading-snug text-gray-500">{{ card.desc }}</p>
+              <p class="mt-1 text-sm leading-snug text-texto-secundario">{{ card.desc }}</p>
             </div>
           </div>
           <span v-if="esAccion(card)" aria-hidden="true"
@@ -120,8 +120,8 @@ const abrir = (card) => {
             <button type="button" @click.stop="abrir(card)"
                     class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold"
                     :class="card.principal
-                      ? 'bg-centros text-white shadow-md shadow-centros/25 hover:bg-centros/90'
-                      : 'border border-centros/30 bg-white text-centros shadow-sm hover:bg-centros/5'">
+                      ? 'bg-rol-fuerte text-white shadow-md shadow-rol-fuerte/25 hover:bg-rol-fuerte/90'
+                      : 'border border-rol-fuerte/30 bg-white text-rol-fuerte shadow-sm hover:bg-rol-fuerte/5'">
               <svg v-if="card.principal" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
               {{ card.cta }}
             </button>
@@ -135,12 +135,12 @@ const abrir = (card) => {
         <div class="grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)] md:items-center">
           <div>
             <h2 class="card-title flex items-center gap-2">
-              <svg v-if="bloque.icon" class="h-5 w-5 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <svg v-if="bloque.icon" class="h-5 w-5 shrink-0 text-texto-secundario" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
                 <path :d="ICONOS_NAV[bloque.icon]" />
               </svg>
               {{ bloque.titulo }}
             </h2>
-            <p class="mt-1 text-sm leading-relaxed text-gray-600">{{ bloque.texto }}</p>
+            <p class="mt-1 text-sm leading-relaxed text-texto-secundario">{{ bloque.texto }}</p>
           </div>
           <!-- Con `separador` los botones son caminos alternativos ("o"); sin él, pantallas en paralelo -->
           <div class="grid items-stretch gap-2"
@@ -149,10 +149,10 @@ const abrir = (card) => {
                  : 'sm:grid-cols-2'">
             <template v-for="(card, i) in bloque.cards" :key="card.titulo">
               <span v-if="i > 0 && bloque.separador" aria-hidden="true"
-                    class="flex items-center justify-center text-xs font-semibold uppercase tracking-widest text-gray-400">{{ bloque.separador }}</span>
+                    class="flex items-center justify-center text-xs font-semibold uppercase tracking-widest text-texto-secundario">{{ bloque.separador }}</span>
               <button type="button" @click="abrir(card)"
                       class="group flex min-w-0 flex-col rounded-xl text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-md"
-                      :class="[card.compacta ? 'p-3 sm:self-center' : 'p-4', i === 0 && bloque.destacarPrimera ? 'bg-centros/5 ring-centros/25' : 'bg-white ring-gray-200/70', claseResalte(card)]">
+                      :class="[card.compacta ? 'p-3 sm:self-center' : 'p-4', i === 0 && bloque.destacarPrimera ? 'bg-rol/5 ring-rol/25' : 'bg-white ring-gray-200/70', claseResalte(card)]">
                 <!-- `compacta`: botón secundario más pequeño (icono, título y texto reducidos) -->
                 <span class="flex items-center" :class="card.compacta ? 'gap-2' : 'gap-3'">
                   <span class="flex shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105"
@@ -162,12 +162,12 @@ const abrir = (card) => {
                     </svg>
                   </span>
                   <span class="min-w-0">
-                    <span v-if="card.etiqueta" class="block text-[10px] font-bold uppercase tracking-widest"
-                          :class="i === 0 && bloque.destacarPrimera ? 'text-centros' : 'text-gray-400'">{{ card.etiqueta }}</span>
+                    <span v-if="card.etiqueta" class="block text-xs font-bold uppercase tracking-widest"
+                          :class="i === 0 && bloque.destacarPrimera ? 'text-rol-fuerte' : 'text-texto-secundario'">{{ card.etiqueta }}</span>
                     <span class="block font-semibold" :class="card.compacta ? 'text-xs' : 'text-sm'">{{ card.titulo }}</span>
                   </span>
                 </span>
-                <span class="mt-2 block leading-relaxed text-gray-500" :class="card.compacta ? 'text-[11px]' : 'text-xs'">{{ card.desc }}</span>
+                <span class="mt-2 block leading-relaxed text-texto-secundario" :class="card.compacta ? 'text-xs' : 'text-xs'">{{ card.desc }}</span>
               </button>
             </template>
           </div>
@@ -182,8 +182,8 @@ const abrir = (card) => {
           <HalosMarca class="absolute inset-y-0 right-0 hidden h-full w-[45%] sm:block [mask-image:linear-gradient(to_right,transparent,black_45%)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_45%)]" />
           <div class="relative z-10 px-5 py-4 sm:max-w-[60%]">
             <h2 class="card-title">{{ flujo.titulo }}</h2>
-            <p class="mt-1 text-sm text-gray-600">
-              Más detalle en <button type="button" class="font-semibold text-centros hover:underline" @click="abrirComoFunciona">¿Cómo funciona DUALAB?</button>
+            <p class="mt-1 text-sm text-texto-secundario">
+              Más detalle en <button type="button" class="font-semibold text-rol-fuerte hover:underline" @click="abrirComoFunciona">¿Cómo funciona DUALAB?</button>
             </p>
           </div>
         </div>

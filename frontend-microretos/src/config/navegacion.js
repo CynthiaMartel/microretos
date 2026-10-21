@@ -55,7 +55,7 @@ export const GRUPOS_NAV = [
         tip: 'Genera retos y proyectos, y consulta sus bibliotecas',
         activa: (p) => p === '/seccion/retos-proyectos' || p.startsWith('/retos')
           || (p.startsWith('/proyectos') && !esPantallaAcceso(p)) },
-      { key: 'encuentros', label: 'Encuentros', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'alumnos',
+      { key: 'encuentros', label: 'Encuentros', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'docente',
         tip: 'Crea encuentros con el alumnado y consulta los registrados',
         activa: (p) => p === '/seccion/encuentros' || p.startsWith('/encuentros') },
       { key: 'mis-grupos', label: 'Mis grupos', icon: 'grafica', ruta: '/mis-grupos', routeName: 'mis-grupos', color: 'docente',
@@ -181,11 +181,13 @@ export const SECCIONES = {
     },
   },
   encuentros: {
-    titulo: 'Encuentros con el', destacado: 'alumnado', color: 'text-alumnos',
+    // Azul como su entrada del menú lateral (decisión 2026-10-21); el naranja queda para
+    // lo que es del alumnado (fase «En el aula» del diagrama).
+    titulo: 'Encuentros con el', destacado: 'alumnado', color: 'text-centros',
     subtitulo: 'Organiza las sesiones de trabajo con tus grupos y revisa las que ya has creado.',
     // Qué es un encuentro — "el cuándo" (mismo texto que ComoFuncionaModal.vue)
     conceptos: [
-      { color: 'alumnos', segmentos: [
+      { color: 'centros', segmentos: [
         { t: 'Un ' }, { t: 'ENCUENTRO', b: true }, { t: ' es el ' }, { t: 'cuándo', b: true },
         { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
         { t: 'workspace', b: true }, { t: '.' },
@@ -199,21 +201,21 @@ export const SECCIONES = {
     ],
     cards: [
       { titulo: 'Crear encuentro', desc: 'Organiza un encuentro de trabajo con retos o proyectos.',
-        ruta: '/encuentros/crear', routeName: 'dashboard-docente', icon: 'portapapeles', tile: 'bg-alumnos' },
+        ruta: '/encuentros/crear', routeName: 'dashboard-docente', icon: 'portapapeles', tile: 'bg-centros' },
       { titulo: 'Biblioteca de encuentros', desc: 'Consulta todos los encuentros registrados.',
-        ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-alumnos' },
+        ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-centros' },
     ],
     flujo: {
       titulo: 'Mira cómo funciona',
       fases: [
-        { nombre: 'Preparar', texto: 'text-alumnos-dark', borde: 'border-alumnos', halo: 'ring-alumnos/15', conector: 'Genera el código',
+        { nombre: 'Preparar', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Genera el código',
           pasos: [
             { titulo: 'Crea el encuentro', conector: 'Guárdalo',
               desc: 'Asocia un proyecto validado, pon la fecha y reparte al alumnado en grupos.' },
             { titulo: 'Consúltalo en la biblioteca',
               desc: 'Desde la biblioteca de encuentros generas el código del alumnado y lo compartes con otros docentes.' },
           ] },
-        { nombre: 'En el aula', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15',
+        { nombre: 'En el aula', texto: 'text-alumnos-dark', borde: 'border-alumnos', halo: 'ring-alumnos/15',
           pasos: [
             { titulo: 'Da acceso al alumnado', conector: 'Trabajan por fases',
               desc: 'Proyecta la pantalla de acceso: cada grupo entra en su workspace con su QR.' },

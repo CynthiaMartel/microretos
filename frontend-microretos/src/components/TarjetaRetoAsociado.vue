@@ -21,7 +21,7 @@ const emit = defineEmits(['cambiar'])
 </script>
 
 <template>
-  <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-reto-asociado">
+  <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-reto-asociado">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
       <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
         <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol-fuerte text-white sm:h-12 sm:w-12" aria-hidden="true">
@@ -43,12 +43,12 @@ const emit = defineEmits(['cambiar'])
       <MiniaturaReto :src="imagen" class="h-32 w-full sm:h-28 sm:w-40" />
       <div class="min-w-0 flex-1">
         <p class="font-heading text-base font-bold leading-snug text-azul-noche break-words sm:text-lg">{{ titulo }}</p>
-        <p v-if="pregunta" class="mt-1 text-sm italic leading-relaxed text-gray-700 sm:text-base">«{{ pregunta }}»</p>
+        <p v-if="pregunta" class="mt-1 text-sm italic leading-relaxed text-azul-noche sm:text-base">«{{ pregunta }}»</p>
 
         <div v-if="estado || empresa || tipoEmpresa" class="mt-2 flex flex-wrap gap-1.5">
           <span v-if="estado" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
                 :class="estado.clase">{{ estado.label }}</span>
-          <span v-if="empresa" class="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-gray-700">
+          <span v-if="empresa" class="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-azul-noche">
             <span class="truncate">{{ empresa }}</span>
           </span>
           <span v-if="tipoEmpresa === 'ficticia'"
@@ -58,7 +58,7 @@ const emit = defineEmits(['cambiar'])
           </span>
         </div>
 
-        <div v-if="familia || curso || ciclo" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+        <div v-if="familia || curso || ciclo" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-texto-secundario">
           <span v-if="familia" class="inline-flex min-w-0 items-center gap-1.5">
             <svg class="h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <span class="break-words">{{ familia }}</span>
