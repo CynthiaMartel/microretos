@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateMicroproyectoRequest;
 use App\Http\Requests\ValidarPropuestaEmpresaRequest;
+use App\Http\Requests\SugerirRaCeRequest;
+use App\Http\Requests\SugerirKpisRequest;
+use App\Http\Requests\SugerirObjetivosRequest;
+use App\Http\Requests\SugerirFundamentacionRequest;
+use App\Http\Requests\SugerirMetodologiaRequest;
 use Illuminate\Http\Request;
 use App\Models\Microproyecto;
 use App\Services\NotificacionDocenteService;
@@ -301,16 +306,12 @@ class MicroproyectoController extends Controller
 
     // --- IA: sugerencia de RA/CE ---
 
-    public function sugerirRaCe(Request $request)
+    public function sugerirRaCe(SugerirRaCeRequest $request)
     {
-        $request->validate([
-            'modulo_ids'   => 'required|array|min:1',
-            'modulo_ids.*' => 'integer|exists:modulos,id',
-            'reto_origen'  => 'nullable|string|max:3000',
-        ]);
+        $datos = $request->validated();
 
         $modulos = \App\Models\Modulo::with(['ras.criteriosEvaluacion'])
-            ->whereIn('id', $request->modulo_ids)
+            ->whereIn('id', $datos['modulo_ids'])
             ->get();
 
         if ($modulos->isEmpty()) {
@@ -328,11 +329,11 @@ class MicroproyectoController extends Controller
         }
 
         $contexto = '';
-        if ($request->filled('titulo'))        $contexto .= "Título: {$request->titulo}\n";
-        if ($request->filled('pregunta_reto')) $contexto .= "Reto: {$request->pregunta_reto}\n";
-        if ($request->filled('descripcion'))   $contexto .= "Descripción: {$request->descripcion}\n";
-        if ($request->filled('contexto'))      $contexto .= "Contexto empresa: {$request->contexto}\n";
-        if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
+        if (filled($datos['titulo'] ?? null))        $contexto .= "Título: {$datos['titulo']}\n";
+        if (filled($datos['pregunta_reto'] ?? null)) $contexto .= "Reto: {$datos['pregunta_reto']}\n";
+        if (filled($datos['descripcion'] ?? null))   $contexto .= "Descripción: {$datos['descripcion']}\n";
+        if (filled($datos['contexto'] ?? null))      $contexto .= "Contexto empresa: {$datos['contexto']}\n";
+        if (filled($datos['reto_origen'] ?? null))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$datos['reto_origen']}\n";
 
         if (!$contexto) $contexto = "Sin contexto adicional.\n";
 
@@ -379,30 +380,21 @@ class MicroproyectoController extends Controller
             : $raCe;
     }
 
-    public function sugerirKpis(Request $request)
+    public function sugerirKpis(SugerirKpisRequest $request)
     {
-        $request->validate([
-            'titulo'        => 'nullable|string|max:300',
-            'pregunta_reto' => 'nullable|string|max:1000',
-            'descripcion'   => 'nullable|string|max:2000',
-            'entregables'   => 'nullable|string|max:1000',
-            'objetivos'     => 'nullable|array|max:20',
-            'objetivos.*'   => 'string|max:300',
-            'ra_ce'         => 'nullable|string|max:30000',
-            'reto_origen'   => 'nullable|string|max:3000',
-        ]);
+        $datos = $request->validated();
 
         $contexto = '';
-        if ($request->filled('titulo'))        $contexto .= "Título del proyecto: {$request->titulo}\n";
-        if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
-        if ($request->filled('descripcion'))   $contexto .= "Descripción: {$request->descripcion}\n";
-        if ($request->filled('entregables'))   $contexto .= "Entregables: {$request->entregables}\n";
-        if ($request->filled('objetivos')) {
-            $lista = collect($request->objetivos)->map(fn($o) => "  - {$o}")->join("\n");
+        if (filled($datos['titulo'] ?? null))        $contexto .= "Título del proyecto: {$datos['titulo']}\n";
+        if (filled($datos['pregunta_reto'] ?? null)) $contexto .= "Pregunta reto: {$datos['pregunta_reto']}\n";
+        if (filled($datos['descripcion'] ?? null))   $contexto .= "Descripción: {$datos['descripcion']}\n";
+        if (filled($datos['entregables'] ?? null))   $contexto .= "Entregables: {$datos['entregables']}\n";
+        if (filled($datos['objetivos'] ?? null)) {
+            $lista = collect($datos['objetivos'])->map(fn($o) => "  - {$o}")->join("\n");
             $contexto .= "Objetivos de aprendizaje:\n{$lista}\n";
         }
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
-        if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
+        if (filled($datos['ra_ce'] ?? null))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($datos['ra_ce']) . "\n";
+        if (filled($datos['reto_origen'] ?? null))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$datos['reto_origen']}\n";
 
         if (!$contexto) {
             return response()->json(['error' => 'Proporciona al menos un campo de contexto'], 422);
@@ -434,24 +426,17 @@ class MicroproyectoController extends Controller
         return response()->json(['kpis' => $resultado['kpis'] ?? []]);
     }
 
-    public function sugerirObjetivos(Request $request)
+    public function sugerirObjetivos(SugerirObjetivosRequest $request)
     {
-        $request->validate([
-            'titulo'        => 'nullable|string|max:300',
-            'pregunta_reto' => 'nullable|string|max:1000',
-            'descripcion'   => 'nullable|string|max:2000',
-            'entregables'   => 'nullable|string|max:1000',
-            'ra_ce'         => 'nullable|string|max:30000',
-            'reto_origen'   => 'nullable|string|max:3000',
-        ]);
+        $datos = $request->validated();
 
         $contexto = '';
-        if ($request->filled('titulo'))        $contexto .= "Título del proyecto: {$request->titulo}\n";
-        if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
-        if ($request->filled('descripcion'))   $contexto .= "Descripción: {$request->descripcion}\n";
-        if ($request->filled('entregables'))   $contexto .= "Entregables: {$request->entregables}\n";
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
-        if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
+        if (filled($datos['titulo'] ?? null))        $contexto .= "Título del proyecto: {$datos['titulo']}\n";
+        if (filled($datos['pregunta_reto'] ?? null)) $contexto .= "Pregunta reto: {$datos['pregunta_reto']}\n";
+        if (filled($datos['descripcion'] ?? null))   $contexto .= "Descripción: {$datos['descripcion']}\n";
+        if (filled($datos['entregables'] ?? null))   $contexto .= "Entregables: {$datos['entregables']}\n";
+        if (filled($datos['ra_ce'] ?? null))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($datos['ra_ce']) . "\n";
+        if (filled($datos['reto_origen'] ?? null))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$datos['reto_origen']}\n";
 
         if (!$contexto) {
             return response()->json(['error' => 'Proporciona al menos un campo de contexto'], 422);
@@ -483,24 +468,17 @@ class MicroproyectoController extends Controller
         return response()->json(['objetivos' => $resultado['objetivos'] ?? []]);
     }
 
-    public function sugerirFundamentacion(Request $request)
+    public function sugerirFundamentacion(SugerirFundamentacionRequest $request)
     {
-        $request->validate([
-            'titulo'        => 'nullable|string|max:300',
-            'pregunta_reto' => 'nullable|string|max:1000',
-            'descripcion'   => 'nullable|string|max:2000',
-            'contexto'      => 'nullable|string|max:2000',
-            'ra_ce'         => 'nullable|string|max:30000',
-            'reto_origen'   => 'nullable|string|max:3000',
-        ]);
+        $datos = $request->validated();
 
         $contexto = '';
-        if ($request->filled('titulo'))        $contexto .= "Título del reto: {$request->titulo}\n";
-        if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
-        if ($request->filled('descripcion'))   $contexto .= "Descripción del reto: {$request->descripcion}\n";
-        if ($request->filled('contexto'))      $contexto .= "Contexto/situación de partida: {$request->contexto}\n";
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
-        if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
+        if (filled($datos['titulo'] ?? null))        $contexto .= "Título del reto: {$datos['titulo']}\n";
+        if (filled($datos['pregunta_reto'] ?? null)) $contexto .= "Pregunta reto: {$datos['pregunta_reto']}\n";
+        if (filled($datos['descripcion'] ?? null))   $contexto .= "Descripción del reto: {$datos['descripcion']}\n";
+        if (filled($datos['contexto'] ?? null))      $contexto .= "Contexto/situación de partida: {$datos['contexto']}\n";
+        if (filled($datos['ra_ce'] ?? null))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($datos['ra_ce']) . "\n";
+        if (filled($datos['reto_origen'] ?? null))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$datos['reto_origen']}\n";
 
         if (!$contexto) {
             return response()->json(['error' => 'Proporciona al menos un campo de contexto'], 422);
@@ -535,30 +513,20 @@ class MicroproyectoController extends Controller
         ]);
     }
 
-    public function sugerirMetodologia(Request $request)
+    public function sugerirMetodologia(SugerirMetodologiaRequest $request)
     {
-        $request->validate([
-            'titulo'        => 'nullable|string|max:300',
-            'pregunta_reto' => 'nullable|string|max:1000',
-            'descripcion'   => 'nullable|string|max:2000',
-            'fases'         => 'nullable|string|max:500',
-            'ciclo'         => 'nullable|string|max:255',
-            'curso'         => 'nullable|string|max:20',
-            'empresa'       => 'nullable|string|max:500',
-            'modulos'       => 'nullable|string|max:1000',
-            'reto_origen'   => 'nullable|string|max:3000',
-        ]);
+        $datos = $request->validated();
 
         $contexto = '';
-        if ($request->filled('titulo'))        $contexto .= "Título del reto: {$request->titulo}\n";
-        if ($request->filled('ciclo'))          $contexto .= "Ciclo formativo: {$request->ciclo}\n";
-        if ($request->filled('curso'))          $contexto .= "Curso: {$request->curso}\n";
-        if ($request->filled('modulos'))        $contexto .= "Módulos implicados: {$request->modulos}\n";
-        if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
-        if ($request->filled('descripcion'))   $contexto .= "Descripción del reto: {$request->descripcion}\n";
-        if ($request->filled('empresa'))        $contexto .= "Empresa colaboradora: {$request->empresa}\n";
-        if ($request->filled('fases'))         $contexto .= "Fases del proyecto: {$request->fases}\n";
-        if ($request->filled('reto_origen'))    $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
+        if (filled($datos['titulo'] ?? null))        $contexto .= "Título del reto: {$datos['titulo']}\n";
+        if (filled($datos['ciclo'] ?? null))          $contexto .= "Ciclo formativo: {$datos['ciclo']}\n";
+        if (filled($datos['curso'] ?? null))          $contexto .= "Curso: {$datos['curso']}\n";
+        if (filled($datos['modulos'] ?? null))        $contexto .= "Módulos implicados: {$datos['modulos']}\n";
+        if (filled($datos['pregunta_reto'] ?? null)) $contexto .= "Pregunta reto: {$datos['pregunta_reto']}\n";
+        if (filled($datos['descripcion'] ?? null))   $contexto .= "Descripción del reto: {$datos['descripcion']}\n";
+        if (filled($datos['empresa'] ?? null))        $contexto .= "Empresa colaboradora: {$datos['empresa']}\n";
+        if (filled($datos['fases'] ?? null))         $contexto .= "Fases del proyecto: {$datos['fases']}\n";
+        if (filled($datos['reto_origen'] ?? null))    $contexto .= "Reto original de referencia (empresa colaboradora):\n{$datos['reto_origen']}\n";
 
         if (!$contexto) {
             return response()->json(['error' => 'Proporciona al menos un campo de contexto'], 422);

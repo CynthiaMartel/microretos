@@ -612,34 +612,42 @@ async function cargarCatalogoRaCe() {
       moduloId: mods[i].id,
       ras:      res.data.ra || [],
     }))
-    raExpandido.value = {}; raChecked.value = {}; ceChecked.value = {}
-
-    // CE que ya están en "RA/CE de este proyecto" — se marcan como ya seleccionados,
-    // por id exacto (ahora que evaluacion_oficial los conserva). Se compara contra el
-    // estado actual del proyecto (no contra raCeDelReto) para que, si ya se quitó
-    // algo, no vuelva a aparecer marcado. Las entradas manuales (ra_id null) nunca
-    // podrán marcar nada aquí — no están en ningún catálogo, por definición.
-    const ceIdsDeEsteProyecto = new Set()
-    form.value.evaluacion_oficial.forEach(e => (e.ce_ids || []).forEach(id => ceIdsDeEsteProyecto.add(id)))
-    // Entradas sin ce_ids (antiguas o copiadas de un reto): sus CE se marcan por texto
-    const textosPorRa = new Map()
-    form.value.evaluacion_oficial.forEach(e => {
-      if (e.ra_id) textosPorRa.set(e.ra_id, new Set((e.ce || []).map(normalizarTexto)))
-    })
-
-    catalogoRaCe.value.forEach(mod => {
-      mod.ras.forEach(ra => {
-        raExpandido.value[ra.id] = true
-        ra.criterios.forEach(ce => {
-          ceChecked.value[ce.id] = ceIdsDeEsteProyecto.has(ce.id)
-            || !!textosPorRa.get(ra.id)?.has(normalizarTexto(ce.descripcion))
-        })
-        raChecked.value[ra.id] = ra.criterios.length > 0 && ra.criterios.every(ce => ceChecked.value[ce.id])
-      })
-    })
+    raExpandido.value = {}
+    catalogoRaCe.value.forEach(mod => mod.ras.forEach(ra => { raExpandido.value[ra.id] = true }))
+    marcarCasillasDesdeProyecto()
   } finally {
     cargandoCatalogo.value = false
   }
+}
+
+// Casillas del árbol a partir de evaluacion_oficial, sobre el catálogo ya cargado: sin
+// peticiones y sin tocar qué RA están desplegados. Se usa al cargar el catálogo y cada vez
+// que la lista cambia por otra vía (quitar un chip, sugerencia de IA).
+function marcarCasillasDesdeProyecto() {
+  raChecked.value = {}; ceChecked.value = {}
+
+  // CE que ya están en "RA/CE de este proyecto" — se marcan como ya seleccionados,
+  // por id exacto (ahora que evaluacion_oficial los conserva). Se compara contra el
+  // estado actual del proyecto (no contra raCeDelReto) para que, si ya se quitó
+  // algo, no vuelva a aparecer marcado. Las entradas manuales (ra_id null) nunca
+  // podrán marcar nada aquí — no están en ningún catálogo, por definición.
+  const ceIdsDeEsteProyecto = new Set()
+  form.value.evaluacion_oficial.forEach(e => (e.ce_ids || []).forEach(id => ceIdsDeEsteProyecto.add(id)))
+  // Entradas sin ce_ids (antiguas o copiadas de un reto): sus CE se marcan por texto
+  const textosPorRa = new Map()
+  form.value.evaluacion_oficial.forEach(e => {
+    if (e.ra_id) textosPorRa.set(e.ra_id, new Set((e.ce || []).map(normalizarTexto)))
+  })
+
+  catalogoRaCe.value.forEach(mod => {
+    mod.ras.forEach(ra => {
+      ra.criterios.forEach(ce => {
+        ceChecked.value[ce.id] = ceIdsDeEsteProyecto.has(ce.id)
+          || !!textosPorRa.get(ra.id)?.has(normalizarTexto(ce.descripcion))
+      })
+      raChecked.value[ra.id] = ra.criterios.length > 0 && ra.criterios.every(ce => ceChecked.value[ce.id])
+    })
+  })
 }
 
 // El árbol del paso 3 aplica cada casilla al momento, pero solo sobre la entrada de ESE
@@ -743,7 +751,7 @@ async function sugerirRaCeConIa() {
         if (!e.ra_id) textosIa.value.add(normalizarTexto(e.ra))
       })
       sugerenciaIaPendienteRevision.value = true
-      await cargarCatalogoRaCe() // refleja en las casillas lo que ha añadido la IA
+      marcarCasillasDesdeProyecto() // refleja en las casillas lo que ha añadido la IA (mismo catálogo)
     }
   } catch (e) {
     console.error('Error sugiriendo RA/CE con IA', e)
@@ -1303,7 +1311,8 @@ async function sugerirDesdePanel() {
   if (paso.value === 3) return sugerirRaCeConIa()
   if (paso.value === 4) return sugerirFundamentacion()
   if (paso.value === 5) return sugerirMetodologia()
-  if (paso.value === 6) { await sugerirObjetivos(); await sugerirKpis() }
+  // Independientes (los objetivos sugeridos no entran en form hasta que el docente los acepta)
+  if (paso.value === 6) await Promise.all([sugerirObjetivos(), sugerirKpis()])
 }
 
 // ── Estado de guardado («Guardado» / «Guardando…» / «Sin guardar») ───────────
@@ -2050,8 +2059,8 @@ onUnmounted(() => { tourActivo.value = false; });
                                      :textos-reto="textosDelReto"
                                      :ce-ids-ia="ceIdsIa"
                                      :textos-ia="textosIa"
-                                     @quitar-entrada="i => { quitarEntradaRaCe(i); cargarCatalogoRaCe() }"
-                                     @quitar-ce="(i, j) => { quitarCeDeEntrada(i, j); cargarCatalogoRaCe() }" />
+                                     @quitar-entrada="i => { quitarEntradaRaCe(i); marcarCasillasDesdeProyecto() }"
+                                     @quitar-ce="(i, j) => { quitarCeDeEntrada(i, j); marcarCasillasDesdeProyecto() }" />
                 <p v-else class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-600">
                   <template v-if="microretoVinculado && !raCeDelReto.length">
                     El reto no tiene RA/CE oficiales asignados (probablemente su módulo aún no tiene el currículo del BOE cargado).
