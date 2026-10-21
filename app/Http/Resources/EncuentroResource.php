@@ -12,9 +12,8 @@ class EncuentroResource extends JsonResource
     {
         $user           = $request->user();
         $esPropietario  = $user && $this->user_id === $user->id;
-        $puedeEditar    = $esPropietario || ($user && $this->colaboradores->contains(
-            fn($c) => $c->id === $user->id && $c->pivot->puede_editar
-        ));
+        // Misma regla que scopeEditablesPara (propietario, colaborador con edición, admin del centro, superadmin)
+        $puedeEditar    = $this->resource->esEditablePor($user);
 
         return [
             'id'                 => $this->id,
@@ -48,8 +47,9 @@ class EncuentroResource extends JsonResource
                     'rol'    => $m->rol,
                 ]),
             ])),
-            'codigo_clase'       => $this->codigo_clase,
-            'codigo_ia'          => $this->codigo_ia,
+            // Códigos de acceso solo para quien puede editar el encuentro (no a colaboradores de solo lectura)
+            'codigo_clase'       => $puedeEditar ? $this->codigo_clase : null,
+            'codigo_ia'          => $puedeEditar ? $this->codigo_ia : null,
             'microproyecto_uuid' => $this->microproyecto?->uuid,
             'proyecto_titulo'    => $this->microproyecto?->titulo,
             'microreto_id'       => $this->microproyecto?->microreto_id,

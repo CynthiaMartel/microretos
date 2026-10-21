@@ -1345,12 +1345,6 @@ parameters:
 			path: app/Http/Controllers/EquipoGestionController.php
 
 		-
-			message: '#^Parameter \#1 \$user of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Encuentro\>\:\:visiblesPara\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/EquipoGestionController.php
-
-		-
 			message: '#^Cannot access property \$curso on App\\Models\\Microproyecto\|null\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -2481,7 +2475,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\EncuentroResource\:\:\$colaboradores\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Http/Resources/EncuentroResource.php
 
 		-

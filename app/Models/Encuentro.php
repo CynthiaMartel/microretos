@@ -87,6 +87,32 @@ class Encuentro extends Model
         });
     }
 
+    /**
+     * Misma regla que scopeEditablesPara() sobre un encuentro ya cargado (sin consulta si
+     * 'colaboradores' viene cargada). Decide quién recibe los códigos y tokens de acceso al
+     * workspace del alumnado: un colaborador de solo lectura ve el progreso, nunca los
+     * códigos (con ellos podría entrar en el workspace y modificar el trabajo del grupo).
+     */
+    public function esEditablePor(?\App\Models\User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+        if ($user->isAdmin() && $user->centro_educativo_id) {
+            return (int) $this->centro_educativo_id === (int) $user->centro_educativo_id;
+        }
+        if ((int) $this->user_id === (int) $user->id) {
+            return true;
+        }
+
+        $colaboradores = $this->relationLoaded('colaboradores') ? $this->colaboradores : $this->colaboradores()->get();
+
+        return $colaboradores->contains(fn ($c) => (int) $c->id === (int) $user->id && (bool) data_get($c, 'pivot.puede_editar'));
+    }
+
     // Encuentros que el usuario puede MUTAR: los suyos, o aquellos donde es colaborador
     // con 'puede_editar' explícito. Un colaborador de solo lectura no pasa este scope.
     public function scopeEditablesPara($query, \App\Models\User $user)

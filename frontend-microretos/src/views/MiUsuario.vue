@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import api from '../api.js'
 import { useRoleTheme } from '../composables/useRoleTheme.js'
+import SelectorModulosDocente from '../components/SelectorModulosDocente.vue'
+import { getMisModulos, guardarMisModulos } from '../services/modulosDocenteService.js'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -42,6 +44,51 @@ onMounted(async () => {
     cargando.value = false
   }
 })
+
+// ── Mis módulos ──────────────────────────────────────────────────────────────
+// Los módulos que imparte el docente: con ellos, los compañeros de su centro que compartan
+// familia y módulo pueden invitarle como colaborador de sus encuentros (y al revés).
+const tieneModulos     = computed(() => (authStore.isDocente || authStore.isAdmin) && !!authStore.userCentroId)
+const ofertaModulos    = ref([])
+const misModulos       = ref([])
+const modulosGuardados = ref([])
+const cargandoModulos  = ref(false)
+const guardandoModulos = ref(false)
+const msgModulos       = ref('')
+const msgModulosOk     = ref(false)
+const modulosCambiados = computed(() =>
+  [...misModulos.value].sort().join() !== [...modulosGuardados.value].sort().join())
+
+async function cargarModulos() {
+  if (!tieneModulos.value) return
+  cargandoModulos.value = true
+  try {
+    const data = await getMisModulos()
+    ofertaModulos.value    = data.oferta
+    misModulos.value       = data.asignados
+    modulosGuardados.value = data.asignados
+  } catch { /* silencioso: la tarjeta muestra la oferta vacía */ } finally {
+    cargandoModulos.value = false
+  }
+}
+onMounted(cargarModulos)
+
+async function guardarModulos() {
+  guardandoModulos.value = true
+  msgModulos.value = ''
+  try {
+    const data = await guardarMisModulos(misModulos.value)
+    misModulos.value       = data.asignados
+    modulosGuardados.value = data.asignados
+    msgModulos.value   = 'Módulos guardados.'
+    msgModulosOk.value = true
+  } catch (e) {
+    msgModulos.value   = e.response?.data?.message || 'No se pudieron guardar los módulos.'
+    msgModulosOk.value = false
+  } finally {
+    guardandoModulos.value = false
+  }
+}
 
 async function guardar() {
   errors.value    = {}
@@ -205,6 +252,31 @@ async function guardar() {
           {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
         </button>
 
+      </div>
+
+      <!-- Mis módulos (docentes y admins de centro) -->
+      <div v-if="tieneModulos" class="mt-6 bg-white border border-gray-200 rounded-[1.75rem] p-5 sm:p-8 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-widest text-[#1F2937]">Mis módulos</h2>
+          <p class="mt-1 text-xs text-gray-500 leading-relaxed">
+            Marca los módulos que impartes. Solo los compañeros de tu centro que compartan familia y algún
+            módulo con un proyecto pueden ser invitados a ver sus encuentros, y al revés.
+          </p>
+        </div>
+        <div v-if="cargandoModulos" class="h-24 bg-gray-100 rounded-xl animate-pulse"></div>
+        <SelectorModulosDocente v-else v-model="misModulos" :oferta="ofertaModulos" :disabled="guardandoModulos" />
+        <p v-if="msgModulos" class="text-xs px-3 py-2 rounded-xl border"
+           :class="msgModulosOk ? [theme.text, theme.bg5, theme.border20] : 'text-red-500 bg-red-50 border-red-200'">
+          {{ msgModulos }}
+        </p>
+        <div class="flex justify-end">
+          <button @click="guardarModulos" :disabled="guardandoModulos || !modulosCambiados"
+                  class="inline-flex items-center rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white
+                         transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  :class="[theme.bg, theme.bgHover]">
+            {{ guardandoModulos ? 'Guardando…' : 'Guardar módulos' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

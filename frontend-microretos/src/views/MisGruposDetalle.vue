@@ -325,7 +325,9 @@ onMounted(async () => {
          esta cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-centros">Detalle de grupos</p>
+        <p class="text-xs font-black uppercase tracking-widest text-centros">
+          Detalle de grupos<span v-if="encuentro && encuentro.puede_editar === false" class="text-violet-600"> · solo lectura</span>
+        </p>
         <p class="text-sm font-bold text-[#121212] truncate">
           {{ proyecto?.titulo || (encuentro?.grupo && `Clase ${encuentro.grupo}`) || encuentro?.ciclo_formativo || 'Cargando…' }}
         </p>
@@ -489,8 +491,9 @@ onMounted(async () => {
             <template #evaluacion="{ equipo: eq }">
               <!-- Tarjeta propia con acento de marca (centros) para que no se confunda con
                    las reflexiones de arriba ni con el diagnóstico de abajo -->
-              <div v-if="evaluacionForms[eq.id]"
-                   class="mt-4 rounded-2xl border-2 border-centros/30 bg-centros/5 p-4 sm:p-5 space-y-3">
+              <!-- fieldset disabled: un colaborador de solo lectura ve la evaluación pero no la cambia -->
+              <fieldset v-if="evaluacionForms[eq.id]" :disabled="!encuentro?.puede_editar"
+                        class="mt-4 min-w-0 rounded-2xl border-2 border-centros/30 bg-centros/5 p-4 sm:p-5 space-y-3">
                 <div class="flex items-start gap-3">
                   <span class="shrink-0 w-9 h-9 rounded-xl bg-centros text-white flex items-center justify-center text-base">📋</span>
                   <div class="flex-1 min-w-0">
@@ -539,13 +542,13 @@ onMounted(async () => {
 
                 <p v-if="errorEval" class="text-xs text-red-500 font-semibold">{{ errorEval }}</p>
 
-                <button @click="enviarEvaluacion(eq)"
+                <button v-if="encuentro?.puede_editar" @click="enviarEvaluacion(eq)"
                         :disabled="!puedeEnviarEvaluacion(eq.id) || guardandoEval"
                         :class="['w-full py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all',
                                  puedeEnviarEvaluacion(eq.id) ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-gray-100 text-gray-300 cursor-not-allowed']">
                   {{ eq.fases[4]?.validado_docente ? 'Actualizar evaluación' : 'Guardar evaluación' }}
                 </button>
-              </div>
+              </fieldset>
             </template>
 
             <!-- Formulario de edición manual: solo mientras se edita ESTE equipo; si no, la
@@ -619,13 +622,13 @@ onMounted(async () => {
                     Ver diagnóstico completo
                   </button>
                 </span>
-                <button v-if="eq.diagnostico_final"
+                <button v-if="eq.diagnostico_final && encuentro?.puede_editar"
                         @click="editarDiagnostico(eq)"
                         class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                hover:bg-amber-100 transition-colors text-[10px] font-black uppercase tracking-wider">
                   ✏️ Editar manualmente
                 </button>
-                <button @click="generarDiagnostico(eq)"
+                <button v-if="encuentro?.puede_editar" @click="generarDiagnostico(eq)"
                         :disabled="generandoDiagnostico[eq.id]"
                         class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                hover:bg-violet-100 transition-colors text-[10px] font-black uppercase tracking-wider

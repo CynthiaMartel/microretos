@@ -597,6 +597,12 @@ onMounted(cargar)
                   📊 {{ resumenGrupo(g).diagnosticos }} diagnóstico{{ resumenGrupo(g).diagnosticos === 1 ? '' : 's' }} disponible{{ resumenGrupo(g).diagnosticos === 1 ? '' : 's' }}
                 </span>
               </div>
+              <!-- Encuentro de un compañero que me ha dado permiso como colaborador -->
+              <p v-if="g.encuentro.es_propietario === false && g.encuentro.propietario_nombre"
+                 class="mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                <span class="truncate">De {{ g.encuentro.propietario_nombre }}</span>
+                <span v-if="!g.encuentro.puede_editar" class="shrink-0">· solo lectura</span>
+              </p>
               <div v-if="g.encuentro.codigo_clase || g.encuentro.codigo_ia" class="flex flex-wrap items-center gap-1.5 mt-1.5" @click.stop>
                 <CodigoBadgeMini v-if="g.encuentro.codigo_clase" :code="g.encuentro.codigo_clase" variant="clase" @copiar="copiarCodigo" />
                 <CodigoBadgeMini v-if="g.encuentro.codigo_ia" :code="g.encuentro.codigo_ia" variant="ia" @copiar="copiarCodigo" />

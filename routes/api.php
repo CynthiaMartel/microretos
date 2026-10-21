@@ -22,6 +22,7 @@ use App\Http\Controllers\DocenteNotaController;
 use App\Http\Controllers\DocenteTareaController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\AlumnadoController;
+use App\Http\Controllers\ModulosDocenteController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
 use App\Http\Controllers\PublicMicroproyectoCatalogoController;
 use App\Http\Controllers\CurriculoController;
@@ -164,6 +165,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Perfil propio (accesible por todos los roles autenticados)
     Route::get('/perfil',   [AdminAuthController::class, 'getPerfil']);
     Route::patch('/perfil', [AdminAuthController::class, 'updatePerfil']);
+    // Módulos que imparte el propio docente (limitan a quién puede invitar como colaborador)
+    Route::get('/perfil/modulos', [ModulosDocenteController::class, 'mios']);
+    Route::middleware('throttle:30,1,perfil-modulos')->put('/perfil/modulos', [ModulosDocenteController::class, 'actualizarMios']);
 
     // Biblioteca de microretos (lectura — todos los roles autenticados)
     Route::middleware('throttle:60,1,microretos-lectura')->group(function () {
@@ -400,6 +404,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/restaurar',        [AdminUserController::class, 'restaurar']);
         Route::delete('/{id}/destruir',       [AdminUserController::class, 'destruir']);
         Route::patch('/{user}/centro',        [AdminUserController::class, 'asociarCentro'])->middleware('superadmin');
+        Route::get('/{user}/modulos',         [ModulosDocenteController::class, 'delDocente']);
+        Route::middleware('throttle:30,1,admin-usuario-modulos')
+            ->put('/{user}/modulos',          [ModulosDocenteController::class, 'actualizarDelDocente']);
     });
 
 });

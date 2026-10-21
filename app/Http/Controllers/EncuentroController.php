@@ -414,12 +414,15 @@ class EncuentroController extends Controller
         $user      = $request->user();
         $encuentro = Encuentro::where('id', $id)->visiblesPara($user)
             ->with([
+                'colaboradores',
                 'microproyecto.familia',
                 'equipos.microproyecto.familia',
                 'equipos.miembros',
                 'equipos.fases',
                 'equipos.reflexiones',
             ])->firstOrFail();
+        $puedeEditar = $encuentro->esEditablePor($user);
+        $encuentro->equipos->each(fn ($e) => $e->setRelation('encuentro', $encuentro));
 
         return response()->json([
             'encuentro' => [
@@ -430,7 +433,9 @@ class EncuentroController extends Controller
                 'grupo'            => $encuentro->grupo,
                 'fecha'            => $encuentro->fecha,
                 'num_alumnos'      => $encuentro->num_alumnos,
-                'codigo_ia'        => $encuentro->codigo_ia,
+                // Solo para quien puede editar (no a colaboradores de solo lectura)
+                'codigo_ia'        => $puedeEditar ? $encuentro->codigo_ia : null,
+                'puede_editar'     => $puedeEditar,
             ],
             'proyecto' => $this->formatProyecto($encuentro->microproyecto),
             'equipos' => $this->formatEquiposConProgreso($encuentro->equipos),
@@ -453,6 +458,8 @@ class EncuentroController extends Controller
     {
         $user  = $request->user();
         $query = Encuentro::with([
+            'colaboradores',
+            'docente:id,name',
             'microproyecto.familia',
             'equipos.microproyecto.familia',
             'equipos.miembros',
@@ -475,12 +482,17 @@ class EncuentroController extends Controller
      */
     public function equiposDeProyecto(Request $request, string $uuid)
     {
+        $user = $request->user();
         $proyecto = Microproyecto::where('uuid', $uuid)
-            ->whereHas('encuentros', fn ($q) => $q->visiblesPara($request->user()))
+            ->whereHas('encuentros', fn ($q) => $q->visiblesPara($user))
             ->firstOrFail();
 
+        // Solo los equipos de encuentros que el usuario puede ver: ver uno de los encuentros
+        // del proyecto no da acceso a los grupos de los demás
         $equipos = $proyecto->equipos()
-            ->with(['microproyecto.familia', 'miembros', 'fases', 'reflexiones', 'prototipos', 'encuentro:id,grupo,curso,fecha'])
+            ->whereHas('encuentro', fn ($q) => $q->visiblesPara($user))
+            ->with(['microproyecto.familia', 'miembros', 'fases', 'reflexiones', 'prototipos',
+                    'encuentro:id,grupo,curso,fecha,user_id,centro_educativo_id', 'encuentro.colaboradores'])
             ->get();
 
         return response()->json([

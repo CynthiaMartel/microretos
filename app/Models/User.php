@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 use App\Notifications\RestablecerContrasena;
 
@@ -99,6 +100,17 @@ class User extends Authenticatable
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Empresa::class, 'empresa_id');
+    }
+
+    /**
+     * Módulos que imparte el docente (pivot docente_modulo). La familia se deduce del ciclo
+     * de cada módulo. Ver ModulosDocenteService.
+     *
+     * @return BelongsToMany<Modulo, $this>
+     */
+    public function modulos(): BelongsToMany
+    {
+        return $this->belongsToMany(Modulo::class, 'docente_modulo', 'user_id', 'modulo_id')->withTimestamps();
     }
 
     public function isOperational(): bool

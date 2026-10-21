@@ -1,5 +1,7 @@
 <!-- Ruta: /usuarios (name: gestion-usuarios). Antes vivía en /admin/usuarios — ver router/index.js. Nota: el endpoint del backend sigue siendo /admin/usuarios, no confundir. -->
 <script setup>
+import SelectorModulosDocente from '../components/SelectorModulosDocente.vue'
+import { getModulosDocente, guardarModulosDocente } from '../services/modulosDocenteService.js'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import api from '../api.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -38,6 +40,47 @@ const usuarioEditando    = ref(null)
 const formEditar         = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
 const confirmarCambioPassword = ref(false)   // switch que el admin debe marcar para autorizar el reseteo de contraseña
 
+// ── Módulos que imparte el docente (se guardan aparte: PUT /admin/usuarios/{id}/modulos) ──
+const ofertaModulosEditar    = ref([])
+const modulosEditar          = ref([])
+const modulosEditarGuardados = ref([])
+const cargandoModulosEditar  = ref(false)
+const guardandoModulosEditar = ref(false)
+const msgModulosEditar       = ref('')
+const modulosEditarCambiados = computed(() =>
+  [...modulosEditar.value].sort().join() !== [...modulosEditarGuardados.value].sort().join())
+
+async function cargarModulosEditar(usuario) {
+  ofertaModulosEditar.value = []; modulosEditar.value = []; modulosEditarGuardados.value = []; msgModulosEditar.value = ''
+  if (Number(usuario.role) !== 2) return
+  cargandoModulosEditar.value = true
+  try {
+    const data = await getModulosDocente(usuario.id)
+    // Si mientras tanto se abrió otro usuario, esta respuesta ya no le corresponde
+    if (usuarioEditando.value?.id !== usuario.id) return
+    ofertaModulosEditar.value    = data.oferta
+    modulosEditar.value          = data.asignados
+    modulosEditarGuardados.value = data.asignados
+  } catch { msgModulosEditar.value = 'No se pudieron cargar los módulos.' } finally {
+    cargandoModulosEditar.value = false
+  }
+}
+
+async function guardarModulosEditar() {
+  guardandoModulosEditar.value = true
+  msgModulosEditar.value = ''
+  try {
+    const data = await guardarModulosDocente(usuarioEditando.value.id, modulosEditar.value)
+    modulosEditar.value          = data.asignados
+    modulosEditarGuardados.value = data.asignados
+    mostrarToast('Módulos del docente guardados.')
+  } catch (e) {
+    msgModulosEditar.value = e.response?.data?.message || 'No se pudieron guardar los módulos.'
+  } finally {
+    guardandoModulosEditar.value = false
+  }
+}
+
 // ── Requisitos de contraseña (mismos que valida el backend: min 8, mayúscula, minúscula, número, símbolo) ──
 function evaluarPassword(pwd) {
   return [
@@ -71,6 +114,7 @@ async function abrirModalEditar(usuario) {
   formEditarErrors.value = {}
   msgEditar.value        = ''
   modalEditar.value      = true
+  cargarModulosEditar(usuario)
 
   if (authStore.isSuperAdmin) {
     await Promise.all([
@@ -1453,6 +1497,26 @@ onMounted(async () => {
                 {{ editando ? 'Guardando...' : 'Guardar cambios' }}
               </button>
             </form>
+
+            <!-- Módulos que imparte (solo docentes): se guardan aparte del resto de la cuenta -->
+            <div v-if="Number(usuarioEditando?.role) === 2" class="mt-6 space-y-3 border-t border-gray-100 pt-5">
+              <div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-gray-500">Módulos que imparte</p>
+                <p class="mt-1 text-[11px] text-gray-500 leading-relaxed">
+                  Con ellos, los compañeros del centro que compartan familia y módulo con un proyecto pueden invitarle como colaborador.
+                </p>
+              </div>
+              <div v-if="cargandoModulosEditar" class="h-20 bg-gray-100 rounded-xl animate-pulse"></div>
+              <SelectorModulosDocente v-else v-model="modulosEditar" :oferta="ofertaModulosEditar" :disabled="guardandoModulosEditar" />
+              <p v-if="msgModulosEditar" class="text-xs text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{{ msgModulosEditar }}</p>
+              <div class="flex justify-end">
+                <button type="button" @click="guardarModulosEditar" :disabled="guardandoModulosEditar || !modulosEditarCambiados"
+                        class="rounded-full bg-administraciones px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white
+                               transition-all hover:bg-administraciones/90 disabled:opacity-40 disabled:cursor-not-allowed">
+                  {{ guardandoModulosEditar ? 'Guardando…' : 'Guardar módulos' }}
+                </button>
+              </div>
+            </div>
             </div>
     </Modal>
 

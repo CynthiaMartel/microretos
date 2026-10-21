@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Encuentro;
 use App\Models\User;
+use App\Services\ModulosDocenteService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreEncuentroColaboradorRequest extends FormRequest
@@ -34,6 +35,15 @@ class StoreEncuentroColaboradorRequest extends FormRequest
                 $centroPropietario = $encuentro->docente?->centro_educativo_id;
                 if ($centroPropietario === null || $candidato->centro_educativo_id !== $centroPropietario) {
                     $fail('Solo puedes compartir el encuentro con docentes de tu mismo centro educativo.');
+                    return;
+                }
+
+                // Docentes: solo compañeros que compartan familia y módulo con el proyecto
+                /** @var User $candidato */
+                /** @var Encuentro $encuentro */
+                if ($candidato->isDocente()
+                    && !app(ModulosDocenteService::class)->comparteConProyecto($candidato, $encuentro->microproyecto)) {
+                    $fail('Solo puedes compartir el encuentro con compañeros que impartan algún módulo de la familia del proyecto.');
                 }
             }],
             'puede_editar' => ['nullable', 'boolean'],

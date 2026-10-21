@@ -216,9 +216,16 @@ class EquipoGestionController extends Controller
      */
     public function pantallaAcceso(Request $request, $uuid)
     {
-        $proyecto = $this->proyectoDeMiEncuentro($request, $uuid);
+        // Los códigos y tokens dan entrada al workspace del alumnado (y permiten escribir en
+        // él): solo los grupos de encuentros que el usuario puede EDITAR, nunca a un
+        // colaborador de solo lectura.
+        /** @var \App\Models\User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
+        $proyecto = Microproyecto::where('uuid', $uuid)
+            ->whereHas('encuentros', fn($q) => $q->editablesPara($user))
+            ->firstOrFail();
 
-        $equipos = $proyecto->equipos()->get()->map(fn($e) => [
+        $equipos = $proyecto->equipos()->whereHas('encuentro', fn($q) => $q->editablesPara($user))->get()->map(fn($e) => [
             'id'            => $e->id,
             'nombre'        => $e->nombre,
             'codigo_acceso' => $e->codigo_acceso,
@@ -235,20 +242,13 @@ class EquipoGestionController extends Controller
     // Un docente solo puede gestionar equipos/proyectos de sus propios encuentros.
     // Admin y superadmin ven todos (EnsureIsDocente ya deja pasar a ambos roles).
 
-    // pantallaAcceso solo lee (visiblesPara); validarFase/rechazarFase/evaluar/destroy mutan
-    // datos del equipo, así que exigen editablesPara (un colaborador de solo lectura no pasa).
+    // validarFase/rechazarFase/evaluar/destroy mutan datos del equipo y pantallaAcceso entrega
+    // los códigos de acceso: todos exigen editablesPara (un colaborador de solo lectura no pasa).
 
     private function equipoDeMiEncuentro(Request $request, int $equipoId): Equipo
     {
         return Equipo::where('id', $equipoId)
             ->whereHas('encuentro', fn($q) => $q->editablesPara($request->user()))
-            ->firstOrFail();
-    }
-
-    private function proyectoDeMiEncuentro(Request $request, string $uuid): Microproyecto
-    {
-        return Microproyecto::where('uuid', $uuid)
-            ->whereHas('encuentros', fn($q) => $q->visiblesPara($request->user()))
             ->firstOrFail();
     }
 }

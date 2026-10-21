@@ -673,6 +673,12 @@ function formatFecha(isoDate) {
                       </li>
                     </ul>
                   </div>
+                  <!-- Encuentro de un compañero que me ha dado permiso como colaborador -->
+                  <p v-if="!s.es_propietario && s.propietario_nombre"
+                     class="inline-flex max-w-full items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                    <span class="truncate">De {{ s.propietario_nombre }}</span>
+                    <span v-if="!s.puede_editar" class="shrink-0">· solo lectura</span>
+                  </p>
                   <div class="space-y-1">
                     <p v-if="s.ciclo_formativo" class="text-[10px] text-gray-500 flex items-center gap-1.5">
                       <svg class="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

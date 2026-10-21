@@ -258,7 +258,8 @@ function formatItemFase(item) {
         </template>
       </div>
 
-      <router-link
+      <!-- Sin token (colaborador de solo lectura) no hay acceso al workspace del alumnado -->
+      <router-link v-if="equipo.token"
         :to="{ name: 'equipo-workspace', params: { token: equipo.token } }"
         target="_blank"
         rel="noopener"
@@ -317,7 +318,7 @@ function formatItemFase(item) {
               <span v-else class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 text-[10px] font-semibold">
                 Pendiente
               </span>
-              <router-link
+              <router-link v-if="equipo.token"
                 :to="{ name: 'equipo-workspace', params: { token: equipo.token }, query: { fase: f.num } }"
                 target="_blank"
                 rel="noopener"

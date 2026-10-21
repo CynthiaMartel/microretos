@@ -75,7 +75,9 @@ async function quitarColaborador(colaborador) {
   try {
     await api.delete(`/encuentros/${props.encuentro.id}/colaboradores/${colaborador.id}`)
     colaboradores.value = colaboradores.value.filter(c => c.id !== colaborador.id)
-    candidatos.value.push({ id: colaborador.id, name: colaborador.name })
+    // Se recargan del backend: solo vuelve a ser candidato si comparte familia y módulo con el proyecto
+    const { data } = await api.get(`/encuentros/${props.encuentro.id}/colaboradores/candidatos`)
+    candidatos.value = data
   } catch (e) {
     error.value = 'No se pudo quitar al colaborador.'
   }
@@ -131,8 +133,10 @@ async function quitarColaborador(colaborador) {
 
               <div class="mt-5 pt-4 border-t border-gray-100">
                 <p class="cem-label">Añadir colaborador</p>
-                <div v-if="!candidatos.length" class="text-xs text-gray-400 py-2">
-                  No hay más docentes de tu centro disponibles para añadir.
+                <div v-if="!candidatos.length" class="text-xs text-gray-400 py-2 leading-relaxed">
+                  No hay compañeros disponibles. Solo aparecen docentes de tu centro que impartan algún
+                  módulo de la familia de este proyecto: cada uno los indica en «Mi usuario» (o el
+                  administrador del centro, en Gestión de usuarios).
                 </div>
                 <div v-else class="space-y-2.5">
                   <select v-model="candidatoId" class="cem-select">
