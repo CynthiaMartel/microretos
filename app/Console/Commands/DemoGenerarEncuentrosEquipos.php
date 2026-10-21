@@ -18,7 +18,7 @@ use App\Models\EquipoReflexion;
 use App\Models\EquipoTarea;
 use App\Models\Microproyecto;
 use App\Models\User;
-use App\Support\AliasGenerator;
+use App\Console\Commands\Concerns\AlumnadoFicticio;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -50,6 +50,8 @@ use Illuminate\Support\Facades\Http;
  */
 class DemoGenerarEncuentrosEquipos extends Command
 {
+    use AlumnadoFicticio;
+
     use InvocaControladoresReales;
 
     protected $signature = 'demo:generar-encuentros-equipos
@@ -76,15 +78,6 @@ class DemoGenerarEncuentrosEquipos extends Command
         'Equipo autónomo, ha sabido priorizar bien las tareas de cada fase.',
     ];
 
-    // Nombres de pila inventados para el alias ("Nombre Animal Color") — nunca apellidos
-    private const NOMBRES_PILA = [
-        'María', 'Lucía', 'Sofía', 'Martina', 'Paula', 'Daniela', 'Alba', 'Noa', 'Carla', 'Julia',
-        'Valeria', 'Marta', 'Laura', 'Sara', 'Elena', 'Carmen', 'Nerea', 'Claudia', 'Irene', 'Andrea',
-        'Alejandro', 'Daniel', 'Pablo', 'Hugo', 'Mateo', 'Martín', 'Lucas', 'Adrián', 'David', 'Javier',
-        'Diego', 'Iker', 'Marcos', 'Álvaro', 'Rubén', 'Sergio', 'Jorge', 'Óscar', 'Raúl', 'Nicolás',
-    ];
-
-    private const LETRAS_GRUPO = ['A', 'B', 'C', 'D'];
 
     private const MAX_INTENTOS_SINTESIS = 3;
     private const ESPERA_SINTESIS       = 15;
@@ -156,22 +149,23 @@ class DemoGenerarEncuentrosEquipos extends Command
         foreach ($seleccionados as $proyecto) {
             $microreto = $proyecto->microreto;
             $numEquipos = random_int(1, 2);
-            [$alumnados, $totalAlumnos] = $this->generarAlumnado($numEquipos);
+            $fecha = $this->fechaCursoAnterior();
+            [$letra, $curso] = $this->claseAleatoria($proyecto->curso);
+            [$alumnados, $totalAlumnos] = $this->alumnadoDeClase($proyecto->centro_id, $proyecto->ciclo_id, $letra, $curso, $fecha, $numEquipos, self::ROLES_ROTACION);
 
-            $this->line("Proyecto #{$proyecto->id} \"{$proyecto->titulo}\" → {$numEquipos} equipo(s), {$totalAlumnos} alumnos ficticios");
+            $this->line("Proyecto #{$proyecto->id} \"{$proyecto->titulo}\" → {$numEquipos} equipo(s), {$totalAlumnos} alumnos ficticios ({$curso}º{$letra})");
 
             if (!$commit) {
                 continue;
             }
 
             try {
-                $fecha = $this->fechaCursoAnterior();
-
                 $reqEncuentro = $this->peticion(StoreEncuentroRequest::class, [
                     'microproyecto_id' => $proyecto->id,
                     'fecha'            => $fecha,
-                    'curso'            => (string) ($proyecto->curso ?: '2'),
-                    'grupo'            => $this->generarGrupo($proyecto->curso),
+                    'curso'            => "{$curso}º",
+                    'grupo'            => $letra,
+                    'ciclo_formativo'  => $proyecto->cicloFormativo()->value('nombre'),
                     'num_alumnos'      => $totalAlumnos,
                     'num_equipos'      => $numEquipos,
                     'alumnados'        => $alumnados,
@@ -223,7 +217,9 @@ class DemoGenerarEncuentrosEquipos extends Command
             foreach ($restantes as $proyecto) {
                 $microreto = $proyecto->microreto;
                 $numEquipos = random_int(1, 2);
-                [$alumnados, $totalAlumnos] = $this->generarAlumnado($numEquipos);
+                $fecha = $this->fechaEnCurso();
+                [$letra, $curso] = $this->claseAleatoria($proyecto->curso);
+                [$alumnados, $totalAlumnos] = $this->alumnadoDeClase($proyecto->centro_id, $proyecto->ciclo_id, $letra, $curso, $fecha, $numEquipos, self::ROLES_ROTACION);
 
                 $this->line("Proyecto #{$proyecto->id} \"{$proyecto->titulo}\" → {$numEquipos} equipo(s) EN CURSO, {$totalAlumnos} alumnos ficticios");
 
@@ -234,9 +230,10 @@ class DemoGenerarEncuentrosEquipos extends Command
                 try {
                     $reqEncuentro = $this->peticion(StoreEncuentroRequest::class, [
                         'microproyecto_id' => $proyecto->id,
-                        'fecha'            => $this->fechaEnCurso(),
-                        'curso'            => (string) ($proyecto->curso ?: '2'),
-                        'grupo'            => $this->generarGrupo($proyecto->curso),
+                        'fecha'            => $fecha,
+                        'curso'            => "{$curso}º",
+                        'grupo'            => $letra,
+                        'ciclo_formativo'  => $proyecto->cicloFormativo()->value('nombre'),
                         'num_alumnos'      => $totalAlumnos,
                         'num_equipos'      => $numEquipos,
                         'alumnados'        => $alumnados,
@@ -285,52 +282,6 @@ class DemoGenerarEncuentrosEquipos extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Protección de datos: el alumnado solo existe por su alias ("Nombre Animal Color", único
-     * en el encuentro), igual que en la app real — nunca apellidos, ni siquiera inventados.
-     *
-     * @return array{0: array<int, array{alias:string,equipo_num:int,rol:string}>, 1: int}
-     */
-    private function generarAlumnado(int $numEquipos): array
-    {
-        $alumnados = [];
-        $total     = 0;
-        $usados    = [];
-
-        for ($eq = 1; $eq <= $numEquipos; $eq++) {
-            $n = random_int(3, 5);
-            for ($m = 1; $m <= $n; $m++) {
-                $rol = $m === 1 ? 'portavoz' : self::ROLES_ROTACION[($m - 2) % count(self::ROLES_ROTACION)];
-                $alias = AliasGenerator::generar(self::NOMBRES_PILA[array_rand(self::NOMBRES_PILA)], $usados);
-                $usados[] = $alias;
-                $alumnados[] = [
-                    'alias'      => $alias,
-                    'equipo_num' => $eq,
-                    'rol'        => $rol,
-                ];
-                $total++;
-            }
-        }
-
-        return [$alumnados, $total];
-    }
-
-    /**
-     * Grupo = clase real del encuentro (ej. "2ºB"), no un código derivado del proyecto —
-     * así lo interpreta el frontend (ver Encuentro.grupo en MisGruposDetalle.vue).
-     */
-    private function generarGrupo(?string $curso): string
-    {
-        $numero = match ($curso) {
-            '1' => '1',
-            '2' => '2',
-            default => (string) random_int(1, 2), // 'ambos_cursos' u otro valor: uno de los dos al azar
-        };
-        $letra = self::LETRAS_GRUPO[array_rand(self::LETRAS_GRUPO)];
-
-        return "{$numero}º{$letra}";
     }
 
     /**

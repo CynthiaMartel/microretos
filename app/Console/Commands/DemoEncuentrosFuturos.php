@@ -9,7 +9,7 @@ use App\Models\Encuentro;
 use App\Models\Microproyecto;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use App\Support\AliasGenerator;
+use App\Console\Commands\Concerns\AlumnadoFicticio;
 use Illuminate\Console\Command;
 
 /**
@@ -30,6 +30,8 @@ use Illuminate\Console\Command;
  */
 class DemoEncuentrosFuturos extends Command
 {
+    use AlumnadoFicticio;
+
     use InvocaControladoresReales;
 
     protected $signature = 'demo:encuentros-futuros
@@ -39,14 +41,6 @@ class DemoEncuentrosFuturos extends Command
     protected $description = 'Crea encuentros futuros (próximos encuentros) para proyectos de demo validados de este curso.';
 
     private const CENTRO_DEMO = 10; // DuaLab
-    // Nombres de pila inventados para el alias ("Nombre Animal Color") — nunca apellidos
-    private const NOMBRES_PILA = [
-        'María', 'Lucía', 'Sofía', 'Martina', 'Paula', 'Daniela', 'Alba', 'Noa', 'Carla', 'Julia',
-        'Valeria', 'Marta', 'Laura', 'Sara', 'Elena', 'Carmen', 'Nerea', 'Claudia', 'Irene', 'Andrea',
-        'Alejandro', 'Daniel', 'Pablo', 'Hugo', 'Mateo', 'Martín', 'Lucas', 'Adrián', 'David', 'Javier',
-        'Diego', 'Iker', 'Marcos', 'Álvaro', 'Rubén', 'Sergio', 'Jorge', 'Óscar', 'Raúl', 'Nicolás',
-    ];
-
     private const ROLES     = ['tiempos', 'documentacion', 'foco']; // el primero de cada equipo es 'portavoz'
 
     public function handle(): int
@@ -82,7 +76,8 @@ class DemoEncuentrosFuturos extends Command
             if ($fecha->isSunday())   $fecha = $fecha->addDay();
 
             $numEquipos = 2;
-            [$alumnados, $numAlumnos] = $this->alumnado($numEquipos);
+            [$letra, $curso] = $this->claseAleatoria($proyecto->curso);
+            [$alumnados, $numAlumnos] = $this->alumnadoDeClase($proyecto->centro_id, $proyecto->ciclo_id, $letra, $curso, $fecha->toDateString(), $numEquipos, self::ROLES);
             $this->line("Proyecto #{$proyecto->id} → encuentro el {$fecha->toDateString()} · {$numEquipos} equipos · {$numAlumnos} alumnos ficticios");
 
             if (!$commit) continue;
@@ -96,8 +91,9 @@ class DemoEncuentrosFuturos extends Command
             $peticion = $this->peticion(StoreEncuentroRequest::class, [
                 'microproyecto_id' => $proyecto->id,
                 'fecha'            => $fecha->toDateString(),
-                'curso'            => (string) ($proyecto->curso ?: '2'),
-                'grupo'            => ($proyecto->curso === '1' ? '1' : '2') . 'º' . ['A', 'B', 'C'][$i % 3],
+                'curso'            => "{$curso}º",
+                'grupo'            => $letra,
+                'ciclo_formativo'  => $proyecto->cicloFormativo()->value('nombre'),
                 'num_alumnos'      => $numAlumnos,
                 'num_equipos'      => $numEquipos,
                 'alumnados'        => $alumnados,
@@ -117,27 +113,5 @@ class DemoEncuentrosFuturos extends Command
             $this->info("Creados {$creados} encuentros futuros. Recuerda: php artisan cache:clear");
         }
         return self::SUCCESS;
-    }
-
-    /** Alumnado ficticio repartido en equipos de 3–5 (el primero de cada equipo, portavoz). */
-    /** @return array{0: array<int, array{alias: string, equipo_num: int, rol: string}>, 1: int} */
-    private function alumnado(int $numEquipos): array
-    {
-        // Protección de datos: solo alias "Nombre Animal Color", nunca apellidos
-        $alumnado = [];
-        $usados   = [];
-        for ($eq = 1; $eq <= $numEquipos; $eq++) {
-            $n = random_int(3, 5);
-            for ($m = 1; $m <= $n; $m++) {
-                $alias = AliasGenerator::generar(self::NOMBRES_PILA[array_rand(self::NOMBRES_PILA)], $usados);
-                $usados[] = $alias;
-                $alumnado[] = [
-                    'alias'      => $alias,
-                    'equipo_num' => $eq,
-                    'rol'        => $m === 1 ? 'portavoz' : self::ROLES[($m - 2) % count(self::ROLES)],
-                ];
-            }
-        }
-        return [$alumnado, count($alumnado)];
     }
 }
