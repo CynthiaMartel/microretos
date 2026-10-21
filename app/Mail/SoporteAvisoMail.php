@@ -23,8 +23,10 @@ class SoporteAvisoMail extends Mailable implements ShouldQueue
 
     public int $tries = 3;
 
+    /** @var array<int, int> */
     public array $backoff = [60, 300];
 
+    /** @param array<string, mixed> $solicitud */
     public function __construct(public array $solicitud) {}
 
     public function envelope(): Envelope

@@ -55,12 +55,14 @@ class NotificacionDocenteService
         $this->enviar(collect([$invitado]), new InvitacionEncuentro($encuentro, $invitador, $puedeEditar));
     }
 
+    /** @return Collection<int, User> */
     private function duenoProyecto(Microproyecto $proyecto): Collection
     {
         // user_id es nullable (proyectos antiguos) — sin dueño no hay a quién avisar
         return collect([$proyecto->docente])->filter();
     }
 
+    /** @param Collection<int, User> $destinatarios */
     private function enviar(Collection $destinatarios, BaseNotification $notificacion): void
     {
         if ($destinatarios->isEmpty()) return;

@@ -79,7 +79,7 @@ class GenerarInteresesEmpresas extends Command
         return $fallos && $commit ? self::FAILURE : self::SUCCESS;
     }
 
-    /** @return \Illuminate\Support\Collection<int, array{empresa: Empresa, familias: string[]}> */
+    /** @return \Illuminate\Support\Collection<int, array{empresa: Empresa, familias: non-empty-array<int, mixed>}>  familias: nombres sin interés */
     private function pendientes(): \Illuminate\Support\Collection
     {
         // Ficticias activas: rondan las 160 en total (sin paginar), se cargan con sus familias
@@ -93,7 +93,7 @@ class GenerarInteresesEmpresas extends Command
             ->map(fn (Empresa $e) => [
                 'empresa'  => $e,
                 'familias' => $e->familias
-                    ->filter(fn ($f) => trim((string) $f->pivot?->interes) === '')
+                    ->filter(fn ($f) => trim((string) $f->pivot?->getAttribute('interes')) === '')
                     ->pluck('nombre')->values()->all(),
             ])
             ->filter(fn ($p) => $p['familias'] !== [])

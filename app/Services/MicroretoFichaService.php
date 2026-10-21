@@ -311,7 +311,7 @@ class MicroretoFichaService
     {
         if (!array_key_exists('interes', $copia) || empty($copia['familia']) || !empty($copia['interes_modificado_en_reto'])) return false;
         $actual = $empresa->relationLoaded('familias')
-            ? $empresa->familias->firstWhere('nombre', $copia['familia'])?->pivot?->interes
+            ? $empresa->familias->firstWhere('nombre', $copia['familia'])?->pivot?->getAttribute('interes')
             : app(EmpresaFamiliaService::class)->interes($empresa->id, (string) $copia['familia']);
         return trim((string) $actual) !== trim((string) $copia['interes']);
     }

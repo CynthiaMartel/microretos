@@ -137,7 +137,7 @@ class ReasignarSectoresEmpresas extends Command
 
         $this->table(['Sector actual', 'Sector nuevo', 'Empresas'], collect($cambios)
             ->groupBy(fn ($c) => $c['de'] . '→' . ($c['a'] ?? '(sin sector)'))
-            ->map(fn ($g) => [$g[0]['de'], $g[0]['a'] ?? '(sin sector)', $g->count()])
+            ->map(fn ($g) => [$g->value('de'), $g->value('a') ?? '(sin sector)', $g->count()])
             ->sortBy(fn ($fila) => $fila[1])->values()->all());
 
         if ($sinPropuesta) {

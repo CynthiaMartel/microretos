@@ -78,7 +78,7 @@ class AppServiceProvider extends ServiceProvider
         // Contraseña común del módulo Empresas: usuario + IP, como el login, para que ni
         // una cuenta desde varias IPs ni varias cuentas desde una IP puedan probar en bucle.
         RateLimiter::for('empresas-acceso', function (Request $request) {
-            return Limit::perMinute(5)->by(($request->user()?->id ?? 'anon') . '|' . $request->ip());
+            return Limit::perMinute(5)->by(($request->user()->id ?? 'anon') . '|' . $request->ip());
         });
 
         // Escaparate público de microretos (frontoffice) — throttle propio, no

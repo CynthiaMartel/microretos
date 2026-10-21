@@ -607,12 +607,12 @@ class MicroproyectoController extends Controller
             'microreto_titulo' => $p->microreto?->titulo,
             // En el listado llega precargado (withMin); en show/store/update se consulta una sola vez.
             'encuentro_id'     => array_key_exists('encuentros_min_id', $p->getAttributes())
-                ? $p->encuentros_min_id
+                ? $p->getAttribute('encuentros_min_id')
                 : $p->encuentros()->min('id'),
             // Fecha del primer encuentro: el frontend asigna el proyecto al curso académico de esta
             // fecha (o, si no tiene encuentro, al de created_at). Precargada en el listado (withMin).
             'encuentro_fecha'  => array_key_exists('encuentros_min_fecha', $p->getAttributes())
-                ? ($p->encuentros_min_fecha ? substr((string) $p->encuentros_min_fecha, 0, 10) : null)
+                ? ($p->getAttribute('encuentros_min_fecha') ? substr((string) $p->getAttribute('encuentros_min_fecha'), 0, 10) : null)
                 : (($f = $p->encuentros()->min('fecha')) ? substr((string) $f, 0, 10) : null),
             'datos_empresa'    => $p->datos_empresa,
             'datos_centro'     => $p->datos_centro,

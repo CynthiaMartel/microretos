@@ -13,6 +13,7 @@ class ResetPasswordRequest extends FormRequest
     }
 
     // Misma política de contraseña que UpdatePerfilRequest (/mi-usuario), pero obligatoria
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         return [

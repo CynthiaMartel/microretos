@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read \Illuminate\Database\Eloquent\Relations\Pivot|null $pivot  solo al cargarla desde Empresa::familias()
+ */
 class Familia extends Model
 {
     use SoftDeletes;
@@ -27,6 +30,11 @@ class Familia extends Model
 
     // Familias con lo mínimo para generar un reto: algún ciclo con módulos que tengan
     // RA y criterios de evaluación. Con $ciclosIds (los de un centro), solo entre esos.
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Familia>  $query
+     * @param  \Illuminate\Support\Collection<array-key, mixed>|null  $ciclosIds
+     * @return \Illuminate\Database\Eloquent\Builder<Familia>
+     */
     public function scopeConDatosParaRetos($query, ?\Illuminate\Support\Collection $ciclosIds = null)
     {
         return $query->whereHas('ciclos', fn ($q) => $q->conDatosParaRetos($ciclosIds));

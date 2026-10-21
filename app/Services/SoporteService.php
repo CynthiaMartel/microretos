@@ -12,6 +12,7 @@ class SoporteService
 {
     // Sin tabla propia: la consulta solo viaja por email (encolado, con reintentos;
     // si falla del todo queda en failed_jobs).
+    /** @param array<string, mixed> $data */
     public function enviar(array $data): void
     {
         $solicitud = [

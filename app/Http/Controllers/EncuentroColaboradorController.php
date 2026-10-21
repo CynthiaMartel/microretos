@@ -67,10 +67,12 @@ class EncuentroColaboradorController extends Controller
 
         // Solo se avisa a quien entra nuevo (no al reenviar a alguien que ya estaba)
         if (in_array((int) $validated['user_id'], array_map('intval', $cambios['attached']), true)) {
+            /** @var User $invitador  ruta bajo auth:sanctum */
+            $invitador = $request->user();
             app(NotificacionDocenteService::class)->invitacionEncuentro(
                 $encuentro,
-                User::findOrFail($validated['user_id']),
-                $request->user(),
+                User::findOrFail((int) $validated['user_id']),
+                $invitador,
                 (bool) ($validated['puede_editar'] ?? false),
             );
         }

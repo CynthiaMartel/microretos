@@ -118,7 +118,7 @@ class DatosFPController extends Controller
                     $familia->imagen_url = asset($familia->imagen_url);
                 }
                 // Tiene módulos y RA/CE: se puede generar un reto para ella
-                $familia->con_datos_retos = $conDatos->has($familia->id);
+                $familia->setAttribute('con_datos_retos', $conDatos->has($familia->id));
                 return $familia;
             });
 
@@ -148,7 +148,7 @@ class DatosFPController extends Controller
 
         // Ciclo con módulos y RA/CE: sin ellos el generador no puede completar el reto
         $conDatos = CicloFormativo::conDatosParaRetos()->whereIn('id', $ciclos->pluck('id'))->pluck('id')->flip();
-        $ciclos->each(fn ($c) => $c->con_datos_retos = $conDatos->has($c->id));
+        $ciclos->each(fn ($c) => $c->setAttribute('con_datos_retos', $conDatos->has($c->id)));
 
         return response()->json($ciclos);
     }
@@ -477,6 +477,7 @@ class DatosFPController extends Controller
     public function storeCiclo(StoreCicloRequest $request)
     {
         $datos   = $request->validated();
+        /** @var Familia $familia  validado con exists:familias,id en StoreCicloRequest */
         $familia = Familia::find($datos['familia_id']);
 
         $ciclo = CicloFormativo::create([
@@ -497,6 +498,7 @@ class DatosFPController extends Controller
         if (!$ciclo) return response()->json(['error' => 'Ciclo no encontrado'], 404);
 
         $datos   = $request->validated();
+        /** @var Familia $familia  validado con exists:familias,id en StoreCicloRequest */
         $familia = Familia::find($datos['familia_id']);
 
         $ciclo->nombre      = $datos['nombre'];
@@ -628,7 +630,7 @@ class DatosFPController extends Controller
 
         // Un admin sin centro asignado no puede dar de alta: la empresa quedaría huérfana.
         if ($auth->isAdmin() && !$centroEducativoNombre) {
-            Log::warning('Alta de empresa denegada: admin sin centro asignado.', ['user_id' => $auth->id]);
+            Log::warning('Alta de empresa denegada: admin sin centro asignado.', ['user_id' => $auth?->id]);
             return response()->json(['error' => 'Tu cuenta no tiene centro asignado: contacta con DUALAB.'], 422);
         }
 
@@ -863,7 +865,7 @@ class DatosFPController extends Controller
             return response()->json(['error' => 'Empresa no encontrada'], 404);
         }
 
-        if ($request->user()->isAdmin() && !$empresa->perteneceAlCentroDe($request->user())) {
+        if ($request->user()?->isAdmin() && !$empresa->perteneceAlCentroDe($request->user())) {
             return response()->json(['error' => 'No autorizado: esta empresa no pertenece a tu centro educativo.'], 403);
         }
 

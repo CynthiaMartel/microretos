@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 /**
  * Empresa para el dashboard de Base de datos (superadmin): lo mismo que EmpresaResource
  * más los campos de gestión que solo usa esa vista.
+ *
+ * @property-read bool|null $disponible_para_retos  withExists() de DatosFPController
  */
 class EmpresaDashboardResource extends EmpresaResource
 {

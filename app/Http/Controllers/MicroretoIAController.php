@@ -35,6 +35,7 @@ class MicroretoIAController extends Controller
         // Cuando el volumen crezca habrá que añadir filtros server-side.
         $limit = min((int) $request->query('limit', 500), 500);
 
+        /** @var \App\Models\User $user  ruta bajo auth:sanctum */
         $user  = $request->user();
         $query = Microreto::with([
             'empresa.centroEducativo',
@@ -65,6 +66,7 @@ class MicroretoIAController extends Controller
         ]);
 
         // Docentes y admins docentes solo pueden ver microretos de su centro
+        /** @var \App\Models\User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
             // Por el centro del reto: sigue siendo suyo aunque la empresa esté borrada

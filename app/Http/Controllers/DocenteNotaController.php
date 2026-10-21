@@ -6,7 +6,11 @@ use App\Http\Requests\StoreDocenteNotaRequest;
 use App\Http\Requests\UpdateDocenteNotaRequest;
 use App\Http\Resources\DocenteNotaResource;
 use App\Models\DocenteNota;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class DocenteNotaController extends Controller
 {
@@ -16,9 +20,11 @@ class DocenteNotaController extends Controller
     /**
      * GET /api/notas — solo las del usuario autenticado
      */
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $notas = DocenteNota::where('user_id', $request->user()->id)
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
+        $notas = DocenteNota::where('user_id', $user->id)
             ->latest()
             ->take(self::MAX_LISTADO)
             ->get();
@@ -29,10 +35,12 @@ class DocenteNotaController extends Controller
     /**
      * POST /api/notas
      */
-    public function store(StoreDocenteNotaRequest $request)
+    public function store(StoreDocenteNotaRequest $request): JsonResponse
     {
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
         $nota = new DocenteNota($request->validated());
-        $nota->user_id = $request->user()->id;
+        $nota->user_id = $user->id;
         $nota->save();
 
         return (new DocenteNotaResource($nota))->response()->setStatusCode(201);
@@ -41,7 +49,7 @@ class DocenteNotaController extends Controller
     /**
      * PATCH /api/notas/{nota}
      */
-    public function update(UpdateDocenteNotaRequest $request, DocenteNota $nota)
+    public function update(UpdateDocenteNotaRequest $request, DocenteNota $nota): DocenteNotaResource
     {
         $this->authorize('update', $nota);
         $nota->update($request->validated());
@@ -52,7 +60,7 @@ class DocenteNotaController extends Controller
     /**
      * DELETE /api/notas/{nota}
      */
-    public function destroy(Request $request, DocenteNota $nota)
+    public function destroy(Request $request, DocenteNota $nota): Response
     {
         $this->authorize('delete', $nota);
         $nota->delete();

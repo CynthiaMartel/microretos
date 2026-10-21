@@ -95,6 +95,11 @@ class Empresa extends Model
     // Plantillas del catálogo DuaLab que los centros pueden usar: al menos una de sus familias
     // tiene módulos y RA/CE. Las demás no permitirían completar un reto y no se ofrecen.
     // Con $ciclosCentro (CicloFormativo::idsDelCentro), solo cuentan los ciclos de ese centro.
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Empresa>  $query
+     * @param  \Illuminate\Support\Collection<array-key, mixed>|null  $ciclosCentro
+     * @return \Illuminate\Database\Eloquent\Builder<Empresa>
+     */
     public function scopeCatalogoUsable($query, ?\Illuminate\Support\Collection $ciclosCentro = null)
     {
         return $query->where('es_catalogo', true)
@@ -103,6 +108,10 @@ class Empresa extends Model
 
     // Excluye las plantillas del catálogo que no se pueden usar (ver scopeCatalogoUsable);
     // las empresas normales no se ven afectadas.
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Empresa>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Empresa>
+     */
     public function scopeSinCatalogoInutilizable($query)
     {
         return $query->where(fn ($q) => $q->where('es_catalogo', false)

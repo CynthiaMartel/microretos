@@ -14,11 +14,13 @@ class RestablecerContrasena extends Notification implements ShouldQueue
 
     public function __construct(private string $token) {}
 
+    /** @return array<int, string> */
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
+    /** @param \App\Models\User $notifiable */
     public function toMail(object $notifiable): MailMessage
     {
         $url = rtrim(config('app.frontend_url'), '/') . '/restablecer-contrasena?' . http_build_query([

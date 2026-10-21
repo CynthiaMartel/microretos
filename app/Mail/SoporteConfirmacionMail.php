@@ -16,6 +16,7 @@ class SoporteConfirmacionMail extends Mailable implements ShouldQueue
 
     public int $tries = 3;
 
+    /** @var array<int, int> */
     public array $backoff = [60, 300];
 
     public function __construct(public string $nombre, public string $tipo) {}

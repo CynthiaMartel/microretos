@@ -11,9 +11,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * Requiere cargadas: microproyecto.familia y las relaciones de EquipoProgresoResource
  * en equipos.
+ *
+ * @mixin \App\Models\Encuentro
  */
 class EncuentroSeguimientoResource extends JsonResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         return [

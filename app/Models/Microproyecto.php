@@ -88,6 +88,7 @@ class Microproyecto extends Model
     }
 
     // FK explícita: sin ella Laravel infiere 'docente_id' (por el nombre del método), que no existe
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this> */
     public function docente()
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
@@ -143,6 +144,7 @@ class Microproyecto extends Model
     // (modulos_seleccionados: [{id, nombre}]) o, en proyectos antiguos sin ellos, los
     // que aparecen en la evaluación oficial (RA/CE por módulo). Lo usan los Resources
     // de encuentros para mostrar y agrupar por módulo.
+    /** @return array<int, string> */
     public function nombresModulos(): array
     {
         $nombres = collect($this->modulos_seleccionados ?? [])->pluck('nombre');

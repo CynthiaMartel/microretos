@@ -68,7 +68,7 @@ class EmpresaResource extends JsonResource
                     'id'      => $f->id,
                     'nombre'  => $f->nombre,
                     // Para qué quiere la empresa al alumnado de esa familia (opcional)
-                    'interes' => $f->pivot?->interes,
+                    'interes' => $f->pivot?->getAttribute('interes'),
                 ])->values()
             ),
         ];

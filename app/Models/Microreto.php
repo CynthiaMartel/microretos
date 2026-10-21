@@ -73,7 +73,12 @@ class Microreto extends Model
         return (bool) $this->empresa?->perteneceAlCentroDe($user);
     }
 
-    /** Mismo criterio que perteneceAlCentroDe(), para filtrar listados. */
+    /**
+     * Mismo criterio que perteneceAlCentroDe(), para filtrar listados.
+     *
+     * @param  Builder<Microreto>  $query
+     * @return Builder<Microreto>
+     */
     public function scopeDelCentroDe(Builder $query, User $user): Builder
     {
         $centroId     = $user->centro_educativo_id;

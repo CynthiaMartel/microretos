@@ -16,6 +16,7 @@ class DocenteNota extends Model
         'fecha' => 'date:Y-m-d',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

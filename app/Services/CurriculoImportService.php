@@ -90,16 +90,16 @@ class CurriculoImportService
     private function leer(UploadedFile $archivo): array
     {
         $contenido = (string) file_get_contents($archivo->getRealPath());
-        $contenido = preg_replace('/^\xEF\xBB\xBF/', '', $contenido);
+        $contenido = (string) preg_replace('/^\xEF\xBB\xBF/', '', $contenido);
         if (!mb_check_encoding($contenido, 'UTF-8')) {
             // Excel guarda «CSV» a secas en Windows-1252: se convierte para no perder tildes
             $contenido = mb_convert_encoding($contenido, 'UTF-8', 'Windows-1252');
         }
 
-        $lineas = preg_split('/\R/', $contenido);
+        $lineas = preg_split('/\R/', $contenido) ?: [];
         $cabecera = array_shift($lineas) ?? '';
         $separador = substr_count($cabecera, ';') >= substr_count($cabecera, ',') ? ';' : ',';
-        $columnas = array_map(fn ($c) => mb_strtolower(trim($c)), str_getcsv($cabecera, $separador));
+        $columnas = array_map(fn ($c) => mb_strtolower(trim((string) $c)), str_getcsv($cabecera, $separador));
 
         $faltan = array_diff(self::COLUMNAS, $columnas);
         if ($faltan) {
@@ -176,11 +176,11 @@ class CurriculoImportService
     // Texto plano: fuera etiquetas HTML y espacios sobrantes (viene copiado del BOE)
     private function limpiar(string $texto): string
     {
-        return trim(preg_replace('/[ \t]+/u', ' ', strip_tags($texto)));
+        return trim((string) preg_replace('/[ \t]+/u', ' ', strip_tags($texto)));
     }
 
     private function clave(string $texto): string
     {
-        return mb_strtolower(preg_replace('/\s+/u', ' ', trim($texto)));
+        return mb_strtolower((string) preg_replace('/\s+/u', ' ', trim($texto)));
     }
 }

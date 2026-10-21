@@ -16,6 +16,7 @@ class DocenteTarea extends Model
         'hecha' => 'boolean',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

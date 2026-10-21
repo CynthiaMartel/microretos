@@ -95,7 +95,10 @@ class EmpresaFamiliaService
         }
     }
 
-    /** @return Collection<int, string>  id => nombre (sin familias borradas) */
+    /**
+     * @param  array<int, string>  $nombres
+     * @return Collection<int, string>  id => nombre (sin familias borradas)
+     */
     private function familiasPorNombre(array $nombres): Collection
     {
         return Familia::whereIn('nombre', array_unique($nombres))->pluck('nombre', 'id');
@@ -124,6 +127,7 @@ class EmpresaFamiliaService
         }
     }
 
+    /** @return array<string, mixed> */
     private function fila(int $empresaId, ?int $familiaId, string $nombre): array
     {
         return [

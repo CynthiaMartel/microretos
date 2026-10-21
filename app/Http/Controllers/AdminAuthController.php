@@ -72,7 +72,7 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        $remember = (bool) ($data['remember'] ?? false) && $user->puedeRecordarSesion();
+        $remember = (bool) ($data['remember'] ?? false) && $user?->puedeRecordarSesion();
         if ($remember) {
             Auth::guard('web')->login($user, true);
         }
@@ -157,7 +157,10 @@ class AdminAuthController extends Controller
     // verla) — el frontend lo necesita saber para no cerrar sesión por inactividad.
     private function sesionRecordada(Request $request): bool
     {
-        return $request->cookies->has(Auth::guard('web')->getRecallerName());
+        /** @var \Illuminate\Auth\SessionGuard $guard  el guard 'web' es de sesión */
+        $guard = Auth::guard('web');
+
+        return $request->cookies->has($guard->getRecallerName());
     }
 
     // Sesión de Laravel (driver 'database'): expira 'session.lifetime' minutos después

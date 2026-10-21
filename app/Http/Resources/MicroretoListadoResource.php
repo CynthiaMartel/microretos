@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 /** @mixin \App\Models\Microreto */
 class MicroretoListadoResource extends MicroretoFichaResource
 {
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $ficha = parent::toArray($request);

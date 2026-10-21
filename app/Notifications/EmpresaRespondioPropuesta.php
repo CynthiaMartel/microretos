@@ -21,7 +21,8 @@ class EmpresaRespondioPropuesta extends NotificacionDocente
 
     protected function mensaje(): string
     {
-        $empresa = $this->proyecto->empresa?->nombre ?? 'La empresa';
+        // La columna es nombre_comercial: con ->nombre el aviso decía siempre «La empresa»
+        $empresa = $this->proyecto->empresa->nombre_comercial ?? 'La empresa';
         $titulo  = $this->proyecto->titulo ?: 'tu proyecto';
 
         if (!$this->validada) {

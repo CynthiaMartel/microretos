@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Console\Commands\Concerns\InvocaControladoresReales;
 use App\Http\Controllers\MicroproyectoController;
 use App\Http\Requests\UpdateMicroproyectoRequest;
+use App\Http\Requests\ValidarPropuestaEmpresaRequest;
 use App\Models\CentroEducativo;
 use App\Models\Microproyecto;
 use App\Models\Microreto;
@@ -330,7 +331,7 @@ class DemoGenerarProyectos extends Command
         // 'diagnostico_correcto'=>true (booleano inventado) se mostraba tal cual en la
         // ficha del proyecto porque el frontend solo sabe formatear estas 4 claves con
         // valor 'Sí'/'No'/'Parcialmente' — cualquier otra clave se imprime cruda.
-        $reqEmpresa = $this->peticion(Request::class, [
+        $reqEmpresa = $this->peticion(ValidarPropuestaEmpresaRequest::class, [
             'decision'   => 'validar',
             'respuestas' => [
                 'reto_comprensible'   => 'Sí',

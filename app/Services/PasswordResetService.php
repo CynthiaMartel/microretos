@@ -29,6 +29,7 @@ class PasswordResetService
     }
 
     // true si el token era válido y la contraseña se ha cambiado
+    /** @param array<string, mixed> $data */
     public function restablecer(array $data): bool
     {
         $user = User::where('email', $data['email'])->first();

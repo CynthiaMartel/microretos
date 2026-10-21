@@ -19,11 +19,13 @@ abstract class NotificacionDocente extends Notification
     abstract protected function mensaje(): string;
     abstract protected function ruta(): ?string;
 
+    /** @return array<int, string> */
     public function via(object $notifiable): array
     {
         return ['database'];
     }
 
+    /** @return array<string, mixed> */
     public function toArray(object $notifiable): array
     {
         return [

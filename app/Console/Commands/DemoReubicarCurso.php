@@ -53,10 +53,18 @@ class DemoReubicarCurso extends Command
     private CarbonImmutable $hoy;
     private string $semilla;
 
-    /** Cambios calculados: tabla => [id => [columna => valor]] */
+    /**
+     * Cambios calculados: tabla => [id => [columna => valor]]
+     *
+     * @var array<string, array<int, array<string, mixed>>>
+     */
     private array $cambios = [];
 
-    /** Curso asignado a cada proyecto (id => '2025/26' | '2026/27'), para las comprobaciones */
+    /**
+     * Curso asignado a cada proyecto (id => '2025/26' | '2026/27'), para las comprobaciones
+     *
+     * @var array<int|string, string>
+     */
     private array $cursoAsignado = [];
 
     public function handle(): int
@@ -108,7 +116,7 @@ class DemoReubicarCurso extends Command
             if ($p->estado === 'validado' && isset($conEncuentros[$p->id])) {
                 // Validados con encuentro (equipos trabajando): actividad de este curso, septiembre–octubre
                 $cursoProyecto[$p->id] = '2026/27';
-                $anclaProyecto[$p->id] = $this->diaLaborable(CarbonImmutable::create(2026, 9, 14), $this->hoy->subDays(3), $this->r("ancla-p{$p->id}"));
+                $anclaProyecto[$p->id] = $this->diaLaborable(CarbonImmutable::createStrict(2026, 9, 14), $this->hoy->subDays(3), $this->r("ancla-p{$p->id}"));
                 continue;
             }
             [$curso, $desde, $hasta] = $this->ventanaPorEstado($p->estado, $this->r("curso-p{$p->id}"));
@@ -131,24 +139,24 @@ class DemoReubicarCurso extends Command
         // Duración de cada encuentro con la misma regla que la app (Microproyecto::fechaFinSugerida,
         // según las clases estimadas del proyecto): los encuentros abarcan semanas de trabajo.
         $modelos = Microproyecto::whereIn('id', $encuentros->pluck('microproyecto_id')->unique())->get()->keyBy('id');
-        $duracionProyecto = fn (int $proyectoId) => ($f = $modelos[$proyectoId]?->fechaFinSugerida(Carbon::create(2026, 1, 5)))
-            ? (int) Carbon::create(2026, 1, 5)->diffInDays($f, true) : 0;
+        $duracionProyecto = fn (int $proyectoId) => ($f = $modelos[$proyectoId]?->fechaFinSugerida(Carbon::createStrict(2026, 1, 5)))
+            ? (int) Carbon::createStrict(2026, 1, 5)->diffInDays($f, true) : 0;
 
         $nuevaFecha = []; // encuentro id => [inicio, fin] (CarbonImmutable)
         foreach ($encuentrosPorProyecto as $proyectoId => $lista) {
             $curso  = $cursoProyecto[$proyectoId];
-            $limite = $curso === '2025/26' ? CarbonImmutable::create(2026, 6, 26) : $this->hoy->subDay();
+            $limite = $curso === '2025/26' ? CarbonImmutable::createStrict(2026, 6, 26) : $this->hoy->subDay();
             $cursor = $anclaProyecto[$proyectoId];
             $duracion = $duracionProyecto((int) $proyectoId);
             foreach ($lista->values() as $i => $e) {
                 if (isset($candidatosFuturos[$e->id])) {
-                    $inicio = $this->diaLaborable($this->hoy->addDays(5), CarbonImmutable::create(2026, 12, 18), $this->r("futuro-e{$e->id}"));
+                    $inicio = $this->diaLaborable($this->hoy->addDays(5), CarbonImmutable::createStrict(2026, 12, 18), $this->r("futuro-e{$e->id}"));
                 } else {
                     if ($i > 0) $cursor = $this->siguienteLaborable($cursor->addDays(7 + (int) floor($this->r("gap-e{$e->id}") * 12)));
                     $inicio = $cursor->greaterThan($limite) ? $this->diaLaborable($anclaProyecto[$proyectoId], $limite, $this->r("comp-e{$e->id}")) : $cursor;
                     // En 2025/26 el encuentro debe terminar antes de fin de curso
                     if ($curso === '2025/26' && $inicio->addDays($duracion)->greaterThan($limite)) {
-                        $inicio = $this->siguienteLaborable($this->maxFecha($limite->subDays($duracion), CarbonImmutable::create(2025, 9, 15)));
+                        $inicio = $this->siguienteLaborable($this->maxFecha($limite->subDays($duracion), CarbonImmutable::createStrict(2025, 9, 15)));
                     }
                 }
                 $nuevaFecha[$e->id] = [$inicio, $inicio->addDays($duracion)];
@@ -223,7 +231,7 @@ class DemoReubicarCurso extends Command
             $primerEnc   = $lista->map(fn ($e) => CarbonImmutable::parse($this->cambios['encuentros'][$e->id]['created_at']))->min();
             $ancla       = $this->minFecha($anclaProyecto[$p->id], $this->hoy->subDay());
             // nunca antes del inicio de su curso (agosto pertenece todavía al curso anterior)
-            $inicioCurso = $cursoProyecto[$p->id] === '2026/27' ? CarbonImmutable::create(2026, 9, 1) : CarbonImmutable::create(2025, 9, 8);
+            $inicioCurso = $cursoProyecto[$p->id] === '2026/27' ? CarbonImmutable::createStrict(2026, 9, 1) : CarbonImmutable::createStrict(2025, 9, 8);
             $creado      = $this->maxFecha($ancla->subDays(7 + (int) floor($this->r("crea-p{$p->id}") * 23)), $inicioCurso);
             // por día (no por hora): el proyecto, al menos un día antes que su primer encuentro
             if ($primerEnc && !$creado->lessThan($primerEnc->startOfDay())) $creado = $primerEnc->startOfDay()->subDays(2);
@@ -234,7 +242,7 @@ class DemoReubicarCurso extends Command
                                                                   => $this->diaLaborable($this->maxFecha($creado, $this->hoy->subDays(12)), $this->hoy->subDay(), $this->r("upd-p{$p->id}")),
                 default                                           => ($ultimoEnc ?? $ancla)->addDays((int) floor($this->r("upd-p{$p->id}") * 20)),
             };
-            $techo       = $cursoProyecto[$p->id] === '2025/26' ? CarbonImmutable::create(2026, 6, 30) : $this->hoy->subDay();
+            $techo       = $cursoProyecto[$p->id] === '2025/26' ? CarbonImmutable::createStrict(2026, 6, 30) : $this->hoy->subDay();
             $actualizado = $this->minFecha($this->maxFecha($actualizado, $creado), $techo);
             $creadoProyecto[$p->id] = $creado;
             $this->cambiar('microproyectos', $p->id, [
@@ -257,10 +265,10 @@ class DemoReubicarCurso extends Command
         foreach ($retos as $r) {
             $primer = ($proyectosPorReto[$r->id] ?? collect())->map(fn ($p) => $creadoProyecto[$p->id])->min();
             $creado = $primer
-                ? $this->minFecha($this->maxFecha($primer->subDays(3 + (int) floor($this->r("crea-r{$r->id}") * 22)), CarbonImmutable::create(2025, 9, 1)), $primer->subDay())
+                ? $this->minFecha($this->maxFecha($primer->subDays(3 + (int) floor($this->r("crea-r{$r->id}") * 22)), CarbonImmutable::createStrict(2025, 9, 1)), $primer->subDay())
                 : ($this->r("curso-r{$r->id}") < 0.9
                     ? $this->diaPonderado2526($this->r("crea-r{$r->id}"), 0, 8)   // sep 2025 – may 2026
-                    : $this->diaLaborable(CarbonImmutable::create(2026, 9, 1), $this->hoy->subDay(), $this->r("crea-r{$r->id}")));
+                    : $this->diaLaborable(CarbonImmutable::createStrict(2026, 9, 1), $this->hoy->subDay(), $this->r("crea-r{$r->id}")));
             $creadoReto[$r->id] = $creado;
             $this->cambiar('microretos', $r->id, [
                 'created_at' => $this->conHora($creado, "cr{$r->id}"),
@@ -277,13 +285,13 @@ class DemoReubicarCurso extends Command
         foreach ($empresas->sortByDesc('es_catalogo') as $e) {
             $deps = collect($minDependiente[$e->id] ?? [])->min();
             if ($e->es_catalogo) {
-                $creado = $this->diaLaborable(CarbonImmutable::create(2025, 6, 2), CarbonImmutable::create(2025, 7, 31), $this->r("crea-emp{$e->id}"));
+                $creado = $this->diaLaborable(CarbonImmutable::createStrict(2025, 6, 2), CarbonImmutable::createStrict(2025, 7, 31), $this->r("crea-emp{$e->id}"));
             } elseif ($deps) {
-                $creado = $this->maxFecha($deps->subDays(5 + (int) floor($this->r("crea-emp{$e->id}") * 35)), CarbonImmutable::create(2025, 8, 1));
+                $creado = $this->maxFecha($deps->subDays(5 + (int) floor($this->r("crea-emp{$e->id}") * 35)), CarbonImmutable::createStrict(2025, 8, 1));
             } else {
                 $creado = $this->r("curso-emp{$e->id}") < 0.9
                     ? $this->diaPonderado2526($this->r("crea-emp{$e->id}"), 0, 7)  // sep 2025 – abr 2026
-                    : $this->diaLaborable(CarbonImmutable::create(2026, 9, 1), $this->hoy->subDay(), $this->r("crea-emp{$e->id}"));
+                    : $this->diaLaborable(CarbonImmutable::createStrict(2026, 9, 1), $this->hoy->subDay(), $this->r("crea-emp{$e->id}"));
             }
             if ($e->copiada_de_id && isset($creadoEmpresa[$e->copiada_de_id]) && $creado->lessThanOrEqualTo($creadoEmpresa[$e->copiada_de_id])) {
                 $creado = $creadoEmpresa[$e->copiada_de_id]->addDays(1);
@@ -333,7 +341,11 @@ class DemoReubicarCurso extends Command
 
     // ── Reparto ──────────────────────────────────────────────────────────────────
 
-    /** Curso y ventana de fechas según el estado del proyecto. */
+    /**
+     * Curso y ventana de fechas según el estado del proyecto.
+     *
+     * @return array{string, CarbonImmutable, CarbonImmutable}
+     */
     private function ventanaPorEstado(string $estado, float $r): array
     {
         $c25 = fn ($d, $h) => ['2025/26', CarbonImmutable::parse($d), CarbonImmutable::parse($h)];
@@ -359,11 +371,11 @@ class DemoReubicarCurso extends Command
         foreach ($tramo as [$y, $m, $peso]) {
             $acum += $peso / $total;
             if ($r <= $acum || $m === end($tramo)[1]) {
-                $inicio = CarbonImmutable::create($y, $m, 1);
+                $inicio = CarbonImmutable::createStrict($y, $m, 1);
                 return $this->diaLaborable($inicio, $inicio->endOfMonth()->startOfDay(), fmod($r * 97.13, 1.0));
             }
         }
-        return CarbonImmutable::create(2025, 10, 1);
+        return CarbonImmutable::createStrict(2025, 10, 1);
     }
 
     // ── Utilidades de fechas ─────────────────────────────────────────────────────
@@ -396,6 +408,7 @@ class DemoReubicarCurso extends Command
     private function minFecha(CarbonImmutable $a, CarbonImmutable $b): CarbonImmutable { return $a->lessThan($b) ? $a : $b; }
     private function maxFecha(CarbonImmutable $a, CarbonImmutable $b): CarbonImmutable { return $a->greaterThan($b) ? $a : $b; }
 
+    /** @param \stdClass $e  fila de DB::table('encuentros') */
     private function sinAlumnos(object $e): bool { return !$e->num_alumnos; }
 
     private function alumnosEstimados(int $encuentroId): int
@@ -405,6 +418,7 @@ class DemoReubicarCurso extends Command
         return $miembros ?: 18 + (int) floor($this->r("alumnos-e{$encuentroId}") * 9);
     }
 
+    /** @param array<string, mixed> $valores */
     private function cambiar(string $tabla, int $id, array $valores): void
     {
         $this->cambios[$tabla][$id] = $valores;
@@ -412,6 +426,11 @@ class DemoReubicarCurso extends Command
 
     // ── Resumen y comprobaciones ─────────────────────────────────────────────────
 
+    /**
+     * @param Collection<array-key, \stdClass>                        $proyectos
+     * @param array<int|string, string>                                  $cursoProyecto
+     * @param array<int|string, array{CarbonImmutable, CarbonImmutable}> $nuevaFecha
+     */
     private function resumen(Collection $proyectos, array $cursoProyecto, array $nuevaFecha): void
     {
         $this->newLine();
@@ -433,6 +452,14 @@ class DemoReubicarCurso extends Command
         $this->table(['Tabla', 'Registros'], collect($this->cambios)->map(fn ($f, $t) => [$t, count($f)])->values()->all());
     }
 
+    /**
+     * @param Collection<array-key, \stdClass>                        $proyectos
+     * @param Collection<array-key, \stdClass>                        $retos
+     * @param Collection<array-key, \stdClass>                        $empresas
+     * @param Collection<array-key, \stdClass>                        $encuentros
+     * @param array<int|string, array{CarbonImmutable, CarbonImmutable}> $nuevaFecha
+     * @param Collection<array-key, mixed>                               $futuros
+     */
     private function comprobar(Collection $proyectos, Collection $retos, Collection $empresas, Collection $encuentros, array $nuevaFecha, Collection $futuros): int
     {
         $c = $this->cambios;

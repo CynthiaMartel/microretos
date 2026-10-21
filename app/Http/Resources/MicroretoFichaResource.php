@@ -12,7 +12,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * autenticación (equipo por token), así que cualquier campo añadido a $fillable en Empresa o
  * Microreto NO se expone automáticamente: hay que añadirlo aquí a propósito.
  */
-/** @mixin \App\Models\Microreto */
+/**
+ * @mixin \App\Models\Microreto
+ * @property-read string|null $empresa_estado  calculado por MicroretoFichaService
+ */
 class MicroretoFichaResource extends JsonResource
 {
     private function esPersonal(Request $request): bool

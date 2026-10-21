@@ -32,7 +32,7 @@ class CurriculoController extends Controller
         if ($resultado['importado']) {
             Log::info('Currículo importado.', [
                 'ciclo_id' => $ciclo->id,
-                'user_id'  => $request->user()->id,
+                'user_id'  => $request->user()?->id,
                 'modulos'  => count($resultado['modulos_nuevos']),
                 'ras'      => $resultado['total_ras'],
                 'ces'      => $resultado['total_ces'],

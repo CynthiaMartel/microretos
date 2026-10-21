@@ -6,7 +6,11 @@ use App\Http\Requests\StoreDocenteTareaRequest;
 use App\Http\Requests\UpdateDocenteTareaRequest;
 use App\Http\Resources\DocenteTareaResource;
 use App\Models\DocenteTarea;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class DocenteTareaController extends Controller
 {
@@ -16,9 +20,11 @@ class DocenteTareaController extends Controller
     /**
      * GET /api/tareas — solo las del usuario autenticado, en orden de creación
      */
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $tareas = DocenteTarea::where('user_id', $request->user()->id)
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
+        $tareas = DocenteTarea::where('user_id', $user->id)
             ->latest()
             ->take(self::MAX_LISTADO)
             ->get()
@@ -31,10 +37,12 @@ class DocenteTareaController extends Controller
     /**
      * POST /api/tareas
      */
-    public function store(StoreDocenteTareaRequest $request)
+    public function store(StoreDocenteTareaRequest $request): JsonResponse
     {
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
         $tarea = new DocenteTarea($request->validated());
-        $tarea->user_id = $request->user()->id;
+        $tarea->user_id = $user->id;
         $tarea->save();
 
         return (new DocenteTareaResource($tarea))->response()->setStatusCode(201);
@@ -43,7 +51,7 @@ class DocenteTareaController extends Controller
     /**
      * PATCH /api/tareas/{tarea}
      */
-    public function update(UpdateDocenteTareaRequest $request, DocenteTarea $tarea)
+    public function update(UpdateDocenteTareaRequest $request, DocenteTarea $tarea): DocenteTareaResource
     {
         $this->authorize('update', $tarea);
         $tarea->update($request->validated());
@@ -54,7 +62,7 @@ class DocenteTareaController extends Controller
     /**
      * DELETE /api/tareas/{tarea}
      */
-    public function destroy(Request $request, DocenteTarea $tarea)
+    public function destroy(Request $request, DocenteTarea $tarea): Response
     {
         $this->authorize('delete', $tarea);
         $tarea->delete();
