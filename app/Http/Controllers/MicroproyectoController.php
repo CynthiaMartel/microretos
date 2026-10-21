@@ -364,6 +364,21 @@ class MicroproyectoController extends Controller
         return response()->json(['seleccion' => $seleccion]);
     }
 
+    /**
+     * RA/CE (texto serializado) para el contexto de las sugerencias de IA. Antes se
+     * rechazaba la petición a partir de 5.000 caracteres (~20 CE), así que con propuestas
+     * amplias la IA fallaba. Ahora se aceptan hasta 30.000 y al prompt se envía como mucho
+     * RA_CE_PROMPT_MAX caracteres: suficiente contexto sin disparar el coste por tokens.
+     */
+    private const RA_CE_PROMPT_MAX = 12000;
+
+    private function raCeParaPrompt(string $raCe): string
+    {
+        return mb_strlen($raCe) > self::RA_CE_PROMPT_MAX
+            ? mb_substr($raCe, 0, self::RA_CE_PROMPT_MAX) . "\n[… lista recortada: hay más RA/CE seleccionados]"
+            : $raCe;
+    }
+
     public function sugerirKpis(Request $request)
     {
         $request->validate([
@@ -373,7 +388,7 @@ class MicroproyectoController extends Controller
             'entregables'   => 'nullable|string|max:1000',
             'objetivos'     => 'nullable|array|max:20',
             'objetivos.*'   => 'string|max:300',
-            'ra_ce'         => 'nullable|string|max:5000',
+            'ra_ce'         => 'nullable|string|max:30000',
             'reto_origen'   => 'nullable|string|max:3000',
         ]);
 
@@ -386,7 +401,7 @@ class MicroproyectoController extends Controller
             $lista = collect($request->objetivos)->map(fn($o) => "  - {$o}")->join("\n");
             $contexto .= "Objetivos de aprendizaje:\n{$lista}\n";
         }
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n{$request->ra_ce}\n";
+        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
         if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
 
         if (!$contexto) {
@@ -426,7 +441,7 @@ class MicroproyectoController extends Controller
             'pregunta_reto' => 'nullable|string|max:1000',
             'descripcion'   => 'nullable|string|max:2000',
             'entregables'   => 'nullable|string|max:1000',
-            'ra_ce'         => 'nullable|string|max:5000',
+            'ra_ce'         => 'nullable|string|max:30000',
             'reto_origen'   => 'nullable|string|max:3000',
         ]);
 
@@ -435,7 +450,7 @@ class MicroproyectoController extends Controller
         if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
         if ($request->filled('descripcion'))   $contexto .= "Descripción: {$request->descripcion}\n";
         if ($request->filled('entregables'))   $contexto .= "Entregables: {$request->entregables}\n";
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n{$request->ra_ce}\n";
+        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
         if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
 
         if (!$contexto) {
@@ -475,7 +490,7 @@ class MicroproyectoController extends Controller
             'pregunta_reto' => 'nullable|string|max:1000',
             'descripcion'   => 'nullable|string|max:2000',
             'contexto'      => 'nullable|string|max:2000',
-            'ra_ce'         => 'nullable|string|max:5000',
+            'ra_ce'         => 'nullable|string|max:30000',
             'reto_origen'   => 'nullable|string|max:3000',
         ]);
 
@@ -484,7 +499,7 @@ class MicroproyectoController extends Controller
         if ($request->filled('pregunta_reto')) $contexto .= "Pregunta reto: {$request->pregunta_reto}\n";
         if ($request->filled('descripcion'))   $contexto .= "Descripción del reto: {$request->descripcion}\n";
         if ($request->filled('contexto'))      $contexto .= "Contexto/situación de partida: {$request->contexto}\n";
-        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n{$request->ra_ce}\n";
+        if ($request->filled('ra_ce'))         $contexto .= "RA/CE trabajados:\n" . $this->raCeParaPrompt($request->ra_ce) . "\n";
         if ($request->filled('reto_origen'))   $contexto .= "Reto original de referencia (empresa colaboradora):\n{$request->reto_origen}\n";
 
         if (!$contexto) {

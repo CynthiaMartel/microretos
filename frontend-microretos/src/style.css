@@ -56,8 +56,9 @@
   --color-centros-light: #6BA4D5;
 
   /* Naranja oscurecido: el naranja de marca da solo ~2.4:1 sobre blanco — no
-     vale como TEXTO sobre fondo claro (sí vale de sobra como fondo con texto
-     blanco encima, o como icono/acento grande). Usar esta variante para texto
+     vale como TEXTO sobre fondo claro, y por lo mismo tampoco como fondo con
+     texto blanco encima (2,4:1: usar texto azul noche sobre naranja). Vale como
+     icono/acento grande o decoración. Usar esta variante para texto
      de "alumnos" sobre tarjetas claras (PublicMicroreto, UnirseEquipo...). */
   --color-alumnos-dark: #B85E0A;
 
@@ -71,6 +72,33 @@
      opacidad plena, da ~6,6:1 sobre --color-azul-noche — más legible y con
      mejor color que difuminar el verde base. */
   --color-empresas-light: #6EC13F;
+
+  /* Turquesa oscurecido: el turquesa de marca da ~2.9:1 sobre blanco (y con texto
+     blanco encima). Esta variante da 5,0:1: texto turquesa sobre fondo claro y
+     fondo de botones con texto blanco en sesión de admin/superadmin. */
+  --color-administraciones-dark: #0F7C7D;
+
+  /* Neutros de la guía de diseño (docs/GUIA_DISENO.md §1). */
+  --color-texto-secundario: #526176; /* 6,3:1 sobre blanco, 5,9:1 sobre el fondo */
+  --color-borde: #D9E1EA;            /* solo bordes decorativos (tarjetas, separadores) */
+  --color-borde-campo: #7D8CA1;      /* borde de input/select/textarea: 3,4:1 (WCAG 1.4.11) */
+
+  /* Color del rol de la sesión (GUIA_DISENO §2.1). Valor por defecto: azul de marca;
+     se redefine abajo según html[data-rol], que pone App.vue con useRoleTheme.
+     · rol        → color de marca tal cual: acentos, iconos grandes, fondos suaves (/10)
+     · rol-fuerte → variante con contraste ≥ 4,5:1 sobre blanco: fondo de botones con
+                    texto blanco, texto y enlaces en el color del rol, foco */
+  --color-rol: #3072AA;
+  --color-rol-fuerte: #3072AA;
+}
+
+html[data-rol="administraciones"] {
+  --color-rol: #19A7A8;
+  --color-rol-fuerte: #0F7C7D;
+}
+html[data-rol="empresas"] {
+  --color-rol: #509928;
+  --color-rol-fuerte: #3D7A1E;
 }
 
 /* ---------------------------------------------------
@@ -90,6 +118,17 @@ body {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }
+
+  /* Foco visible al navegar con teclado (GUIA_DISENO §6.3). :focus-visible no salta
+     con el ratón. Los campos tienen su propio foco (borde + halo, más abajo). Sobre
+     el chrome oscuro (TopBar/SidePanel en azul noche) el contorno va en blanco. */
+  :where(a, button, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-rol-fuerte);
+    outline-offset: 2px;
+  }
+  :where(.bg-azul-noche) :where(a, button, summary, [role="button"], [tabindex]):focus-visible {
+    outline-color: #fff;
+  }
 }
 
 /* ---------------------------------------------------
@@ -108,18 +147,18 @@ body {
 input, select, textarea {
   background-color: #F2F7FB; /* Azul muy claro (marca genérica) */
   color: #1F2937;            /* Texto oscuro para máxima legibilidad */
-  border: 2px solid #C7DCEC; /* Borde azul tenue */
+  border: 2px solid var(--color-borde-campo); /* 3:1 con el fondo: el campo se distingue (WCAG 1.4.11) */
 }
 
 input::placeholder, textarea::placeholder {
-  color: #9CA3AF; /* Gris medio, legible sobre fondo azul claro */
+  color: #6B7280; /* 4,8:1 sobre el fondo del campo (antes #9CA3AF, 2,4:1) */
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #3072AA;
+  border-color: var(--color-rol-fuerte);
   background-color: #E5EFF7; /* Azul un tono más intenso al enfocar */
   outline: none;
-  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-rol-fuerte) 15%, transparent);
 }
 
 /* Customización del Scrollbar (Opcional, pero recomendado para mantener limpieza) */
@@ -163,10 +202,10 @@ input:focus, select:focus, textarea:focus {
 --------------------------------------------------- */
 @layer components {
   .accion-principal {
-    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-5 text-sm font-semibold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90;
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-rol-fuerte px-5 text-sm font-semibold text-white shadow-md shadow-rol-fuerte/25 transition-colors hover:bg-rol-fuerte/90;
   }
   .accion-secundaria {
-    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-5 text-sm font-semibold text-centros shadow-sm transition-colors hover:bg-centros/5;
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-rol-fuerte/30 bg-white px-5 text-sm font-semibold text-rol-fuerte shadow-sm transition-colors hover:bg-rol-fuerte/5;
   }
   .accion-icono {
     @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-red-200 hover:text-red-500;
@@ -182,7 +221,7 @@ input:focus, select:focus, textarea:focus {
     @apply flex items-center justify-between gap-3;
   }
   .btn-paso {
-    @apply ml-auto inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-5 text-sm font-bold text-white shadow-md shadow-centros/25 transition-colors hover:bg-centros/90 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply ml-auto inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-rol-fuerte px-5 text-sm font-bold text-white shadow-md shadow-rol-fuerte/25 transition-colors hover:bg-rol-fuerte/90 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-paso-atras {
     @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-gray-200 bg-white px-5 text-sm font-bold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50;
@@ -200,16 +239,17 @@ input:focus, select:focus, textarea:focus {
   @apply w-full border-2 rounded-2xl p-4 text-sm font-semibold outline-none transition-all shadow-inner disabled:opacity-50;
   background-color: #f6fafc;
   color: #1F2937;
-  border-color: #bad5ec;
+  border-color: var(--color-borde-campo);
 }
 .input-style::placeholder {
-  color: #9CA3AF;
+  color: #6B7280;
 }
 .input-style:focus {
   background-color: #dae8f5;
-  border-color: #3072AA;
-  box-shadow: 0 0 0 4px rgba(48, 114, 170, 0.15);
+  border-color: var(--color-rol-fuerte);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-rol-fuerte) 15%, transparent);
 }
+/* 12px como mínimo (GUIA_DISENO §3); antes 10px y font-black, que Inter no carga. */
 .label-style {
-  @apply text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-4 mb-2 block;
+  @apply text-xs font-bold uppercase tracking-[0.15em] text-gray-500 ml-4 mb-2 block;
 }

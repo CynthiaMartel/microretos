@@ -20,6 +20,13 @@ const route     = useRoute()
 const authStore = useAuthStore()
 const { theme } = useRoleTheme()
 
+// Color de acción = color del rol (docs/GUIA_DISENO.md §2.1): style.css redefine
+// --color-rol y --color-rol-fuerte según este atributo, y de ahí lo leen
+// .accion-principal, .btn-paso, el foco, etc.
+watch(() => theme.value.key, (key) => {
+  document.documentElement.dataset.rol = key
+}, { immediate: true })
+
 const isPublicRetoRoute = computed(() =>
   route.path.startsWith('/reto/') ||
   route.path.startsWith('/startup/landing/') ||

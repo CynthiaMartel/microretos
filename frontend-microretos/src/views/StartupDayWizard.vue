@@ -1,7 +1,14 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
-import { useRoute, useRouter } from 'vue-router';
+import TallerPasos from '../components/TallerPasos.vue'
+import TallerResumen from '../components/TallerResumen.vue'
+import TallerArbolRaCe from '../components/TallerArbolRaCe.vue'
+import ListaEditableOrdenable from '../components/ListaEditableOrdenable.vue'
+import TarjetaRetoAsociado from '../components/TarjetaRetoAsociado.vue'
+import TallerSeleccionRaCe from '../components/TallerSeleccionRaCe.vue'
+import ModalTaller from '../components/ModalTaller.vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import api from '../api.js';
 import { useUIState } from '../composables/useUIState.js';
 import { useAuthStore } from '../stores/auth.js';
@@ -50,7 +57,7 @@ const estadoOpciones = {
   en_edicion: { label: 'En edición', dot: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50' },
   archivado:  { label: 'Archivar',   dot: 'bg-gray-400',   text: 'text-gray-500',   bg: 'bg-gray-50' },
   propuesta:  { label: 'Propuesta',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
-  validado:   { label: 'Validado',   dot: 'bg-centros',  text: 'text-centros',  bg: 'bg-centros/10' },
+  validado:   { label: 'Validado',   dot: 'bg-rol-fuerte',  text: 'text-rol-fuerte',  bg: 'bg-rol/10' },
   completado: { label: 'Completado', dot: 'bg-sky-500',    text: 'text-sky-700',    bg: 'bg-sky-50' },
 };
 
@@ -277,6 +284,7 @@ const videosLocales     = ref([])
 const documentosLocales = ref([])
 const imagenesLocales   = ref([])
 const imagenPortadaId   = ref(null)
+const imagenPortadaUrl  = ref('')   // imagen_portada_url del proyecto (respaldo si la lista no la trae)
 
 // ── Helpers recursos (Cloudinary) ────────────────────────────────────────────
 const labelVideo     = ref('')
@@ -421,13 +429,35 @@ function toggleFaseEnSesion(i, numFase) {
 }
 
 // ── Helpers listas ────────────────────────────────────────────────────────────
-const nuevoObjetivo = ref('');
-function addObjetivo() { if (!nuevoObjetivo.value.trim()) return; form.value.objetivos.lista.push(nuevoObjetivo.value.trim()); nuevoObjetivo.value = ''; }
-function removeObjetivo(i) { form.value.objetivos.lista.splice(i, 1); }
-
-const nuevoKpi = ref('');
-function addKpi() { if (!nuevoKpi.value.trim()) return; form.value.kpis.lista.push(nuevoKpi.value.trim()); nuevoKpi.value = ''; }
-function removeKpi(i) { form.value.kpis.lista.splice(i, 1); }
+// Lo que sugiere la IA para objetivos y KPIs queda aparte, pendiente de revisar: no
+// entra en form (ni se guarda) hasta que el docente lo acepta (GUIA_DISENO §8.4).
+const objetivosSugeridos = ref([]);
+const kpisSugeridos      = ref([]);
+function anadirSugerencias(destino, pendientes, nuevas) {
+  const vistas = new Set([...destino, ...pendientes.value].map(normalizarTexto));
+  nuevas.forEach(t => {
+    const clave = normalizarTexto(t);
+    if (clave && !vistas.has(clave)) { pendientes.value.push(t); vistas.add(clave); }
+  });
+}
+function aceptarSugerencia(lista, pendientes, i) {
+  lista.push(pendientes.value[i]);
+  pendientes.value.splice(i, 1);
+}
+function aceptarTodas(lista, pendientes) {
+  lista.push(...pendientes.value);
+  pendientes.value = [];
+}
+const sugerenciasPendientes = computed(() => objetivosSugeridos.value.length + kpisSugeridos.value.length);
+const avisoPaso6 = ref('');
+function siguienteDesdePaso6() {
+  if (sugerenciasPendientes.value) {
+    avisoPaso6.value = `Tienes ${sugerenciasPendientes.value} sugerencia(s) de la IA sin revisar: añádelas o descártalas antes de seguir.`;
+    return;
+  }
+  avisoPaso6.value = '';
+  guardar(7);
+}
 
 const sugirendoKpis = ref(false);
 const errorKpis = ref('');
@@ -443,9 +473,7 @@ async function sugerirKpis() {
       ra_ce:         form.value.evaluacion_oficial.length ? serializarEvaluacionOficialATexto(form.value.evaluacion_oficial) : undefined,
       reto_origen:   contextoRetoOrigen.value,
     });
-    const sugeridos = res.data.kpis ?? [];
-    const existentes = new Set(form.value.kpis.lista);
-    sugeridos.forEach(k => { if (!existentes.has(k)) form.value.kpis.lista.push(k); });
+    anadirSugerencias(form.value.kpis.lista, kpisSugeridos, res.data.kpis ?? []);
   } catch {
     errorKpis.value = 'Error al contactar con la IA. Inténtalo de nuevo.';
   } finally {
@@ -466,9 +494,7 @@ async function sugerirObjetivos() {
       ra_ce:         form.value.evaluacion_oficial.length ? serializarEvaluacionOficialATexto(form.value.evaluacion_oficial) : undefined,
       reto_origen:   contextoRetoOrigen.value,
     });
-    const sugeridos = res.data.objetivos ?? [];
-    const existentes = new Set(form.value.objetivos.lista);
-    sugeridos.forEach(o => { if (!existentes.has(o)) form.value.objetivos.lista.push(o); });
+    anadirSugerencias(form.value.objetivos.lista, objetivosSugeridos, res.data.objetivos ?? []);
   } catch {
     errorObjetivos.value = 'Error al contactar con la IA. Inténtalo de nuevo.';
   } finally {
@@ -534,12 +560,33 @@ function toggleModulo(m) {
 function moduloSeleccionado(id) { return form.value.modulos_seleccionados.some(m => m.id === id); }
 
 // ── RA/CE selection ───────────────────────────────────────────────────────────
-const modoRaCe         = ref('texto')  // 'ia' | 'texto'
-const mostrarSeleccionManual = ref(false) // desplegable "Seleccionar otros manualmente" dentro de Datos del proyecto
+// Paso 3: la selección parte de los RA/CE originales del reto; desde ahí se amplía en
+// modal con «Seleccionar otros» (catálogo con los ya elegidos marcados) o a mano.
+const modalRaCe        = ref('')       // '' | 'catalogo' | 'manual'
+const arbolModal       = ref(null)     // TallerArbolRaCe del modal (Plegar / Desplegar todo)
+function abrirModalRaCe(nombre) {
+  modalRaCe.value = nombre
+  if (nombre === 'catalogo') cargarCatalogoRaCe()
+}
+// Vuelve a dejar exactamente los RA/CE del reto (deshace quitar/añadir).
+async function restaurarRaCeDelReto() {
+  const original = microretoVinculado.value?.evaluacion_oficial
+  if (!Array.isArray(original) || !original.length) return
+  if (!window.confirm('Se sustituirá la selección actual por los RA y CE originales del reto. ¿Continuar?')) return
+  form.value.evaluacion_oficial = clonarEvaluacionOficial(original)
+  await cargarCatalogoRaCe()
+}
 const catalogoRaCe     = ref([])       // [{ modulo, moduloId, ras: [{id,orden,descripcion,criterios:[...]}] }]
 const cargandoCatalogo = ref(false)
 const cargandoIaRaCe   = ref(false)
 const sugerenciaIaPendienteRevision = ref(false) // true tras usar "Sugerir con IA" — recuerda revisar antes de publicar
+const ceIdsIa          = ref(new Set())  // CE añadidos por la IA (etiqueta «Sugerencia IA» en el árbol)
+const textosIa         = ref(new Set())  // RA sin id añadidos por la IA (texto normalizado)
+function marcarSugerenciasRevisadas() {
+  sugerenciaIaPendienteRevision.value = false
+  ceIdsIa.value = new Set()
+  textosIa.value = new Set()
+}
 const raExpandido      = ref({})       // { raId: bool }
 const raChecked        = ref({})       // { raId: bool }
 const ceChecked        = ref({})       // { ceId: bool }
@@ -548,9 +595,15 @@ function normalizarTexto(t) {
   return (t || '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+let claveCatalogoEnCurso = ''
 async function cargarCatalogoRaCe() {
   const mods = form.value.modulos_seleccionados
   if (!mods.length) { catalogoRaCe.value = []; return }
+  // Al abrir un proyecto en el paso 3 saltan a la vez el watch del paso y el de los
+  // módulos: una sola petición por combinación de módulos.
+  const clave = mods.map(m => m.id).join(',')
+  if (cargandoCatalogo.value && clave === claveCatalogoEnCurso) return
+  claveCatalogoEnCurso = clave
   cargandoCatalogo.value = true
   try {
     const results = await Promise.all(mods.map(m => api.get(`/modulos/${m.id}/ra-ce`)))
@@ -583,48 +636,70 @@ async function cargarCatalogoRaCe() {
   }
 }
 
-function toggleRa(ra) {
-  const v = !raChecked.value[ra.id]
-  raChecked.value[ra.id] = v
-  ra.criterios.forEach(ce => { ceChecked.value[ce.id] = v })
+// El árbol del paso 3 aplica cada casilla al momento, pero solo sobre la entrada de ESE
+// RA en evaluacion_oficial (conserva su «aplicacion» y su posición). Nunca reconstruye la
+// lista entera: así, abrir el paso no borra entradas que el catálogo no sabe mapear
+// (RA/CE con texto pero sin ce_ids, manuales, de módulos sin catálogo).
+function sincronizarRa(ra, mod) {
+  const ces = ra.criterios.filter(ce => ceChecked.value[ce.id])
+  const lista = form.value.evaluacion_oficial
+  const idx = lista.findIndex(e => e.ra_id === ra.id)
+  if (!ces.length) {
+    if (idx >= 0) lista.splice(idx, 1)
+  } else if (idx >= 0) {
+    lista[idx].ce_ids = ces.map(c => c.id)
+    lista[idx].ce     = ces.map(c => c.descripcion)
+  } else {
+    lista.push({ modulo: mod.modulo, ra_id: ra.id, ra: ra.descripcion,
+                 ce_ids: ces.map(c => c.id), ce: ces.map(c => c.descripcion), aplicacion: '' })
+  }
+  raChecked.value[ra.id] = ces.length === ra.criterios.length
 }
+
+function toggleRa(ra, mod) {
+  const v = raEstado(ra) !== 'all'
+  ra.criterios.forEach(ce => { ceChecked.value[ce.id] = v })
+  sincronizarRa(ra, mod)
+}
+
+function toggleCe(ce, ra, mod) {
+  ceChecked.value[ce.id] = !ceChecked.value[ce.id]
+  sincronizarRa(ra, mod)
+}
+
+// Casilla del módulo. Quitar un módulo con RA/CE elegidos pide confirmación y quita
+// también esas entradas de la propuesta.
+function toggleModuloArbol(m) {
+  if (moduloSeleccionado(m.id)) {
+    const n = form.value.evaluacion_oficial.filter(e => e.modulo === m.nombre).length
+    if (n && !window.confirm(`Al quitar «${m.nombre}» se quitarán también sus ${n} RA de esta propuesta. ¿Continuar?`)) return
+    form.value.evaluacion_oficial = form.value.evaluacion_oficial.filter(e => e.modulo !== m.nombre)
+  }
+  toggleModulo(m)
+}
+
+function quitarEntradaRaCe(i) {
+  form.value.evaluacion_oficial.splice(i, 1)
+}
+function quitarCeDeEntrada(i, j) {
+  const entry = form.value.evaluacion_oficial[i]
+  if (!entry) return
+  entry.ce.splice(j, 1)
+  if (Array.isArray(entry.ce_ids)) entry.ce_ids.splice(j, 1)
+  if (!entry.ce.length) form.value.evaluacion_oficial.splice(i, 1)
+}
+
+const raIdsCatalogo = computed(() => {
+  const ids = new Set()
+  catalogoRaCe.value.forEach(mod => mod.ras.forEach(ra => ids.add(ra.id)))
+  return ids
+})
 
 function raEstado(ra) {
   const n = ra.criterios.filter(ce => ceChecked.value[ce.id]).length
   if (n === 0) return 'none'
   if (n === ra.criterios.length) return 'all'
   return 'some'
-}
-
-// Entradas de "RA/CE de este proyecto" que no proceden del catálogo oficial cargado
-// ahora mismo (ra_id null porque se añadieron a mano, o de un módulo no seleccionado
-// en este momento) — se preservan al reconstruir la selección desde los checkboxes,
-// para no borrarlas por accidente.
-function raCeFueraDeCatalogo() {
-  const raIdsCatalogo = new Set()
-  catalogoRaCe.value.forEach(mod => mod.ras.forEach(ra => raIdsCatalogo.add(ra.id)))
-  return form.value.evaluacion_oficial.filter(e => !e.ra_id || !raIdsCatalogo.has(e.ra_id))
-}
-
-function aplicarSeleccionManual() {
-  const seleccionCatalogo = []
-  catalogoRaCe.value.forEach(mod => {
-    mod.ras.forEach(ra => {
-      const ces = ra.criterios.filter(ce => ceChecked.value[ce.id])
-      if (ces.length) {
-        seleccionCatalogo.push({
-          modulo: mod.modulo,
-          ra_id: ra.id,
-          ra: ra.descripcion,
-          ce_ids: ces.map(c => c.id),
-          ce: ces.map(c => c.descripcion),
-          aplicacion: '',
-        })
-      }
-    })
-  })
-  form.value.evaluacion_oficial = [...seleccionCatalogo, ...raCeFueraDeCatalogo()]
-  mostrarSeleccionManual.value = false
 }
 
 // Añade las entradas de "nuevas" que no estén ya en "actuales" (por ra_id exacto, o
@@ -650,9 +725,15 @@ async function sugerirRaCeConIa() {
     })
     const sugeridos = res.data.seleccion || []
     if (sugeridos.length) {
+      const antes = form.value.evaluacion_oficial.length
       form.value.evaluacion_oficial = mergeEvaluacionOficial(form.value.evaluacion_oficial, sugeridos)
+      // Marca lo nuevo como «Sugerencia IA» en el árbol hasta que el docente lo revise.
+      form.value.evaluacion_oficial.slice(antes).forEach(e => {
+        ;(e.ce_ids || []).forEach(id => ceIdsIa.value.add(id))
+        if (!e.ra_id) textosIa.value.add(normalizarTexto(e.ra))
+      })
       sugerenciaIaPendienteRevision.value = true
-      modoRaCe.value = 'texto'
+      await cargarCatalogoRaCe() // refleja en las casillas lo que ha añadido la IA
     }
   } catch (e) {
     console.error('Error sugiriendo RA/CE con IA', e)
@@ -661,37 +742,11 @@ async function sugerirRaCeConIa() {
   }
 }
 
-watch(modoRaCe, (modo) => {
-  if (modo === 'ia') cargarCatalogoRaCe()
-})
-
-watch(mostrarSeleccionManual, (abierto) => {
-  if (abierto) cargarCatalogoRaCe()
-})
-
+// El catálogo oficial de los módulos marcados se carga al entrar en el paso 3 y cuando
+// cambian los módulos estando en él.
+watch(paso, (v) => { if (v === 3) cargarCatalogoRaCe() })
 watch(() => form.value.modulos_seleccionados, () => {
-  if (mostrarSeleccionManual.value || modoRaCe.value === 'ia') cargarCatalogoRaCe()
-}, { deep: true })
-
-watch(ceChecked, () => {
-  if (!mostrarSeleccionManual.value) return
-  const seleccionCatalogo = []
-  catalogoRaCe.value.forEach(mod => {
-    mod.ras.forEach(ra => {
-      const ces = ra.criterios.filter(ce => ceChecked.value[ce.id])
-      if (ces.length) {
-        seleccionCatalogo.push({
-          modulo: mod.modulo,
-          ra_id: ra.id,
-          ra: ra.descripcion,
-          ce_ids: ces.map(c => c.id),
-          ce: ces.map(c => c.descripcion),
-          aplicacion: '',
-        })
-      }
-    })
-  })
-  form.value.evaluacion_oficial = [...seleccionCatalogo, ...raCeFueraDeCatalogo()]
+  if (paso.value === 3) cargarCatalogoRaCe()
 }, { deep: true })
 
 const busquedaRaCe = ref('')
@@ -731,26 +786,6 @@ const raCeDelReto = computed(() => {
   return orden.map(m => porModulo[m])
 })
 
-// RA/CE de este proyecto — lo que realmente se guarda y se verá en la ficha final
-// (form.evaluacion_oficial). Empieza siendo copia del reto, pero puede crecer con
-// "Sugerir otros con IA", "Seleccionar otros manualmente" o "Añadir RA/CE manualmente".
-// Cada ra lleva _flatIndex = su posición real en form.evaluacion_oficial, para poder
-// editar (borrar CE) sin tener que reconstruir el índice a partir del grid agrupado.
-const raCeDeEsteProyecto = computed(() => {
-  const porModulo = {}
-  const orden = []
-  form.value.evaluacion_oficial.forEach((entry, flatIdx) => {
-    const modulo = entry.modulo || 'Sin módulo'
-    if (!porModulo[modulo]) { porModulo[modulo] = { modulo, ras: [] }; orden.push(modulo) }
-    porModulo[modulo].ras.push({
-      descripcion: entry.ra || '',
-      criterios: Array.isArray(entry.ce) ? entry.ce : [],
-      _flatIndex: flatIdx,
-    })
-  })
-  return orden.map(m => porModulo[m])
-})
-
 // Serializa una lista evaluacion_oficial al mismo formato de texto plano que usa el
 // backend ("[Módulo]\nRA:...\nCE:\n  • ...") — solo para dar contexto textual a los
 // endpoints de IA de KPIs/fundamentación, que siguen esperando un string.
@@ -773,18 +808,6 @@ function clonarEvaluacionOficial(lista) {
     ce: Array.isArray(e.ce) ? [...e.ce] : (e.ce ? [e.ce] : []),
     aplicacion: e.aplicacion || '',
   }))
-}
-
-// Quita un único CE de "RA/CE de este proyecto" — si el RA se queda sin CE, se elimina
-// también. Nunca toca raCeDelReto (siempre se recalcula desde el reto vinculado, aparte).
-function eliminarCeDeProyecto(modIdx, raIdx, ceIdx) {
-  const ra = raCeDeEsteProyecto.value[modIdx]?.ras[raIdx]
-  if (!ra) return
-  const entry = form.value.evaluacion_oficial[ra._flatIndex]
-  if (!entry) return
-  entry.ce.splice(ceIdx, 1)
-  if (Array.isArray(entry.ce_ids)) entry.ce_ids.splice(ceIdx, 1)
-  if (!entry.ce.length) form.value.evaluacion_oficial.splice(ra._flatIndex, 1)
 }
 
 // Formulario "Añadir RA/CE manualmente" — para RA/CE que no están en el catálogo oficial.
@@ -829,14 +852,26 @@ const raCeDivergeDelReto = computed(() => {
   return JSON.stringify(normalizarLista(original)) !== JSON.stringify(normalizarLista(form.value.evaluacion_oficial))
 })
 
+// Totales de la propuesta (incluye RA/CE manuales y de módulos sin catálogo).
 const totalCeSeleccionados = computed(() =>
-  Object.values(ceChecked.value).filter(Boolean).length
+  form.value.evaluacion_oficial.reduce((n, e) => n + (e.ce?.length || 0), 0)
 )
-const totalRaSeleccionados = computed(() =>
-  catalogoRaCe.value.reduce((acc, mod) =>
-    acc + mod.ras.filter(ra => raEstado(ra) !== 'none').length, 0
-  )
-)
+const totalRaSeleccionados = computed(() => form.value.evaluacion_oficial.length)
+
+// RA/CE del reto sin ids (datos antiguos): se reconocen por texto «ra|ce».
+const textosDelReto = computed(() => {
+  const t = new Set()
+  ;(microretoVinculado.value?.evaluacion_oficial || []).forEach(e =>
+    (Array.isArray(e.ce) ? e.ce : [e.ce]).forEach(ce => t.add(`${normalizarTexto(e.ra)}|${normalizarTexto(ce)}`)))
+  return t
+})
+
+// CE que traía el reto vinculado — etiqueta «Del reto» en el árbol.
+const ceIdsDelReto = computed(() => {
+  const ids = new Set()
+  ;(microretoVinculado.value?.evaluacion_oficial || []).forEach(e => (e.ce_ids || []).forEach(id => ids.add(id)))
+  return ids
+})
 
 // ── Catálogos ─────────────────────────────────────────────────────────────────
 async function cargarCatalogos() {
@@ -1055,6 +1090,8 @@ async function cargarProyecto() {
     documentosLocales.value = recRes.data.documentos || [];
     imagenesLocales.value   = recRes.data.imagenes  || [];
     imagenPortadaId.value   = recRes.data.imagen_portada_id ?? null;
+    imagenPortadaUrl.value  = p.imagen_portada_url || '';
+    ultimaModificacion.value = p.updated_at || null;
   } finally {
     cargandoProyecto.value = false;
     cargando.value = false;
@@ -1066,20 +1103,35 @@ onMounted(async () => {
   await cargarCatalogos();
   if (!uuid.value && authStore.userCentroId) form.value.centro_id = authStore.userCentroId;
   await cargarProyecto();
+  // A partir de aquí, cualquier cambio del formulario cuenta como «sin guardar».
+  await nextTick();
+  seguimientoActivo.value = true;
   // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
   // await nextTick();
   // if (!modalBorradorAviso.value) showTourPrompt.value = true;
 });
 
 // ── Guardar ───────────────────────────────────────────────────────────────────
+function marcarGuardado(data) {
+  sinGuardar.value = false;
+  ultimaModificacion.value = data?.updated_at || new Date().toISOString();
+}
+
 async function guardar(siguientePaso) {
   guardando.value = true; errorMsg.value = '';
   try {
-    const payload = { ...form.value, paso_actual: siguientePaso };
+    const limpiar = lista => (lista || []).map(t => String(t).trim()).filter(Boolean);
+    const payload = {
+      ...form.value,
+      objetivos: { ...form.value.objetivos, lista: limpiar(form.value.objetivos.lista) },
+      kpis:      { ...form.value.kpis,      lista: limpiar(form.value.kpis.lista) },
+      paso_actual: siguientePaso,
+    };
     if (uuid.value) {
       const res = await api.put(`/startup/proyectos/${uuid.value}`, payload);
       proyectoValidado.value = !!res.data.empresa_validado;
       if (res.data.token_empresa) tokenEmpresa.value = res.data.token_empresa;
+      marcarGuardado(res.data);
     } else {
       const res = await api.post('/startup/proyectos', {
         titulo:       form.value.titulo,
@@ -1089,6 +1141,7 @@ async function guardar(siguientePaso) {
       const upd = await api.put(`/startup/proyectos/${uuid.value}`, payload);
       proyectoValidado.value = !!upd.data.empresa_validado;
       if (upd.data.token_empresa) tokenEmpresa.value = upd.data.token_empresa;
+      marcarGuardado(upd.data);
       router.replace({ name: 'startup-day-editar', params: { uuid: uuid.value } });
     }
     paso.value = siguientePaso;
@@ -1141,13 +1194,134 @@ async function seleccionarEstado(estado) {
   }
 }
 
-const progreso = computed(() => Math.round(((paso.value - 1) / (totalPasos - 1)) * 100));
+// Título de la cabecera en cada paso (titulo + destacado en el color del rol).
 const pasos = [
-  { num: 1, label: 'Básicos' }, { num: 2, label: 'Empresa' },
-  { num: 3, label: 'Currículo' },{ num: 4, label: 'El Reto' },
-  { num: 5, label: 'Propuesta' }, { num: 6, label: 'Objetivos' },
-  { num: 7, label: 'Publicar' },
+  { num: 1, label: 'Básicos',   titulo: 'Datos',         destacado: 'básicos' },
+  { num: 2, label: 'Empresa',   titulo: 'Datos de la',   destacado: 'empresa' },
+  { num: 3, label: 'Currículo', titulo: 'Currículo y',   destacado: 'criterios' },
+  { num: 4, label: 'El reto',   titulo: 'Definición del', destacado: 'reto' },
+  { num: 5, label: 'Propuesta', titulo: 'Diseño de la',  destacado: 'propuesta' },
+  { num: 6, label: 'Objetivos', titulo: 'Objetivos y',   destacado: 'KPIs' },
+  { num: 7, label: 'Publicar',  titulo: 'Revisar y',     destacado: 'publicar' },
 ];
+const pasoInfo = computed(() => pasos[paso.value - 1]);
+const subtituloPaso = computed(() => ({
+  1: uuid.value ? 'Revisa los datos de base de la propuesta.' : 'Elige el reto de la biblioteca al que responde esta propuesta y completa los datos de base.',
+  2: empresaDesdeReto.value ? 'Información autocompletada desde el reto. Solo lectura.' : 'Confirma o completa la información de la empresa colaboradora.',
+  3: 'Marca los módulos, resultados de aprendizaje y criterios de evaluación que se trabajan en esta propuesta.',
+  4: 'Define el contexto, la fundamentación y el reto central de la propuesta.',
+  5: 'Define las fases, la metodología y el cronograma del trabajo.',
+  6: 'Define los objetivos de la propuesta y los indicadores de éxito.',
+  7: 'Revisa la propuesta, añade materiales y decide cuándo enviarla a validar.',
+})[paso.value]);
+// Navegar a un paso ya alcanzado (sin reto vinculado solo se puede estar en el 1).
+function puedeIrAPaso(num) { return num === 1 || !!form.value.microreto_id }
+
+// ── Chips de cabecera y panel lateral (solo datos reales) ─────────────────────
+const cursoTexto = computed(() => {
+  const c = form.value.curso || microretoVinculado.value?.curso
+  return c ? (c === 'ambos_cursos' ? '1º y 2º curso' : `${String(c).replace('º', '')}º curso`) : ''
+})
+const tipoEmpresa = computed(() => {
+  const emp = empresas.value.find(e => e.id == form.value.empresa_id) || microretoVinculado.value?.empresa
+  if (!emp || emp.es_simulada === undefined) return ''
+  return emp.es_simulada ? 'ficticia' : 'real'
+})
+const estadoResumen = computed(() => {
+  const e = form.value.estado
+  if (e === 'propuesta') return proyectoValidado.value
+    ? { label: 'Validada por la empresa', clase: 'bg-emerald-50 text-emerald-800' }
+    : { label: 'Pendiente de validar', clase: 'bg-amber-50 text-amber-800' }
+  if (e === 'validado')   return { label: 'Validado', clase: 'bg-emerald-50 text-emerald-800' }
+  if (e === 'completado') return { label: 'Completado', clase: 'bg-sky-50 text-sky-800' }
+  if (e === 'archivado')  return { label: 'Archivado', clase: 'bg-gray-100 text-gray-700' }
+  return { label: 'Borrador', clase: 'bg-gray-100 text-gray-700' }
+})
+const portadaUrl = computed(() =>
+  imagenesLocales.value.find(i => i.id === imagenPortadaId.value)?.url || imagenPortadaUrl.value || ''
+)
+
+// Lista con iconos del resumen (crear_proyecto.png): empresa, familia, curso, duración, nivel.
+const datosResumen = computed(() => [
+  { icono: 'empresa',    valor: retoEmpresaNombre.value, ancho: true },
+  { icono: 'familia',    valor: retoFamiliaNombre.value, ancho: true },
+  { icono: 'curso',      valor: [cursoTexto.value, retoCicloNombre.value].filter(Boolean).join(' · '), ancho: true },
+  { icono: 'calendario', valor: microretoVinculado.value?.duracion ? String(microretoVinculado.value.duracion) : '' },
+  { icono: 'nivel',      valor: microretoVinculado.value?.nivel_grupo ? `Nivel: ${microretoVinculado.value.nivel_grupo}` : '' },
+].filter(d => d.valor))
+
+// Recuadro «Antes de continuar» de la columna derecha: avisos primero; si no hay, el
+// consejo del paso.
+const CONSEJO_PASO = {
+  1: 'Verifica que el reto y los datos del centro sean correctos. Podrás modificarlos más adelante.',
+  2: 'Revisa el email de contacto: se usará para enviar a la empresa el enlace de validación.',
+  3: 'Marca solo los criterios que de verdad se trabajan: aparecerán en la propuesta que verá la empresa.',
+  4: 'Cuanto más concretos sean la pregunta reto y los entregables, más fácil será evaluar el resultado.',
+  5: 'El resumen ejecutivo es lo primero que leerá la empresa al abrir el enlace de validación.',
+  6: 'Añade al menos un objetivo. Los KPIs son opcionales, pero hacen la propuesta evaluable.',
+  7: 'De momento es una propuesta: cuando la valide la empresa (o tú como docente), pasará a llamarse proyecto.',
+}
+const antesDeContinuar = computed(() => {
+  if (proyectoValidado.value) return { tipo: 'aviso', titulo: 'Ya validado por la empresa',
+    texto: 'Si modificas el contenido, la empresa tendrá que validarlo de nuevo.' }
+  if (paso.value === 3 && sugerenciaIaPendienteRevision.value) return { tipo: 'aviso', titulo: 'Sugerencias de la IA sin revisar',
+    texto: 'Revisa los RA/CE con la etiqueta «Sugerencia IA» y desmarca los que no encajen.' }
+  if (paso.value === 6 && sugerenciasPendientes.value) return { tipo: 'aviso', titulo: 'Sugerencias de la IA sin revisar',
+    texto: `Tienes ${sugerenciasPendientes.value} sugerencia(s) pendientes: añádelas o descártalas antes de seguir.` }
+  return { tipo: 'info', titulo: 'Antes de continuar', texto: CONSEJO_PASO[paso.value] }
+})
+
+// Tarjeta «Sugerencias con IA» del panel lateral: lanza la IA del paso actual.
+const iaPaso = computed(() => {
+  switch (paso.value) {
+    case 3: return { texto: 'Te ayudamos a seleccionar los RA y CE más adecuados para este reto.', boton: 'Sugerir RA y CE',
+                     cargando: cargandoIaRaCe.value, deshabilitado: !form.value.modulos_seleccionados.length,
+                     motivo: 'Marca al menos un módulo.' }
+    case 4: return { texto: 'Te proponemos la justificación y la innovación a partir del reto y su currículo.', boton: 'Sugerir fundamentación',
+                     cargando: sugiriendoFundamentacion.value }
+    case 5: return { texto: 'Te proponemos la metodología, el cronograma y el resumen a partir de las fases.', boton: 'Sugerir metodología',
+                     cargando: sugiriendoMetodologia.value }
+    case 6: return { texto: 'Te ayudamos a definir objetivos medibles y KPIs adecuados. Revisa cada sugerencia antes de añadirla.', boton: 'Generar sugerencias',
+                     cargando: sugiriendoObjetivos.value || sugirendoKpis.value }
+    default: return null
+  }
+})
+async function sugerirDesdePanel() {
+  if (paso.value === 3) return sugerirRaCeConIa()
+  if (paso.value === 4) return sugerirFundamentacion()
+  if (paso.value === 5) return sugerirMetodologia()
+  if (paso.value === 6) { await sugerirObjetivos(); await sugerirKpis() }
+}
+
+// ── Estado de guardado («Guardado» / «Guardando…» / «Sin guardar») ───────────
+// Se guarda al pulsar Siguiente (no hay botón «Guardar borrador»): este indicador y el
+// aviso al salir evitan perder cambios.
+const sinGuardar         = ref(false)
+const ultimaModificacion = ref(null)
+const seguimientoActivo  = ref(false)
+watch(form, () => { if (seguimientoActivo.value && !guardando.value) sinGuardar.value = true }, { deep: true })
+const horaGuardado = computed(() => {
+  if (!ultimaModificacion.value) return ''
+  const d = new Date(ultimaModificacion.value)
+  if (isNaN(d)) return ''
+  const hoy = new Date().toDateString() === d.toDateString()
+  return hoy
+    ? d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+})
+function avisoAntesDeCerrar(e) {
+  if (!sinGuardar.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+window.addEventListener('beforeunload', avisoAntesDeCerrar)
+onUnmounted(() => window.removeEventListener('beforeunload', avisoAntesDeCerrar))
+onBeforeRouteLeave((to) => {
+  // El paso de /proyectos/crear a /proyectos/:uuid/editar tras el primer guardado no es salir.
+  if (to.name === 'startup-day-editar' && to.params.uuid === uuid.value) return true
+  if (sinGuardar.value && !window.confirm('Tienes cambios sin guardar en esta propuesta. Si sales ahora, se perderán. ¿Salir igualmente?')) return false
+  return true
+})
 
 // ── Tour guiado ───────────────────────────────────────────────────────────────
 const { tourActivo } = useUIState();
@@ -1201,71 +1375,6 @@ onUnmounted(() => { tourActivo.value = false; });
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-175 h-100
                 bg-primary-400 opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
-    <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
-      <CabeceraSeccion titulo="Taller de" destacado="Ideas" color="text-centros" :volver="{ name: 'startup-day' }"
-                       subtitulo="Convierte una propuesta en un proyecto completo, paso a paso.">
-        <!-- Ayuda: mismo botón y sitio en todas las vistas -->
-        <button type="button" @click="modoGuia = true"
-                class="accion-secundaria" title="Guía de este paso">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          Ayuda
-        </button>
-      </CabeceraSeccion>
-    </div>
-
-    <!-- Barra de progreso superior -->
-    <div class="sticky top-16 z-20 bg-[#F8FAFC]/95 backdrop-blur border-b border-gray-100 shadow-sm">
-      <div class="max-w-3xl mx-auto px-4 py-3">
-        <div class="flex items-center gap-4 mb-2">
-          <div class="flex-1 min-w-0">
-            <p class="text-[9px] font-black uppercase tracking-[0.25em] text-centros">
-              Taller de Ideas · Paso {{ paso }} de {{ totalPasos }}
-            </p>
-            <p class="text-xs font-bold text-gray-600 truncate">{{ form.titulo || 'Nuevo proyecto' }}</p>
-          </div>
-          <span class="text-xs font-black text-gray-400 shrink-0">{{ progreso }}%</span>
-        </div>
-
-        <!-- Barra progreso -->
-        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-          <div class="h-full bg-linear-to-r from-centros to-primary-400 rounded-full transition-all duration-500"
-               :style="{ width: progreso + '%' }"/>
-        </div>
-
-        <!-- Pasos mini -->
-        <div class="flex gap-1 overflow-x-auto scrollbar-none">
-          <button v-for="p in pasos" :key="p.num"
-                  @click="(p.num === 1 || form.microreto_id) && p.num <= pasoMaxAlcanzado && (paso = p.num)"
-                  :class="[
-                    'flex-1 min-w-13 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all',
-                    p.num === paso
-                      ? 'bg-centros/10 text-centros border border-centros/30'
-                      : (p.num === 1 || form.microreto_id) && p.num <= pasoMaxAlcanzado
-                        ? 'bg-gray-100 text-gray-500 hover:text-centros border border-gray-200 cursor-pointer'
-                        : 'bg-transparent text-gray-300 border border-transparent cursor-default'
-                  ]">
-            {{ p.label }}
-          </button>
-        </div>
-
-        <!-- Aviso: proyecto validado por empresa -->
-        <div v-if="proyectoValidado"
-             class="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
-          <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          </svg>
-          <p class="text-[10px] font-bold text-amber-700 leading-tight">
-            Este proyecto ya ha sido validado por la empresa. Modificar el contenido requerirá una nueva validación.
-          </p>
-        </div>
-      </div>
-    </div>
-
     <!-- ══ TOUR OVERLAY ══════════════════════════════════════════════════════ -->
     <Transition
       enter-active-class="transition-all duration-200 ease-out"
@@ -1279,23 +1388,23 @@ onUnmounted(() => { tourActivo.value = false; });
              @click.stop>
           <!-- Cabecera con progreso -->
           <div class="flex items-center gap-3 mb-5">
-            <div class="w-10 h-10 rounded-2xl bg-centros/20 flex items-center justify-center
-                        text-centros font-black text-base shrink-0">
+            <div class="w-10 h-10 rounded-2xl bg-rol/20 flex items-center justify-center
+                        text-rol-fuerte font-bold text-base shrink-0">
               {{ paso }}
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1.5">
+              <p class="text-xs font-bold uppercase tracking-widest text-white/40 mb-1.5">
                 Guía · Paso {{ paso }} de {{ totalPasos }}
               </p>
               <div class="flex gap-1">
                 <span v-for="i in totalPasos" :key="i"
                       class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= paso ? 'bg-centros w-5' : 'bg-white/20 w-3'" />
+                      :class="i <= paso ? 'bg-rol-fuerte w-5' : 'bg-white/20 w-3'" />
               </div>
             </div>
           </div>
           <!-- Título del paso -->
-          <p class="text-[10px] font-black uppercase tracking-widest text-centros mb-2">
+          <p class="text-xs font-bold uppercase tracking-widest text-rol-fuerte mb-2">
             {{ guiaWizard[paso - 1].titulo }}
           </p>
           <!-- Descripción -->
@@ -1305,13 +1414,13 @@ onUnmounted(() => { tourActivo.value = false; });
           <!-- Botones -->
           <div class="flex items-center gap-2">
             <button @click="modoGuia = false"
-                    class="flex-1 py-2.5 rounded-full bg-centros text-white text-[10px] font-black
-                           uppercase tracking-widest hover:bg-centros/90 transition-all">
+                    class="flex-1 py-2.5 rounded-full bg-rol-fuerte text-white text-xs font-bold
+                           uppercase tracking-widest hover:bg-rol/90 transition-all">
               Entendido ✓
             </button>
             <button @click="modoGuia = false"
                     class="px-3 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/40
-                           text-[10px] font-black uppercase tracking-widest hover:text-white/60 transition-all">
+                           text-xs font-bold uppercase tracking-widest hover:text-white/60 transition-all">
               Cerrar
             </button>
           </div>
@@ -1319,10 +1428,78 @@ onUnmounted(() => { tourActivo.value = false; });
       </div>
     </Transition>
 
-    <!-- Contenido -->
-    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8">
-      <div class="flex gap-8 items-start">
-      <div class="flex-1 min-w-0">
+    <!-- Contenido: columna principal + panel lateral (diseño crear_proyecto*.png) -->
+    <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-5 xl:px-8 2xl:px-10">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-5 xl:gap-8">
+      <div class="min-w-0 flex-1 space-y-5">
+
+      <!-- Cabecera: misma pieza que el resto de vistas; título según el paso -->
+      <CabeceraSeccion plano :titulo="pasoInfo.titulo" :destacado="pasoInfo.destacado" color="text-rol-fuerte"
+                       :antetitulo="`Taller de Ideas · Paso ${paso} de ${totalPasos}`"
+                       :volver="{ name: 'startup-day' }" volver-label="Volver a proyectos" :subtitulo="subtituloPaso">
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Ayuda: mismo botón y sitio en todas las vistas -->
+          <button type="button" @click="modoGuia = true" aria-label="Ayuda: guía de este paso"
+                  class="accion-secundaria max-sm:w-10 max-sm:px-0" title="Guía de este paso">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="max-sm:sr-only">Ayuda</span>
+          </button>
+        </div>
+      </CabeceraSeccion>
+
+      <!-- Chips con datos reales + estado de guardado (diseño crear_proyecto.png) -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span v-if="retoEmpresaNombre" class="chip-taller max-w-full">
+          <svg class="h-4 w-4 shrink-0 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span class="truncate">{{ retoEmpresaNombre }}</span>
+        </span>
+        <span v-if="cursoTexto || retoCicloNombre" class="chip-taller max-w-full">
+          <svg class="h-4 w-4 shrink-0 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="truncate">{{ [cursoTexto, retoCicloNombre].filter(Boolean).join(' · ') }}</span>
+        </span>
+        <span v-if="microretoVinculado?.duracion" class="chip-taller">
+          <svg class="h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          {{ microretoVinculado.duracion }}
+        </span>
+        <span v-if="microretoVinculado?.nivel_grupo" class="chip-taller">
+          <svg class="h-4 w-4 shrink-0 text-alumnos-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0h6m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v14"/></svg>
+          Nivel: {{ microretoVinculado.nivel_grupo }}
+        </span>
+
+        <!-- Estado de guardado (se guarda al pulsar Siguiente) -->
+        <span class="inline-flex items-center gap-1.5 px-1 text-[13px]" role="status" aria-live="polite">
+          <template v-if="guardando">
+            <svg class="h-4 w-4 animate-spin text-gray-500" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
+            <span class="text-gray-600">Guardando…</span>
+          </template>
+          <template v-else-if="sinGuardar">
+            <span class="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+            <span class="font-medium text-amber-800">Sin guardar · se guarda al pulsar Siguiente</span>
+          </template>
+          <template v-else-if="horaGuardado">
+            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-texto-secundario">Última modificación: {{ horaGuardado }}</span>
+          </template>
+        </span>
+      </div>
+
+      <TallerPasos :pasos="pasos" :actual="paso" :maximo="pasoMaxAlcanzado" :puede-ir="puedeIrAPaso"
+                   @ir="paso = $event" />
+
+      <!-- Aviso: proyecto validado por empresa -->
+      <div v-if="proyectoValidado"
+           class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 lg:hidden">
+        <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        <p class="text-sm text-amber-800">
+          Este proyecto ya ha sido validado por la empresa. Modificar el contenido requerirá una nueva validación.
+        </p>
+      </div>
 
       <!-- Error -->
       <div v-if="errorMsg"
@@ -1336,12 +1513,12 @@ onUnmounted(() => { tourActivo.value = false; });
                   leave-active-class="transition-all duration-300"
                   leave-to-class="opacity-0 -translate-y-2">
         <div v-if="autocompletando"
-             class="mb-4 flex items-center gap-3 bg-centros/8 border border-centros/25
+             class="mb-4 flex items-center gap-3 bg-rol/8 border border-rol/25
                     rounded-2xl px-4 py-3">
-          <svg class="w-4 h-4 text-centros shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+          <svg class="w-4 h-4 text-rol-fuerte shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
           </svg>
-          <p class="text-sm font-semibold text-centros">
+          <p class="text-sm font-semibold text-rol-fuerte">
             Datos autocompletados desde el reto vinculado. Revisa y ajusta lo que necesites.
           </p>
         </div>
@@ -1349,71 +1526,54 @@ onUnmounted(() => { tourActivo.value = false; });
 
       <!-- Spinner carga inicial -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-32">
-        <svg class="animate-spin w-10 h-10 text-centros mb-3" viewBox="0 0 24 24">
+        <svg class="animate-spin w-10 h-10 text-rol-fuerte mb-3" viewBox="0 0 24 24">
           <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
         </svg>
-        <p class="text-centros font-black tracking-widest uppercase text-xs animate-pulse">Cargando...</p>
+        <p class="text-rol-fuerte font-bold tracking-widest uppercase text-xs animate-pulse">Cargando...</p>
       </div>
 
       <template v-else>
 
         <!-- ═══ PASO 1: Básicos ═══ -->
         <div v-if="paso === 1">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 1</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Datos básicos</h2>
-            <p class="text-gray-500 text-sm mt-1">
-              {{ uuid ? 'Revisa los datos de base de la propuesta.' : 'Elige el reto de la biblioteca al que responde esta propuesta y completa los datos de base.' }}
-            </p>
-          </div>
 
-            <!-- Selector de reto (creación) -->
-            <div v-if="!uuid"
-                 class="bg-centros/[0.04] rounded-4xl border-2 border-centros/25 shadow-sm
+            <!-- Reto elegido (diseño crear_encuentro.png) -->
+            <TarjetaRetoAsociado v-if="microretoVinculado" class="mb-8"
+                                 :titulo="microretoVinculado.titulo"
+                                 :pregunta="microretoVinculado.pregunta_reto || ''"
+                                 :empresa="retoEmpresaNombre"
+                                 :tipo-empresa="tipoEmpresa"
+                                 :estado="uuid ? estadoResumen : null"
+                                 :familia="microretoVinculado.familia || ''"
+                                 :curso="cursoLabel(microretoVinculado.curso) ? `${cursoLabel(microretoVinculado.curso)} curso` : ''"
+                                 :ciclo="microretoVinculado.ciclo || ''"
+                                 :puede-cambiar="!uuid"
+                                 @cambiar="limpiarReto" />
+
+            <!-- Selector de reto (creación, mientras no hay reto elegido) -->
+            <div v-if="!uuid && !microretoVinculado"
+                 class="bg-rol/[0.04] rounded-2xl border-2 border-rol/25 shadow-sm
                         p-6 space-y-4 mb-8">
 
               <!-- Header -->
-              <div class="flex items-start justify-between gap-3 pb-3 border-b border-centros/15">
+              <div class="flex items-start justify-between gap-3 pb-3 border-b border-rol/15">
                 <div class="flex items-start gap-3">
-                  <div class="w-8 h-8 rounded-xl bg-centros/15 border border-centros/30
+                  <div class="w-8 h-8 rounded-xl bg-rol/15 border border-rol/30
                               flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a.5.5 0 01-.354.146H9.88a.5.5 0 01-.354-.146l-.345-.346z"/>
                     </svg>
                   </div>
                   <div>
-                    <p class="text-xs font-black text-[#121212]">Reto <span class="text-red-500">*</span></p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">Selecciona el reto de la biblioteca al que responde esta propuesta.</p>
+                    <p class="text-xs font-bold text-[#121212]">Reto <span class="text-red-500">*</span></p>
+                    <p class="text-xs text-gray-400 mt-0.5">Selecciona el reto de la biblioteca al que responde esta propuesta.</p>
                   </div>
-                </div>
-                <button v-if="microretoVinculado" @click="limpiarReto"
-                        class="shrink-0 px-3 py-1.5 rounded-full bg-white border border-gray-200
-                               text-[10px] font-black uppercase tracking-widest text-gray-400
-                               hover:border-centros hover:text-centros transition-all">
-                  Cambiar
-                </button>
-              </div>
-
-              <!-- Reto seleccionado -->
-              <div v-if="microretoVinculado"
-                   class="rounded-2xl border border-centros/30 bg-centros/5 p-4">
-                <p class="text-[9px] font-black uppercase tracking-widest text-centros mb-1">Seleccionado</p>
-                <p class="text-sm font-black text-[#1F2937] leading-snug mb-2">{{ microretoVinculado.titulo }}</p>
-                <div class="flex flex-wrap gap-1.5">
-                  <span v-if="microretoVinculado.empresa?.nombre_comercial"
-                        class="tag tag-gray">{{ microretoVinculado.empresa.nombre_comercial }}</span>
-                  <span v-if="microretoVinculado.familia" class="tag tag-gray">{{ microretoVinculado.familia }}</span>
-                  <span v-if="microretoVinculado.ciclo"   class="tag tag-gray">{{ microretoVinculado.ciclo }}</span>
-                  <span v-if="microretoVinculado.curso"
-                        class="tag tag-lime">{{ cursoLabel(microretoVinculado.curso) }}</span>
                 </div>
               </div>
 
               <!-- Buscador + filtros + grid -->
-              <div v-else class="space-y-3">
+              <div class="space-y-3">
 
                 <!-- Buscador -->
                 <div class="relative">
@@ -1429,33 +1589,33 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Filtros -->
                 <div class="flex flex-wrap gap-2">
                   <select v-model="retoFiltroFamilia"
-                          class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
+                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-gray-200
                                  bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
-                                 focus:ring-1 focus:ring-centros/40">
+                                 focus:ring-1 focus:ring-rol/40">
                     <option value="">Familia</option>
                     <option v-for="f in familiasFiltroRetos" :key="f" :value="f">{{ f }}</option>
                   </select>
                   <select v-model="retoFiltroCiclo"
-                          class="text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200
+                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-gray-200
                                  bg-white text-gray-600 hover:border-gray-300 transition-colors focus:outline-none
-                                 focus:ring-1 focus:ring-centros/40">
+                                 focus:ring-1 focus:ring-rol/40">
                     <option value="">Ciclo</option>
                     <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
                   </select>
-                  <div class="flex rounded-full border border-gray-200 overflow-hidden text-[11px] font-black uppercase tracking-widest">
+                  <div class="flex rounded-full border border-gray-200 overflow-hidden text-xs font-bold uppercase tracking-widest">
                     <button v-for="op in ['', '1º', '2º', 'ambos_cursos']" :key="op"
                             @click="retoFiltroCurso = op"
                             :title="op === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''"
                             :class="['px-3 py-1.5 rounded-full transition-colors',
                                      retoFiltroCurso === op
-                                       ? 'bg-centros text-white'
+                                       ? 'bg-rol-fuerte text-white'
                                        : 'bg-white text-gray-400 hover:bg-gray-50']">
                       {{ op === '' ? 'Todos' : op === 'ambos_cursos' ? 'Ambos Cursos' : op }}
                     </button>
                   </div>
                   <button v-if="retoBusqueda || retoFiltroFamilia || retoFiltroCiclo || retoFiltroCurso"
                           @click="retoBusqueda = ''; retoFiltroFamilia = ''; retoFiltroCiclo = ''; retoFiltroCurso = ''"
-                          class="text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full
+                          class="text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full
                                  border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400
                                  transition-colors">
                     Limpiar
@@ -1466,12 +1626,12 @@ onUnmounted(() => { tourActivo.value = false; });
                 <button type="button" @click="retosAbiertos = !retosAbiertos"
                         :aria-expanded="retosAbiertos"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl
-                               bg-white border border-gray-200 hover:border-centros/40
+                               bg-white border border-gray-200 hover:border-rol/40
                                transition-colors text-left">
-                  <span class="text-xs font-black text-[#1F2937]">
+                  <span class="text-xs font-bold text-[#1F2937]">
                     {{ retosAbiertos ? 'Ocultar retos' : 'Ver retos de la biblioteca' }}
-                    <span class="ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-full
-                                 bg-centros/10 text-centros border border-centros/20">
+                    <span class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full
+                                 bg-rol/10 text-rol-fuerte border border-rol/20">
                       {{ retosFiltrados.length }}
                     </span>
                   </span>
@@ -1489,39 +1649,39 @@ onUnmounted(() => { tourActivo.value = false; });
                 </p>
 
                 <!-- Grid de miniaturas -->
-                <div v-else class="grid sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
+                <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[26rem] overflow-y-auto pr-1 -mr-1">
                   <div v-for="mr in retosFiltrados" :key="mr.id"
                        class="relative rounded-2xl border border-gray-100 bg-white
-                              hover:border-centros/40 hover:bg-centros/5 hover:shadow-sm
+                              hover:border-rol/40 hover:bg-rol/5 hover:shadow-sm
                               transition-all group">
                     <button @click="seleccionarReto(mr)"
                             class="text-left w-full px-4 pt-3.5 pb-10">
                       <div class="flex items-start justify-between gap-2 mb-1.5">
-                        <p class="text-sm font-black text-[#1F2937] leading-snug line-clamp-2
-                                  group-hover:text-centros transition-colors">
+                        <p class="text-sm font-bold text-[#1F2937] leading-snug line-clamp-2
+                                  group-hover:text-rol-fuerte transition-colors">
                           {{ mr.titulo }}
                         </p>
                         <span v-if="mr.curso"
-                              class="shrink-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full
+                              class="shrink-0 text-xs font-bold uppercase px-1.5 py-0.5 rounded-full
                                      bg-primary-400/20 text-primary-700 border border-primary-400/30">
                           {{ cursoLabel(mr.curso) }}
                         </span>
                       </div>
                       <p v-if="mr.pregunta_reto"
-                         class="text-[11px] text-gray-400 leading-relaxed line-clamp-2 mb-2">
+                         class="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-2">
                         {{ mr.pregunta_reto }}
                       </p>
                       <div class="flex flex-wrap gap-1">
                         <span v-if="mr.empresa?.nombre_comercial"
                               class="tag tag-gray">{{ mr.empresa.nombre_comercial }}</span>
                         <span v-if="mr.familia" class="tag tag-gray">{{ mr.familia }}</span>
-                        <span v-if="mr.ciclo"   class="tag tag-gray text-[9px]">{{ mr.ciclo }}</span>
+                        <span v-if="mr.ciclo"   class="tag tag-gray text-xs">{{ mr.ciclo }}</span>
                       </div>
                     </button>
                     <button @click.stop="microretoModalId = mr.id"
                             class="absolute bottom-2.5 right-3 flex items-center gap-1
-                                   text-[10px] font-black uppercase tracking-widest
-                                   text-gray-400 hover:text-centros transition-colors">
+                                   text-xs font-bold uppercase tracking-widest
+                                   text-gray-400 hover:text-rol-fuerte transition-colors">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -1539,25 +1699,25 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-4xl border border-gray-200 shadow-sm p-6 space-y-5">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
               <div class="pb-3 border-b border-gray-100">
-                <p class="text-xs font-black text-[#121212]">Datos de la propuesta</p>
-                <p class="text-[11px] text-gray-400 mt-0.5">Completa la información básica de tu propuesta.</p>
+                <p class="text-xs font-bold text-[#121212]">Datos de la propuesta</p>
+                <p class="text-xs text-gray-400 mt-0.5">Completa la información básica de tu propuesta.</p>
               </div>
               <div>
                 <label class="field-label">Título de la propuesta *</label>
                 <input v-model="form.titulo" type="text" required class="field-input"
                        placeholder="Ej: Rediseño de packaging sostenible para EcoFab" />
               </div>
-              <div class="grid sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 <!-- Empresa: read-only del reto -->
                 <div>
                   <label class="field-label flex items-center gap-1.5">
                     Empresa colaboradora
                     <span v-if="microretoVinculado"
-                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-centros/10 text-centros border border-centros/20">
+                          class="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-rol/10 text-rol-fuerte border border-rol/20">
                       Del reto
                     </span>
                   </label>
@@ -1581,8 +1741,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   <label class="field-label flex items-center gap-1.5">
                     Centro educativo
                     <span v-if="centroBloqueado"
-                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-centros/10 text-centros border border-centros/20">
+                          class="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-rol/10 text-rol-fuerte border border-rol/20">
                       Tu centro
                     </span>
                   </label>
@@ -1606,8 +1766,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   <label class="field-label flex items-center gap-1.5">
                     Familia profesional
                     <span v-if="microretoVinculado"
-                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-centros/10 text-centros border border-centros/20">
+                          class="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-rol/10 text-rol-fuerte border border-rol/20">
                       Del reto
                     </span>
                   </label>
@@ -1631,8 +1791,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   <label class="field-label flex items-center gap-1.5">
                     Ciclo formativo
                     <span v-if="microretoVinculado"
-                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-centros/10 text-centros border border-centros/20">
+                          class="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-rol/10 text-rol-fuerte border border-rol/20">
                       Del reto
                     </span>
                   </label>
@@ -1656,8 +1816,8 @@ onUnmounted(() => { tourActivo.value = false; });
                   <label class="field-label flex items-center gap-1.5">
                     Curso
                     <span v-if="microretoVinculado"
-                          class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5
-                                 rounded-full bg-centros/10 text-centros border border-centros/20">
+                          class="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5
+                                 rounded-full bg-rol/10 text-rol-fuerte border border-rol/20">
                       Del reto
                     </span>
                   </label>
@@ -1678,7 +1838,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
                 <!-- Datos de Docente Responsable -->
                 <div class="sm:col-span-2 pt-3 mt-1 border-t border-gray-100">
-                  <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Datos de Docente Responsable</p>
+                  <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Datos de Docente Responsable</p>
                 </div>
                 <div>
                   <label class="field-label">Docente responsable</label>
@@ -1718,22 +1878,13 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- ═══ PASO 2: Empresa ═══ -->
         <div v-if="paso === 2">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 2</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Datos de la empresa</h2>
-            <p class="text-gray-500 text-sm mt-1">
-              {{ empresaDesdeReto ? 'Información autocompleta desde el reto. Solo lectura.' : 'Confirma o completa la información de la empresa colaboradora.' }}
-            </p>
-          </div>
 
-          <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
 
             <!-- Cabecera "Del reto" cuando es read-only -->
             <div v-if="empresaDesdeReto"
-                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-centros/8
-                        border border-centros/20 text-[11px] font-bold text-centros">
+                 class="flex items-center gap-2 px-3 py-2 rounded-xl bg-rol/8
+                        border border-rol/20 text-xs font-bold text-rol-fuerte">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -1743,7 +1894,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
             <!-- Read-only (empresa del reto) -->
             <template v-if="empresaDesdeReto">
-              <div class="grid sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div v-for="[label, val] in [
                   ['Nombre / Razón social', form.datos_empresa.nombre],
                   ['CIF',                  form.datos_empresa.cif],
@@ -1762,7 +1913,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                       </svg>
-                      <span class="truncate">{{ val || '—' }}</span>
+                      <span class="min-w-0 truncate">{{ val || '—' }}</span>
                     </div>
                   </div>
                 </div>
@@ -1778,7 +1929,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
             <!-- Editable (sin reto o empresa diferente) -->
             <template v-else>
-              <div class="grid sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label class="field-label">Nombre / Razón social</label><input v-model="form.datos_empresa.nombre" type="text" class="field-input" /></div>
                 <div><label class="field-label">CIF</label><input v-model="form.datos_empresa.cif" type="text" class="field-input" /></div>
                 <div><label class="field-label">Sector</label><input v-model="form.datos_empresa.sector" type="text" class="field-input" /></div>
@@ -1805,522 +1956,238 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- ═══ PASO 3: Módulos y RA/CE ═══ -->
         <div v-if="paso === 3">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 3</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Módulos y currículum</h2>
-            <p class="text-gray-500 text-sm mt-1">Selecciona los módulos del ciclo que se trabajan en esta propuesta.</p>
-          </div>
+          <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
 
-          <div class="space-y-4">
-
-            <!-- Callout módulos autocompletados -->
-            <Transition enter-active-class="transition-all duration-300"
-                        enter-from-class="opacity-0 -translate-y-2"
-                        leave-active-class="transition-all duration-200"
-                        leave-to-class="opacity-0 -translate-y-2">
-              <div v-if="modulosAutocompletados"
-                   class="flex items-start gap-3 bg-centros/8 border border-centros/25
-                          rounded-2xl px-4 py-3">
-                <svg class="w-4 h-4 text-centros shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-black text-centros mb-0.5">Módulos seleccionados automáticamente</p>
-                  <p class="text-xs text-centros/70 leading-relaxed">
-                    Esto se basa en el reto vinculado. Si crees que se trabajan otros módulos,
-                    revisa el reto para que esté acorde, o ajusta la selección manualmente.
-                  </p>
-                </div>
-                <button @click="modulosAutocompletados = false"
-                        class="shrink-0 text-centros/40 hover:text-centros transition-colors mt-0.5">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-            </Transition>
-
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Módulos formativos</p>
-              <div v-if="!modulos.length" class="text-center py-8 text-gray-400 text-sm">
-                {{ form.ciclo_id ? 'Cargando módulos…' : 'Selecciona un ciclo en el paso 1 para ver los módulos' }}
-              </div>
-              <div v-else class="grid sm:grid-cols-2 gap-2">
-                <button v-for="m in modulos" :key="m.id" @click="toggleModulo(m)"
-                        :class="[
-                          'text-left px-4 py-3 rounded-2xl border text-sm font-semibold transition-all',
-                          moduloSeleccionado(m.id)
-                            ? 'bg-centros/10 border-centros/30 text-centros'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-centros/40 hover:text-[#1F2937]'
-                        ]">
-                  <span class="text-[10px] text-gray-400 block mb-0.5 font-normal">{{ m.codigoBOE }}</span>
-                  {{ m.nombre }}
-                </button>
-              </div>
-            </div>
-
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6">
-              <!-- Cabecera -->
-              <div class="flex items-start justify-between gap-3 mb-4">
-                <label class="field-label">Resultados de Aprendizaje y Criterios de Evaluación</label>
-                <Transition enter-active-class="transition-all duration-300"
-                            enter-from-class="opacity-0 scale-75"
-                            leave-active-class="transition-all duration-200"
-                            leave-to-class="opacity-0 scale-75">
-                  <span v-if="raCeAutocompletado"
-                        class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full
-                               bg-amber-50 border border-amber-200 text-amber-600
-                               text-[9px] font-black uppercase tracking-widest">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    Del reto
-                  </span>
-                </Transition>
-              </div>
-
-              <!-- Callout autocompletado -->
-              <Transition enter-active-class="transition-all duration-300"
-                          enter-from-class="opacity-0 -translate-y-2"
-                          leave-active-class="transition-all duration-200"
-                          leave-to-class="opacity-0 -translate-y-2">
-                <div v-if="raCeAutocompletado"
-                     class="flex items-start gap-3 bg-amber-50 border border-amber-200
-                            rounded-2xl px-4 py-3 mb-4">
-                  <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  <p class="text-xs text-amber-700 leading-relaxed flex-1">
-                    RA y CE generados a partir del reto vinculado. Revisa que estén alineados con tu
-                    programación o ajusta la selección.
-                  </p>
-                  <button @click="raCeAutocompletado = false"
-                          class="shrink-0 text-amber-400 hover:text-amber-600 transition-colors mt-0.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
-              </Transition>
-
-              <!-- Selector de modo -->
-              <div class="flex gap-2 mb-5 p-1 bg-gray-100 rounded-full">
-                <button v-for="modo in [
-                    { key: 'ia',     label: 'Sugerir con IA',   icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
-                    { key: 'texto',  label: 'Datos de la propuesta', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-                  ]" :key="modo.key" @click="modoRaCe = modo.key"
-                  :class="[
-                    'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all',
-                    modoRaCe === modo.key
-                      ? 'bg-white shadow text-centros'
-                      : 'text-gray-500 hover:text-gray-700'
-                  ]">
-                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="modo.icon"/>
-                  </svg>
-                  <span class="hidden sm:inline">{{ modo.label }}</span>
-                </button>
-              </div>
-
-              <!-- ── MODO IA ── -->
-              <div v-if="modoRaCe === 'ia'" class="space-y-4">
-                <div class="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 text-sm text-violet-700 leading-relaxed">
-                  La IA analizará el contexto de la propuesta y los módulos seleccionados para sugerir los RA y CE más relevantes del catálogo oficial.
-                </div>
-                <button @click="sugerirRaCeConIa"
-                        :disabled="cargandoIaRaCe || !form.modulos_seleccionados.length"
-                        class="w-full py-4 rounded-full text-sm font-black tracking-wide transition-all flex items-center justify-center gap-2
-                               bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40">
-                  <template v-if="cargandoIaRaCe">
-                    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-                    </svg>
-                    Analizando currículum…
+            <!-- Cabecera de la tarjeta -->
+            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0">
+                <h2 class="text-lg font-bold text-azul-noche">Resultados de aprendizaje y criterios de evaluación</h2>
+                <p class="mt-0.5 text-sm text-texto-secundario" aria-live="polite">
+                  <template v-if="totalRaSeleccionados">
+                    <strong class="font-semibold text-azul-noche">{{ totalCeSeleccionados }} CE</strong> en
+                    <strong class="font-semibold text-azul-noche">{{ totalRaSeleccionados }} RA</strong> seleccionados
+                    · {{ form.modulos_seleccionados.length }} módulo(s)
                   </template>
-                  <template v-else>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                    </svg>
-                    Sugerir otros con IA
-                  </template>
-                </button>
-                <p v-if="!form.modulos_seleccionados.length" class="text-xs text-gray-400 text-center">
-                  Selecciona al menos un módulo para usar esta opción.
+                  <template v-else>Marca un módulo y elige sus criterios de evaluación.</template>
                 </p>
               </div>
+              <button type="button" @click="sugerirRaCeConIa"
+                      :disabled="cargandoIaRaCe || !form.modulos_seleccionados.length"
+                      :title="form.modulos_seleccionados.length ? 'La IA propone RA y CE del catálogo oficial' : 'Marca al menos un módulo'"
+                      class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50">
+                <svg v-if="cargandoIaRaCe" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg>
+                <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                {{ cargandoIaRaCe ? 'Analizando currículo…' : 'Sugerir con IA' }}
+              </button>
+            </div>
 
-              <!-- ── MODO DATOS DE LA PROPUESTA ── -->
-              <div v-else class="space-y-5">
+            <div class="space-y-3">
+              <!-- Aviso: selección autocompletada desde el reto -->
+              <div v-if="raCeAutocompletado || modulosAutocompletados"
+                   class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="min-w-0 flex-1 text-sm text-amber-900">
+                  Los módulos, RA y CE vienen del reto vinculado. Revisa que estén alineados con la programación del ciclo:
+                  puedes ajustar la selección o pedir una propuesta a la IA.
+                </p>
+                <button type="button" @click="raCeAutocompletado = false; modulosAutocompletados = false"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
+                        aria-label="Cerrar aviso">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
 
-                <!-- Grid(s) de RA/CE: del reto vinculado y/o de esta propuesta -->
-                <div>
+              <!-- Aviso: la IA ha añadido RA/CE -->
+              <div v-if="sugerenciaIaPendienteRevision"
+                   class="flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 sm:flex-row sm:items-center">
+                <p class="min-w-0 flex-1 text-sm text-violet-900">
+                  La IA ha marcado nuevos RA/CE con la etiqueta <strong class="font-semibold">Sugerencia IA</strong>.
+                  Revísalos y desmarca los que no encajen.
+                </p>
+                <button type="button" @click="marcarSugerenciasRevisadas"
+                        class="inline-flex h-9 shrink-0 items-center self-start rounded-full bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800 sm:self-auto">
+                  Ya los he revisado
+                </button>
+              </div>
 
-                  <!-- Aviso: la propuesta ya no coincide con el original del reto -->
-                  <div v-if="raCeDivergeDelReto"
-                       class="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-3">
-                    <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                    </svg>
-                    <p class="text-xs text-amber-700 leading-relaxed">
-                      Si decides añadir otros RA/CE y/o cambiar los existentes, estos no coincidirá con los que aparecen en la ficha del reto asociado.
-                      Ten en cuenta que la sección "RA/CE de esta propuesta" contendrán los definitivos, aunque en el reto original puedan aparecer otros
-                      (los que la IA sugirió originalmente en la generación del reto). Revisa ambas secciones
+              <!-- RA y CE originales del reto = selección de la propuesta (parte de ellos) -->
+              <div class="rounded-xl border border-rol/20 bg-rol/[0.03] p-3 sm:p-4">
+                <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <h3 class="text-base font-bold text-azul-noche">RA y CE originales del reto</h3>
+                    <p class="mt-0.5 text-sm text-texto-secundario">
+                      <template v-if="raCeDivergeDelReto">Has cambiado la selección del reto: en la propuesta cuentan los de esta lista.</template>
+                      <template v-else-if="raCeDelReto.length">Son los que propuso el reto. Quita los que no se trabajen o añade otros.</template>
+                      <template v-else>Añade los RA y CE que se trabajan en esta propuesta.</template>
                     </p>
                   </div>
-
-                  <!-- Aviso: selección hecha por IA, revisar -->
-                  <div v-if="raCeDelReto.length"
-                       class="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 mb-3">
-                    <svg class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-xs text-blue-700 leading-relaxed">
-                      Esta selección de RA/CE la hizo la IA al generar el reto — revísala antes de publicar la propuesta.
-                    </p>
-                  </div>
-
-                  <!-- RA/CE originales del reto asociado (solo lectura, siempre refleja el reto) -->
-                  <div class="mb-4">
-                    <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                      RA/CE originales del reto asociado
-                    </p>
-                    <RaCeGrid v-if="raCeDelReto.length" :items="raCeDelReto" />
-
-                    <!-- Sin reto vinculado -->
-                    <div v-else-if="!microretoVinculado"
-                         class="py-8 text-center text-sm text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                      Esta propuesta no tiene un reto vinculado — no hay RA/CE de referencia.
-                    </div>
-
-                    <!-- Reto vinculado pero sin RA/CE cargados en BD -->
-                    <div v-else
-                         class="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-                      <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                      </svg>
-                      <p class="text-xs text-amber-700 leading-relaxed">
-                        El reto asociado no tiene RA/CE oficiales asignados — probablemente el módulo aún no tiene
-                        currículo cargado en la base de datos (pendiente de importar del BOE). Añádelos manualmente
-                        con "Seleccionar otros manualmente" o "Añadir RA/CE manualmente".
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- RA/CE de esta propuesta (editable — lo que realmente se guarda) -->
-                  <div>
-                    <p class="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                      RA/CE de esta propuesta
-                    </p>
-
-                    <!-- Aviso: contenido sugerido por IA, revisar -->
-                    <div v-if="sugerenciaIaPendienteRevision"
-                         class="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 mb-3">
-                      <svg class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      <p class="text-xs text-blue-700 leading-relaxed">
-                        La IA ha añadido nuevos RA/CE a esta sección — revísalos y quita con el botón × los que no encajen.
-                      </p>
-                    </div>
-
-                    <RaCeGrid v-if="raCeDeEsteProyecto.length" :items="raCeDeEsteProyecto"
-                              editable @remove-ce="eliminarCeDeProyecto" />
-                    <div v-else
-                         class="py-4 text-center text-xs text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                      Sin RA/CE en esta propuesta todavía.
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Desplegable: Seleccionar otros manualmente -->
-                <div class="rounded-2xl border border-gray-100 overflow-hidden">
-                  <button @click="mostrarSeleccionManual = !mostrarSeleccionManual"
-                          class="w-full flex items-center justify-between gap-2 px-4 py-3
-                                 bg-gray-50/80 hover:bg-gray-100 transition-colors">
-                    <span class="flex items-center gap-2 text-xs font-bold text-gray-700">
-                      <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                      </svg>
-                      Seleccionar otros manualmente
-                    </span>
-                    <svg class="w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform duration-200"
-                         :class="mostrarSeleccionManual ? 'rotate-180' : ''"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                    </svg>
+                  <button v-if="raCeDivergeDelReto && raCeDelReto.length" type="button" @click="restaurarRaCeDelReto"
+                          class="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-full px-3 text-sm font-semibold text-gray-600 hover:bg-white hover:text-rol-fuerte">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    Restaurar los del reto
                   </button>
-
-                  <div v-if="mostrarSeleccionManual" class="p-4 border-t border-gray-100">
-
-                    <!-- Cargando -->
-                    <div v-if="cargandoCatalogo" class="flex flex-col items-center justify-center py-12 gap-3">
-                      <div class="w-8 h-8 rounded-full border-4 border-centros/20 border-t-centros animate-spin" />
-                      <p class="text-sm text-gray-400">Cargando catálogo…</p>
-                    </div>
-
-                    <!-- Sin módulos seleccionados -->
-                    <div v-else-if="!catalogoRaCe.length"
-                         class="py-8 text-center text-sm text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                      <svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                      </svg>
-                      Selecciona módulos en la sección superior para ver su catálogo de RA y CE.
-                    </div>
-
-                    <div v-else>
-                      <!-- Aviso: los ya marcados coinciden con el reto -->
-                      <div class="flex items-start gap-2.5 bg-centros/8 border border-centros/20 rounded-2xl px-4 py-3 mb-4">
-                        <svg class="w-4 h-4 text-centros shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-xs text-centros/80 leading-relaxed">
-                          Los CE ya marcados coinciden con los del reto asociado. Añade otros marcando los que falten.
-                        </p>
-                      </div>
-
-                      <!-- Buscador -->
-                      <div class="relative mb-4">
-                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
-                        </svg>
-                        <input v-model="busquedaRaCe" type="text"
-                               placeholder="Buscar resultado de aprendizaje o criterio de evaluación…"
-                               class="w-full pl-9 pr-8 py-2.5 text-sm bg-gray-50 border border-gray-200
-                                      rounded-2xl focus:outline-none focus:border-centros/50 focus:bg-white
-                                      transition-colors placeholder-gray-400" />
-                        <button v-if="busquedaRaCe" @click="busquedaRaCe = ''"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                          </svg>
-                        </button>
-                      </div>
-
-                      <!-- Barra de contadores -->
-                      <div class="flex flex-wrap items-center gap-3 px-4 py-2 mb-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl">
-                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mr-1">Selección:</span>
-                        <div class="flex items-center gap-1.5">
-                          <span class="w-1.5 h-1.5 rounded-full bg-centros shrink-0" />
-                          <span class="text-[11px] font-black text-centros">{{ totalRaSeleccionados }}</span>
-                          <span class="text-[11px] text-centros/70">RA</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                          <span class="text-[11px] font-black text-amber-600">{{ totalCeSeleccionados }}</span>
-                          <span class="text-[11px] text-amber-500/70">CE</span>
-                        </div>
-                      </div>
-
-                      <!-- Sin resultados de búsqueda -->
-                      <div v-if="!catalogoFiltrado.length"
-                           class="py-6 text-center text-sm text-gray-400 bg-gray-50 rounded-2xl">
-                        Sin resultados para "<span class="font-semibold">{{ busquedaRaCe }}</span>"
-                      </div>
-
-                      <!-- Lista de módulos al estilo CatalogoBoeModal -->
-                      <div v-else class="space-y-2">
-                        <div v-for="mod in catalogoFiltrado" :key="mod.moduloId"
-                             class="rounded-2xl border border-gray-100 overflow-hidden">
-
-                          <!-- Cabecera módulo -->
-                          <div class="flex items-center gap-2 px-4 py-3 bg-gray-50/80 border-b border-gray-100">
-                            <span class="text-[10px] font-black uppercase tracking-widest
-                                         bg-indigo-100/60 text-indigo-500 px-2 py-0.5 rounded-full shrink-0">MF</span>
-                            <span class="flex-1 text-xs font-bold text-gray-700">{{ mod.modulo }}</span>
-                            <span class="text-[10px] text-gray-400">{{ mod.ras.length }} RA</span>
-                          </div>
-
-                          <!-- Resultados de Aprendizaje -->
-                          <div class="divide-y divide-gray-50">
-                            <div v-for="ra in mod.ras" :key="ra.id"
-                                 class="overflow-hidden"
-                                 :class="raEstado(ra) !== 'none' ? 'bg-centros/4' : ''">
-
-                              <!-- Fila RA -->
-                              <div class="flex items-start gap-2.5 px-4 py-3">
-                                <!-- Checkbox RA -->
-                                <button @click="toggleRa(ra)"
-                                        class="mt-0.5 shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-                                        :class="raEstado(ra) === 'all'
-                                          ? 'bg-centros border-centros'
-                                          : raEstado(ra) === 'some'
-                                            ? 'bg-centros/30 border-centros'
-                                            : 'bg-white border-gray-300 hover:border-centros/50'">
-                                  <svg v-if="raEstado(ra) !== 'none'" class="w-2.5 h-2.5 text-white"
-                                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path v-if="raEstado(ra) === 'all'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"/>
-                                  </svg>
-                                </button>
-                                <!-- Badge RA + texto (igual que CatalogoBoeModal) -->
-                                <div class="flex items-center gap-1.5 shrink-0 mt-0.5">
-                                  <span class="text-[9px] font-black uppercase tracking-widest text-centros
-                                               bg-centros/10 px-2 py-0.5 rounded-full">RA{{ ra.orden }}</span>
-                                  <span class="text-[9px] text-gray-300">#{{ ra.id }}</span>
-                                </div>
-                                <p class="flex-1 text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
-                                <!-- Expand toggle -->
-                                <button @click="raExpandido[ra.id] = !raExpandido[ra.id]"
-                                        class="shrink-0 text-gray-400 hover:text-gray-600 transition-colors mt-0.5 ml-1">
-                                  <svg class="w-3.5 h-3.5 transition-transform duration-200"
-                                       :class="raExpandido[ra.id] ? 'rotate-180' : ''"
-                                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                  </svg>
-                                </button>
-                              </div>
-
-                              <!-- Criterios de Evaluación (igual que CatalogoBoeModal) -->
-                              <div v-if="raExpandido[ra.id]"
-                                   class="border-t border-centros/15 px-4 pb-3 pt-2.5 bg-white/60">
-                                <div class="flex items-center gap-1.5 mb-2">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                  <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">
-                                    Criterios de Evaluación
-                                  </span>
-                                </div>
-                                <div class="space-y-1.5 pl-2">
-                                  <label v-for="ce in ra.criterios" :key="ce.id"
-                                         class="flex items-start gap-2.5 cursor-pointer group">
-                                    <div class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-all"
-                                         :class="ceChecked[ce.id]
-                                           ? 'bg-amber-400 border-amber-400'
-                                           : 'bg-white border-gray-300 group-hover:border-amber-300'">
-                                      <svg v-if="ceChecked[ce.id]" class="w-2 h-2 text-white"
-                                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                      </svg>
-                                    </div>
-                                    <input type="checkbox" v-model="ceChecked[ce.id]" class="sr-only" />
-                                    <span class="text-[10px] text-gray-600 leading-snug">
-                                      <span class="font-bold text-amber-500 mr-1">{{ ce.orden }}.</span>{{ ce.descripcion }}
-                                    </span>
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Pie: botón aplicar -->
-                      <div class="mt-4 flex items-center justify-between gap-3">
-                        <p class="text-xs text-gray-400">
-                          <template v-if="totalCeSeleccionados > 0">
-                            {{ totalCeSeleccionados }} CE de {{ totalRaSeleccionados }} RA seleccionados
-                          </template>
-                          <template v-else>
-                            Marca los CE que se trabajarán en la propuesta.
-                          </template>
-                        </p>
-                        <button @click="aplicarSeleccionManual"
-                                :disabled="totalCeSeleccionados === 0"
-                                class="px-5 py-3 bg-centros text-white rounded-full text-sm font-black tracking-wide
-                                       hover:bg-centros/90 disabled:opacity-40 transition-colors shrink-0">
-                          Aplicar selección →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
-                <!-- Añadir RA/CE manualmente -->
-                <div>
-                  <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
-                    Añadir RA/CE manualmente
-                  </p>
-                  <p class="text-xs text-gray-400 mb-3">
-                    Para RA/CE que no aparecen en el catálogo oficial del módulo. Se añaden directamente a "RA/CE de esta propuesta".
-                  </p>
+                <TallerSeleccionRaCe v-if="form.evaluacion_oficial.length"
+                                     :evaluacion="form.evaluacion_oficial"
+                                     :ce-ids-reto="ceIdsDelReto"
+                                     :textos-reto="textosDelReto"
+                                     :ce-ids-ia="ceIdsIa"
+                                     :textos-ia="textosIa"
+                                     @quitar-entrada="i => { quitarEntradaRaCe(i); cargarCatalogoRaCe() }"
+                                     @quitar-ce="(i, j) => { quitarCeDeEntrada(i, j); cargarCatalogoRaCe() }" />
+                <p v-else class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-600">
+                  <template v-if="microretoVinculado && !raCeDelReto.length">
+                    El reto no tiene RA/CE oficiales asignados (probablemente su módulo aún no tiene el currículo del BOE cargado).
+                    Añádelos desde el catálogo o a mano.
+                  </template>
+                  <template v-else>Todavía no hay RA ni CE en esta propuesta.</template>
+                </p>
 
-                  <div class="rounded-2xl border border-gray-100 overflow-hidden">
-                    <div class="px-4 py-3 bg-gray-50/80 border-b border-gray-100">
-                      <select v-model="nuevoRaManual.moduloId" class="field-input">
+                <!-- Ampliar la selección: en modal (la lista del catálogo es muy larga) -->
+                <div class="mt-4 flex flex-wrap gap-2 border-t border-rol/15 pt-4">
+                  <button type="button" @click="abrirModalRaCe('catalogo')"
+                          class="inline-flex h-10 items-center gap-2 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    Seleccionar otros
+                  </button>
+                  <button type="button" @click="abrirModalRaCe('manual')"
+                          class="inline-flex h-10 items-center gap-2 rounded-full border border-rol-fuerte/30 bg-white px-4 text-sm font-semibold text-rol-fuerte hover:bg-rol-fuerte/5">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Agregar manualmente
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Modal «Seleccionar otros»: catálogo oficial con los ya elegidos marcados -->
+          <ModalTaller :abierto="modalRaCe === 'catalogo'" titulo="Seleccionar otros RA y CE"
+                       subtitulo="Los que ya tiene la propuesta aparecen marcados. Lo que marques se aplica al momento."
+                       @cerrar="modalRaCe = ''">
+            <template #barra>
+              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label for="buscar-ra-ce-modal" class="sr-only">Buscar resultado de aprendizaje o criterio</label>
+                <div class="relative min-w-0 flex-1">
+                  <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+                  <input id="buscar-ra-ce-modal" v-model="busquedaRaCe" type="search" autofocus
+                         placeholder="Buscar resultado de aprendizaje o criterio…"
+                         class="w-full rounded-xl py-2 pl-9 pr-3 text-sm" />
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" @click="arbolModal?.plegarTodo()"
+                          class="inline-flex h-9 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                    Plegar todo
+                  </button>
+                  <button type="button" @click="arbolModal?.desplegarTodo()"
+                          class="inline-flex h-9 items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    Desplegar
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <TallerArbolRaCe ref="arbolModal"
+              :modulos="modulos"
+              :seleccionados="form.modulos_seleccionados.map(m => m.id)"
+              :catalogo="catalogoFiltrado"
+              :ra-ids-catalogo="raIdsCatalogo"
+              :cargando="cargandoCatalogo"
+              :ce-checked="ceChecked"
+              :evaluacion="form.evaluacion_oficial"
+              :ce-ids-reto="ceIdsDelReto"
+              :ce-ids-ia="ceIdsIa"
+              :textos-ia="textosIa"
+              :mostrar-extras="false"
+              :con-buscador="false"
+              @toggle-modulo="toggleModuloArbol"
+              @toggle-ra="toggleRa"
+              @toggle-ce="toggleCe" />
+
+            <template #pie>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-texto-secundario" aria-live="polite">
+                  <strong class="font-semibold text-azul-noche">{{ totalCeSeleccionados }} CE</strong> en
+                  <strong class="font-semibold text-azul-noche">{{ totalRaSeleccionados }} RA</strong> en la propuesta
+                </p>
+                <button type="button" @click="modalRaCe = ''"
+                        class="inline-flex h-10 items-center rounded-full bg-rol-fuerte px-6 text-sm font-semibold text-white hover:bg-rol-fuerte/90">
+                  Listo
+                </button>
+              </div>
+            </template>
+          </ModalTaller>
+
+          <!-- Modal «Agregar manualmente»: RA/CE que no están en el catálogo -->
+          <ModalTaller :abierto="modalRaCe === 'manual'" titulo="Agregar RA y CE manualmente"
+                       subtitulo="Para resultados de aprendizaje y criterios que no están en el catálogo oficial del módulo."
+                       ancho="w-[min(40rem,calc(100vw-2rem))]" @cerrar="modalRaCe = ''">
+            <div class="space-y-3">
+                                    <p v-if="!form.modulos_seleccionados.length" class="text-sm text-gray-700">
+                    Marca antes un módulo en «Seleccionar otros».
+                  </p>
+                  <template v-else>
+                    <div>
+                      <label for="ra-manual-modulo" class="field-label">Módulo</label>
+                      <select id="ra-manual-modulo" v-model="nuevoRaManual.moduloId" class="field-input" autofocus>
                         <option value="" disabled>Selecciona un módulo…</option>
                         <option v-for="m in form.modulos_seleccionados" :key="m.id" :value="m.id">{{ m.nombre }}</option>
                       </select>
                     </div>
-
-                    <div class="p-4 space-y-3 bg-centros/4">
-                      <div class="flex items-start gap-2.5">
-                        <span class="text-[9px] font-black uppercase tracking-widest text-centros
-                                     bg-centros/10 px-2 py-0.5 rounded-full shrink-0 mt-2.5">RA</span>
-                        <input v-model="nuevoRaManual.ra" type="text"
-                               placeholder="Describe el resultado de aprendizaje…"
-                               class="field-input flex-1" />
-                      </div>
-
-                      <div class="pl-1">
-                        <div class="flex items-center gap-1.5 mb-1.5">
-                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                          <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">
-                            Criterios de Evaluación
-                          </span>
-                        </div>
-                        <div class="space-y-2 pl-2">
-                          <div v-for="(ce, i) in nuevoRaManual.ces" :key="i" class="flex items-center gap-2">
-                            <input v-model="nuevoRaManual.ces[i]" type="text" :placeholder="`Criterio ${i + 1}…`"
-                                   class="field-input flex-1" />
-                            <button v-if="nuevoRaManual.ces.length > 1" @click="removeCeManualField(i)"
-                                    class="text-gray-400 hover:text-red-500 shrink-0 font-bold">×</button>
-                          </div>
-                        </div>
-                        <button @click="addCeManualField"
-                                class="mt-2 text-[11px] font-bold text-amber-600 hover:text-amber-700 transition-colors">
-                          + Añadir otro criterio
-                        </button>
-                      </div>
+                    <div>
+                      <label for="ra-manual-texto" class="field-label">Resultado de aprendizaje</label>
+                      <input id="ra-manual-texto" v-model="nuevoRaManual.ra" type="text"
+                             placeholder="Describe el resultado de aprendizaje…" class="field-input" />
                     </div>
-
-                    <div class="px-4 py-3 border-t border-gray-100 flex justify-end">
-                      <button @click="anadirRaManualAlProyecto" :disabled="!raManualValido"
-                              class="px-5 py-2.5 bg-centros text-white rounded-full text-sm font-black tracking-wide
-                                     hover:bg-centros/90 disabled:opacity-40 transition-colors">
-                        Añadir a esta propuesta →
+                    <fieldset>
+                      <legend class="field-label">Criterios de evaluación</legend>
+                      <div class="space-y-2">
+                        <div v-for="(ce, i) in nuevoRaManual.ces" :key="i" class="flex items-center gap-2">
+                          <input v-model="nuevoRaManual.ces[i]" type="text" :placeholder="`Criterio ${i + 1}…`"
+                                 :aria-label="`Criterio ${i + 1}`" class="field-input flex-1" />
+                          <button v-if="nuevoRaManual.ces.length > 1" type="button" @click="removeCeManualField(i)"
+                                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                  :aria-label="`Quitar criterio ${i + 1}`">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                      <button type="button" @click="addCeManualField"
+                              class="mt-2 inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">
+                        + Añadir otro criterio
+                      </button>
+                    </fieldset>
+                    <div class="flex justify-end">
+                      <button type="button" @click="anadirRaManualAlProyecto" :disabled="!raManualValido"
+                              class="inline-flex h-10 items-center rounded-full bg-rol-fuerte px-5 text-sm font-semibold text-white hover:bg-rol-fuerte/90 disabled:cursor-not-allowed disabled:opacity-50">
+                        Añadir a esta propuesta
                       </button>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  </template>
             </div>
-          </div>
+          </ModalTaller>
 
           <div class="fila-pasos mt-5">
             <button @click="paso = 2" class="btn-paso-atras">← Anterior</button>
-            <button @click="() => { if (mostrarSeleccionManual && totalCeSeleccionados > 0) aplicarSeleccionManual(); guardar(4); }" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
+            <button @click="guardar(4)" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
           </div>
         </div>
 
         <!-- ═══ PASO 4: El Reto ═══ -->
         <div v-if="paso === 4">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 4</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">El reto</h2>
-            <p class="text-gray-500 text-sm mt-1">Define el contexto, la fundamentación y el reto central de la propuesta.</p>
-          </div>
 
           <div class="space-y-4">
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
               <div class="flex items-center justify-between">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Fundamentación</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Fundamentación</p>
                 <button @click="sugerirFundamentacion" :disabled="sugiriendoFundamentacion"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
                                bg-violet-50 border border-violet-200 text-violet-700
-                               text-[10px] font-black uppercase tracking-wider
+                               text-xs font-bold uppercase tracking-wider
                                hover:bg-violet-100 transition-all active:scale-95
                                disabled:opacity-60 disabled:cursor-not-allowed">
                   <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugiriendoFundamentacion }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2342,8 +2209,8 @@ onUnmounted(() => { tourActivo.value = false; });
                           placeholder="¿Qué tiene de innovador esta propuesta?" /></div>
             </div>
 
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Diseño del reto</p>
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+              <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Diseño del reto</p>
               <div><label class="field-label">Descripción del reto *</label>
                 <textarea v-model="form.diseno_reto.descripcion" rows="3" class="field-input resize-none" required
                           placeholder="Describe el reto al que se enfrenta el grupo…" /></div>
@@ -2367,18 +2234,11 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- ═══ PASO 5: Diseño de la propuesta ═══ -->
         <div v-if="paso === 5">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 5</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Diseño de la propuesta</h2>
-            <p class="text-gray-500 text-sm mt-1">Define las fases, metodología y cronograma del trabajo.</p>
-          </div>
 
           <div class="space-y-4">
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Fases de la propuesta</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Fases de la propuesta</p>
                 <p class="text-xs text-gray-400 mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
               </div>
               <div class="space-y-2">
@@ -2386,25 +2246,25 @@ onUnmounted(() => { tourActivo.value = false; });
                      class="rounded-2xl border p-3 sm:p-4 flex items-center gap-3 sm:gap-4" :class="colorMapFases[f.color]">
                   <span class="text-lg leading-none shrink-0">{{ f.icono }}</span>
                   <div class="flex-1 min-w-0">
-                    <p class="font-black text-sm text-[#1F2937]">F{{ f.num }} - {{ f.label }}</p>
+                    <p class="font-bold text-sm text-[#1F2937]">F{{ f.num }} - {{ f.label }}</p>
                     <p class="text-xs text-gray-500 mt-0.5">{{ f.descLarga }}</p>
                   </div>
-                  <span class="text-[11px] font-bold uppercase tracking-wide opacity-80 shrink-0 whitespace-nowrap">
+                  <span class="text-xs font-bold uppercase tracking-wide opacity-80 shrink-0 whitespace-nowrap">
                     {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
                   </span>
                 </div>
               </div>
 
               <div class="pt-2 border-t border-gray-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Modificar duración de cada fase</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Modificar duración de cada fase</p>
                 <p class="text-xs text-gray-400 mt-1 mb-3">Marca qué fase(s) se trabajan en cada sesión — una misma sesión puede cubrir varias fases.</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div v-for="(c, i) in form.diseno_microproyecto.clases" :key="i"
                        class="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
                     <div class="flex items-center justify-between">
-                      <p class="text-sm font-black text-[#1F2937]">Sesión {{ i + 1 }}</p>
+                      <p class="text-sm font-bold text-[#1F2937]">Sesión {{ i + 1 }}</p>
                       <button @click="removeSesion(i)" type="button"
-                              class="text-gray-300 hover:text-red-500 font-black text-sm leading-none">×</button>
+                              class="text-gray-300 hover:text-red-500 font-bold text-sm leading-none">×</button>
                     </div>
                     <div class="space-y-1.5">
                       <button v-for="f in FASES_PROYECTO" :key="f.num" type="button"
@@ -2417,14 +2277,14 @@ onUnmounted(() => { tourActivo.value = false; });
                         <span class="text-xs font-bold flex-1" :class="c.fases.includes(f.num) ? 'text-[#1F2937]' : 'text-gray-400'">
                           F{{ f.num }} - {{ f.label }}
                         </span>
-                        <span v-if="c.fases.includes(f.num)" class="text-centros font-black text-sm shrink-0">✓</span>
+                        <span v-if="c.fases.includes(f.num)" class="text-rol-fuerte font-bold text-sm shrink-0">✓</span>
                       </button>
                     </div>
                   </div>
                 </div>
                 <button @click="addSesion" type="button"
-                        class="mt-3 px-4 py-2 rounded-full border border-dashed border-centros/40 text-centros
-                               text-xs font-black uppercase tracking-widest hover:bg-centros/5 transition-all">
+                        class="mt-3 px-4 py-2 rounded-full border border-dashed border-rol/40 text-rol-fuerte
+                               text-xs font-bold uppercase tracking-widest hover:bg-rol/5 transition-all">
                   + Añadir sesión
                 </button>
                 <p class="text-xs font-bold text-[#1F2937] mt-3">Total: {{ form.diseno_microproyecto.clases.length }} sesión(es)</p>
@@ -2432,9 +2292,9 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Cronograma general — hitos derivados de las fases + el calendario de arriba -->
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Cronograma general</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Cronograma general</p>
                 <p class="text-xs text-gray-400 mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -2442,9 +2302,9 @@ onUnmounted(() => { tourActivo.value = false; });
                      class="rounded-2xl border p-3 space-y-1" :class="colorMapFases[f.color]">
                   <div class="flex items-center gap-1.5">
                     <span class="text-base leading-none">{{ f.icono }}</span>
-                    <p class="font-black text-xs text-[#1F2937]">{{ f.label }}</p>
+                    <p class="font-bold text-xs text-[#1F2937]">{{ f.label }}</p>
                   </div>
-                  <p class="text-[9px] font-bold uppercase tracking-wide opacity-70">
+                  <p class="text-xs font-bold uppercase tracking-wide opacity-70">
                     {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
                   </p>
                   <p class="text-xs text-gray-600 leading-snug">🎯 {{ f.desc }}</p>
@@ -2457,13 +2317,13 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
             </div>
 
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
               <div class="flex items-center justify-between">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Metodología y resumen ejecutivo</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Metodología y resumen ejecutivo</p>
                 <button @click="sugerirMetodologia" :disabled="sugiriendoMetodologia"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
                                bg-violet-50 border border-violet-200 text-violet-700
-                               text-[10px] font-black uppercase tracking-wider
+                               text-xs font-bold uppercase tracking-wider
                                hover:bg-violet-100 transition-all active:scale-95
                                disabled:opacity-60 disabled:cursor-not-allowed">
                   <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugiriendoMetodologia }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2497,89 +2357,86 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- ═══ PASO 6: Objetivos y KPIs ═══ -->
         <div v-if="paso === 6">
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 6</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Objetivos y KPIs</h2>
-            <p class="text-gray-500 text-sm mt-1">Define los objetivos de la propuesta y los indicadores de éxito.</p>
-          </div>
-
           <div class="space-y-4">
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Objetivos</p>
-                <button @click="sugerirObjetivos" :disabled="sugiriendoObjetivos"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                               bg-violet-50 border border-violet-200 text-violet-700
-                               text-[10px] font-black uppercase tracking-wider
-                               hover:bg-violet-100 transition-all active:scale-95
-                               disabled:opacity-60 disabled:cursor-not-allowed">
-                  <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugiriendoObjetivos }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M17.657 18.364l-.707-.707M12 20v1M6.343 17.657l-.707.707M4 12H3M6.343 6.343l-.707-.707"/>
-                  </svg>
+
+            <!-- Objetivos del proyecto -->
+            <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
+              <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+                  <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte sm:h-12 sm:w-12" aria-hidden="true">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <h2 id="titulo-objetivos" class="text-lg font-bold text-azul-noche">Objetivos del proyecto</h2>
+                    <p class="mt-0.5 text-sm text-texto-secundario">Define qué se quiere conseguir con esta propuesta. Puedes añadir varios objetivos.</p>
+                  </div>
+                </div>
+                <button type="button" @click="sugerirObjetivos" :disabled="sugiriendoObjetivos"
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60">
+                  <svg class="h-4 w-4" :class="{ 'animate-spin': sugiriendoObjetivos }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                   {{ sugiriendoObjetivos ? 'Generando…' : 'Sugerir con IA' }}
                 </button>
               </div>
-              <p v-if="errorObjetivos" class="text-xs text-red-500">{{ errorObjetivos }}</p>
-              <div class="flex gap-2">
-                <input v-model="nuevoObjetivo" type="text" placeholder="Añadir objetivo…"
-                       class="field-input flex-1" @keyup.enter="addObjetivo" />
-                <button @click="addObjetivo"
-                        class="shrink-0 px-4 py-2.5 bg-centros text-white rounded-full
-                               text-sm font-black hover:bg-centros/90 transition-all active:scale-95">+</button>
-              </div>
-              <ul v-if="form.objetivos.lista.length" class="space-y-2">
-                <li v-for="(obj, i) in form.objetivos.lista" :key="i"
-                    class="flex items-center gap-2 text-sm text-[#1F2937]">
-                  <span class="text-centros font-black shrink-0">›</span>
-                  <span class="flex-1">{{ obj }}</span>
-                  <button @click="removeObjetivo(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
-                </li>
-              </ul>
-              <p v-else class="text-xs text-gray-400 italic">Añade al menos un objetivo</p>
-            </div>
 
-            <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Indicadores de éxito (KPIs)</p>
-                <button @click="sugerirKpis" :disabled="sugirendoKpis"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                               bg-violet-50 border border-violet-200 text-violet-700
-                               text-[10px] font-black uppercase tracking-wider
-                               hover:bg-violet-100 transition-all active:scale-95
-                               disabled:opacity-60 disabled:cursor-not-allowed">
-                  <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': sugirendoKpis }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M17.657 18.364l-.707-.707M12 20v1M6.343 17.657l-.707.707M4 12H3M6.343 6.343l-.707-.707"/>
-                  </svg>
+              <p class="mb-4 flex items-start gap-2 rounded-xl bg-rol/5 px-3 py-2 text-sm text-azul-noche">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Los objetivos deben estar alineados con los resultados de aprendizaje y con las necesidades de la empresa.
+              </p>
+              <p v-if="errorObjetivos" class="mb-3 text-sm text-red-700" role="alert">{{ errorObjetivos }}</p>
+
+              <ListaEditableOrdenable v-model="form.objetivos.lista" nombre="objetivo"
+                                      placeholder="Describe un objetivo…"
+                                      vacio="Añade al menos un objetivo."
+                                      :sugerencias="objetivosSugeridos"
+                                      @aceptar="i => aceptarSugerencia(form.objetivos.lista, objetivosSugeridos, i)"
+                                      @descartar="i => objetivosSugeridos.splice(i, 1)"
+                                      @aceptar-todas="aceptarTodas(form.objetivos.lista, objetivosSugeridos)" />
+            </section>
+
+            <!-- Indicadores de éxito -->
+            <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-kpis">
+              <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+                  <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 sm:h-12 sm:w-12" aria-hidden="true">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0h6m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v14"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <h2 id="titulo-kpis" class="text-lg font-bold text-azul-noche">
+                      Indicadores de éxito (KPIs)
+                      <span class="ml-1 align-middle text-xs font-semibold uppercase tracking-wide text-gray-500">Opcional</span>
+                    </h2>
+                    <p class="mt-0.5 text-sm text-texto-secundario">Define cómo se medirá el cumplimiento de los objetivos. Puedes añadir varios indicadores.</p>
+                  </div>
+                </div>
+                <button type="button" @click="sugerirKpis" :disabled="sugirendoKpis"
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60">
+                  <svg class="h-4 w-4" :class="{ 'animate-spin': sugirendoKpis }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                   {{ sugirendoKpis ? 'Generando…' : 'Sugerir con IA' }}
                 </button>
               </div>
-              <p v-if="errorKpis" class="text-xs text-red-500">{{ errorKpis }}</p>
-              <div class="flex gap-2">
-                <input v-model="nuevoKpi" type="text" placeholder="Añadir KPI o indicador…"
-                       class="field-input flex-1" @keyup.enter="addKpi" />
-                <button @click="addKpi"
-                        class="shrink-0 px-4 py-2.5 bg-centros text-white rounded-full
-                               text-sm font-black hover:bg-centros/90 transition-all active:scale-95">+</button>
-              </div>
-              <ul v-if="form.kpis.lista.length" class="space-y-2">
-                <li v-for="(kpi, i) in form.kpis.lista" :key="i"
-                    class="flex items-center gap-2 text-sm text-[#1F2937]">
-                  <span class="text-primary-400 font-black shrink-0">✓</span>
-                  <span class="flex-1">{{ kpi }}</span>
-                  <button @click="removeKpi(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
-                </li>
-              </ul>
-              <p v-else class="text-xs text-gray-400 italic">Los KPIs son opcionales pero recomendados para la validación empresa. Usa la IA para generar sugerencias.</p>
-            </div>
+
+              <p class="mb-4 flex items-start gap-2 rounded-xl bg-rol/5 px-3 py-2 text-sm text-azul-noche">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Los KPIs son opcionales, pero recomendados: hacen la propuesta evaluable para la empresa.
+              </p>
+              <p v-if="errorKpis" class="mb-3 text-sm text-red-700" role="alert">{{ errorKpis }}</p>
+
+              <ListaEditableOrdenable v-model="form.kpis.lista" nombre="KPI"
+                                      placeholder="Describe un indicador…"
+                                      :sugerencias="kpisSugeridos"
+                                      @aceptar="i => aceptarSugerencia(form.kpis.lista, kpisSugeridos, i)"
+                                      @descartar="i => kpisSugeridos.splice(i, 1)"
+                                      @aceptar-todas="aceptarTodas(form.kpis.lista, kpisSugeridos)" />
+            </section>
+
+            <p v-if="avisoPaso6" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+              {{ avisoPaso6 }}
+            </p>
           </div>
 
           <div class="fila-pasos mt-5">
             <button @click="paso = 5" class="btn-paso-atras">← Anterior</button>
-            <button @click="guardar(7)" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
+            <button @click="siguienteDesdePaso6" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
           </div>
         </div>
 
@@ -2588,13 +2445,13 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <!-- ── Estado de éxito tras publicar ── -->
           <div v-if="publicadoExito" class="flex flex-col items-center text-center py-8 gap-6">
-            <div class="w-20 h-20 rounded-full bg-centros/10 border-2 border-centros/20 flex items-center justify-center">
-              <svg class="w-10 h-10 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-20 h-20 rounded-full bg-rol/10 border-2 border-rol/20 flex items-center justify-center">
+              <svg class="w-10 h-10 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
             <div>
-              <h2 class="text-2xl font-black text-azul-noche">¡Propuesta lista!</h2>
+              <h2 class="text-2xl font-bold text-azul-noche">¡Propuesta lista!</h2>
               <p class="text-gray-500 text-sm mt-1.5 max-w-sm mx-auto">
                 El enlace de validación ya está listo. Puedes enviárselo a la empresa por correo para que valide la propuesta.
                 Cuando la valide, pasará a llamarse <strong>proyecto</strong>.
@@ -2604,7 +2461,7 @@ onUnmounted(() => { tourActivo.value = false; });
               <button v-if="form.empresa_id"
                       @click="modalPropuestaAviso = true"
                       class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 text-white
-                             rounded-full text-xs font-black uppercase tracking-widest shadow-sm
+                             rounded-full text-xs font-bold uppercase tracking-widest shadow-sm
                              hover:bg-amber-400 transition-all active:scale-95">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2621,11 +2478,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <template v-else>
           <div class="mb-6">
-            <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-centros/10 border border-centros/20">
-              <span class="text-[10px] font-black uppercase tracking-widest text-centros">Paso 7</span>
-            </div>
-            <h2 class="text-2xl font-black text-azul-noche">Publicar propuesta</h2>
-            <p class="text-gray-500 text-sm mt-1">
+            <p class="text-gray-600 text-sm">
               Márcala como <strong class="text-[#1F2937]">Propuesta</strong> para generar el enlace de validación
               y enviárselo a la empresa colaboradora. La empresa accederá al enlace, revisará la propuesta
               y decidirá si la valida o no.
@@ -2645,48 +2498,48 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
 
           <!-- Resumen -->
-          <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 mb-4">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Resumen de la propuesta</p>
-            <div class="grid sm:grid-cols-2 gap-4 text-sm">
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-4">Resumen de la propuesta</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Título</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Título</p>
                 <p class="font-bold text-[#1F2937]">{{ form.titulo || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Empresa</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Empresa</p>
                 <p class="font-bold text-[#1F2937]">{{ form.datos_empresa.nombre || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Docente</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Docente</p>
                 <p class="font-bold text-[#1F2937]">{{ form.datos_centro.docente_nombre || '—' }}</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Módulos</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Módulos</p>
                 <p class="font-bold text-[#1F2937]">{{ form.modulos_seleccionados.length }} seleccionado(s)</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Objetivos</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Objetivos</p>
                 <p class="font-bold text-[#1F2937]">{{ form.objetivos.lista.length }} definido(s)</p>
               </div>
               <div class="p-3 bg-gray-50 rounded-2xl">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Calendario</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Calendario</p>
                 <p class="font-bold text-[#1F2937]">{{ form.diseno_microproyecto.clases?.length || 0 }} sesión(es)</p>
               </div>
             </div>
           </div>
 
           <!-- Recursos: vídeos y documentos para la empresa (almacenados en Cloudinary) -->
-          <div class="bg-white rounded-4xl border border-gray-100 shadow-sm p-6 mb-4">
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
             <div class="flex items-center gap-3 mb-1">
-              <div class="w-8 h-8 rounded-xl bg-centros/10 border border-centros/20
+              <div class="w-8 h-8 rounded-xl bg-rol/10 border border-rol/20
                           flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
               </div>
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-centros">Recursos para la empresa</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-rol-fuerte">Recursos para la empresa</p>
                 <p class="text-xs text-gray-400 mt-0.5">
                   Los archivos se suben a <strong>Cloudinary</strong>. La empresa los verá al abrir el enlace de validación.
                 </p>
@@ -2702,7 +2555,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
               <!-- ── VÍDEOS ─────────────────────────────────────────── -->
               <div>
-                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Vídeos</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Vídeos</p>
 
                 <!-- Lista -->
                 <div v-if="videosLocales.length" class="space-y-2 mb-3">
@@ -2719,7 +2572,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     </button>
                     <button @click="abrirRecurso(v)" class="flex-1 min-w-0 text-left">
                       <p class="text-xs font-bold text-gray-700 truncate group-hover/vid:text-blue-600 transition-colors">{{ v.label || v.filename }}</p>
-                      <p class="text-[9px] text-blue-400/80 truncate">Cloudinary · {{ v.filename }}</p>
+                      <p class="text-xs text-blue-400/80 truncate">Cloudinary · {{ v.filename }}</p>
                     </button>
                     <button @click.stop="removeVideo(i)"
                             class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
@@ -2734,10 +2587,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div class="flex gap-2 items-center">
                   <input v-model="labelVideo" type="text" placeholder="Nombre del vídeo (opcional)"
                          class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-centros transition-colors"/>
+                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-gray-200 bg-gray-50
-                                cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
+                                cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                          :class="subiendoVideo ? 'opacity-50 pointer-events-none' : ''">
                     <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2754,8 +2607,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
               <!-- ── BANCO DE IMÁGENES ─────────────────────────────────── -->
               <div>
-                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Banco de imágenes</p>
-                <p class="text-[10px] text-gray-400 mb-3">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Banco de imágenes</p>
+                <p class="text-xs text-gray-400 mb-3">
                   También puede subir imágenes el alumnado desde su workspace. La primera
                   se marca como portada automáticamente; puedes cambiarla cuando quieras.
                 </p>
@@ -2764,23 +2617,24 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-if="imagenesLocales.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
                   <div v-for="(img, i) in imagenesLocales" :key="img.id"
                        class="relative group/img rounded-xl overflow-hidden border-2"
-                       :class="img.id === imagenPortadaId ? 'border-centros' : 'border-gray-100'">
+                       :class="img.id === imagenPortadaId ? 'border-rol-fuerte' : 'border-gray-100'">
                     <img :src="img.url" :alt="img.label || img.filename" class="w-full h-20 object-cover" />
                     <span v-if="img.id === imagenPortadaId"
-                          class="absolute top-1 left-1 bg-centros text-white text-[8px] font-black
+                          class="absolute top-1 left-1 bg-rol-fuerte text-white text-xs font-bold
                                  uppercase tracking-wider px-1.5 py-0.5 rounded-full">Portada</span>
-                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100
+                    <!-- En móvil siempre visibles (no hay hover); desde sm, al pasar el ratón o con foco -->
+                    <div class="absolute inset-0 bg-black/40 sm:bg-black/50 sm:opacity-0 sm:group-hover/img:opacity-100 sm:focus-within:opacity-100
                                 transition-opacity flex items-center justify-center gap-1.5">
                       <button v-if="img.id !== imagenPortadaId" @click="marcarPortada(img)" type="button"
-                              title="Marcar como portada"
-                              class="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-centros hover:bg-white">
+                              title="Marcar como portada" aria-label="Marcar como portada"
+                              class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-rol-fuerte hover:bg-white">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                         </svg>
                       </button>
-                      <button @click.stop="removeImagen(i)" type="button"
-                              class="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-red-400 hover:bg-white">
+                      <button @click.stop="removeImagen(i)" type="button" aria-label="Quitar imagen" title="Quitar imagen"
+                              class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-red-400 hover:bg-white">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -2792,7 +2646,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Uploader -->
                 <label class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                               border-2 border-dashed border-gray-200 bg-gray-50
-                              cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
+                              cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                        :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
                   <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2804,29 +2658,29 @@ onUnmounted(() => { tourActivo.value = false; });
                   <input type="file" accept="image/png,image/jpeg,image/gif,image/webp"
                          class="sr-only" @change="subirArchivo('imagen', $event)" :disabled="subiendoImagen"/>
                 </label>
-                <p class="text-[9px] text-gray-300 mt-1.5 pl-1">Máx. 8 MB por imagen.</p>
+                <p class="text-xs text-gray-300 mt-1.5 pl-1">Máx. 8 MB por imagen.</p>
               </div>
 
               <!-- ── DOCUMENTOS ─────────────────────────────────────── -->
               <div>
-                <p class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Documentos, otros archivos...</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Documentos, otros archivos...</p>
 
                 <!-- Lista -->
                 <div v-if="documentosLocales.length" class="space-y-2 mb-3">
                   <div v-for="(d, i) in documentosLocales" :key="i"
                        class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
-                              hover:border-centros/30 hover:bg-centros/5 transition-colors group/doc">
+                              hover:border-rol/30 hover:bg-rol/5 transition-colors group/doc">
                     <button @click="abrirRecurso(d)"
-                            class="w-7 h-7 rounded-full bg-centros/10 shrink-0 flex items-center justify-center
-                                   group-hover/doc:bg-centros/20 transition-colors">
-                      <svg class="w-3.5 h-3.5 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-7 h-7 rounded-full bg-rol/10 shrink-0 flex items-center justify-center
+                                   group-hover/doc:bg-rol/20 transition-colors">
+                      <svg class="w-3.5 h-3.5 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                       </svg>
                     </button>
                     <button @click="abrirRecurso(d)" class="flex-1 min-w-0 text-left">
-                      <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-centros transition-colors">{{ d.label || d.filename }}</p>
-                      <p class="text-[9px] text-blue-400/80 truncate">Cloudinary · {{ d.filename }}</p>
+                      <p class="text-xs font-bold text-gray-700 truncate group-hover/doc:text-rol-fuerte transition-colors">{{ d.label || d.filename }}</p>
+                      <p class="text-xs text-blue-400/80 truncate">Cloudinary · {{ d.filename }}</p>
                     </button>
                     <button @click.stop="removeDocumento(i)"
                             class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
@@ -2841,10 +2695,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div class="flex gap-2 items-center">
                   <input v-model="labelDocumento" type="text" placeholder="Nombre del documento (opcional)"
                          class="w-44 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs
-                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-centros transition-colors"/>
+                                text-gray-700 placeholder-gray-300 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-gray-200 bg-gray-50
-                                cursor-pointer hover:border-centros/40 hover:bg-centros/5 transition-all"
+                                cursor-pointer hover:border-rol/40 hover:bg-rol/5 transition-all"
                          :class="subiendoDoc ? 'opacity-50 pointer-events-none' : ''">
                     <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2858,13 +2712,13 @@ onUnmounted(() => { tourActivo.value = false; });
                            class="sr-only" @change="subirArchivo('documento', $event)" :disabled="subiendoDoc"/>
                   </label>
                 </div>
-                <p class="text-[9px] text-gray-300 mt-1.5 pl-1">Máx. 20 MB por archivo · Los archivos se alojan en Cloudinary. La BD no almacena ningún fichero.</p>
+                <p class="text-xs text-gray-300 mt-1.5 pl-1">Máx. 20 MB por archivo · Los archivos se alojan en Cloudinary. La BD no almacena ningún fichero.</p>
               </div>
 
             </div>
           </div>
 
-          <div class="bg-amber-50/80 border border-amber-200/60 rounded-4xl p-5 mb-5">
+          <div class="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-5 mb-5">
             <div class="flex items-start gap-3">
               <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2891,10 +2745,10 @@ onUnmounted(() => { tourActivo.value = false; });
                 >
                   <!-- Dot + label del estado actual -->
                   <span :class="['w-2 h-2 rounded-full shrink-0 transition-colors',
-                    form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-centros'
+                    form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-rol-fuerte'
                     : estadoOpciones[form.estado]?.dot || 'bg-amber-400']" />
                   <span :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail
-                    ? 'text-centros' : (estadoOpciones[form.estado]?.text || 'text-amber-700')">
+                    ? 'text-rol-fuerte' : (estadoOpciones[form.estado]?.text || 'text-amber-700')">
                     {{ labelEstadoBtn }}
                   </span>
                   <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2950,33 +2804,34 @@ onUnmounted(() => { tourActivo.value = false; });
                                          : 'text-violet-700 hover:bg-violet-50']">
                         <span class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full shrink-0"
-                                :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-centros' : 'bg-violet-400'" />
+                                :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-rol-fuerte' : 'bg-violet-400'" />
                           Propuesta
                           <svg v-if="form.estado === 'propuesta'" class="w-3.5 h-3.5 ml-auto"
-                               :class="form.enviado_a_empresa_mail ? 'text-centros' : 'text-violet-400'"
+                               :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-violet-400'"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                           </svg>
                         </span>
                         <!-- Sub-estado visible solo cuando está en propuesta -->
                         <span v-if="form.estado === 'propuesta'"
-                              class="text-[9px] font-black uppercase tracking-wider pl-4"
-                              :class="form.enviado_a_empresa_mail ? 'text-centros' : 'text-violet-500'">
+                              class="text-xs font-bold uppercase tracking-wider pl-4"
+                              :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-violet-500'">
                           {{ form.enviado_a_empresa_mail ? '✅ SÍ enviada por mail' : '✉ NO enviada por mail' }}
                         </span>
                       </button>
                       <!-- Tooltip (i) -->
                       <div class="relative group/info shrink-0">
-                        <div class="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
+                        <button type="button" aria-label="Qué significa marcarla como Propuesta"
+                                class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
                           <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                           </svg>
-                        </div>
-                        <div class="absolute hidden group-hover/info:block bottom-full right-0 mb-2
-                                    bg-[#1a2332] text-white text-[11px] rounded-xl p-3 w-60 z-30
+                        </button>
+                        <div role="tooltip" class="absolute hidden group-hover/info:block group-focus-within/info:block bottom-full right-0 mb-2
+                                    bg-[#1a2332] text-white text-xs rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
-                          Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-centros">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
+                          Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-rol-fuerte">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
                           <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-[#1a2332] rotate-45" />
                         </div>
                       </div>
@@ -3019,70 +2874,20 @@ onUnmounted(() => { tourActivo.value = false; });
       </template>
       </div><!-- /flex-1 wizard -->
 
-      <!-- ── Panel lateral: info del reto ─────────────────────────────────── -->
-      <aside v-if="microretoVinculado"
-             class="hidden lg:flex flex-col gap-4 w-72 shrink-0 sticky self-start rounded-3xl
-                    border border-gray-100 bg-white shadow-sm p-5 overflow-hidden"
-             style="top: 7.5rem">
-
-        <!-- Header -->
-        <div class="flex items-start justify-between gap-2">
-          <span class="text-[9px] font-black uppercase tracking-widest text-centros">Reto del proyecto</span>
-          <button v-if="!uuid" @click="limpiarReto"
-                  class="text-[9px] font-black uppercase tracking-widest text-gray-400
-                         hover:text-red-400 transition-colors shrink-0">
-            Cambiar
-          </button>
-        </div>
-
-        <!-- Titulo -->
-        <div>
-          <p class="text-sm font-black text-[#121212] leading-snug">{{ microretoVinculado.titulo }}</p>
-          <p v-if="microretoVinculado.pregunta_reto"
-             class="text-[11px] text-gray-500 mt-2 leading-relaxed line-clamp-4 italic">
-            "{{ microretoVinculado.pregunta_reto }}"
-          </p>
-        </div>
-
-        <!-- Chips -->
-        <div class="flex flex-wrap gap-1.5">
-          <span v-if="retoEmpresaNombre" class="tag tag-gray">{{ retoEmpresaNombre }}</span>
-          <span v-if="microretoVinculado.familia" class="tag tag-gray">{{ microretoVinculado.familia }}</span>
-          <span v-if="microretoVinculado.ciclo"
-                class="tag tag-gray text-[9px] max-w-full truncate">{{ microretoVinculado.ciclo }}</span>
-          <span v-if="microretoVinculado.curso"
-                class="tag tag-lime">{{ cursoLabel(microretoVinculado.curso) }}</span>
-        </div>
-
-        <!-- Ver ficha completa -->
-        <button @click="microretoModalId = microretoVinculado.id"
-                class="flex items-center justify-center gap-1.5 w-full py-2 rounded-full
-                       border border-gray-200 text-[10px] font-black uppercase tracking-widest
-                       text-gray-500 hover:border-centros hover:text-centros transition-all">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
-                     -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-          </svg>
-          Ver ficha completa
-        </button>
-
-        <!-- Nota fija: fase de propuesta -->
-        <div v-if="form.estado !== 'validado'"
-             class="flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-3">
-          <svg class="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <p class="text-[10px] text-blue-700 leading-relaxed">
-            Esto es, de momento, una <strong>propuesta</strong>. Al publicarla y ser validada,
-            pasará a llamarse <strong>proyecto</strong>.
-          </p>
-        </div>
-
-      </aside>
+      <!-- ── Panel lateral: resumen del proyecto + IA del paso (solo lg) ──────── -->
+      <TallerResumen :titulo="form.titulo || microretoVinculado?.titulo || ''"
+                     :pregunta="form.diseno_reto.pregunta_reto || microretoVinculado?.pregunta_reto || ''"
+                     :portada-url="portadaUrl"
+                     :datos="datosResumen"
+                     :tipo-empresa="tipoEmpresa"
+                     :estado="(microretoVinculado || form.titulo) ? estadoResumen : null"
+                     :hay-reto="!!microretoVinculado"
+                     :puede-editar-imagen="!!uuid && paso !== 7 && puedeIrAPaso(7) && pasoMaxAlcanzado >= 7"
+                     :antes="antesDeContinuar"
+                     :ia="iaPaso"
+                     @ver-ficha="microretoVinculado && (microretoModalId = microretoVinculado.id)"
+                     @editar-imagen="paso = 7"
+                     @sugerir="sugerirDesdePanel" />
 
       </div><!-- /flex gap-8 -->
     </div>
@@ -3119,7 +2924,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-azul-noche text-center mb-4">
+        <h3 class="text-xl font-bold text-azul-noche text-center mb-4">
           Propuesta en edición
         </h3>
 
@@ -3133,7 +2938,7 @@ onUnmounted(() => { tourActivo.value = false; });
           @click="modalBorradorAviso = false"
           class="mt-7 w-full inline-flex items-center justify-center
                  px-6 py-3 bg-[#1F2937] text-white rounded-full
-                 text-xs font-black uppercase tracking-widest shadow-sm
+                 text-xs font-bold uppercase tracking-widest shadow-sm
                  hover:bg-[#1F2937]/80 transition-all active:scale-95"
         >
           Entendido, seguir editando
@@ -3158,9 +2963,9 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 overflow-y-auto max-h-[90vh]">
 
         <!-- Icono -->
-        <div class="w-14 h-14 rounded-2xl bg-centros/10 border border-centros/20
+        <div class="w-14 h-14 rounded-2xl bg-rol/10 border border-rol/20
                     flex items-center justify-center mb-5 mx-auto">
-          <svg class="w-7 h-7 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-7 h-7 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
@@ -3170,13 +2975,13 @@ onUnmounted(() => { tourActivo.value = false; });
         <div class="flex justify-center mb-4">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
                        bg-violet-50 border border-violet-200 text-violet-700
-                       text-[10px] font-black uppercase tracking-widest">
+                       text-xs font-bold uppercase tracking-widest">
             <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
             Propuesta · Pendiente de validar
           </span>
         </div>
 
-        <h3 class="text-xl font-black text-azul-noche text-center mb-2">
+        <h3 class="text-xl font-bold text-azul-noche text-center mb-2">
           Propuesta pendiente de validar
         </h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
@@ -3185,7 +2990,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Vía A: Validación empresa -->
         <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-3">
-          <p class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-3">
+          <p class="text-xs font-bold uppercase tracking-widest text-blue-500 mb-3">
             Vía A · Validación empresa
           </p>
           <div class="flex items-center gap-2 mb-3">
@@ -3196,8 +3001,8 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="copiarUrlModal"
                     :class="['shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all',
                              urlCopiadaModal
-                               ? 'bg-centros/10 text-centros border-centros/20'
-                               : 'bg-white text-gray-500 border-gray-200 hover:border-centros hover:text-centros']">
+                               ? 'bg-rol/10 text-rol-fuerte border-rol/20'
+                               : 'bg-white text-gray-500 border-gray-200 hover:border-rol-fuerte hover:text-rol-fuerte']">
               {{ urlCopiadaModal ? '¡Copiado!' : 'Copiar' }}
             </button>
           </div>
@@ -3207,7 +3012,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="infoEmpresaAbierta = !infoEmpresaAbierta"
                     class="w-full flex items-center justify-between px-3 py-2 rounded-xl
                            bg-white border border-blue-200 text-xs font-bold text-blue-700
-                           hover:border-centros/40 hover:text-centros transition-all">
+                           hover:border-rol/40 hover:text-rol-fuerte transition-all">
               <span class="flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3232,22 +3037,22 @@ onUnmounted(() => { tourActivo.value = false; });
               <div v-if="infoEmpresaAbierta"
                    class="mt-2 px-3 py-3 bg-white border border-blue-100 rounded-xl space-y-1.5">
                 <p v-if="form.datos_empresa?.sector"
-                   class="text-[10px] text-gray-400">
-                  <span class="font-black uppercase tracking-wider">Sector:</span>
+                   class="text-xs text-gray-400">
+                  <span class="font-bold uppercase tracking-wider">Sector:</span>
                   {{ form.datos_empresa.sector }}
                 </p>
                 <p v-if="form.datos_empresa?.persona_contacto"
-                   class="text-[10px] text-gray-400">
-                  <span class="font-black uppercase tracking-wider">Contacto:</span>
+                   class="text-xs text-gray-400">
+                  <span class="font-bold uppercase tracking-wider">Contacto:</span>
                   {{ form.datos_empresa.persona_contacto }}
                 </p>
                 <p v-if="form.datos_empresa?.email"
-                   class="text-[10px] text-gray-400">
-                  <span class="font-black uppercase tracking-wider">Email:</span>
+                   class="text-xs text-gray-400">
+                  <span class="font-bold uppercase tracking-wider">Email:</span>
                   {{ form.datos_empresa.email }}
                 </p>
                 <p v-if="form.datos_empresa?.descripcion"
-                   class="text-[10px] text-gray-500 leading-relaxed pt-1 border-t border-gray-100">
+                   class="text-xs text-gray-500 leading-relaxed pt-1 border-t border-gray-100">
                   {{ form.datos_empresa.descripcion }}
                 </p>
               </div>
@@ -3259,7 +3064,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button v-if="form.empresa_id"
                     @click="abrirConfirmEnvio"
                     :class="form.enviado_a_empresa_mail
-                      ? 'bg-centros/10 border-centros/30 text-centros hover:bg-centros/20'
+                      ? 'bg-rol/10 border-rol/30 text-rol-fuerte hover:bg-rol/20'
                       : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'"
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5
                            border rounded-full text-xs font-bold transition-all">
@@ -3272,7 +3077,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <button @click="router.push({ name: 'empresas' }); modalPropuestaAviso = false"
                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5
                            bg-white border border-blue-200 text-blue-600 rounded-full
-                           text-xs font-bold hover:border-centros/40 hover:text-centros transition-all">
+                           text-xs font-bold hover:border-rol/40 hover:text-rol-fuerte transition-all">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -3284,7 +3089,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Vía B: Validación docente -->
         <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
-          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3">
+          <p class="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-3">
             Vía B · Validación docente
           </p>
           <p class="text-xs text-gray-600 leading-relaxed mb-3">
@@ -3316,7 +3121,7 @@ onUnmounted(() => { tourActivo.value = false; });
             @click="cerrarModalPropuestaAviso()"
             class="flex-1 inline-flex items-center justify-center
                    px-5 py-3 bg-gray-100 text-[#1F2937] rounded-full
-                   text-xs font-black uppercase tracking-widest
+                   text-xs font-bold uppercase tracking-widest
                    hover:bg-gray-200 transition-all active:scale-95"
           >
             Entendido
@@ -3324,9 +3129,9 @@ onUnmounted(() => { tourActivo.value = false; });
           <button
             @click="cerrarModalPropuestaAviso()"
             class="flex-1 inline-flex items-center justify-center gap-2
-                   px-5 py-3 bg-centros text-white rounded-full
-                   text-xs font-black uppercase tracking-widest shadow-sm
-                   hover:bg-centros/90 transition-all active:scale-95"
+                   px-5 py-3 bg-rol-fuerte text-white rounded-full
+                   text-xs font-bold uppercase tracking-widest shadow-sm
+                   hover:bg-rol/90 transition-all active:scale-95"
           >
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -3364,7 +3169,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-azul-noche text-center mb-1">
+        <h3 class="text-xl font-bold text-azul-noche text-center mb-1">
           Confirmar envío
         </h3>
         <p class="text-sm text-gray-500 text-center mb-5 leading-relaxed">
@@ -3374,27 +3179,27 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- Tarjeta empresa -->
         <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-5">
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-8 h-8 rounded-xl bg-centros/10 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 rounded-xl bg-rol/10 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
               </svg>
             </div>
-            <p class="font-black text-sm text-[#121212]">
+            <p class="font-bold text-sm text-[#121212]">
               {{ form.datos_empresa?.nombre || '—' }}
             </p>
           </div>
           <div class="space-y-1 pl-10">
-            <p v-if="form.datos_empresa?.sector" class="text-[11px] text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-[10px]">Sector:</span>
+            <p v-if="form.datos_empresa?.sector" class="text-xs text-gray-500">
+              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Sector:</span>
               {{ form.datos_empresa.sector }}
             </p>
-            <p v-if="form.datos_empresa?.persona_contacto" class="text-[11px] text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-[10px]">Contacto:</span>
+            <p v-if="form.datos_empresa?.persona_contacto" class="text-xs text-gray-500">
+              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Contacto:</span>
               {{ form.datos_empresa.persona_contacto }}
             </p>
-            <p v-if="form.datos_empresa?.email" class="text-[11px] text-gray-500">
-              <span class="font-bold text-gray-400 uppercase tracking-wider text-[10px]">Email:</span>
+            <p v-if="form.datos_empresa?.email" class="text-xs text-gray-500">
+              <span class="font-bold text-gray-400 uppercase tracking-wider text-xs">Email:</span>
               {{ form.datos_empresa.email }}
             </p>
           </div>
@@ -3402,8 +3207,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Campo de seguridad: escribe "enviar" -->
         <div class="mb-5">
-          <label class="block text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">
-            Escribe <span class="font-black text-[#1F2937] normal-case tracking-normal">enviar</span> para confirmar
+          <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+            Escribe <span class="font-bold text-[#1F2937] normal-case tracking-normal">enviar</span> para confirmar
           </label>
           <input
             v-model="confirmEnvioTexto"
@@ -3415,15 +3220,15 @@ onUnmounted(() => { tourActivo.value = false; });
             :class="confirmEnvioTexto && !confirmEnvioValido
               ? 'border-red-300 bg-red-50 text-red-700 focus:ring-2 focus:ring-red-200'
               : confirmEnvioTexto && confirmEnvioValido
-                ? 'border-centros/50 bg-centros/5 text-centros focus:ring-2 focus:ring-centros/20'
+                ? 'border-rol/50 bg-rol/5 text-rol-fuerte focus:ring-2 focus:ring-rol/20'
                 : 'border-gray-200 bg-white focus:border-gray-400 focus:ring-2 focus:ring-gray-100'"
           />
           <p v-if="confirmEnvioTexto && !confirmEnvioValido"
-             class="mt-1.5 text-[10px] text-red-500 font-semibold">
+             class="mt-1.5 text-xs text-red-500 font-semibold">
             Escribe exactamente: enviar
           </p>
           <p v-if="confirmEnvioTexto && confirmEnvioValido"
-             class="mt-1.5 text-[10px] text-centros font-semibold">
+             class="mt-1.5 text-xs text-rol-fuerte font-semibold">
             Confirmado. Ya puedes continuar.
           </p>
         </div>
@@ -3434,7 +3239,7 @@ onUnmounted(() => { tourActivo.value = false; });
             @click="modalConfirmEnvio = false"
             class="flex-1 inline-flex items-center justify-center
                    px-4 py-2.5 bg-gray-100 text-[#1F2937] rounded-full
-                   text-xs font-black uppercase tracking-widest
+                   text-xs font-bold uppercase tracking-widest
                    hover:bg-gray-200 transition-all active:scale-95"
           >
             Cancelar
@@ -3443,7 +3248,7 @@ onUnmounted(() => { tourActivo.value = false; });
             @click="confirmarEnvio"
             :disabled="!confirmEnvioValido"
             class="flex-1 inline-flex items-center justify-center gap-2
-                   px-4 py-2.5 rounded-full text-xs font-black uppercase tracking-widest
+                   px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest
                    transition-all active:scale-95"
             :class="confirmEnvioValido
               ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
@@ -3462,7 +3267,7 @@ onUnmounted(() => { tourActivo.value = false; });
           @click="router.push({ name: 'empresas' }); modalConfirmEnvio = false; modalPropuestaAviso = false"
           class="w-full inline-flex items-center justify-center gap-2
                  px-4 py-2.5 bg-white border border-gray-200 text-gray-500 rounded-full
-                 text-xs font-bold hover:border-centros/40 hover:text-centros transition-all"
+                 text-xs font-bold hover:border-rol/40 hover:text-rol-fuerte transition-all"
         >
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -3495,7 +3300,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <!-- Cabecera -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <p class="text-sm font-black text-[#121212] truncate pr-4">{{ modalRecurso.label }}</p>
+          <p class="text-sm font-bold text-[#121212] truncate pr-4">{{ modalRecurso.label }}</p>
           <button @click="modalRecurso = null"
                   class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
                          text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all shrink-0">
@@ -3535,9 +3340,9 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
             <p class="text-gray-400 text-sm">Este tipo de archivo no se puede previsualizar</p>
             <a :href="modalRecurso.url" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-2 px-5 py-2.5 bg-centros text-white
-                      rounded-full text-xs font-black uppercase tracking-widest
-                      hover:bg-centros/90 transition-all">
+               class="inline-flex items-center gap-2 px-5 py-2.5 bg-rol-fuerte text-white
+                      rounded-full text-xs font-bold uppercase tracking-widest
+                      hover:bg-rol/90 transition-all">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -3579,7 +3384,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </svg>
         </div>
 
-        <h3 class="text-xl font-black text-azul-noche text-center mb-4">
+        <h3 class="text-xl font-bold text-azul-noche text-center mb-4">
           Sobre la publicación de la propuesta
         </h3>
 
@@ -3594,9 +3399,9 @@ onUnmounted(() => { tourActivo.value = false; });
         <button
           @click="confirmarGuardarBorrador"
           class="mt-7 w-full inline-flex items-center justify-center
-                 px-6 py-3 bg-centros text-white rounded-full
-                 text-xs font-black uppercase tracking-widest shadow-sm
-                 hover:bg-centros/90 transition-all active:scale-95"
+                 px-6 py-3 bg-rol-fuerte text-white rounded-full
+                 text-xs font-bold uppercase tracking-widest shadow-sm
+                 hover:bg-rol/90 transition-all active:scale-95"
         >
           Entendido
         </button>
@@ -3620,30 +3425,35 @@ onUnmounted(() => { tourActivo.value = false; });
 <style scoped>
 @reference "../style.css";
 
+/* Chips de datos bajo la cabecera del wizard (diseño crear_proyecto*.png) */
+.chip-taller {
+  @apply inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-[13px] text-gray-700 shadow-sm;
+}
+
 .field-label {
-  @apply block text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mb-1.5;
+  @apply block text-xs font-bold uppercase tracking-[0.12em] text-gray-600 mb-1.5;
 }
 .field-input {
-  @apply w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-sm
-         text-[#1F2937] placeholder-gray-400 focus:outline-none focus:border-centros
+  @apply w-full bg-white border border-borde-campo rounded-xl px-4 py-2.5 text-sm
+         text-[#1F2937] placeholder-gray-500 focus:outline-none focus:border-rol-fuerte
          transition-colors shadow-sm;
 }
 .btn-primary {
-  @apply inline-flex items-center gap-2 px-6 py-2.5 bg-centros text-white
-         rounded-full text-xs font-black uppercase tracking-widest shadow-sm
-         hover:bg-centros/90 hover:shadow-[0_0_0_3px_rgba(48,114,170,0.15)]
+  @apply inline-flex items-center gap-2 px-6 py-2.5 bg-rol-fuerte text-white
+         rounded-full text-xs font-bold uppercase tracking-widest shadow-sm
+         hover:bg-rol-fuerte/90
          transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
 }
 .btn-secondary {
   @apply inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200
-         rounded-full text-xs font-black uppercase tracking-widest text-[#1F2937]
-         shadow-sm hover:border-centros hover:text-centros
+         rounded-full text-xs font-bold uppercase tracking-widest text-[#1F2937]
+         shadow-sm hover:border-rol-fuerte hover:text-rol-fuerte
          transition-all active:scale-95;
 }
 .tag {
   display: inline-flex; align-items: center;
   padding: 0.125rem 0.5rem; border-radius: 999px;
-  font-size: 0.625rem; font-weight: 800;
+  font-size: 0.75rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.1em;
 }
 .tag-gray  { background: #F3F4F6; color: #6B7280; }

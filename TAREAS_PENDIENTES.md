@@ -181,3 +181,29 @@ Las tablas `modulos`, `resultados_aprendizaje` y `criterios_evaluacion` no tiene
 guardar con Eloquent (a `CicloFormativo` le pasaba y el alta/edición de ciclos daba 500).
 
 **Hecho cuando.** Un superadmin puede corregir un módulo, RA o CE concreto desde «Base de datos».
+
+---
+
+## T6 · Tipo de KPI (cualitativo / cuantitativo) en el Taller de Ideas — pendiente
+
+**Contexto.** El rediseño del paso 6 (`StartupDayWizard.vue`, diseño `src/assets/crear_proyecto_2.png`)
+muestra un desplegable «Cualitativo / Cuantitativo» en cada KPI. Hoy `microproyectos.kpis` guarda
+`{ lista: ["texto", …] }`, y ese formato lo leen el wizard, `MicroproyectoFichaPublicaResource`
+(validación de la empresa), los PDF (`useMicroproyectoPdfExport`) y la ficha del proyecto.
+
+**Qué hacer.** Pasar cada KPI a `{ texto, tipo }` aceptando también el formato antiguo (texto
+suelto = sin tipo), validar `tipo` con `in:cualitativo,cuantitativo` en `UpdateMicroproyectoRequest`
+y adaptar todos los lectores. Sin migración de esquema (es un JSON); si se normalizan los datos
+existentes, preguntar antes (regla de BD).
+
+## T7 · «Recursos de apoyo» en el Taller de Ideas — mostrado (2026-10-21), falta «Añadir recurso»
+
+**Contexto.** Los diseños del wizard (`crear_proyecto*.png`) tienen en el panel lateral un bloque
+«Recursos de apoyo» con «Añadir recurso». Desde el 2026-10-21 el bloque existe (`TallerResumen.vue`)
+y muestra los mismos recursos de `/seccion/recursos` (`SECCIONES.recursos` en
+`config/navegacion.js`: «¿Qué es DUALAB?», «Glosario», «Guías y plantillas», «Acerca de»), con
+«Ver todos los recursos». No hay «Añadir recurso»: no existe tabla, endpoint ni policy.
+
+**Qué hacer.** Decidir si son recursos globales de DuaLab (guías para docentes, gestionados por
+admin) o adjuntos de cada proyecto (ya existen en el paso 7: vídeos, imágenes y documentos). Según
+eso: modelo + migración + FormRequest + Resource + policy, y el bloque en `WizardResumen`.
