@@ -13,6 +13,7 @@ import TourPromptModal from '../components/TourPromptModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
 import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
+import { formatCurso } from '../utils/formatCurso.js'
 import { useUIState } from '../composables/useUIState.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -174,6 +175,55 @@ function addAlumnadoEncuentro() {
     alias: generarAliasAleatorio(nuevoAlumnadoNombre.value, aliasUsados.value),
   })
   nuevoAlumnadoNombre.value = ''
+}
+
+// ─── Copiar alumnado de un encuentro anterior (solo los del propio docente) ──
+// Así el mismo alumno conserva su alias entre proyectos y el docente no tiene que volver a
+// darlo de alta ni a apuntar otra correspondencia alias → alumno. Los encuentros ya vienen
+// cargados en el historial (GET /encuentros, con equipos y miembros); al guardar, el backend
+// vuelve a validar los alias (AliasAlumnado).
+const copiandoAlumnado     = ref(false)
+const encuentroACopiar     = ref('')
+const copiarConReparto     = ref(true)
+const mensajeCopiaAlumnado = ref('')
+
+function alumnadoDe(encuentro) {
+  if (encuentro.equipos?.length) {
+    return encuentro.equipos.flatMap(e => (e.miembros || []).map(m => ({ alias: m.alias, equipo_num: e.numero_equipo, rol: m.rol })))
+  }
+  return (encuentro.alumnados || []).filter(a => a.alias)
+}
+
+const encuentrosParaCopiar = computed(() => encuentros.value
+  .filter(e => e.es_propietario)
+  .map(e => ({ id: e.id, alumnado: alumnadoDe(e), etiqueta: [
+    formatFecha(e.fecha), e.proyecto_titulo || 'Sin proyecto',
+    [e.curso && formatCurso(e.curso), e.grupo].filter(Boolean).join(' '),
+  ].filter(Boolean).join(' · ') }))
+  .filter(e => e.alumnado.length))
+
+function copiarAlumnadoDeEncuentro() {
+  const origen = encuentrosParaCopiar.value.find(e => e.id === Number(encuentroACopiar.value))
+  if (!origen) return
+  const grupos = form.value.num_equipos || 3
+  const yaEstan = new Set(form.value.alumnados.map(a => String(a.alias).toLowerCase()))
+  let copiados = 0, repetidos = 0, sinSitio = 0
+  for (const a of origen.alumnado) {
+    if (yaEstan.has(String(a.alias).toLowerCase())) { repetidos++; continue }
+    if (limiteAlcanzado.value) { sinSitio++; continue }
+    // Con reparto: el mismo grupo si existe (si no, el último); sin reparto: grupos equilibrados
+    const equipo = copiarConReparto.value ? Math.min(Number(a.equipo_num) || 1, grupos) : (copiados % grupos) + 1
+    form.value.alumnados.push({ alias: a.alias, equipo_num: equipo, ...(a.rol ? { rol: a.rol } : {}) })
+    yaEstan.add(String(a.alias).toLowerCase())
+    copiados++
+  }
+  mensajeCopiaAlumnado.value = [
+    `${copiados} alumno${copiados === 1 ? '' : 's'} copiado${copiados === 1 ? '' : 's'}`,
+    repetidos && `${repetidos} ya estaba${repetidos === 1 ? '' : 'n'}`,
+    sinSitio && `${sinSitio} sin copiar por el límite de alumnado`,
+  ].filter(Boolean).join(' · ') + '. Revisa los grupos antes de guardar.'
+  copiandoAlumnado.value = false
+  encuentroACopiar.value = ''
 }
 
 function removeAlumnadoEncuentro(i) {
@@ -1052,6 +1102,48 @@ function formatFecha(isoDate) {
                   </div>
                   <p v-if="errorNuevoAlumnado" class="text-[11px] font-semibold text-red-500">{{ errorNuevoAlumnado }}</p>
 
+                  <!-- Copiar alumnado de un encuentro anterior del mismo docente -->
+                  <div v-if="encuentrosParaCopiar.length">
+                    <button v-if="!copiandoAlumnado" type="button" @click="copiandoAlumnado = true; mensajeCopiaAlumnado = ''"
+                            :disabled="!fechaEstablecida"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-centros/30 bg-white px-3 py-2
+                                   text-xs font-black text-centros transition-all hover:bg-centros/5
+                                   disabled:opacity-40 disabled:cursor-not-allowed">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                      Copiar alumnado de un encuentro anterior
+                    </button>
+                    <div v-else class="space-y-2 rounded-xl border border-centros/20 bg-centros/5 p-3">
+                      <label class="block text-[10px] font-black uppercase tracking-widest text-centros" for="encuentro-a-copiar">
+                        ¿De qué encuentro copias el alumnado?
+                      </label>
+                      <select id="encuentro-a-copiar" v-model="encuentroACopiar" class="field-input w-full !text-sm cursor-pointer">
+                        <option value="" disabled>Elige uno de tus encuentros…</option>
+                        <option v-for="e in encuentrosParaCopiar" :key="e.id" :value="e.id">
+                          {{ e.etiqueta }} · {{ e.alumnado.length }} alumnos
+                        </option>
+                      </select>
+                      <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                        <input v-model="copiarConReparto" type="checkbox" class="h-4 w-4 rounded accent-centros" />
+                        Mantener los mismos grupos (si no, se reparten equilibrados)
+                      </label>
+                      <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" @click="copiandoAlumnado = false; encuentroACopiar = ''"
+                                class="rounded-full px-3 py-2 text-xs font-black text-gray-500 hover:text-gray-700">
+                          Cancelar
+                        </button>
+                        <button type="button" @click="copiarAlumnadoDeEncuentro" :disabled="!encuentroACopiar"
+                                class="rounded-full bg-centros px-4 py-2 text-xs font-black text-white transition-all hover:bg-centros/90
+                                       disabled:opacity-40 disabled:cursor-not-allowed">
+                          Copiar alumnado
+                        </button>
+                      </div>
+                    </div>
+                    <p v-if="mensajeCopiaAlumnado" class="mt-1.5 text-[11px] font-semibold text-centros">{{ mensajeCopiaAlumnado }}</p>
+                  </div>
+
                   <!-- Grid de equipos -->
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div v-for="n in (form.num_equipos || 3)" :key="n"
@@ -1081,6 +1173,11 @@ function formatFecha(isoDate) {
                       <div v-if="alumnadosDeEquipo(n).length" class="space-y-1.5">
                         <div v-for="a in alumnadosDeEquipo(n)" :key="a._i" class="flex items-center gap-2 text-xs">
                           <span class="flex-1 min-w-0 truncate font-medium text-[#1F2937]">{{ a.alias }}</span>
+                          <select :value="a.equipo_num" @change="form.alumnados[a._i].equipo_num = Number($event.target.value)"
+                                  :aria-label="`Grupo de ${a.alias}`"
+                                  class="h-8 shrink-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-1.5 text-[11px] font-bold text-gray-500">
+                            <option v-for="g in (form.num_equipos || 3)" :key="g" :value="g">G{{ g }}</option>
+                          </select>
                           <RegenerarAliasButton :alias="a.alias" :usados="aliasUsados"
                                                  @generado="alias => (form.alumnados[a._i].alias = alias)" />
                           <button @click="removeAlumnadoEncuentro(a._i)" :aria-label="`Quitar a ${a.alias}`"
@@ -1100,6 +1197,12 @@ function formatFecha(isoDate) {
                     <div class="space-y-1.5">
                       <div v-for="a in alumnadosSinEquipo" :key="a._i" class="flex items-center gap-2 text-xs">
                         <span class="flex-1 min-w-0 truncate font-medium text-amber-700">{{ a.alias }}</span>
+                        <select :value="''" @change="form.alumnados[a._i].equipo_num = Number($event.target.value)"
+                                :aria-label="`Asignar grupo a ${a.alias}`"
+                                class="h-8 shrink-0 cursor-pointer rounded-xl border border-amber-200 bg-white px-1.5 text-[11px] font-bold text-amber-700">
+                          <option value="" disabled>Grupo</option>
+                          <option v-for="g in (form.num_equipos || 3)" :key="g" :value="g">G{{ g }}</option>
+                        </select>
                         <RegenerarAliasButton :alias="a.alias" :usados="aliasUsados"
                                                @generado="alias => (form.alumnados[a._i].alias = alias)" />
                         <button @click="removeAlumnadoEncuentro(a._i)" :aria-label="`Quitar a ${a.alias}`"

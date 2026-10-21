@@ -72,6 +72,7 @@ async function cambiarAlias(i, alias) {
 }
 
 const aliasUsados = computed(() => alumnados.value.map(a => a.alias))
+const hayAliasConfirmados = computed(() => alumnados.value.some(a => a.bloqueado))
 
 // Protección de datos: solo el nombre de pila (sin apellidos) + animal y color generados,
 // único en la clase
@@ -167,6 +168,10 @@ async function guardar() {
             <!-- Alumnado por equipos -->
             <div class="mt-5 space-y-3">
               <label class="req-label">Alumnado por grupos</label>
+              <!-- El 🔒 de cada alumno se explica aquí: con title solo se vería al pasar el ratón -->
+              <p v-if="hayAliasConfirmados" class="text-[11px] text-gray-500">
+                🔒 Grupo que ya confirmó sus alias en el workspace: no se pueden cambiar.
+              </p>
 
               <div class="flex flex-wrap gap-2">
                 <input v-model="nuevoNombre" type="text" maxlength="30"
