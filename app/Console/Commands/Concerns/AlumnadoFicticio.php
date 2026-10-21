@@ -20,23 +20,40 @@ use Illuminate\Support\Facades\DB;
  */
 trait AlumnadoFicticio
 {
-    // Nombres de pila variados (chicas y chicos) — nunca apellidos
+    // ~300 nombres de pila (chicas y chicos) — nunca apellidos: los frecuentes en España en la
+    // generación del alumnado de FP (nacidos ~2003-2010), nombres canarios de origen guanche y
+    // otros muy extendidos en las islas, y algunos de origen extranjero habituales en las aulas
     protected const NOMBRES_PILA_DEMO = [
-        'Lucía', 'Sofía', 'Martina', 'María', 'Julia', 'Paula', 'Valeria', 'Emma', 'Daniela', 'Carla',
-        'Alba', 'Noa', 'Sara', 'Carmen', 'Vega', 'Lola', 'Olivia', 'Valentina', 'Claudia', 'Jimena',
-        'Abril', 'Chloe', 'Elena', 'Aitana', 'Irene', 'Adriana', 'Laia', 'Marina', 'Ana', 'Alejandra',
-        'Candela', 'Lara', 'Inés', 'Triana', 'Nora', 'Leire', 'Mía', 'Ainhoa', 'Ariadna', 'Blanca',
-        'Nerea', 'Cayetana', 'Iratxe', 'Naiara', 'Rocío', 'Celia', 'Andrea', 'Lorena', 'Patricia', 'Raquel',
-        'Silvia', 'Cristina', 'Beatriz', 'Miriam', 'Yaiza', 'Tamara', 'Noelia', 'Estela', 'Gemma', 'Ruth',
-        'Itziar', 'Aroa', 'Erika', 'Judith', 'Salma', 'Yasmina', 'Amira', 'Fátima', 'Zaira', 'Gabriela',
-        'Camila', 'Renata', 'Ximena', 'Luna', 'Alma', 'Nahia', 'Ona', 'Maya', 'Elsa', 'Greta',
-        'Hugo', 'Martín', 'Lucas', 'Mateo', 'Leo', 'Daniel', 'Alejandro', 'Pablo', 'Manuel', 'Álvaro',
-        'Adrián', 'Mario', 'Diego', 'Enzo', 'Marcos', 'Izan', 'Javier', 'Bruno', 'Oliver', 'Thiago',
-        'Marco', 'Antonio', 'Gonzalo', 'Miguel', 'Carlos', 'Rodrigo', 'Nicolás', 'Iker', 'Héctor', 'Rubén',
-        'Sergio', 'Jorge', 'Raúl', 'Óscar', 'Iván', 'Unai', 'Aitor', 'Eric', 'Samuel', 'Gabriel',
-        'Víctor', 'Joel', 'Asier', 'Aarón', 'Guillermo', 'Rayan', 'Youssef', 'Omar', 'Saúl', 'Kevin',
-        'Cristian', 'Dylan', 'Gael', 'Liam', 'Nil', 'Pau', 'Jan', 'Pol', 'Arnau', 'Biel',
-        'Teo', 'Dario', 'Ismael', 'Rafael', 'Alberto', 'Fernando', 'Ignacio', 'Luis', 'Jaime', 'Tomás',
+        'Lucía', 'María', 'Paula', 'Laura', 'Marta', 'Andrea', 'Alba', 'Sara', 'Claudia', 'Carla',
+        'Irene', 'Nerea', 'Julia', 'Ana', 'Elena', 'Cristina', 'Natalia', 'Patricia', 'Raquel', 'Sandra',
+        'Noelia', 'Alicia', 'Ainhoa', 'Carmen', 'Rocío', 'Celia', 'Daniela', 'Sofía', 'Adriana', 'Lorena',
+        'Aitana', 'Nuria', 'Beatriz', 'Miriam', 'Silvia', 'Ángela', 'Inés', 'Lidia', 'Eva', 'Clara',
+        'Marina', 'Judith', 'Rebeca', 'Tania', 'Desirée', 'Esther', 'Ariadna', 'Mónica', 'Sheila', 'Tamara',
+        'Vanesa', 'Carolina', 'Alexandra', 'Valeria', 'Martina', 'Lola', 'Sonia', 'Laia', 'Ainara', 'Leire',
+        'Naiara', 'Estela', 'Elisa', 'Rosa', 'Isabel', 'Victoria', 'Jimena', 'Blanca', 'Vega', 'Olivia',
+        'Emma', 'Abril', 'Candela', 'Triana', 'Carlota', 'Gabriela', 'Camila', 'Noa', 'Lara', 'Nora',
+        'Mía', 'Alma', 'Luna', 'Celeste', 'Macarena', 'Esperanza', 'Pilar', 'Teresa', 'Lourdes', 'Gema',
+        'Verónica', 'Jessica', 'Melanie', 'Aroa', 'Erika', 'Ruth', 'Itziar', 'Gisela', 'Paola', 'Elsa',
+        'Greta', 'Iris', 'Zoe', 'Nahia', 'Aurora', 'Diana', 'Cayetana', 'Amaia', 'Yaiza', 'Nayra',
+        'Iraya', 'Dácil', 'Idaira', 'Gara', 'Atteneri', 'Haridian', 'Guacimara', 'Chaxiraxi', 'Tayri', 'Moneiba',
+        'Yurena', 'Cathaysa', 'Himar', 'Xiomara', 'Nayara', 'Mireya', 'Saray', 'Itahisa', 'Iballa', 'Fayna',
+        'Tenesoya', 'Yanira', 'Guayarmina', 'Ariday', 'Yaritza', 'Coraima', 'Acerina', 'Naira', 'Yeremay', 'Arminda',
+        'Salma', 'Amira', 'Fátima', 'Yasmina', 'Aya', 'Nour', 'Ikram', 'Malak', 'Valentina', 'Ximena',
+        'Renata', 'Antonella', 'Luciana', 'Mariana', 'Isabella', 'Dayana', 'Kiara', 'Pablo', 'Alejandro', 'Daniel',
+        'David', 'Javier', 'Adrián', 'Álvaro', 'Sergio', 'Carlos', 'Diego', 'Hugo', 'Mario', 'Iván',
+        'Jorge', 'Rubén', 'Marcos', 'Manuel', 'Miguel', 'Raúl', 'Alberto', 'Víctor', 'Antonio', 'Fernando',
+        'Francisco', 'José', 'Juan', 'Luis', 'Andrés', 'Óscar', 'Jesús', 'Ángel', 'Samuel', 'Aarón',
+        'Héctor', 'Gonzalo', 'Ignacio', 'Rodrigo', 'Nicolás', 'Martín', 'Lucas', 'Mateo', 'Iker', 'Unai',
+        'Eric', 'Izan', 'Joel', 'Kevin', 'Cristian', 'Jonathan', 'Alexis', 'Guillermo', 'Enrique', 'Pedro',
+        'Jaime', 'Tomás', 'Gabriel', 'Bruno', 'Marco', 'Leo', 'Dylan', 'Gael', 'Asier', 'Aitor',
+        'Ismael', 'Rafael', 'Saúl', 'Alex', 'Borja', 'Germán', 'Julián', 'Emilio', 'Felipe', 'Esteban',
+        'Agustín', 'Moisés', 'Elías', 'Abel', 'Isaac', 'Noel', 'Axel', 'Darío', 'Pol', 'Arnau',
+        'Biel', 'Nil', 'Marc', 'Eneko', 'Mikel', 'Ander', 'Teo', 'Oliver', 'Enzo', 'Iñigo',
+        'Rayan', 'Gerardo', 'Ricardo', 'Roberto', 'Alonso', 'Santiago', 'Sebastián', 'Valentín', 'Ciro', 'Lorenzo',
+        'Joaquín', 'Ayoze', 'Yeray', 'Airam', 'Aythami', 'Rayco', 'Nauzet', 'Dailos', 'Jonay', 'Tanausú',
+        'Iriome', 'Ruymán', 'Echedey', 'Acoidan', 'Ancor', 'Beneharo', 'Bentor', 'Kilian', 'Xerach', 'Acaymo',
+        'Tinerfe', 'Adargoma', 'Doramas', 'Yoel', 'Guayasén', 'Youssef', 'Omar', 'Mohamed', 'Adam', 'Ilyas',
+        'Bilal', 'Thiago', 'Matías', 'Benjamín', 'Santino', 'Emiliano',
     ];
 
     /**
