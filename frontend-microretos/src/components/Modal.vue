@@ -36,10 +36,10 @@ defineEmits(['cerrar'])
          @click.self="closable && $emit('cerrar')">
       <Transition name="modal-scale">
         <div v-if="visible"
-             class="relative bg-white border border-gray-200 rounded-[1.75rem] shadow-2xl w-full flex flex-col max-h-[90vh]"
+             class="relative bg-white border border-gray-200 rounded-[2rem] shadow-2xl w-full flex flex-col max-h-[90dvh]"
              :class="[maxWidth, cardClass]">
-          <button v-if="closable" type="button" @click="$emit('cerrar')"
-            class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200
+          <button v-if="closable" type="button" @click="$emit('cerrar')" aria-label="Cerrar"
+            class="absolute top-4 right-4 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200
                    flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all z-10">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

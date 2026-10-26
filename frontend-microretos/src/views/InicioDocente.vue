@@ -82,7 +82,7 @@ const kpis = computed(() => [
   { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/seccion/alumnado' },
   { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/seccion/empresas' },
   // Mismo criterio que /proyectos/terminados: estado 'completado' (solo se llega desde 'validado')
-  { key: 'completados', valor: proCurso.value.filter(p => p.estado === 'completado').length, label: 'Proyectos completados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos/terminados' },
+  { key: 'completados', valor: proCurso.value.filter(p => p.estado === 'completado').length, label: 'Proyectos completados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
   { key: 'encuentros', valor: encCurso.value.length,                                                 label: 'Encuentros realizados',  tile: 'bg-centros',          num: 'text-centros',          icon: 'encuentro', ruta: '/encuentros' },
 ])
 
@@ -222,7 +222,7 @@ const donut = computed(() => {
     { label: 'Pendiente validar', color: '#3072AA', ruta: filtroRuta('propuesta'),  valor: prop.length,
       detalle: [esperando && `${esperando} esperando`, sinEnviar && `${sinEnviar} sin enviar`, revisar && `${revisar} a revisar`].filter(Boolean).join(' · ') },
     { label: 'Validados',         color: '#509928', ruta: filtroRuta('validado'),   valor: all.filter(p => p.estado === 'validado').length },
-    { label: 'Completados',       color: '#19A7A8', ruta: '/proyectos/terminados',  valor: all.filter(p => p.estado === 'completado').length },
+    { label: 'Completados',       color: '#19A7A8', ruta: '/proyectos',  valor: all.filter(p => p.estado === 'completado').length },
   ]
   const total = grupos.reduce((s, g) => s + g.valor, 0)
   const GAP = grupos.filter(g => g.valor).length > 1 ? 2 : 0 // separador de 2px entre segmentos
@@ -412,7 +412,9 @@ function colorProyecto(p) {
 }
 
 function verTodosProyectos() {
-  if (filtroProy.value === 'todos') return irA('/proyectos')
+  // Completados es la pestaña por defecto; 'todos' = lo que está en proceso
+  if (filtroProy.value === 'completado') return irA('/proyectos')
+  if (filtroProy.value === 'todos') return irA('/proyectos?ver=proceso')
   router.push({ path: '/proyectos', query: { filtro: filtroProy.value } })
 }
 
@@ -441,13 +443,13 @@ const tareasAuto = computed(() => {
   const dias = (d) => Math.floor((now - new Date(d).getTime()) / 86_400_000)
   const t = []
   const revisar = proyectos.value.filter(p => p.estado === 'propuesta' && p.empresa_no_valida_aun)
-  if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar la respuesta de ${revisar.length} empresa${revisar.length > 1 ? 's' : ''}`, ruta: '/proyectos', nivel: 'alta' })
+  if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar la respuesta de ${revisar.length} empresa${revisar.length > 1 ? 's' : ''}`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'alta' })
   const sinEnviar = proyectos.value.filter(p => p.estado === 'propuesta' && !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun)
-  if (sinEnviar.length) t.push({ id: `enviar:${sinEnviar.length}`, texto: `Enviar ${sinEnviar.length} propuesta${sinEnviar.length > 1 ? 's' : ''} a la empresa`, ruta: '/proyectos', nivel: 'media' })
+  if (sinEnviar.length) t.push({ id: `enviar:${sinEnviar.length}`, texto: `Enviar ${sinEnviar.length} propuesta${sinEnviar.length > 1 ? 's' : ''} a la empresa`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'media' })
   const estancados = proyectos.value.filter(p => p.estado === 'en_edicion' && p.updated_at && dias(p.updated_at) >= 14)
-  if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} proyecto${estancados.length > 1 ? 's' : ''} parado${estancados.length > 1 ? 's' : ''} hace +14 días`, ruta: '/proyectos', nivel: 'media' })
+  if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} proyecto${estancados.length > 1 ? 's' : ''} parado${estancados.length > 1 ? 's' : ''} hace +14 días`, ruta: '/proyectos?ver=proceso', nivel: 'media' })
   const sinRespuesta = proyectos.value.filter(p => p.estado === 'propuesta' && p.enviado_a_empresa_mail && !p.empresa_validado && p.updated_at && dias(p.updated_at) >= 10)
-  if (sinRespuesta.length) t.push({ id: `recordar:${sinRespuesta.length}`, texto: `Recordar a ${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's' : ''} sin responder (+10 días)`, ruta: '/proyectos', nivel: 'media' })
+  if (sinRespuesta.length) t.push({ id: `recordar:${sinRespuesta.length}`, texto: `Recordar a ${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's' : ''} sin responder (+10 días)`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'media' })
   return t
 })
 

@@ -13,6 +13,7 @@
 import { computed } from 'vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
+import RolGrupo from './RolGrupo.vue'
 
 const props = defineProps({
   equipo: { type: Object, required: true },
@@ -31,12 +32,6 @@ const emit = defineEmits(['toggle-equipo', 'toggle-fase'])
 
 const FASES = FASES_PROYECTO
 
-const ROLES = {
-  portavoz:      { label: 'Portavoz',      color: 'bg-blue-100 text-blue-700' },
-  tiempos:       { label: 'Tiempos',       color: 'bg-amber-100 text-amber-700' },
-  documentacion: { label: 'Documentación', color: 'bg-violet-100 text-violet-700' },
-  foco:          { label: 'Foco',          color: 'bg-emerald-100 text-emerald-700' },
-}
 
 const FASE_COLORS = {
   slate:  { bg: 'bg-slate-100',  text: 'text-slate-600',  dot: 'bg-slate-400' },
@@ -199,12 +194,11 @@ function formatItemFase(item) {
         </div>
         <!-- Miembros -->
         <div class="flex flex-wrap gap-1.5 mt-1.5">
+          <!-- Rol en el grupo con «i» que lo explica (RolGrupo, común a las vistas del docente) -->
           <span v-for="m in equipo.miembros" :key="m.id"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-sm font-bold">
+                class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 py-0.5 pl-2.5 pr-0.5 text-sm font-semibold text-azul-noche">
             {{ m.alias }}
-            <span v-if="m.rol" :class="['px-1.5 py-px rounded-full text-[9px] font-black', ROLES[m.rol]?.color]">
-              {{ ROLES[m.rol]?.label }}
-            </span>
+            <RolGrupo v-if="m.rol" :rol="m.rol" />
           </span>
         </div>
         <!-- Fases en móvil: barra segmentada (el stepper completo no cabe) -->

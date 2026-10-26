@@ -138,10 +138,14 @@ async function guardar() {
 
 <template>
   <div class="min-h-screen pt-16">
-    <div class="max-w-lg mx-auto px-4 py-10">
+    <!-- Mismo contenedor que el resto de vistas (la cabecera empieza en el mismo sitio); el
+         formulario va debajo, estrecho y alineado a la izquierda -->
+    <div class="mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Mi" destacado="usuario" volver="/"
+      <CabeceraSeccion titulo="Mi" destacado="usuario" antetitulo="Mi cuenta" volver="/"
                        subtitulo="Edita tu nombre o cambia la contraseña de acceso." class="mb-6" />
+
+      <div class="max-w-lg">
 
       <!-- Tarjeta -->
       <div class="bg-white border border-gray-200 rounded-[1.75rem] p-8 shadow-sm space-y-5">
@@ -277,6 +281,7 @@ async function guardar() {
             {{ guardandoModulos ? 'Guardando…' : 'Guardar módulos' }}
           </button>
         </div>
+      </div>
       </div>
     </div>
   </div>

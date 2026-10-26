@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js'
@@ -124,6 +124,34 @@ function cerrar() {
   emit('close')
 }
 
+// ── Accesibilidad (como ModalTaller, GUIA_DISENO §6.4) ──────────────────────
+// Diálogo con nombre, foco dentro, Escape cierra y el foco vuelve a donde estaba. Si hay abierto
+// algo por encima (ficha del reto o un recurso), Escape es de eso. Se guarda el overflow anterior
+// del body: esta ficha también se abre encima del diagnóstico, que ya lo bloquea.
+const panel = ref(null)
+let focoPrevio = null
+let overflowPrevio = ''
+function alTeclear(e) {
+  if (e.key !== 'Escape' || microretoModalId.value || modalRecurso.value) return
+  e.stopPropagation()
+  cerrar()
+}
+watch(abierto, async (v, antes) => {
+  if (v) {
+    focoPrevio = document.activeElement
+    overflowPrevio = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', alTeclear, true)
+    await nextTick()
+    panel.value?.focus()
+  } else if (antes) {
+    document.removeEventListener('keydown', alTeclear, true)
+    document.body.style.overflow = overflowPrevio
+    focoPrevio?.focus?.()
+  }
+}, { immediate: true })
+onUnmounted(() => document.removeEventListener('keydown', alTeclear, true))
+
 function irAPaginaCompleta() {
   router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.value.uuid } })
   cerrar()
@@ -138,8 +166,10 @@ function irAPaginaCompleta() {
 
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrar" />
 
-        <div class="relative z-10 bg-[#f4f6fa] rounded-[2rem] shadow-2xl w-full max-w-4xl my-4
-                    max-h-[92vh] flex flex-col overflow-hidden">
+        <div ref="panel" role="dialog" aria-modal="true" tabindex="-1"
+             :aria-label="proyecto?.titulo ? `Ficha del proyecto: ${proyecto.titulo}` : 'Ficha del proyecto'"
+             class="relative z-10 bg-[#f4f6fa] rounded-[2rem] shadow-2xl w-full max-w-4xl my-4
+                    max-h-[92vh] flex flex-col overflow-hidden outline-none">
 
           <!-- Barra superior sticky -->
           <div class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 bg-white border-b border-gray-100 shrink-0">

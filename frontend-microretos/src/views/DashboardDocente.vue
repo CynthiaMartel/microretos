@@ -727,7 +727,7 @@ function formatFecha(isoDate) {
                 bg-rol-fuerte opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <!-- Asistente de 4 pasos + columna derecha (diseño crear_encuentro.png) -->
-    <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-5 xl:px-8 2xl:px-10">
+    <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-5 xl:px-8">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-5 xl:gap-8">
       <div class="min-w-0 flex-1 space-y-5">
 

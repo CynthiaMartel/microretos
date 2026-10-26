@@ -28,9 +28,9 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
 </script>
 
 <template>
-  <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] pt-16 md:pt-16">
+  <div class="min-h-screen px-4 pb-10 pt-[5.25rem] sm:px-6 lg:px-8 font-sans text-[#1F2937]">
 
-    <div class="relative z-10 max-w-6xl mx-auto"
+    <div class="relative z-10 mx-auto max-w-[90rem]"
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 

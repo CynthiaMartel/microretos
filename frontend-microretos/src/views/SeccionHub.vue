@@ -8,7 +8,7 @@ import { SECCIONES, ICONOS_NAV } from '../config/navegacion.js'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import ConceptoClave from '../components/ConceptoClave.vue'
 import FlujoDiagrama from '../components/FlujoDiagrama.vue'
-import HalosMarca from '../components/HalosMarca.vue'
+import AccesoRapidoEncuentros from '../components/AccesoRapidoEncuentros.vue'
 
 // Entrada de cada área del panel lateral: cards con las herramientas de la sección.
 // El contenido vive en config/navegacion.js; esta vista solo lo pinta, con el mismo
@@ -68,7 +68,7 @@ const abrir = (card) => {
   <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
     <!-- pb-20: el footer de créditos (AppCredit) es fixed y en móvil ocupa dos líneas;
          sin este margen tapa el final del flujo y el scroll rebota sin llegar a verlo -->
-    <div v-if="seccion" class="mx-auto max-w-[1100px] space-y-4 px-4 pb-20 pt-5 sm:px-6 lg:px-8">
+    <div v-if="seccion" class="mx-auto max-w-[90rem] space-y-4 px-4 pb-20 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion :titulo="seccion.titulo" :destacado="seccion.destacado" :color="seccion.color" :subtitulo="seccion.subtitulo" />
 
@@ -129,6 +129,10 @@ const abrir = (card) => {
         </article>
       </div>
 
+      <!-- Acceso del alumnado: «Dar acceso al encuentro», bajo las herramientas de la sección, con los
+           encuentros en curso hoy y, dentro, el botón para dar acceso a cualquier otro -->
+      <AccesoRapidoEncuentros v-if="seccion.accesoRapido" titulo="Dar acceso al encuentro" ver-todos :limite="3" />
+
       <!-- Bloque secundario: texto a la izquierda y botones pequeños a la derecha
            (Retos: de qué reto parte el proyecto · Alumnado: cómo lo ve el alumnado) -->
       <section v-if="bloque?.cards.length" class="card p-4 sm:p-5">
@@ -174,18 +178,24 @@ const abrir = (card) => {
         </div>
       </section>
 
-      <!-- Flujo explicativo de la sección (p. ej. Retos y proyectos): ver FlujoDiagrama.vue -->
-      <section v-if="flujo" class="pt-4">
-        <!-- Franja de título con los halos de los banners del panel docente a la derecha,
-             fundidos hacia el texto (mismo lenguaje que la bienvenida de InicioDocente) -->
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-transparent">
-          <HalosMarca class="absolute inset-y-0 right-0 hidden h-full w-[45%] sm:block [mask-image:linear-gradient(to_right,transparent,black_45%)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_45%)]" />
-          <div class="relative z-10 px-5 py-4 sm:max-w-[60%]">
-            <h2 class="card-title">{{ flujo.titulo }}</h2>
-            <p class="mt-1 text-sm text-texto-secundario">
-              Más detalle en <button type="button" class="font-semibold text-rol-fuerte hover:underline" @click="abrirComoFunciona">¿Cómo funciona DUALAB?</button>
-            </p>
+      <!-- Flujo explicativo de la sección (p. ej. Retos y proyectos): ver FlujoDiagrama.vue.
+           Tarjeta que envuelve título y diagrama, sin halos: los halos y la franja de marca son
+           de la cabecera (CabeceraSeccion) y aquí la harían parecer un segundo banner. -->
+      <section v-if="flujo" class="card p-4 sm:p-6" aria-labelledby="titulo-flujo">
+        <div class="flex flex-col gap-3 border-b border-borde pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 items-start gap-3">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte" aria-hidden="true">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+            </span>
+            <div class="min-w-0">
+              <h2 id="titulo-flujo" class="card-title">{{ flujo.titulo }}</h2>
+              <p class="mt-0.5 text-sm text-texto-secundario">El recorrido de esta sección, paso a paso.</p>
+            </div>
           </div>
+          <button type="button" class="accion-secundaria self-start sm:self-auto" @click="abrirComoFunciona">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            ¿Cómo funciona DUALAB?
+          </button>
         </div>
 
         <FlujoDiagrama class="mt-5" :fases="flujo.fases" />

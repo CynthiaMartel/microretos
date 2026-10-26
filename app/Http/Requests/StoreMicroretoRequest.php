@@ -15,7 +15,7 @@ class StoreMicroretoRequest extends FormRequest
     {
         $textFields = [
             'empresa_nombre', 'titulo', 'subtitulo', 'quien_es', 'dia_a_dia',
-            'pregunta_reto', 'ciclo', 'modulo', 'duracion', 'nivel_grupo',
+            'pregunta_reto', 'ciclo', 'modulo', 'nivel_grupo',
         ];
 
         $sanitized = [];
@@ -106,7 +106,6 @@ class StoreMicroretoRequest extends FormRequest
             'interes_familia'     => 'nullable|string|max:255',
             'interes_usado'       => 'nullable|string|max:500',
             'interes_firma'       => 'nullable|string|size:64',
-            'duracion'             => 'nullable|string|max:100',
             'es_simulado'          => 'nullable|boolean',
         ];
     }

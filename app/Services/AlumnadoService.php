@@ -28,9 +28,9 @@ class AlumnadoService
     public function participaciones(User $user): Collection
     {
         $encuentros = Encuentro::with([
-            'microproyecto:id,uuid,titulo,estado,familia_id',
+            'microproyecto:id,uuid,titulo,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
             'microproyecto.familia:id,nombre',
-            'equipos.microproyecto:id,uuid,titulo,estado,familia_id',
+            'equipos.microproyecto:id,uuid,titulo,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
             'equipos.microproyecto.familia:id,nombre',
             'equipos.miembros',
             'equipos.fases',

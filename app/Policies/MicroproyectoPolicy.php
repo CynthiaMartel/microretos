@@ -35,4 +35,11 @@ class MicroproyectoPolicy
     {
         return $proyecto->esEditablePara($user);
     }
+
+    // Publicar u ocultar el proyecto en el escaparate de la web pública (frontoffice,
+    // /api/public/microproyectos): es contenido de DuaLab hacia fuera, solo superadmin.
+    public function publicarEscaparate(User $user, Microproyecto $proyecto): bool
+    {
+        return $user->isSuperAdmin();
+    }
 }

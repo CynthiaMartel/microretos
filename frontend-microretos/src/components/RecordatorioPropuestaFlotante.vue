@@ -39,7 +39,7 @@ onMounted(() => {
       </span>
       <button
         @click="cerrar"
-        class="shrink-0 -mt-0.5 -mr-1 p-0.5 rounded-full text-amber-500/70 hover:text-amber-700 hover:bg-amber-100 transition-colors"
+        class="shrink-0 -my-2 -mr-2.5 flex h-9 w-9 items-center justify-center rounded-full text-amber-700 hover:text-amber-900 hover:bg-amber-100 transition-colors"
         title="Cerrar"
         aria-label="Cerrar recordatorio"
       >

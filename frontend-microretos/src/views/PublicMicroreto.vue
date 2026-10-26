@@ -164,11 +164,6 @@ const imagenFondo = computed(() => {
                            text-indigo-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                 {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos: 1º y 2º' : reto.curso + 'º Curso' }}
               </span>
-              <span v-if="reto.duracion"
-                    class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200
-                           text-gray-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                {{ reto.duracion }}
-              </span>
             </div>
           </div>
         </div>

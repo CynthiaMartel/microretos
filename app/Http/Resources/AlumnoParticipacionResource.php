@@ -82,6 +82,9 @@ class AlumnoParticipacionResource extends JsonResource
                 'titulo'  => $proyecto->titulo,
                 'estado'  => $proyecto->estado,
                 'familia' => $proyecto->familia?->nombre,
+                // Módulos que trabaja (los elegidos o, en proyectos antiguos, los de la evaluación
+                // oficial): filtro Módulo y tarjeta del Listado de alumnado. Sin consultas extra.
+                'modulos' => $proyecto->nombresModulos(),
             ] : null,
 
             'reflexion_individual' => $equipo->reflexiones

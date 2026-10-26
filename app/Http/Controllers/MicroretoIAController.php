@@ -369,7 +369,6 @@ class MicroretoIAController extends Controller
         {$contextoFriccion}
         LIMITACIONES TÉCNICAS Y LOGÍSTICAS (P3): {$request->restricciones}.
         LO QUE NO QUIEREN (P3b): {$request->loQueNoQuieren}.
-        DURACIÓN: {$request->duracion}.
 
         {$curriculumTexto}
         {$bloqueFijados}
@@ -556,7 +555,7 @@ class MicroretoIAController extends Controller
         $validated = $request->validated();
 
         $textFields = ['empresa_nombre', 'titulo', 'subtitulo', 'quien_es', 'dia_a_dia', 'pregunta_reto',
-                       'ciclo', 'modulo', 'duracion', 'nivel_grupo'];
+                       'ciclo', 'modulo', 'nivel_grupo'];
         $arrayFields = ['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
                         'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes'];
 
@@ -682,7 +681,8 @@ class MicroretoIAController extends Controller
     {
         try {
             $microreto = Microreto::with('empresa')->findOrFail($id);
-            $this->authorize('update', $microreto);
+            // Escaparate público (frontoffice): solo superadmin (MicroretoPolicy::publicarEscaparate)
+            $this->authorize('publicarEscaparate', $microreto);
 
             $microreto->visible_publico = !$microreto->visible_publico;
             $microreto->save();
@@ -698,7 +698,7 @@ class MicroretoIAController extends Controller
                 'visible_publico' => $microreto->visible_publico,
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json(['error' => 'No autorizado: este micro-reto no pertenece a tu centro educativo.'], 403);
+            return response()->json(['error' => 'Solo el superadmin puede publicar u ocultar retos en el escaparate público.'], 403);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['error' => 'Micro-reto no encontrado.'], 404);
         } catch (\Exception $e) {

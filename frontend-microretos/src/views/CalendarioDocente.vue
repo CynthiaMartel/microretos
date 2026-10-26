@@ -191,14 +191,13 @@ function enviarTarea() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
-    <div class="@container/page mx-auto max-w-[1440px] space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+  <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
+    <div class="@container/page relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Mi" destacado="calendario"
                        subtitulo="Tus encuentros del mes, las notas que apuntes en cada día y las tareas que tienes pendientes.">
-        <button @click="router.push('/encuentros/crear')"
-                class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+        <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
           Nuevo encuentro
         </button>
       </CabeceraSeccion>
@@ -222,12 +221,12 @@ function enviarTarea() {
             <p v-if="encActivo" class="flex min-w-0 items-center gap-2 text-xs" aria-live="polite">
               <span class="shrink-0 rounded-full bg-centros px-2 py-0.5 font-bold text-white">{{ diasTexto(encActivo) }}</span>
               <span class="min-w-0 truncate text-gray-600"><strong class="font-semibold text-azul-noche">{{ tituloEnc(encActivo) }}</strong> · {{ rangoEnc(encActivo) }}</span>
-              <button v-if="selEncId" class="shrink-0 text-gray-400 hover:text-gray-600" aria-label="Dejar de destacar el encuentro" @click="selEncId = null">×</button>
+              <button v-if="selEncId" type="button" class="-my-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Dejar de destacar el encuentro" @click="selEncId = null">×</button>
             </p>
             <div v-else class="flex items-center gap-4 text-xs text-gray-500">
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-centros" />Encuentro</span>
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-alumnos" />Nota</span>
-              <button class="link" @click="irAHoy">Hoy</button>
+              <button type="button" class="-my-1.5 inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-centros hover:bg-centros/10" @click="irAHoy">Hoy</button>
             </div>
           </div>
 
@@ -312,9 +311,9 @@ function enviarTarea() {
             <ul v-if="notasDia.length" class="mt-2 space-y-1">
               <li v-for="n in notasDia" :key="n.id" class="group flex items-start gap-2 rounded-lg bg-alumnos/5 p-2 text-sm">
                 <span class="min-w-0 flex-1 break-words text-gray-700">{{ n.texto }}</span>
-                <button class="shrink-0 text-xs text-gray-400 opacity-0 transition hover:text-centros group-hover:opacity-100 focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 shrink-0 items-center rounded-full px-2 text-xs text-gray-500 transition hover:bg-centros/10 hover:text-centros sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                         title="Quitar del calendario (se queda en tus notas)" @click="quitarFecha(n)">Sin fecha</button>
-                <button class="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                         :aria-label="`Borrar nota: ${n.texto}`" @click="eliminarNota(n)">×</button>
               </li>
             </ul>
@@ -322,8 +321,8 @@ function enviarTarea() {
           </div>
             <form class="mt-3 flex shrink-0 gap-2" @submit.prevent="addNotaDia">
               <input v-model="textoDia" maxlength="1000" placeholder="Apuntar una nota en este día…"
-                     class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoDia.trim() || guardando">Añadir</button>
+                     class="h-9 min-w-0 flex-1 rounded-xl border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
+              <button class="h-9 shrink-0 rounded-full bg-centros/10 px-4 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoDia.trim() || guardando">Añadir</button>
             </form>
           </article>
       </div>
@@ -337,7 +336,7 @@ function enviarTarea() {
               <h2 class="card-title text-base">Tareas pendientes</h2>
               <span v-if="pendientes" class="rounded-full bg-alumnos/15 px-2 py-0.5 text-xs font-bold text-alumnos-dark">{{ pendientes }}</span>
             </div>
-            <p v-if="errorTareas" class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorTareas }}</p>
+            <p v-if="errorTareas" class="mb-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorTareas }}</p>
             <ul v-if="listaTareas.length" class="space-y-0.5">
               <li v-for="item in tareasPagina" :key="item.key" class="group flex min-h-11 items-center gap-2.5 rounded-lg px-1.5 text-sm hover:bg-gray-50">
                 <template v-if="item.tipo === 'auto'">
@@ -346,7 +345,7 @@ function enviarTarea() {
                           @click="toggleAuto(item.t)">
                     <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
                   </button>
-                  <button class="min-w-0 flex-1 text-left leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700 hover:text-centros'" @click="router.push(item.t.ruta)">
+                  <button type="button" class="min-w-0 flex-1 self-stretch py-2 text-left leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700 hover:text-centros'" @click="router.push(item.t.ruta)">
                     {{ item.t.texto }}
                   </button>
                 </template>
@@ -356,7 +355,7 @@ function enviarTarea() {
                     <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
                   </button>
                   <span class="min-w-0 flex-1 break-words leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700'">{{ item.n.text }}</span>
-                  <button class="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                  <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                           :aria-label="`Borrar tarea: ${item.n.text}`" @click="borrarTarea(item.n.id)">×</button>
                 </template>
               </li>
@@ -366,15 +365,15 @@ function enviarTarea() {
             <!-- mt-auto: el formulario queda al pie aunque la tarjeta se estire a la altura de "Mis notas" -->
             <form class="mt-auto flex gap-2 pt-2" @submit.prevent="enviarTarea">
               <input v-model="nuevaTarea" maxlength="200" placeholder="Añadir tarea personal…"
-                     class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!nuevaTarea.trim()">Añadir</button>
+                     class="h-9 min-w-0 flex-1 rounded-xl border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
+              <button class="h-9 shrink-0 rounded-full bg-centros/10 px-4 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!nuevaTarea.trim()">Añadir</button>
             </form>
           </article>
 
           <!-- Notas: libres (sin fecha) y próximas con fecha -->
           <article class="card flex min-w-0 flex-col p-4">
             <h2 class="card-title text-base">Mis notas</h2>
-            <p v-if="errorNotas" class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorNotas }}</p>
+            <p v-if="errorNotas" class="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorNotas }}</p>
 
             <template v-if="proximasNotas.length">
               <p class="mt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Próximas</p>
@@ -392,7 +391,7 @@ function enviarTarea() {
             <ul v-if="notasSinFecha.length" class="mt-1 space-y-1">
               <li v-for="n in notasPagina" :key="n.id" class="group flex items-start gap-2 rounded-lg bg-gray-50 p-2 text-sm">
                 <span class="min-w-0 flex-1 whitespace-pre-line break-words text-gray-700">{{ n.texto }}</span>
-                <button class="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                         :aria-label="`Borrar nota: ${n.texto}`" @click="eliminarNota(n)">×</button>
               </li>
             </ul>
@@ -400,8 +399,8 @@ function enviarTarea() {
             <PaginacionFlechas v-model="paginaNotas" :total="totalPagNotas" etiqueta="Páginas de notas sin fecha" class="mt-2" />
             <form class="mt-auto space-y-2 pt-3" @submit.prevent="addNotaLibre">
               <textarea v-model="textoLibre" maxlength="1000" rows="2" placeholder="Escribe una nota…"
-                        class="block w-full resize-none rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="w-full rounded-full bg-centros/10 py-1.5 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoLibre.trim() || guardando">Guardar nota</button>
+                        class="block w-full resize-none rounded-xl border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
+              <button class="h-9 w-full rounded-full bg-centros/10 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoLibre.trim() || guardando">Guardar nota</button>
             </form>
           </article>
 
@@ -415,8 +414,9 @@ function enviarTarea() {
 
 .card        { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .card-title  { @apply font-heading text-lg font-bold text-azul-noche; }
-.link        { @apply text-sm font-semibold text-centros hover:underline; }
-.cal-nav     { @apply flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
+.cal-nav     { @apply flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
 .interruptor { @apply relative inline-flex h-4 w-7.5 shrink-0 items-center rounded-full p-0.5 transition-colors; }
 .interruptor-bola { @apply h-3 w-3 rounded-full bg-white shadow transition-transform; }
+/* Zona táctil de ~36px alrededor del interruptor (16px de alto a la vista) */
+.interruptor::before { content: ''; position: absolute; inset: -10px -4px; }
 </style>

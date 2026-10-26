@@ -213,7 +213,7 @@ async function copiarUrl() {
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
                 opacity-5 blur-[120px] rounded-full pointer-events-none z-0" :class="theme.bg" />
 
-    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
+    <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Ficha del" destacado="reto" :color="theme.text"
                        :volver="{ name: 'biblioteca' }"

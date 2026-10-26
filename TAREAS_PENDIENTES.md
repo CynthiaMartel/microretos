@@ -206,4 +206,49 @@ y muestra los mismos recursos de `/seccion/recursos` (`SECCIONES.recursos` en
 
 **Qué hacer.** Decidir si son recursos globales de DuaLab (guías para docentes, gestionados por
 admin) o adjuntos de cada proyecto (ya existen en el paso 7: vídeos, imágenes y documentos). Según
-eso: modelo + migración + FormRequest + Resource + policy, y el bloque en `WizardResumen`.
+eso: modelo + migración + FormRequest + Resource + policy, y el bloque en `TallerResumen.vue`.
+
+---
+
+## T10 · Tokens de diseño en el resto de vistas — pendiente
+
+Las vistas rediseñadas el 2026-10-21/22 (Taller de Ideas, crear encuentro, `/encuentros`, secciones,
+explorador de retos, modal de propuesta) y los filtros comunes (`FiltrosPanel`, `FiltroSelect`,
+`FiltroSegmentado`) ya usan los tokens. El resto sigue con grises, bordes y verdes de Tailwind, violeta como color de
+IA, `#1F2937` como texto y textos de 8–11px. Aplicarlo vista a vista al tocar cada una (mismo
+criterio que `docs/GUIA_DISENO.md` §2–§3): texto azul noche / `texto-secundario`, bordes
+`border-borde`, éxito en verde de marca, IA en naranja con acciones en color del rol, mínimo
+12px y sin `font-black`. Revisar fondos oscuros (ahí el texto secundario va en gris claro).
+
+---
+
+## T11 · Formato de explorador en el resto de listados — pendiente
+
+Retos, Encuentros, Proyectos y Mis grupos ya siguen el mismo esquema (2026-10-22, ver
+`docs/GUIA_DISENO.md` §7 y §8.2–§8.2c):
+- cabecera común (`CabeceraSeccion`);
+- sin capas de tarjetas de familia o módulo;
+- `FiltrosPanel separadores` con iconos y botón «Más filtros»;
+- lateral «Filtros rápidos» con casillas y contadores;
+- título de resultados con niveles (`TituloResultados`);
+- familia y módulos diferenciados en las tarjetas (`FamiliaModulos`);
+- pie de tarjeta con botón principal y menú «⋯» (cierre con clic fuera o Escape, sin overlay);
+- orden y paginación;
+- tokens de diseño.
+
+Faltan por pasar a ese formato:
+
+- ~~**Lista de alumnado** — `AlumnadoListado.vue`~~ ✅ hecho (2026-10-26): filtros familia, ciclo, módulo (la API `/alumnado` envía ya `proyecto.modulos`), nivel y clase; lateral con estado, seguimiento, familia, proyecto y fechas; título con niveles; paginación de 20.
+- ~~**Biblioteca de diagnósticos** — `BibliotecaDiagnosticos.vue`~~ ✅ hecho (2026-10-26): barra (búsqueda, curso, ciclo, módulo, nivel, clase), lateral (nota final por tramos, familia, de quién es), título con niveles, tarjetas con pie «Ver diagnóstico» + «⋯» (PDF, trabajo del grupo, ficha del proyecto), paginación de 9.
+- ~~**Listado de empresas** — `EmpresasView.vue`~~ ✅ hecho (2026-10-26): barra (búsqueda, centro y provincia si hay más de uno); lateral (estado de contacto, sector y familia con contadores); título con familia, chips y orden (nombre, estado, más proyectos); tarjetas iguales con pie «Ver ficha» + «⋯» (enviar email, enlace de validación, copiar email); la ficha pasa a un modal accesible; paginación de 12. Los estados de contacto usan ya los valores reales de `StoreEmpresaRequest::ESTADOS_CONTACTO` (antes la vista tenía otros y ni el filtro ni los colores coincidían).
+- ~~**Propuestas de empresas** — `PropuestasEmpresas.vue`~~ ✅ hecho (2026-10-26): se mantiene el tablero de 3 columnas (es un flujo, no una biblioteca); filtros solo buscador, curso académico, empresa y familia; 6 por columna con «Ver 6 más» / «Ver menos»; tokens.
+- ~~**Gestión de usuarios** (admin) — `GestionUsuarios.vue`~~ ✅ hecho (2026-10-26): cabecera común con «Nueva cuenta»; pestañas Activas | Papelera con contador; barra (buscador por nombre, email, centro o empresa; centro solo para superadmin si hay varios); lateral (tipo de cuenta y estado con contadores); título, chips y orden (recientes, nombre, sin activar primero); tarjetas horizontales (una por fila) con «Activar»/«Editar»/«Restaurar» + «⋯» (centro, bloquear, papelera, eliminar definitivamente); paginación de 12. Los modales de crear, editar, centro y confirmación no cambian.
+- **Noticias** — `NoticiasListado.vue`.
+- **Notificaciones** — `NotificacionesDocente.vue`.
+- ~~**Pantallas de acceso** — `PantallaAccesoLista.vue`~~ ✅ hecho (2026-10-26): lanzador, no biblioteca. Arriba «En curso hoy» (`AccesoRapidoEncuentros`, también en /seccion/alumnado) con código, copiar y «Proyectar»; debajo, el resto en lista compacta con buscador, clase y curso académico y «Ver más».
+- **Papelera** — `PapeleraBaseDatos.vue`.
+
+Revisar en cada una qué filtros tienen sentido: en alumnado, encuentro, grupo y fase; en empresas,
+sector, provincia, real/ficticia e interés por familia. Comprobar también si alguna tiene todavía
+capas de tarjetas por familia que haya que quitar. Al terminar cada vista, medirla a 360, 768 y
+1280 px (`/general:responsive-audit`).

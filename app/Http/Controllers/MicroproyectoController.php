@@ -173,7 +173,8 @@ class MicroproyectoController extends Controller
     {
         $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
 
-        $this->authorize('update', $proyecto);
+        // Escaparate público (frontoffice): solo superadmin (MicroproyectoPolicy::publicarEscaparate)
+        $this->authorize('publicarEscaparate', $proyecto);
 
         if ($proyecto->estado !== 'completado' && !$proyecto->visible_publico) {
             return response()->json(['error' => 'Solo se puede publicar un proyecto ya completado.'], 422);

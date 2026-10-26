@@ -1,14 +1,21 @@
-<!-- Ruta: /pantalla-acceso (name: pantalla-acceso-lista). Antes vivía en /dashboard/pantalla-acceso — ver router/index.js. -->
+<!-- Ruta: /pantalla-acceso (name: pantalla-acceso-lista). Antes vivía en /dashboard/pantalla-acceso — ver router/index.js.
+     Lanzador para dar acceso al alumnado en clase (no es otra biblioteca de encuentros: explorar
+     es cosa de /encuentros y Mis grupos). Arriba «En curso hoy» (AccesoRapidoEncuentros, también en
+     /seccion/alumnado) con el código y «Proyectar»; debajo, el resto en una lista compacta con solo
+     buscador, clase y curso académico. -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
+import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import FiltroSegmentado from '../components/FiltroSegmentado.vue'
+import SelectorCurso from '../components/SelectorCurso.vue'
+import AccesoRapidoEncuentros from '../components/AccesoRapidoEncuentros.vue'
+import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
+import { formatCurso } from '../utils/formatCurso.js'
 
 const router = useRouter()
-
-const isLoaded = ref(false)
-onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
 
 const cargando   = ref(true)
 const error      = ref('')
@@ -18,96 +25,131 @@ async function cargar() {
   cargando.value = true
   error.value = ''
   try {
-    const res = await api.get('/encuentros')
-    encuentros.value = res.data
-  } catch (e) {
-    error.value = 'Error al cargar tus encuentros.'
+    encuentros.value = (await api.get('/encuentros')).data
+  } catch {
+    error.value = 'No se han podido cargar tus encuentros.'
   } finally {
     cargando.value = false
   }
 }
-
-// Solo tiene sentido proyectar encuentros que ya tienen equipos creados (codigo_clase)
-const encuentrosConEquipos = computed(() =>
-  encuentros.value.filter(e => e.codigo_clase && e.microproyecto_uuid)
-)
-
-function abrirPantalla(encuentro) {
-  router.push({ name: 'pantalla-acceso', params: { uuid: encuentro.microproyecto_uuid } })
-}
-
-function formatFecha(fecha) {
-  if (!fecha) return ''
-  const d = new Date(fecha + 'T00:00:00')
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
-}
-
-function resumenMiembros(encuentro) {
-  const miembros = (encuentro.equipos || []).flatMap(eq => eq.miembros || [])
-  if (!miembros.length) return ''
-  const nombres = miembros.map(m => m.alias).filter(Boolean)
-  const max = 3
-  const resto = nombres.length - max
-  return resto > 0 ? `${nombres.slice(0, max).join(', ')} +${resto} más` : nombres.join(', ')
-}
-
 onMounted(cargar)
+
+// Solo se puede proyectar lo que ya tiene grupos y código de acceso
+const hoy = new Date().toISOString().slice(0, 10)
+const dia = (f) => String(f || '').slice(0, 10)
+const proyectables = computed(() => encuentros.value.filter(e => e.codigo_clase && e.microproyecto_uuid))
+const enCursoHoy = (e) => dia(e.fecha) && dia(e.fecha) <= hoy && dia(e.fecha_fin || e.fecha) >= hoy
+
+// ── «Otros encuentros»: el resto, con tres filtros ──────────────────────────
+const cursoStore     = useCursoAcademicoStore()
+const cursosConDatos = computed(() => [...new Set(proyectables.value.map(cursoDeEncuentro))])
+const busqueda    = ref('')
+const filtroClase = ref('')
+const titulo = (e) => e.proyecto_titulo || (e.grupo && `Clase ${e.grupo}`) || 'Sin nombre'
+const otros = computed(() => proyectables.value
+  .filter(e => !enCursoHoy(e) && cursoStore.coincide(cursoDeEncuentro(e)))
+  .sort((a, b) => dia(b.fecha).localeCompare(dia(a.fecha))))
+const clasesDisponibles = computed(() => [...new Set(otros.value.map(e => e.grupo).filter(Boolean))].sort())
+const opcionesClase = computed(() => [{ value: '', label: 'Todas' }, ...clasesDisponibles.value.map(c => ({ value: c, label: c }))])
+const filtrados = computed(() => {
+  const q = busqueda.value.trim().toLowerCase()
+  return otros.value.filter(e =>
+    (!filtroClase.value || e.grupo === filtroClase.value) &&
+    (!q || [titulo(e), e.codigo_clase, e.ciclo_formativo, ...(e.equipos || []).flatMap(eq => (eq.miembros || []).map(m => m.alias))]
+      .filter(Boolean).join(' ').toLowerCase().includes(q)))
+})
+const hayFiltros = computed(() => !!(busqueda.value.trim() || filtroClase.value))
+function limpiar() { busqueda.value = ''; filtroClase.value = '' }
+
+// «Ver más» en vez de páginas: se busca uno concreto, normalmente de los más recientes
+const PASO = 20
+const limite = ref(PASO)
+watch([busqueda, filtroClase, () => cursoStore.curso], () => { limite.value = PASO })
+const visibles = computed(() => filtrados.value.slice(0, limite.value))
+
+const fecha = (f) => { const d = new Date(dia(f) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) }
+const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: e.microproyecto_uuid } })
+const aviso = ref('')
+async function copiar(codigo) {
+  try { await navigator.clipboard.writeText(codigo); aviso.value = `Código ${codigo} copiado` } catch { aviso.value = `Código: ${codigo}` }
+  setTimeout(() => { aviso.value = '' }, 2500)
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] pt-16">
+  <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
+    <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-    <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
-      <CabeceraSeccion titulo="Pantalla de" destacado="Acceso" color="text-alumnos" volver="/seccion/alumnado"
-                       subtitulo="Elige el encuentro que quieres proyectar en clase para que el alumnado escanee su QR y código." />
-    </div>
+      <CabeceraSeccion titulo="Dar acceso al" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
+                       subtitulo="Proyecta en clase el QR y el código del encuentro para que el alumnado entre en su espacio de trabajo." />
 
-    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-bold text-[#121212]">Todos tus encuentros</p>
-      </div>
-    </div>
-
-    <div class="max-w-3xl mx-auto px-4 py-6 space-y-3">
-
-      <div v-if="cargando" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 border-2 border-centros border-t-transparent rounded-full animate-spin"></div>
+      <!-- Error de carga -->
+      <div v-if="error && !cargando" class="flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center" role="alert">
+        <p class="min-w-0 flex-1 text-sm font-medium text-red-700">{{ error }}</p>
+        <button type="button" @click="cargar" class="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100">Reintentar</button>
       </div>
 
-      <div v-else-if="error" class="rounded-3xl bg-red-50 border border-red-200 p-8 text-center text-red-600 text-sm font-semibold">
-        {{ error }}
-      </div>
+      <!-- 1. En curso hoy: lo que normalmente se proyecta -->
+      <AccesoRapidoEncuentros v-if="!error" :encuentros="encuentros" :cargando-externo="cargando" />
 
-      <template v-else>
-        <div v-if="!encuentrosConEquipos.length" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-          <p class="text-gray-400 text-sm mb-4">Ningún encuentro tiene grupos creados todavía.</p>
-          <button @click="router.push('/encuentros')"
-                  class="px-4 py-2 rounded-full bg-centros text-white text-xs font-black uppercase tracking-wider">
-            Ir a Crear/Ver Encuentros
-          </button>
+      <!-- 2. El resto, en lista compacta -->
+      <section v-if="!error" class="space-y-3" aria-labelledby="titulo-otros">
+        <h2 id="titulo-otros" class="font-heading text-lg font-bold text-azul-noche">
+          Otros encuentros <span v-if="!cargando" class="font-sans text-base font-semibold text-texto-secundario">· {{ filtrados.length }}</span>
+        </h2>
+
+        <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar por proyecto, código o alumno…"
+                      :hay-activos="hayFiltros" @limpiar="limpiar">
+          <template #curso>
+            <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+          </template>
+          <FiltroSegmentado v-if="clasesDisponibles.length > 1" label="Clase" v-model="filtroClase" :opciones="opcionesClase" />
+        </FiltrosPanel>
+
+        <div v-if="cargando" class="space-y-2" aria-busy="true">
+          <div v-for="n in 5" :key="n" class="h-16 animate-pulse rounded-2xl border border-borde bg-white" />
         </div>
 
-        <button v-for="e in encuentrosConEquipos" :key="e.id"
-                @click="abrirPantalla(e)"
-                class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4
-                       flex items-center gap-4 hover:border-centros/40 transition-all text-left">
-          <div class="flex-1 min-w-0">
-            <p class="font-black text-[#121212] truncate">{{ e.proyecto_titulo || (e.grupo && `Clase ${e.grupo}`) || 'Sin nombre' }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">
-              <span v-if="e.fecha">{{ formatFecha(e.fecha) }} · </span>{{ e.ciclo_formativo }} · código {{ e.codigo_clase }}
-            </p>
-            <p class="text-xs text-gray-500 mt-1 truncate">
-              {{ (e.equipos || []).length }} grupo{{ (e.equipos || []).length === 1 ? '' : 's' }}<span v-if="resumenMiembros(e)"> · {{ resumenMiembros(e) }}</span>
-            </p>
-          </div>
-          <span class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-black uppercase tracking-wider">
-            Proyectar →
-          </span>
-        </button>
-      </template>
+        <p v-else-if="!proyectables.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-10 text-center text-sm text-texto-secundario">
+          Ningún encuentro tiene grupos ni código todavía. Se crean al registrar un encuentro en
+          <RouterLink to="/encuentros" class="font-semibold text-rol-fuerte hover:underline">Encuentros</RouterLink>.
+        </p>
+        <p v-else-if="!filtrados.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-10 text-center text-sm text-texto-secundario">
+          {{ hayFiltros ? 'Ningún encuentro coincide con la búsqueda.' : 'No hay más encuentros en este curso.' }}
+        </p>
 
+        <ul v-else class="divide-y divide-borde overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
+          <li v-for="e in visibles" :key="e.id" class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-semibold text-azul-noche" :title="titulo(e)">{{ titulo(e) }}</p>
+              <p class="truncate text-sm text-texto-secundario">
+                <template v-if="e.grupo">Clase {{ e.grupo }} · </template><template v-if="e.curso">{{ formatCurso(e.curso) }} curso · </template>{{ fecha(e.fecha) || 'Sin fecha' }}<template v-if="e.es_propietario === false && e.propietario_nombre"> · Docente: {{ e.propietario_nombre }}</template>
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="rounded-lg bg-alumnos/5 px-2.5 py-1 font-heading text-base font-bold tracking-[0.12em] text-azul-noche" :title="`Código de acceso ${e.codigo_clase}`">{{ e.codigo_clase }}</span>
+              <button type="button" @click="copiar(e.codigo_clase)" :aria-label="`Copiar el código ${e.codigo_clase}`" title="Copiar el código"
+                      class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-white text-texto-secundario hover:text-azul-noche">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              </button>
+              <button type="button" @click="proyectar(e)" :aria-label="`Proyectar el acceso de «${titulo(e)}»`"
+                      class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5 sm:ml-0">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Proyectar
+              </button>
+            </div>
+          </li>
+        </ul>
+
+        <div v-if="!cargando && filtrados.length > limite" class="text-center">
+          <button type="button" class="accion-secundaria" @click="limite += PASO">Ver más ({{ filtrados.length - limite }})</button>
+        </div>
+      </section>
     </div>
+
+    <Transition enter-from-class="opacity-0 translate-y-2" leave-to-class="opacity-0" enter-active-class="transition" leave-active-class="transition">
+      <p v-if="aviso" role="status"
+         class="fixed bottom-14 right-4 z-[60] max-w-[calc(100vw-2rem)] rounded-2xl bg-azul-noche px-4 py-3 text-sm font-semibold text-white shadow-xl">{{ aviso }}</p>
+    </Transition>
   </div>
 </template>

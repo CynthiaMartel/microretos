@@ -228,14 +228,14 @@ export const SECCIONES = {
   alumnado: {
     titulo: 'Acceso del', destacado: 'alumnado', color: 'text-alumnos',
     subtitulo: 'El alumnado entra con el QR o el código del encuentro, elige su grupo y trabaja en su espacio.',
+    // Bloque «Dar acceso al encuentro» (AccesoRapidoEncuentros) bajo las tarjetas: los encuentros en
+    // curso hoy y, dentro, «Dar acceso a otro encuentro» (/pantalla-acceso)
+    accesoRapido: true,
     cards: [
       { titulo: 'Listado de alumnado', desc: 'Cada alumno con sus proyectos, encuentros, grupo, fase y nota final.',
         ruta: '/alumnado/listado', routeName: 'alumnado-listado', icon: 'alumnado', tile: 'bg-alumnos' },
       { titulo: 'Biblioteca de diagnósticos', desc: 'Diagnósticos finales de los proyectos terminados.',
         ruta: '/evaluacion/diagnosticos', routeName: 'biblioteca-diagnosticos', icon: 'diagnostico', tile: 'bg-administraciones' },
-      { titulo: 'Dar acceso al encuentro', desc: 'Elige un encuentro y proyecta su QR y código para el alumnado.',
-        ancho: true,
-        ruta: '/pantalla-acceso', routeName: 'pantalla-acceso-lista', icon: 'candado', tile: 'bg-alumnos' },
     ],
     // Pantallas del propio alumnado: el docente solo las abre para ver qué ve su alumnado
     bloqueSecundario: {

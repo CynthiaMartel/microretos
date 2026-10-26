@@ -1,9 +1,12 @@
 <!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js. -->
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
-import MigasNavegacion from '../components/MigasNavegacion.vue'
-import { migasFamilia } from '../utils/migasFamilia.js'
+import MiniaturaReto from '../components/MiniaturaReto.vue'
+import TituloResultados from '../components/TituloResultados.vue'
+import FamiliaModulos from '../components/FamiliaModulos.vue'
+import ChipDocente from '../components/ChipDocente.vue'
+import { usePaginacion } from '../composables/usePaginacion.js'
 import { modulosDeEncuentro, modulosDisponibles } from '../utils/modulos.js'
 import { useRouter, useRoute } from 'vue-router'
 import MicroretoModal from '../components/MicroretoModal.vue'
@@ -13,8 +16,6 @@ import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
 import ReestructurarEquipoModal from '../components/ReestructurarEquipoModal.vue'
 import CompartirEncuentroModal from '../components/CompartirEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
-import CodigoBadgeMini from '../components/CodigoBadgeMini.vue'
-import GenerarCodigoBoton from '../components/GenerarCodigoBoton.vue'
 import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
 import SelectorCurso from '../components/SelectorCurso.vue'
 import FiltrosPanel from '../components/FiltrosPanel.vue'
@@ -23,17 +24,9 @@ import FiltroSelect from '../components/FiltroSelect.vue'
 import api from '../api.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
-import ConceptoClave from '../components/ConceptoClave.vue'
 import { FASES_PROYECTO } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
-
-// Qué es un encuentro — mismo texto que ComoFuncionaModal.vue
-const CONCEPTO_ENCUENTRO = [
-  { t: 'Un ' }, { t: 'ENCUENTRO', b: true }, { t: ' es el ' }, { t: 'cuándo', b: true },
-  { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
-  { t: 'workspace', b: true }, { t: '.' },
-]
 
 // Grupos (equipos de alumnado) de un encuentro para la card. Usa los equipos reales si
 // vienen cargados; si no (encuentros antiguos), el reparto plano de `alumnados`.
@@ -92,9 +85,6 @@ async function cargarEncuentros() {
 
 onMounted(async () => {
   await cargarEncuentros()
-  // Solo el superadmin ve varios centros: el resto (docente, admin…) ve únicamente el suyo,
-  // así que se abre desplegado por defecto en vez de obligar a un clic extra.
-  if (!authStore.isSuperAdmin) centrosOrdenados.value.forEach(c => centrosExpandidos.value.add(c))
   const idParam = route.query.id
   if (idParam) {
     const s = encuentros.value.find(s => String(s.id) === String(idParam))
@@ -136,28 +126,47 @@ function mostrarSnack(mensaje, accion = null) {
 }
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
+// Biblioteca de encuentros con el mismo esquema que el explorador de retos: filtros arriba,
+// «Filtros rápidos» a la izquierda (familias —varias—, acceso, propiedad, fechas) y resultados.
 const filtros = ref({
-  titulo:  '',
-  desde:   '',
-  hasta:   '',
-  curso:   '',
-  grupo:   '',
-  familia: '',
-  ciclo:   '',
-  modulo:  '',
-  centro:  '',
+  titulo:    '',
+  desde:     '',
+  hasta:     '',
+  curso:     '',
+  grupo:     '',
+  familias:  [],
+  ciclo:     '',
+  modulo:    '',
+  centro:    '',
+  acceso:    '',   // '' | 'con' (ya tiene código del alumnado) | 'sin'
+  propiedad: '',   // '' | 'mios' | 'compartidos'
 })
-const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familia: '', ciclo: '', modulo: '', centro: '' }
+const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familias: [], ciclo: '', modulo: '', centro: '', acceso: '', propiedad: '' }
 
 // Encuentros cuyo proyecto no tiene familia: opción propia en el filtro
 const SIN_FAMILIA = '__sin_familia__'
-const coincideFamilia = (s) => !filtros.value.familia
-  || (filtros.value.familia === SIN_FAMILIA ? !s.familia_nombre : s.familia_nombre === filtros.value.familia)
+const coincideFamilia = (s) => !filtros.value.familias.length
+  || filtros.value.familias.includes(s.familia_nombre || SIN_FAMILIA)
 const coincideCiclo = (s) => !filtros.value.ciclo
   || (s.ciclo_formativo || '').toLowerCase().includes(filtros.value.ciclo.toLowerCase())
 
 // Familia → ciclo → módulo: cada nivel reinicia los que dependen de él
-watch(() => filtros.value.familia, () => { filtros.value.ciclo = ''; filtros.value.modulo = '' })
+watch(() => filtros.value.familias.join('|'), () => { filtros.value.ciclo = ''; filtros.value.modulo = '' })
+
+// Niveles elegidos para el título de los resultados (TituloResultados): una sola familia →
+// ciclo → módulo. Quitar un nivel quita también los que dependen de él (watches de arriba).
+const nivelesTitulo = computed(() => {
+  const f = filtros.value
+  const niveles = []
+  if (f.familias.length === 1) {
+    niveles.push({ etiqueta: 'Familia profesional', valor: nombreFamilia(f.familias[0]),
+      subir: () => { f.ciclo = ''; f.modulo = '' }, quitar: () => { f.familias = [] } })
+  }
+  if (f.ciclo) niveles.push({ etiqueta: 'Ciclo formativo', valor: f.ciclo, subir: () => { f.modulo = '' }, quitar: () => { f.ciclo = '' } })
+  if (f.modulo) niveles.push({ etiqueta: 'Módulo', valor: f.modulo, subir: () => {}, quitar: () => { f.modulo = '' } })
+  return niveles
+})
+const familiaEnTitulo = computed(() => nivelesTitulo.value[0]?.etiqueta === 'Familia profesional')
 watch(() => filtros.value.ciclo, () => { filtros.value.modulo = '' })
 
 // Curso académico compartido (store): filtros, listado y estadísticas salen de esta lista
@@ -173,8 +182,15 @@ const encuentrosUnicos = computed(() => {
   const deFamilia = encuentrosCurso.value.filter(coincideFamilia)
   const ciclos  = [...new Set(deFamilia.map(s => s.ciclo_formativo).filter(Boolean))].sort()
   // Módulos solo con una familia elegida (como en las bibliotecas), acotados al ciclo si lo hay
-  const modulos = filtros.value.familia ? modulosDisponibles(deFamilia.filter(coincideCiclo), modulosDeEncuentro) : []
-  return { centros, familias, ciclos, modulos }
+  const modulos = filtros.value.familias.length ? modulosDisponibles(deFamilia.filter(coincideCiclo), modulosDeEncuentro) : []
+  // Recuento por familia para el panel «Filtros rápidos» (curso académico + centro)
+  const base = filtros.value.centro ? encuentrosCurso.value.filter(s => s.centro_educativo === filtros.value.centro) : encuentrosCurso.value
+  const conteo = {}
+  base.forEach(s => { const k = s.familia_nombre || SIN_FAMILIA; conteo[k] = (conteo[k] || 0) + 1 })
+  const familiasPanel = familias.map(f => ({ ...f, n: conteo[f.value] || 0 })).sort((a, b) => b.n - a.n)
+  const acceso = { con: base.filter(s => s.codigo_clase).length, sin: base.filter(s => !s.codigo_clase).length }
+  const propiedad = { mios: base.filter(s => s.es_propietario).length, compartidos: base.filter(s => !s.es_propietario).length }
+  return { centros, familias, ciclos, modulos, familiasPanel, acceso, propiedad }
 })
 
 const encuentrosFiltrados = computed(() => {
@@ -192,7 +208,7 @@ const encuentrosFiltrados = computed(() => {
     lista = lista.filter(s => s.curso === filtros.value.curso)
   if (filtros.value.grupo)
     lista = lista.filter(s => s.grupo === filtros.value.grupo)
-  if (filtros.value.familia)
+  if (filtros.value.familias.length)
     lista = lista.filter(coincideFamilia)
   if (filtros.value.ciclo)
     lista = lista.filter(coincideCiclo)
@@ -200,6 +216,12 @@ const encuentrosFiltrados = computed(() => {
     lista = lista.filter(s => modulosDeEncuentro(s).includes(filtros.value.modulo))
   if (filtros.value.centro)
     lista = lista.filter(s => s.centro_educativo === filtros.value.centro)
+  if (filtros.value.acceso)
+    lista = lista.filter(s => filtros.value.acceso === 'con' ? !!s.codigo_clase : !s.codigo_clase)
+  if (filtros.value.propiedad)
+    lista = lista.filter(s => filtros.value.propiedad === 'mios' ? s.es_propietario : !s.es_propietario)
+  if (orden.value === 'antiguos') lista.reverse()
+  else if (orden.value === 'titulo') lista.sort((a, b) => (a.proyecto_titulo || '').localeCompare(b.proyecto_titulo || '', 'es'))
 
   return lista
 })
@@ -208,50 +230,62 @@ const OPCIONES_NIVEL = [{ value: '', label: 'Todos' }, { value: '1º', label: '1
 const OPCIONES_CLASE = [{ value: '', label: 'Todas' }, ...['A', 'B', 'C', 'D'].map(g => ({ value: g, label: g }))]
 
 const hayFiltrosActivos = computed(() =>
-  Object.values(filtros.value).some(v => v !== '')
+  Object.values(filtros.value).some(v => Array.isArray(v) ? v.length : v !== '')
 )
+function alternarFamilia(valor) {
+  const l = filtros.value.familias
+  filtros.value.familias = l.includes(valor) ? l.filter(v => v !== valor) : [...l, valor]
+}
+const nombreFamilia = (v) => v === SIN_FAMILIA ? 'Sin familia asignada' : v
+
+// Orden, vista, panel lateral y paginación (mismo comportamiento que el explorador de retos)
+const orden = ref('recientes')   // 'recientes' | 'antiguos' | 'titulo'
+const VISTA_KEY = 'dualab_encuentros_vista'
+const vista = ref((() => { try { return localStorage.getItem(VISTA_KEY) || 'cuadricula' } catch { return 'cuadricula' } })())
+watch(vista, v => { try { localStorage.setItem(VISTA_KEY, v) } catch { /* sin almacenamiento */ } })
+const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024)
+const columnasEncuentros = computed(() => panelFiltrosAbierto.value
+  ? 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
+  : 'md:grid-cols-2 xl:grid-cols-3')
+const familiasExpandidas = ref(false)
+const familiasPanelVisibles = computed(() => {
+  const todas = encuentrosUnicos.value.familiasPanel
+  return familiasExpandidas.value || todas.length <= 6 ? todas
+    : [...todas.slice(0, 6), ...todas.slice(6).filter(f => filtros.value.familias.includes(f.value))]
+})
+const hayVariosCentros = computed(() => encuentrosUnicos.value.centros.length > 1)
+// 12 por página: se reparte entero en 1, 2, 3 o 4 columnas (con 9, a 2 columnas quedaba
+// una tarjeta sola en la última fila y un hueco a su derecha)
+const POR_PAGINA = 12
+const { pagina, totalPaginas, itemsPagina: encuentrosPagina } = usePaginacion(encuentrosFiltrados, POR_PAGINA)
+watch(encuentrosFiltrados, () => { pagina.value = 0 })
+const paginasVisibles = computed(() => {
+  const n = totalPaginas.value, a = pagina.value
+  const ini = Math.max(0, Math.min(a - 2, n - 5)), fin = Math.min(n, ini + 5)
+  return Array.from({ length: fin - ini }, (_, i) => ini + i)
+})
+function irAPagina(i) {
+  pagina.value = i
+  document.getElementById('resultados-encuentros')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+const menuEncuentro = ref(null)   // id del encuentro con el menú «⋯» abierto
+const menuLlave     = ref(null)   // id del encuentro con el menú de la llave (códigos) abierto
+const ayudaIa       = ref(null)   // id del encuentro con la explicación del código IA desplegada (táctil)
+watch(menuLlave, () => { ayudaIa.value = null })
+// Cierre de los menús de las tarjetas al pulsar fuera: un overlay fixed no sirve, porque queda
+// por encima del menú (el contenedor de la vista es su propio contexto de apilamiento) y se
+// tragaba los clics en las opciones. Cuenta como «dentro» todo lo marcado con data-menu-raiz.
+function cerrarMenusAlPulsarFuera(e) {
+  if (!e.target.closest?.('[data-menu-raiz]')) { menuEncuentro.value = null; menuLlave.value = null }
+}
+watch(() => !!(menuEncuentro.value || menuLlave.value), (abierto) => {
+  document[abierto ? 'addEventListener' : 'removeEventListener']('click', cerrarMenusAlPulsarFuera, true)
+})
+onUnmounted(() => document.removeEventListener('click', cerrarMenusAlPulsarFuera, true))
+
 
 function limpiarFiltros() {
   filtros.value = { ...FILTROS_VACIOS }
-}
-
-// Migas comunes a las vistas por familia (Familias › <familia> › <ciclo> › <módulo>), solo con
-// una familia elegida. La familia es un filtro, no una capa: cada nivel quita los de debajo.
-const migas = computed(() => migasFamilia({
-  raiz:    { label: 'Familias', accion: () => { filtros.value.familia = '' } },
-  familia: {
-    label: filtros.value.familia === SIN_FAMILIA ? 'Sin familia asignada' : filtros.value.familia,
-    accion: () => { filtros.value.ciclo = ''; filtros.value.modulo = '' },
-  },
-  ciclo:   filtros.value.ciclo ? { label: filtros.value.ciclo, accion: () => { filtros.value.modulo = '' } } : null,
-  modulo:  filtros.value.modulo ? { label: filtros.value.modulo } : null,
-}))
-
-// ─── Acordeón por centro educativo ───────────────────────────────────────────
-const centrosExpandidos = ref(new Set())
-
-const encuentrosAgrupados = computed(() => {
-  const mapa = {}
-  for (const s of encuentrosFiltrados.value) {
-    const centro = s.centro_educativo || '— Sin centro asignado —'
-    if (!mapa[centro]) mapa[centro] = []
-    mapa[centro].push(s)
-  }
-  return mapa
-})
-
-const centrosOrdenados = computed(() =>
-  Object.keys(encuentrosAgrupados.value).sort((a, b) => {
-    if (a === '— Sin centro asignado —') return 1
-    if (b === '— Sin centro asignado —') return -1
-    return a.localeCompare(b)
-  })
-)
-
-function toggleCentro(centro) {
-  centrosExpandidos.value.has(centro)
-    ? centrosExpandidos.value.delete(centro)
-    : centrosExpandidos.value.add(centro)
 }
 
 // ─── Modal encuentro ─────────────────────────────────────────────────────────────
@@ -447,7 +481,7 @@ function formatFecha(isoDate) {
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
                 bg-rol-fuerte opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
-    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
+    <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8" @keydown.esc="menuEncuentro = null; menuLlave = null">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) + acciones de la vista -->
       <CabeceraSeccion titulo="Encuentros" destacado="registrados" color="text-centros" volver="/seccion/encuentros"
@@ -484,299 +518,364 @@ function formatFecha(isoDate) {
         </div>
       </CabeceraSeccion>
 
-      <!-- Qué es un encuentro (mismo texto que ComoFuncionaModal.vue) -->
-      <ConceptoClave color="centros" class="mb-8" :segmentos="CONCEPTO_ENCUENTRO" />
-
-      <!-- Dato que no da el pie del panel: retos distintos trabajados en el curso elegido -->
-      <p v-if="stats.total" class="mb-2 px-1 text-xs font-semibold text-texto-secundario">
-        {{ stats.microretos }} {{ stats.microretos === 1 ? 'reto distinto trabajado' : 'retos distintos trabajados' }}
-        en {{ stats.total }} {{ stats.total === 1 ? 'encuentro' : 'encuentros' }} del curso
-      </p>
-
-      <!-- ─── Filtros ──────────────────────────────────────────────────────── -->
-      <FiltrosPanel v-model:busqueda="filtros.titulo" placeholder="Buscar por título de reto…"
-                    :resultados="encuentrosFiltrados.length" :unidad="['encuentro', 'encuentros']"
-                    :hay-activos="hayFiltrosActivos" @limpiar="limpiarFiltros" class="mb-6">
+      <!-- ─── Filtros (mismo panel que el explorador de retos) ─────────────── -->
+      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del proyecto…">
         <template #curso>
-          <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+          <div class="flex flex-wrap items-center gap-2">
+            <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
+            <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
+            <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+                    aria-controls="filtros-rapidos-encuentros" aria-label="Más filtros"
+                    :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
+                    class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
+                    :class="panelFiltrosAbierto ? 'border-rol-fuerte/30 bg-rol/10 text-rol-fuerte' : 'border-rol-fuerte/30 bg-white text-rol-fuerte hover:bg-rol-fuerte/5'">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                    <span>Más filtros</span>
+                    </button>
+          </div>
         </template>
 
-        <FiltroSelect v-model="filtros.centro" label="Centro educativo" todos="Todos los centros"
-                      :opciones="encuentrosUnicos.centros" />
-
-        <FiltroSelect v-if="encuentrosUnicos.familias.length" v-model="filtros.familia" label="Familia profesional"
-                      todos="Todas las familias" :opciones="encuentrosUnicos.familias" />
-
-        <!-- Ciclo: lista de los ciclos presentes en el curso (el filtro compara por "contiene") -->
-        <FiltroSelect v-model="filtros.ciclo" label="Ciclo formativo" todos="Todos los ciclos"
-                      :opciones="encuentrosUnicos.ciclos" />
-
-        <!-- Módulo: con una familia elegida; un encuentro multimódulo aparece en cada uno -->
+        <FiltroSelect v-if="encuentrosUnicos.centros.length > 1 || authStore.isSuperAdmin" v-model="filtros.centro"
+                      label="Centro educativo" todos="Todos los centros" :opciones="encuentrosUnicos.centros" />
+        <!-- Ciclo: ciclos presentes en el curso (el filtro compara por "contiene") -->
+        <FiltroSelect v-model="filtros.ciclo" label="Ciclo formativo" todos="Todos los ciclos" :opciones="encuentrosUnicos.ciclos" />
+        <!-- Módulo: con alguna familia marcada; un encuentro multimódulo aparece en cada uno -->
         <FiltroSelect v-if="encuentrosUnicos.modulos.length" v-model="filtros.modulo" label="Módulo"
                       todos="Todos los módulos" :opciones="encuentrosUnicos.modulos" />
-
-        <!-- Nivel (1º/2º) — el curso académico se elige arriba -->
         <FiltroSegmentado v-model="filtros.curso" label="Nivel" :opciones="OPCIONES_NIVEL" />
-
-        <!-- Clase (campo grupo: A, B, C, D) -->
         <FiltroSegmentado v-model="filtros.grupo" label="Clase" :opciones="OPCIONES_CLASE" />
-
-        <!-- Rango de fechas -->
-        <div class="flex min-w-0 flex-wrap gap-3">
-          <label class="block min-w-0">
-            <span class="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-texto-secundario">Desde</span>
-            <input v-model="filtros.desde" type="date"
-                   class="h-9 max-w-full rounded-xl border border-borde bg-gray-50 px-3 text-xs font-bold text-azul-noche transition-colors focus:border-rol-fuerte focus:bg-white focus:outline-none" />
-          </label>
-          <label class="block min-w-0">
-            <span class="mb-1 block text-xs font-bold uppercase tracking-[0.15em] text-texto-secundario">Hasta</span>
-            <input v-model="filtros.hasta" type="date"
-                   class="h-9 max-w-full rounded-xl border border-borde bg-gray-50 px-3 text-xs font-bold text-azul-noche transition-colors focus:border-rol-fuerte focus:bg-white focus:outline-none" />
-          </label>
-        </div>
       </FiltrosPanel>
 
-      <MigasNavegacion v-if="filtros.familia && !cargando" :items="migas.items" :actual="migas.actual" class="mb-6" />
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
-      <!-- ─── Grid de encuentros ──────────────────────────────────────────────── -->
+        <!-- ═══ Filtros rápidos ═══ -->
+        <aside id="filtros-rapidos-encuentros" aria-label="Filtros rápidos"
+               class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:w-64 xl:w-72"
+               :class="panelFiltrosAbierto ? 'block' : 'hidden'">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h2 class="text-base font-bold text-azul-noche">Filtros rápidos</h2>
+            <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros"
+                    class="inline-flex h-8 items-center rounded-full px-2 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">Limpiar</button>
+          </div>
 
-      <!-- Cargando -->
-      <div v-if="cargando" class="flex flex-col items-center justify-center py-24">
-        <svg class="animate-spin w-8 h-8 text-rol-fuerte mb-3" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-        </svg>
-        <p class="text-rol-fuerte font-bold tracking-widest uppercase text-xs animate-pulse">Cargando encuentros…</p>
-      </div>
+          <div class="border-t border-borde pt-3" role="group" aria-labelledby="enc-filtro-familia">
+            <p id="enc-filtro-familia" class="mb-1.5 text-sm font-semibold text-azul-noche">Familia profesional</p>
+            <label v-for="f in familiasPanelVisibles" :key="f.value"
+                   class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="checkbox" :checked="filtros.familias.includes(f.value)" @change="alternarFamilia(f.value)"
+                     class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="min-w-0 flex-1 truncate text-sm text-azul-noche" :title="f.label">{{ f.label }}</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ f.n }}</span>
+            </label>
+            <p v-if="!encuentrosUnicos.familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin encuentros en este curso.</p>
+            <button v-if="encuentrosUnicos.familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
+                    class="mt-1 inline-flex h-8 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
+              {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${encuentrosUnicos.familiasPanel.length})` }}
+            </button>
+          </div>
 
-      <!-- Estado vacío global -->
-      <div v-else-if="encuentros.length === 0"
-           class="bg-white rounded-[1.5rem] border border-borde shadow-sm px-8 py-16 text-center">
-        <div class="w-16 h-16 rounded-full bg-gray-50 border border-borde
-                    flex items-center justify-center mx-auto mb-4">
-          <svg class="w-7 h-7 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-          </svg>
-        </div>
-        <p class="text-sm text-texto-secundario font-medium mb-4">Aún no hay encuentros registrados.</p>
-        <button @click="router.push('/encuentros/crear')"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-rol-fuerte text-white
-                       text-xs font-bold uppercase tracking-widest hover:bg-rol/90 transition-all">
-          Registrar primer encuentro
-        </button>
-      </div>
+          <div class="mt-3 border-t border-borde pt-3" role="radiogroup" aria-labelledby="enc-filtro-acceso">
+            <p id="enc-filtro-acceso" class="mb-1.5 text-sm font-semibold text-azul-noche">Acceso del alumnado</p>
+            <label v-for="o in [
+                     { v: '', label: 'Todos', n: encuentrosUnicos.acceso.con + encuentrosUnicos.acceso.sin, cls: 'bg-gray-100 text-azul-noche', icono: 'M4 6h16M4 12h16M4 18h16' },
+                     { v: 'con', label: 'Con código de acceso', n: encuentrosUnicos.acceso.con, cls: 'bg-empresas/10 text-empresas-dark', icono: 'M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z' },
+                     { v: 'sin', label: 'Sin código todavía', n: encuentrosUnicos.acceso.sin, cls: 'bg-amber-50 text-amber-800', icono: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+                   ]" :key="'a' + o.v" class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="radio" name="enc-acceso" :value="o.v" v-model="filtros.acceso" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" :class="o.cls" aria-hidden="true">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="o.icono"/></svg>
+              </span>
+              <span class="min-w-0 flex-1 text-sm text-azul-noche">{{ o.label }}</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ o.n }}</span>
+            </label>
+          </div>
 
-      <!-- Sin resultados con filtros -->
-      <div v-else-if="encuentrosFiltrados.length === 0"
-           class="bg-white rounded-[1.5rem] border border-borde shadow-sm px-8 py-12 text-center">
-        <svg class="w-8 h-8 text-texto-secundario mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-        </svg>
-        <p class="text-sm text-texto-secundario font-medium">Sin encuentros para esos filtros.</p>
-      </div>
+          <div v-if="encuentrosUnicos.propiedad.compartidos" class="mt-3 border-t border-borde pt-3" role="radiogroup" aria-labelledby="enc-filtro-propiedad">
+            <p id="enc-filtro-propiedad" class="mb-1.5 text-sm font-semibold text-azul-noche">De quién es</p>
+            <label v-for="o in [
+                     { v: '', label: 'Todos', n: encuentrosUnicos.propiedad.mios + encuentrosUnicos.propiedad.compartidos },
+                     { v: 'mios', label: 'Míos', n: encuentrosUnicos.propiedad.mios },
+                     { v: 'compartidos', label: 'Compartidos conmigo', n: encuentrosUnicos.propiedad.compartidos },
+                   ]" :key="'p' + o.v" class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="radio" name="enc-propiedad" :value="o.v" v-model="filtros.propiedad" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="min-w-0 flex-1 text-sm text-azul-noche">{{ o.label }}</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ o.n }}</span>
+            </label>
+          </div>
 
-      <!-- Acordeón por centro educativo -->
-      <div v-else class="space-y-3">
-        <div v-for="centro in centrosOrdenados" :key="centro"
-             class="bg-white rounded-[1.75rem] border border-borde shadow-sm overflow-hidden">
-
-          <!-- Cabecera del centro -->
-          <button @click="toggleCentro(centro)"
-                  class="w-full flex items-center gap-4 px-6 py-5
-                         hover:bg-gray-50/80 transition-colors duration-150 text-left">
-            <div class="w-10 h-10 rounded-2xl bg-[#1F2937] flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/>
-              </svg>
+          <details class="group mt-3 border-t border-borde pt-3" :open="!!(filtros.desde || filtros.hasta)">
+            <summary class="flex cursor-pointer list-none items-center justify-between py-1 text-sm font-semibold text-azul-noche">
+              Fechas
+              <svg class="h-4 w-4 text-texto-secundario transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </summary>
+            <div class="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2">
+              <label class="block min-w-0">
+                <span class="mb-1 block text-xs font-semibold text-azul-noche">Desde</span>
+                <input v-model="filtros.desde" type="date" class="h-10 w-full rounded-xl px-2 text-sm" />
+              </label>
+              <label class="block min-w-0">
+                <span class="mb-1 block text-xs font-semibold text-azul-noche">Hasta</span>
+                <input v-model="filtros.hasta" type="date" class="h-10 w-full rounded-xl px-2 text-sm" />
+              </label>
             </div>
-            <div class="flex-1 min-w-0">
-              <h2 class="font-bold text-base text-azul-noche truncate">{{ centro }}</h2>
-              <p class="text-xs text-texto-secundario font-medium mt-0.5">
-                {{ encuentrosAgrupados[centro].length }}
-                {{ encuentrosAgrupados[centro].length === 1 ? 'encuentro' : 'encuentros' }}
-              </p>
+          </details>
+        </aside>
+
+        <!-- ═══ Resultados ═══ -->
+        <section id="resultados-encuentros" class="min-w-0 flex-1 scroll-mt-24" aria-label="Encuentros">
+          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
+              <template v-if="cargando">Cargando encuentros…</template>
+              <template v-else>{{ encuentrosFiltrados.length }} {{ encuentrosFiltrados.length === 1 ? 'encuentro encontrado' : 'encuentros encontrados' }}</template>
+              <template #extra>
+                <p v-if="stats.total && !cargando" class="text-xs text-texto-secundario">
+                  {{ stats.microretos }} {{ stats.microretos === 1 ? 'reto distinto trabajado' : 'retos distintos trabajados' }} en el curso
+                </p>
+              </template>
+            </TituloResultados>
+            <div v-if="filtros.familias.length && !familiaEnTitulo" class="flex w-full flex-wrap gap-1.5 sm:order-last">
+              <button v-for="f in filtros.familias" :key="f" type="button" @click="alternarFamilia(f)"
+                      class="inline-flex h-9 max-w-full items-center gap-1.5 rounded-full bg-rol/10 px-3 text-xs font-semibold text-rol-fuerte hover:bg-rol/15"
+                      :aria-label="`Quitar filtro ${nombreFamilia(f)}`">
+                <span class="truncate">{{ nombreFamilia(f) }}</span><span aria-hidden="true">✕</span>
+              </button>
             </div>
-            <svg class="w-5 h-5 text-texto-secundario transition-transform duration-300 shrink-0"
-                 :class="centrosExpandidos.has(centro) ? 'rotate-180' : ''"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-
-          <!-- Encuentros del centro -->
-          <div v-if="centrosExpandidos.has(centro)"
-               class="border-t border-borde px-5 py-5">
-            <!-- auto-rows-fr + card en columna flex: todas las cards del centro miden lo mismo
-                 aunque cambie el largo de familia, módulos, título o el nº de grupos; cada texto
-                 reserva sus líneas y las acciones quedan siempre abajo -->
-            <div class="grid grid-cols-1 md:grid-cols-2 auto-rows-fr gap-4">
-              <div v-for="s in encuentrosAgrupados[centro]" :key="s.id"
-                   class="flex flex-col min-w-0 bg-[#F8FAFC] rounded-[1.25rem] border border-borde
-                          hover:border-rol/30 hover:shadow-sm transition-all group cursor-pointer"
-                   @click="verEncuentro(s)">
-
-                <!-- Card header: familia y módulo en grande (dónde estamos), después el proyecto y la fecha -->
-                <div class="px-5 pt-5 pb-4 border-b border-borde">
-                  <p class="text-xs font-bold uppercase tracking-[0.18em] text-texto-secundario">Familia profesional</p>
-                  <p class="text-lg font-bold uppercase leading-tight text-rol-fuerte line-clamp-2 min-h-[2lh] break-words"
-                     :title="s.familia_nombre">
-                    {{ s.familia_nombre || 'Sin familia asignada' }}
-                  </p>
-                  <!-- Siempre presente (aunque no haya módulos) para no descuadrar la card -->
-                  <p class="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-texto-secundario">
-                    {{ s.modulos?.length > 1 ? 'Módulos' : 'Módulo' }}
-                  </p>
-                  <p class="text-base font-bold leading-snug line-clamp-2 min-h-[2lh] break-words"
-                     :class="s.modulos?.length ? 'text-azul-noche' : 'text-texto-secundario'"
-                     :title="s.modulos?.join(' · ')">{{ s.modulos?.length ? s.modulos.join(' · ') : 'Sin módulo asignado' }}</p>
-                  <p class="mt-3 text-sm font-semibold text-texto-secundario leading-snug line-clamp-2 min-h-[2lh] break-words
-                            group-hover:text-rol-fuerte transition-colors" :title="s.proyecto_titulo">
-                    {{ s.proyecto_titulo || '(sin título)' }}
-                  </p>
-                  <p class="text-xs font-bold text-rol-fuerte mt-1">
-                    {{ formatFecha(s.fecha) }}
-                  </p>
-                </div>
-
-                <!-- Aviso: la card es clicable para más detalle -->
-                <div class="px-5 py-1.5 bg-rol/5 border-b border-borde flex items-center gap-1.5">
-                  <svg class="w-3 h-3 text-rol-fuerte shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  <p class="text-xs font-bold text-rol-fuerte uppercase tracking-wide">
-                    Pica aquí para más detalle y dar acceso al alumnado
-                  </p>
-                </div>
-
-                <!-- Card body (crece para igualar la altura de la fila) -->
-                <div class="flex-1 px-5 py-4 space-y-2">
-                  <div class="flex flex-wrap gap-1.5">
-                    <span v-if="s.curso"       class="tag tag-green">{{ formatCurso(s.curso) }} curso</span>
-                    <span v-if="s.grupo"       class="tag tag-lime">Clase {{ s.grupo }}</span>
-                    <span v-if="s.num_alumnos" class="tag tag-gray">{{ s.num_alumnos }} alumnos</span>
-                  </div>
-                  <!-- Grupos de alumnado del encuentro: nombre, nº de alumnos y fase actual -->
-                  <div v-if="gruposDe(s).length" class="pt-1">
-                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-texto-secundario mb-1">
-                      {{ gruposDe(s).length }} {{ gruposDe(s).length === 1 ? 'grupo' : 'grupos' }}
-                    </p>
-                    <ul class="space-y-1">
-                      <li v-for="g in gruposDe(s)" :key="g.clave"
-                          class="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 border border-borde">
-                        <span class="text-xs font-bold text-azul-noche truncate">{{ g.nombre }}</span>
-                        <span v-if="g.alumnos" class="text-xs text-texto-secundario shrink-0">{{ g.alumnos }} alumnos</span>
-                        <span v-if="g.fase" class="ml-auto shrink-0 rounded-full bg-alumnos/10 px-2 py-0.5 text-xs font-bold text-alumnos-dark truncate max-w-[55%]">
-                          {{ g.fase }}
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                  <!-- Encuentro de un compañero que me ha dado permiso como colaborador -->
-                  <p v-if="!s.es_propietario && s.propietario_nombre"
-                     class="inline-flex max-w-full items-center gap-1 rounded-full bg-rol/10 px-2 py-0.5 text-xs font-bold text-rol-fuerte">
-                    <span class="truncate">De {{ s.propietario_nombre }}</span>
-                    <span v-if="!s.puede_editar" class="shrink-0">· solo lectura</span>
-                  </p>
-                  <div class="space-y-1">
-                    <p v-if="s.ciclo_formativo" class="text-xs text-texto-secundario flex items-center gap-1.5">
-                      <svg class="w-3 h-3 text-texto-secundario flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                      </svg>
-                      <span class="truncate">{{ s.ciclo_formativo }}</span>
-                    </p>
-                    <p v-if="s.notas" class="text-xs text-texto-secundario leading-relaxed line-clamp-2 italic break-words" :title="s.notas">
-                      "{{ s.notas }}"
-                    </p>
-                  </div>
-
-                  <!-- Códigos: acceso del alumnado al workspace + desbloqueo IA -->
-                  <div v-if="s.codigo_clase || s.codigo_ia" @click.stop
-                       class="flex flex-wrap items-end gap-2 pt-1">
-                    <CodigoBadgeMini v-if="s.codigo_clase" :code="s.codigo_clase" variant="clase"
-                                     label="Código acceso al alumnado" @copiar="copiarCodigo" />
-                    <CodigoBadgeMini v-if="s.codigo_ia" :code="s.codigo_ia" variant="ia" @copiar="copiarCodigo" />
-                  </div>
-                  <div v-if="!s.codigo_clase && s.num_equipos && s.puede_editar" @click.stop class="pt-1">
-                    <GenerarCodigoBoton variant="clase" label="Generar código workspace alumnado" loading-label="Creando..."
-                                        :loading="!!creandoCodigo[s.id]" :error="errorCodigo[s.id]"
-                                        @generar="crearCodigo(s)" />
-                  </div>
-                  <div v-if="!s.codigo_ia && s.num_equipos && s.puede_editar" @click.stop class="pt-1">
-                    <GenerarCodigoBoton variant="ia" label="Generar código sugerencia IA alumnado" loading-label="Generando..."
-                                        :loading="!!creandoCodigoIa[s.id]" :error="errorCodigoIa[s.id]"
-                                        @generar="crearCodigoIa(s)" />
-                  </div>
-                </div>
-
-                <!-- Acciones -->
-                <div @click.stop class="mt-auto px-5 py-3 border-t border-borde flex flex-wrap gap-1.5">
-                  <button v-if="s.puede_editar"
-                          @click.stop="abrirReestructurar(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-                                 border border-rol/30 bg-white text-rol-fuerte hover:bg-rol/5 transition-all
-                                 text-xs font-bold uppercase tracking-wide">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    Editar grupo
-                  </button>
-                  <button v-if="s.es_propietario"
-                          @click.stop="abrirCompartir(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-                                 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all
-                                 text-xs font-bold uppercase tracking-wide">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                    </svg>
-                    Compartir
-                  </button>
-                  <button v-if="s.microreto_id"
-                          @click.stop="abrirMicroretoModal(s.microreto_id)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-                                 bg-rol/10 text-rol-fuerte hover:bg-rol/20 transition-all
-                                 text-xs font-bold uppercase tracking-wide">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
-                               a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Ficha del reto
-                  </button>
-                  <button v-if="s.microproyecto_uuid"
-                          @click.stop="abrirProyectoFicha(s.microproyecto_uuid)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-                                 bg-rol/5 text-rol-fuerte hover:bg-rol/10 transition-all
-                                 text-xs font-bold uppercase tracking-wide">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Ficha del proyecto
-                  </button>
-                  <button v-if="s.puede_editar" @click.stop="abrirModalEliminar(s)"
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full ml-auto
-                                 hover:bg-red-50 text-texto-secundario hover:text-red-500 transition-all
-                                 text-xs font-bold uppercase tracking-wide">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    Eliminar
-                  </button>
-                </div>
-
-              </div>
+            <label class="flex items-center gap-2 text-sm text-texto-secundario">
+              <span class="hidden sm:inline">Ordenar por</span>
+              <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar encuentros">
+                <option value="recientes">Más recientes</option>
+                <option value="antiguos">Más antiguos</option>
+                <option value="titulo">Proyecto (A-Z)</option>
+              </select>
+            </label>
+            <div class="flex rounded-full bg-gray-100 p-1" role="group" aria-label="Vista de los resultados">
+              <button type="button" @click="vista = 'cuadricula'" :aria-pressed="vista === 'cuadricula'" aria-label="Vista en cuadrícula" title="Cuadrícula"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+                      :class="vista === 'cuadricula' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+              </button>
+              <button type="button" @click="vista = 'lista'" :aria-pressed="vista === 'lista'" aria-label="Vista en lista" title="Lista"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+                      :class="vista === 'lista' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
             </div>
           </div>
 
-        </div>
-      </div>
+          <!-- Carga: skeleton -->
+          <div v-if="cargando" class="grid grid-cols-1 gap-4" :class="columnasEncuentros" aria-busy="true">
+            <div v-for="n in 6" :key="n" class="flex animate-pulse gap-3 rounded-2xl border border-borde bg-white p-4">
+              <div class="h-20 w-20 shrink-0 rounded-xl bg-gray-200" />
+              <div class="flex-1 space-y-2"><div class="h-3 w-1/3 rounded-full bg-gray-200" /><div class="h-4 w-4/5 rounded-full bg-gray-200" /><div class="h-3 w-2/3 rounded-full bg-gray-200" /></div>
+            </div>
+            <span class="sr-only">Cargando encuentros…</span>
+          </div>
 
+          <!-- Sin encuentros todavía -->
+          <div v-else-if="encuentros.length === 0" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+            <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-rol/10 text-rol-fuerte" aria-hidden="true">
+              <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            <h3 class="mt-3 text-lg font-bold text-azul-noche">Aún no hay encuentros</h3>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Crea el primero a partir de un proyecto validado.</p>
+            <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal mt-4">Nuevo encuentro</button>
+          </div>
+
+          <!-- Sin resultados con filtros -->
+          <div v-else-if="encuentrosFiltrados.length === 0" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+            <h3 class="text-lg font-bold text-azul-noche">No hay encuentros con estos filtros</h3>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Prueba a quitar algún filtro.</p>
+            <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros" class="accion-secundaria mt-4">Limpiar filtros</button>
+          </div>
+
+          <!-- Tarjetas -->
+          <ul v-else :class="vista === 'cuadricula' ? ['grid grid-cols-1 gap-4', columnasEncuentros] : 'space-y-3'">
+            <li v-for="s in encuentrosPagina" :key="s.id"
+                class="group flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div class="flex min-w-0 gap-3">
+                <MiniaturaReto class="flex shrink-0" :class="vista === 'lista' ? 'h-16 w-20' : 'h-20 w-20'" />
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span v-if="s.curso" class="inline-flex items-center rounded-full bg-rol/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-rol-fuerte">{{ formatCurso(s.curso) }} curso</span>
+                    <span v-if="s.grupo" class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-azul-noche">Clase {{ s.grupo }}</span>
+                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide"
+                          :class="s.codigo_clase ? 'bg-empresas/10 text-empresas-dark' : 'bg-amber-50 text-amber-800'">
+                      {{ s.codigo_clase ? 'Acceso dado' : 'Sin código' }}
+                    </span>
+                    <ChipDocente v-if="!s.es_propietario && s.propietario_nombre" :nombre="s.propietario_nombre" :solo-lectura="!s.puede_editar" />
+                  </div>
+                  <h3 class="mt-1.5 line-clamp-2 font-heading text-base font-bold leading-snug text-azul-noche" :title="s.proyecto_titulo">
+                    <button type="button" @click="verEncuentro(s)" class="text-left hover:text-rol-fuerte hover:underline">{{ s.proyecto_titulo || '(sin título)' }}</button>
+                  </h3>
+
+                </div>
+              </div>
+
+              <!-- Familia y módulos diferenciados, con «+N» desplegable (FamiliaModulos, común a las bibliotecas) -->
+              <FamiliaModulos class="mt-3" :familia="s.familia_nombre || 'Sin familia asignada'" :modulos="modulosDeEncuentro(s)" :modulo-activo="filtros.modulo" />
+              <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-texto-secundario">
+                <span class="inline-flex items-center gap-1.5">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  {{ formatFecha(s.fecha) }}
+                </span>
+                <span v-if="s.num_alumnos" class="inline-flex items-center gap-1.5">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  {{ s.num_alumnos }} alumnos
+                </span>
+                <span v-if="s.ciclo_formativo" class="inline-flex min-w-0 items-center gap-1.5">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0118.82 17.5L12 21l-6.82-3.5a12.08 12.08 0 01.66-6.922L12 14z"/></svg>
+                  <span class="truncate">{{ s.ciclo_formativo }}</span>
+                </span>
+                <span v-if="hayVariosCentros && s.centro_educativo" class="inline-flex min-w-0 items-center gap-1.5">
+                  <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 10h.01M15 10h.01"/></svg>
+                  <span class="truncate">{{ s.centro_educativo }}</span>
+                </span>
+              </div>
+
+              <!-- Grupos con su fase -->
+              <ul v-if="gruposDe(s).length" class="mt-2 flex flex-wrap gap-1.5" :aria-label="`${gruposDe(s).length} grupos`">
+                <li v-for="g in gruposDe(s).slice(0, 4)" :key="g.clave"
+                    class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-borde bg-gray-50 px-2 py-0.5 text-xs">
+                  <span class="font-semibold text-azul-noche">{{ g.nombre }}</span>
+                  <span v-if="g.fase" class="truncate text-alumnos-dark">· {{ g.fase }}</span>
+                </li>
+                <li v-if="gruposDe(s).length > 4" class="inline-flex items-center px-1 text-xs text-texto-secundario">+{{ gruposDe(s).length - 4 }}</li>
+              </ul>
+
+              <div class="mt-auto pt-3">
+                <div class="relative flex items-center gap-2 border-t border-borde pt-3">
+                  <!-- Hueco flexible: los grupos ya se ven en sus etiquetas, arriba -->
+                  <span class="min-w-0 flex-1" aria-hidden="true" />
+                  <button type="button" @click="verEncuentro(s)"
+                          class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    Ver encuentro
+                  </button>
+                  <!-- Llave: códigos del alumnado (acceso al espacio de trabajo y sugerencia IA),
+                       para copiarlos o generarlos. El punto verde indica que ya hay acceso dado.
+                       El menú se alinea con el borde derecho de la tarjeta (la fila es la referencia),
+                       no con la llave, para que en móvil no se salga por la izquierda. -->
+                  <div class="shrink-0" data-menu-raiz>
+                    <button type="button" @click="menuEncuentro = null; menuLlave = menuLlave === s.id ? null : s.id"
+                            :aria-expanded="menuLlave === s.id" aria-haspopup="menu" :aria-label="`Códigos del alumnado de «${s.proyecto_titulo || 'encuentro'}»`"
+                            title="Códigos del alumnado"
+                            class="relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors"
+                            :class="menuLlave === s.id ? 'border-rol-fuerte/40 bg-rol/10 text-rol-fuerte' : 'border-borde text-texto-secundario hover:bg-gray-50'">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                      <span v-if="s.codigo_clase" class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-empresas ring-2 ring-white" aria-hidden="true" />
+                    </button>
+                    <div v-if="menuLlave === s.id" role="menu" :aria-label="`Códigos del alumnado de «${s.proyecto_titulo || 'encuentro'}»`"
+                         class="absolute bottom-full right-0 z-30 mb-1 w-[min(18rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white p-1.5 shadow-lg">
+                      <!-- Atajo: proyectar en clase el QR y el código (pantalla de acceso) -->
+                      <button v-if="s.codigo_clase && s.microproyecto_uuid" type="button" role="menuitem"
+                              @click="menuLlave = null; router.push({ name: 'pantalla-acceso', params: { uuid: s.microproyecto_uuid } })"
+                              class="flex w-full items-center gap-2 rounded-lg bg-rol/5 px-2.5 py-2 text-left text-sm font-semibold text-rol-fuerte hover:bg-rol/10">
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Proyectar pantalla de acceso
+                      </button>
+                      <div v-if="s.codigo_clase && s.microproyecto_uuid" class="my-1.5 border-t border-borde" role="separator" />
+                      <!-- Código de acceso al alumnado -->
+                      <p class="px-2.5 pb-1 pt-1.5 text-xs font-semibold text-texto-secundario">Código de acceso al alumnado</p>
+                      <button v-if="s.codigo_clase" type="button" role="menuitem" @click="menuLlave = null; copiarCodigo(s.codigo_clase)"
+                              class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50">
+                        <span class="min-w-0 flex-1 truncate font-bold tracking-[0.15em] text-azul-noche">{{ s.codigo_clase }}</span>
+                        <span class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-rol-fuerte">
+                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                          Copiar
+                        </span>
+                      </button>
+                      <button v-else-if="s.puede_editar && s.num_equipos" type="button" role="menuitem" @click="crearCodigo(s)" :disabled="!!creandoCodigo[s.id]"
+                              class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-rol-fuerte hover:bg-rol/5 disabled:opacity-60">
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-width="2.5" d="M12 5v14M5 12h14"/></svg>
+                        {{ creandoCodigo[s.id] ? 'Creando…' : 'Generar código de acceso' }}
+                      </button>
+                      <p v-else class="px-2.5 py-1.5 text-xs leading-snug text-texto-secundario">
+                        {{ !s.num_equipos ? 'Crea los grupos del encuentro para poder dar acceso.' : 'Todavía no hay código (solo lectura).' }}
+                      </p>
+                      <p v-if="errorCodigo[s.id]" class="px-2.5 pb-1 text-xs text-red-700" role="alert">{{ errorCodigo[s.id] }}</p>
+
+                      <div class="my-1.5 border-t border-borde" role="separator" />
+
+                      <!-- Código sugerencia IA, con explicación al pasar el ratón o al pulsar la «i» -->
+                      <div class="flex items-center gap-1 px-2.5 pt-0.5">
+                        <p class="text-xs font-semibold text-texto-secundario">Código sugerencia IA al alumnado</p>
+                        <span class="group/ayuda relative">
+                          <button type="button" @click="ayudaIa = ayudaIa === s.id ? null : s.id"
+                                  :aria-expanded="ayudaIa === s.id" aria-label="¿Qué es el código de sugerencia IA?"
+                                  class="inline-flex h-7 w-7 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 hover:text-rol-fuerte">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          </button>
+                          <span role="tooltip"
+                                class="pointer-events-none absolute right-0 top-full z-40 mt-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs leading-snug text-white shadow-lg group-hover/ayuda:block group-focus-within/ayuda:block"
+                                :class="{ '!block': ayudaIa === s.id }">
+                            En el espacio de trabajo de los grupos, los botones «Sugerir con IA» están bloqueados hasta que el alumnado escribe este código. Compártelo cuando quieras que puedan usar la IA.
+                          </span>
+                        </span>
+                      </div>
+                      <button v-if="s.codigo_ia" type="button" role="menuitem" @click="menuLlave = null; copiarCodigo(s.codigo_ia)"
+                              class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50">
+                        <span class="min-w-0 flex-1 truncate font-bold tracking-[0.15em] text-alumnos-dark">{{ s.codigo_ia }}</span>
+                        <span class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-rol-fuerte">
+                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                          Copiar
+                        </span>
+                      </button>
+                      <button v-else-if="s.puede_editar && s.num_equipos" type="button" role="menuitem" @click="crearCodigoIa(s)" :disabled="!!creandoCodigoIa[s.id]"
+                              class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-rol-fuerte hover:bg-rol/5 disabled:opacity-60">
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                        {{ creandoCodigoIa[s.id] ? 'Generando…' : 'Generar código sugerencia IA' }}
+                      </button>
+                      <p v-else class="px-2.5 py-1.5 text-xs leading-snug text-texto-secundario">
+                        {{ !s.num_equipos ? 'Crea los grupos del encuentro para poder generarlo.' : 'Todavía no hay código (solo lectura).' }}
+                      </p>
+                      <p v-if="errorCodigoIa[s.id]" class="px-2.5 pb-1 text-xs text-red-700" role="alert">{{ errorCodigoIa[s.id] }}</p>
+                    </div>
+                  </div>
+                  <div class="relative shrink-0" data-menu-raiz>
+                    <button type="button" @click="menuLlave = null; menuEncuentro = menuEncuentro === s.id ? null : s.id"
+                            :aria-expanded="menuEncuentro === s.id" aria-haspopup="menu" :aria-label="`Más acciones de «${s.proyecto_titulo || 'encuentro'}»`"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
+                      <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
+                    </button>
+                    <div v-if="menuEncuentro === s.id" role="menu"
+                         class="absolute bottom-full right-0 z-30 mb-1 w-56 rounded-xl border border-borde bg-white py-1 shadow-lg">
+                      <button v-if="s.puede_editar" type="button" role="menuitem" @click="menuEncuentro = null; abrirReestructurar(s)"
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Editar grupos</button>
+                      <button v-if="s.es_propietario" type="button" role="menuitem" @click="menuEncuentro = null; abrirCompartir(s)"
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Compartir con otro docente</button>
+                      <button v-if="s.microreto_id" type="button" role="menuitem" @click="menuEncuentro = null; abrirMicroretoModal(s.microreto_id)"
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del reto</button>
+                      <button v-if="s.microproyecto_uuid" type="button" role="menuitem" @click="menuEncuentro = null; abrirProyectoFicha(s.microproyecto_uuid)"
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del proyecto</button>
+                      <button v-if="s.puede_editar" type="button" role="menuitem" @click="menuEncuentro = null; abrirModalEliminar(s)"
+                              class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Eliminar encuentro</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+
+          <!-- Paginación -->
+          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+            <p class="text-sm text-texto-secundario">Mostrando {{ encuentrosPagina.length }} de {{ encuentrosFiltrados.length }} encuentros</p>
+            <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de encuentros">
+              <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">«</button>
+              <button type="button" @click="irAPagina(pagina - 1)" :disabled="pagina === 0" aria-label="Página anterior"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">‹</button>
+              <button v-for="i in paginasVisibles" :key="i" type="button" @click="irAPagina(i)"
+                      :aria-current="i === pagina ? 'page' : undefined" :aria-label="`Página ${i + 1}`"
+                      class="inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm font-semibold"
+                      :class="i === pagina ? 'bg-rol-fuerte text-white' : 'text-azul-noche hover:bg-gray-100'">{{ i + 1 }}</button>
+              <button type="button" @click="irAPagina(pagina + 1)" :disabled="pagina >= totalPaginas - 1" aria-label="Página siguiente"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">›</button>
+              <button type="button" @click="irAPagina(totalPaginas - 1)" :disabled="pagina >= totalPaginas - 1" aria-label="Última página"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">»</button>
+            </nav>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 

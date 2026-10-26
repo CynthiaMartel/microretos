@@ -96,29 +96,28 @@ const haceCuanto = (isoStr) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
-    <div class="mx-auto max-w-[900px] space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+  <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
+    <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Notificaciones"
                        subtitulo="Respuestas de empresas, proyectos que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
-        <button v-if="noLeidas" @click="leerTodas"
-                class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        <button v-if="noLeidas" type="button" @click="leerTodas" class="accion-secundaria">
+          <svg aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
           Marcar todas como leídas
         </button>
       </CabeceraSeccion>
 
       <article class="card p-4">
-        <!-- Filtros, mismo estilo de chips que los filtros de proyectos del panel docente -->
-        <div class="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar notificaciones">
-          <button v-for="f in FILTROS" :key="f.key" role="tab" :aria-selected="filtro === f.key" @click="filtro = f.key"
-                  class="rounded-full px-3 py-1 text-xs font-semibold transition"
+        <!-- Filtros en píldora (botones con estado pulsado: no son pestañas con panel) -->
+        <div class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar notificaciones">
+          <button v-for="f in FILTROS" :key="f.key" type="button" :aria-pressed="filtro === f.key" @click="filtro = f.key"
+                  class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
                   :class="filtro === f.key ? 'bg-centros text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
             {{ f.label }}<span v-if="f.key === 'no_leidas' && noLeidas"> · {{ noLeidas }}</span>
           </button>
         </div>
 
-        <p v-if="error" class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+        <p v-if="error" class="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
 
         <div v-if="cargando && !items.length" class="space-y-2"><div v-for="n in 4" :key="n" class="h-16 animate-pulse rounded-xl bg-gray-100" /></div>
         <div v-else-if="!visibles.length" class="flex flex-col items-center justify-center py-12 text-center text-sm text-gray-500">
@@ -144,7 +143,7 @@ const haceCuanto = (isoStr) => {
         </ul>
 
         <div v-if="pagina < ultima" class="mt-3 flex justify-center">
-          <button class="link disabled:opacity-50" :disabled="cargando" @click="cargar()">{{ cargando ? 'Cargando…' : 'Cargar más' }}</button>
+          <button type="button" class="accion-secundaria disabled:opacity-50" :disabled="cargando" @click="cargar()">{{ cargando ? 'Cargando…' : 'Cargar más' }}</button>
         </div>
       </article>
     </div>
@@ -155,5 +154,4 @@ const haceCuanto = (isoStr) => {
 @reference "../style.css";
 
 .card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
-.link { @apply text-sm font-semibold text-centros hover:underline; }
 </style>

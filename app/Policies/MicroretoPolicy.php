@@ -32,4 +32,11 @@ class MicroretoPolicy
 
         return true;
     }
+
+    // Publicar u ocultar el reto en el escaparate de la web pública (frontoffice,
+    // /api/public/microretos): es contenido de DuaLab hacia fuera, solo superadmin.
+    public function publicarEscaparate(User $user, Microreto $microreto): bool
+    {
+        return $user->isSuperAdmin();
+    }
 }

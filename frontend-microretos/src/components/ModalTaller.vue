@@ -2,13 +2,14 @@
      título enlazado, foco inicial dentro, foco atrapado con Tab, cierre con Escape / ✕ /
      clic fuera, y el foco vuelve al botón que lo abrió. Cuerpo con scroll propio
      (la página de detrás no se mueve) y botón «Volver arriba» cuando el cuerpo baja.
-     Slots: `barra` (fija bajo el título: buscador, contadores…), default (cuerpo), `pie`. -->
+     Slots: `cabecera` (sustituye al título por defecto; el ✕ se mantiene), `barra` (fija bajo
+     el título: buscador, contadores…), default (cuerpo), `pie`. -->
 <script setup>
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 
 const props = defineProps({
   abierto:   { type: Boolean, required: true },
-  titulo:    { type: String, required: true },
+  titulo:    { type: String, required: true }, // también nombre accesible si hay slot `cabecera`
   subtitulo: { type: String, default: '' },
   ancho:     { type: String, default: 'w-[min(56rem,calc(100vw-2rem))]' },
 })
@@ -22,27 +23,37 @@ let focoPrevio = null
 
 const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-watch(() => props.abierto, async (v) => {
+// immediate: también cuando el modal se monta ya abierto (p. ej. al cargar la ficha de una propuesta).
+watch(() => props.abierto, async (v, antes) => {
   if (v) {
     focoPrevio = document.activeElement
     document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', alTeclear)
     await nextTick()
     const primero = panel.value?.querySelector('[autofocus]') || panel.value?.querySelector(ENFOCABLES)
     ;(primero || panel.value)?.focus()
-  } else {
+  } else if (antes) {
+    document.removeEventListener('keydown', alTeclear)
     document.body.style.overflow = ''
     verArriba.value = false
     focoPrevio?.focus?.()
   }
+}, { immediate: true })
+onUnmounted(() => {
+  document.removeEventListener('keydown', alTeclear)
+  document.body.style.overflow = ''
 })
-onUnmounted(() => { document.body.style.overflow = '' })
 
+// Escuchado en el documento mientras está abierto: funciona aunque el foco se haya salido del
+// panel (p. ej. al desaparecer el botón pulsado al cambiar de vista).
 function alTeclear(e) {
+  if (!panel.value) return
   if (e.key === 'Escape') { e.stopPropagation(); emit('cerrar'); return }
   if (e.key !== 'Tab') return
   const nodos = [...panel.value.querySelectorAll(ENFOCABLES)].filter(n => n.offsetParent !== null)
   if (!nodos.length) return
   const [primero, ultimo] = [nodos[0], nodos[nodos.length - 1]]
+  if (!panel.value.contains(document.activeElement)) { e.preventDefault(); primero.focus(); return }
   if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus() }
   else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus() }
 }
@@ -60,12 +71,15 @@ defineExpose({ subir })
            @mousedown.self="emit('cerrar')">
         <div ref="panel" role="dialog" aria-modal="true" :aria-labelledby="idTitulo" tabindex="-1"
              class="relative flex max-h-[min(90dvh,56rem)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl outline-none"
-             :class="ancho" @keydown="alTeclear">
+             :class="ancho">
 
-          <header class="flex items-start gap-3 border-b border-borde px-5 pb-4 pt-5 sm:px-6">
+          <header class="flex items-start gap-3 px-5 pt-5 sm:px-6"
+                  :class="$slots.cabecera ? 'pb-1' : 'border-b border-borde pb-4'">
             <div class="min-w-0 flex-1">
-              <h2 :id="idTitulo" class="text-lg font-bold text-azul-noche sm:text-xl">{{ titulo }}</h2>
-              <p v-if="subtitulo" class="mt-0.5 text-sm text-texto-secundario">{{ subtitulo }}</p>
+              <slot name="cabecera" :id-titulo="idTitulo">
+                <h2 :id="idTitulo" class="text-lg font-bold text-azul-noche sm:text-xl">{{ titulo }}</h2>
+                <p v-if="subtitulo" class="mt-0.5 text-sm text-texto-secundario">{{ subtitulo }}</p>
+              </slot>
             </div>
             <button type="button" @click="emit('cerrar')"
                     class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100"

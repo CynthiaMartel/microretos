@@ -10,7 +10,6 @@ import PublicMicroreto from '../views/PublicMicroreto.vue'
 import DashboardDocente from '../views/DashboardDocente.vue'
 import EncuentrosRegistrados from '../views/EncuentrosRegistrados.vue'
 import StartupDayProyectos from '../views/StartupDayProyectos.vue'
-import ProyectosTerminados from '../views/ProyectosTerminados.vue'
 import StartupDayWizard from '../views/StartupDayWizard.vue'
 import StartupDayDetalle from '../views/StartupDayDetalle.vue'
 import StartupDayLanding from '../views/StartupDayLanding.vue'
@@ -47,9 +46,12 @@ const router = createRouter({
   // Las vistas hacen scroll sobre la ventana (App.vue no tiene contenedor con overflow):
   // sin esto, al cambiar de vista se conservaba el scroll de la anterior. Cada navegación
   // empieza arriba; solo atrás/adelante del navegador recupera la posición que tenía.
-  scrollBehavior(to, _from, savedPosition) {
+  scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash }
+    // Misma vista con otra query (filtros, pestañas que se guardan en la URL): no mover la
+    // página; si no, cada filtro marcado la devolvía arriba del todo.
+    if (to.path === from.path) return false
     return { top: 0 }
   },
   routes: [
@@ -177,11 +179,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
     },
     {
-      // Ruta específica antes de /proyectos/:uuid — si no, "terminados" se capturaría como uuid.
+      // Los completados son una pestaña de /proyectos: los enlaces antiguos llegan a ella
+      // (con su familia). Ruta específica antes de /proyectos/:uuid — si no, "terminados"
+      // se capturaría como uuid.
       path: '/proyectos/terminados',
       name: 'proyectos-terminados',
-      component: ProyectosTerminados,
-      meta: { requiresAuth: true, roles: [SA, AD, DO, EM] }
+      redirect: to => ({ name: 'startup-day', query: { ...to.query, ver: 'completados' } })
     },
     {
       path: '/proyectos/crear',

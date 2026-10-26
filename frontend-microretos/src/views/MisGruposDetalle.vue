@@ -312,42 +312,38 @@ onMounted(async () => {
   const equipo = equipos.value.find(e => String(e.id) === String(route.query.equipo))
   if (equipo) irADiagnostico(equipo)
 })
+
+// Fecha del encuentro legible (la API la manda en ISO: «2026-10-06T00:00:00.000000Z»)
+const fechaEncuentro = computed(() => {
+  const f = encuentro.value?.fecha
+  if (!f) return ''
+  const d = new Date(String(f).slice(0, 10) + 'T12:00:00')
+  return isNaN(d) ? String(f) : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+})
+// Título de la cabecera: el proyecto del encuentro (o, si no tiene, su clase o ciclo)
+const tituloCabecera = computed(() =>
+  proyecto.value?.titulo || (encuentro.value?.grupo && `Clase ${encuentro.value.grupo}`) || encuentro.value?.ciclo_formativo || 'Detalle de grupos')
 </script>
 
 <template>
   <div class="min-h-screen bg-[#F8FAFC] pt-16">
-    <div class="mx-auto max-w-5xl px-4 pt-5 pb-4">
-      <CabeceraSeccion titulo="Detalle de" destacado="grupos" :volver="{ name: 'mis-grupos' }"
-                       subtitulo="Avance de cada grupo del encuentro, fase a fase." />
-    </div>
-
-    <!-- Topbar. top-16 (no top-0): la TopBar global es fixed h-16 con z-50 — con top-0
-         esta cabecera propia quedaba pegada al viewport y desaparecía detrás de aquella. -->
-    <div class="sticky top-16 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-      <div class="flex-1 min-w-0">
-        <p class="text-xs font-black uppercase tracking-widest text-centros">
-          Detalle de grupos<span v-if="encuentro && encuentro.puede_editar === false" class="text-violet-600"> · solo lectura</span>
-        </p>
-        <p class="text-sm font-bold text-[#121212] truncate">
-          {{ proyecto?.titulo || (encuentro?.grupo && `Clase ${encuentro.grupo}`) || encuentro?.ciclo_formativo || 'Cargando…' }}
-        </p>
-      </div>
-      <!-- name 'mis-grupos' (antes 'mis-equipos') — ver router/index.js -->
-      <button @click="router.push({ name: 'mis-grupos' })"
-              class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
-                     hover:bg-violet-100 transition-colors text-xs font-black uppercase tracking-wider">
-        Mis grupos
-      </button>
-      <button v-if="proyecto?.uuid"
-              @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })"
-              class="shrink-0 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors
-                     text-xs font-black text-gray-600 uppercase tracking-wider">
-        Ver proyecto
-      </button>
+    <!-- Cabecera común (sustituye a la barra fija propia, que repetía título y botones): el
+         proyecto como título, «Detalle de grupos» (y «solo lectura» si es un encuentro compartido)
+         como antetítulo, volver a Mis grupos y «Ver proyecto» como acción. -->
+    <div class="mx-auto max-w-[90rem] px-4 pt-5 pb-4 sm:px-6 lg:px-8">
+      <CabeceraSeccion :titulo="tituloCabecera" :volver="{ name: 'mis-grupos' }" volver-label="Volver a Mis grupos"
+                       :antetitulo="encuentro && encuentro.puede_editar === false ? 'Detalle de grupos · solo lectura' : 'Detalle de grupos'"
+                       subtitulo="Avance de cada grupo del encuentro, fase a fase.">
+        <button v-if="proyecto?.uuid" type="button" class="accion-secundaria"
+                @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          Ver proyecto
+        </button>
+      </CabeceraSeccion>
     </div>
 
     <!-- Cuerpo -->
-    <div class="max-w-5xl mx-auto px-4 py-6 space-y-8">
+    <div class="mx-auto max-w-[90rem] px-4 py-6 space-y-8 sm:px-6 lg:px-8">
 
       <!-- Estado de carga / error -->
       <div v-if="cargando" class="flex items-center justify-center py-24">
@@ -401,7 +397,7 @@ onMounted(async () => {
                 </span>
                 <span v-if="encuentro.fecha"
                       class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                  {{ encuentro.fecha }}
+                  {{ fechaEncuentro }}
                 </span>
                 <span v-if="encuentro.num_alumnos"
                       class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
