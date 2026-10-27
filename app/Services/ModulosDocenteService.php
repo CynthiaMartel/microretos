@@ -83,6 +83,47 @@ class ModulosDocenteService
         $docente->modulos()->sync($ids);
     }
 
+    /**
+     * Módulos de la oferta de su centro que el docente usa en sus propios proyectos
+     * (modulos_seleccionados), y cuántos proyectos tiene. Solo lectura: sirve para sugerirle
+     * qué marcar como impartido y para la ficha de «Mi usuario».
+     *
+     * `descartados`: módulos de sus proyectos que no están en la oferta actual de su centro.
+     *
+     * @return array{modulos: array<int, int>, descartados: int, proyectos: int}
+     */
+    public function usoEnProyectos(User $docente): array
+    {
+        $proyectos = Microproyecto::where('user_id', $docente->id);
+
+        $ids = (clone $proyectos)->latest('id')->take(500)->pluck('modulos_seleccionados')
+            ->flatten(1)
+            ->map(fn ($m) => is_array($m) ? (int) ($m['id'] ?? 0) : 0)
+            ->filter(fn (int $id) => $id > 0)->unique()->values()->all();
+
+        $validos = $this->idsValidosParaCentro($docente->centro_educativo_id, $ids);
+
+        return [
+            'modulos'     => $validos,
+            'descartados' => count($ids) - count($validos),
+            'proyectos'   => $proyectos->count(),
+        ];
+    }
+
+    /**
+     * ¿Se le piden los módulos que imparte? Docentes con centro y admins de centro que crean
+     * proyectos (también dan clase). Un admin que solo gestiona no recibe el aviso.
+     */
+    public function imparte(User $user): bool
+    {
+        if (!$user->centro_educativo_id) {
+            return false;
+        }
+
+        return $user->isDocente()
+            || ($user->isAdmin() && Microproyecto::where('user_id', $user->id)->exists());
+    }
+
     /** @return array<int, int> */
     public function asignados(User $docente): array
     {

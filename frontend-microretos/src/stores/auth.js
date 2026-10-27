@@ -44,11 +44,16 @@ export const useAuthStore = defineStore('auth', () => {
   // y no hay sesión", para que el guard del router sepa cuándo puede decidir.
   const isInitialized   = ref(false)
   const isAuthenticated = ref(false)
+  const userId           = ref(null)
   const userRole         = ref(ROLE_NONE)
   const userName         = ref('Administrador')
   const userCentroId     = ref(null)
   const userCentroNombre = ref('')
   const userCentroImg    = ref('')
+  // Si ya indicó los módulos que imparte (aviso del panel docente; ver AvisoModulosDocente)
+  const tieneModulos     = ref(false)
+  // Si se le piden: docente con centro o admin de centro que crea proyectos (lo decide el backend)
+  const imparte          = ref(false)
 
   // La sesión de Laravel expira 'minutos' después del último request que la tocó
   // (sliding, no un instante fijo), así que el backend manda en cada /perfil los
@@ -71,11 +76,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   const clearLocalSession = () => {
     isAuthenticated.value  = false
+    userId.value           = null
     userRole.value         = ROLE_NONE
     userName.value         = 'Administrador'
     userCentroId.value     = null
     userCentroNombre.value = ''
     userCentroImg.value    = ''
+    tieneModulos.value     = false
+    imparte.value          = false
     minutosRestantesServidor.value = -1
     recordado.value = false
   }
@@ -83,11 +91,14 @@ export const useAuthStore = defineStore('auth', () => {
   // data = payload de /perfil (data.data) o del login — misma forma en ambos.
   const hidratar = (data) => {
     isAuthenticated.value  = true
+    userId.value           = data.id ?? null
     userRole.value         = Number(data.role ?? ROLE_NONE)
     userName.value         = data.name || 'Administrador'
     userCentroId.value     = data.centro_educativo_id ?? null
     userCentroNombre.value = data.centro_nombre || ''
     userCentroImg.value    = data.centro_img || ''
+    tieneModulos.value     = Boolean(data.tiene_modulos)
+    imparte.value          = Boolean(data.imparte)
     minutosRestantesServidor.value = Number(data.minutos_restantes ?? -1)
     recordado.value = Boolean(data.recordado)
     medidoEn.value = Date.now()
@@ -181,8 +192,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    isInitialized, isAuthenticated, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
-    minutosRestantes, recordado,
+    isInitialized, isAuthenticated, userId, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
+    tieneModulos, imparte, minutosRestantes, recordado,
     isSuperAdmin, isAdmin, isDocente, isEmpresa, roleLabel,
     init, login, logout, ping, updateName, updateCentroImg, canAccess,
   }

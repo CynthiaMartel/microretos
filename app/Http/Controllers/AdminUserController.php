@@ -15,13 +15,17 @@ use Illuminate\Support\Facades\Log;
 // Endpoint API: /admin/usuarios (sin cambios). El frontend renombró su URL a /usuarios — no confundir ambas.
 class AdminUserController extends Controller
 {
+    // Tope de cuentas por listado: el frontend busca, filtra y pagina en cliente sobre la lista,
+    // así que se envían las más recientes hasta este límite y se indica si quedaron fuera
+    private const LIMITE_LISTADO = 1000;
+
     public function index(Request $request): JsonResponse
     {
         $auth = $request->user();
 
         if ($error = $this->requireCentroSiAdmin($auth)) return $error;
 
-        $query = User::with('centroEducativo')
+        $query = User::with('centroEducativo')->withCount('modulos')
             ->whereNot('id', $auth->id)
             ->orderByDesc('created_at');
 
@@ -31,7 +35,7 @@ class AdminUserController extends Controller
                   ->whereNotIn('role', [User::ROLE_SUPERADMIN, User::ROLE_ADMIN]);
         }
 
-        return response()->json(['data' => $this->formatUsers($query->get())]);
+        return response()->json($this->listado($query));
     }
 
     public function store(StoreAdminUserRequest $request): JsonResponse
@@ -172,7 +176,7 @@ class AdminUserController extends Controller
                   ->whereNotIn('role', [User::ROLE_SUPERADMIN, User::ROLE_ADMIN]);
         }
 
-        return response()->json(['data' => $this->formatUsers($query->get())]);
+        return response()->json($this->listado($query));
     }
 
     public function restaurar(Request $request, int $id): JsonResponse
@@ -259,6 +263,17 @@ class AdminUserController extends Controller
         return null;
     }
 
+    /** @return array{data: array<int, mixed>, truncado: bool} */
+    private function listado($query): array
+    {
+        $usuarios = $query->take(self::LIMITE_LISTADO + 1)->get();
+
+        return [
+            'data'     => $this->formatUsers($usuarios->take(self::LIMITE_LISTADO)),
+            'truncado' => $usuarios->count() > self::LIMITE_LISTADO,
+        ];
+    }
+
     private function formatUsers($collection): array
     {
         return $collection->map(fn($u) => $this->formatUser($u))->values()->all();
@@ -282,6 +297,9 @@ class AdminUserController extends Controller
             'created_at'          => $user->created_at?->toDateTimeString(),
             'password_changed_at' => $user->password_changed_at?->toDateTimeString(),
             'deleted_at'          => $user->deleted_at?->toDateTimeString(),
+            // Módulos que imparte: solo se cuenta en el listado (withCount); una cuenta recién
+            // creada no tiene ninguno. null = no calculado (otras respuestas)
+            'num_modulos'         => $user->modulos_count ?? ($user->wasRecentlyCreated ? 0 : null),
         ];
     }
 }

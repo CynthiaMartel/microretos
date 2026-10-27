@@ -92,7 +92,7 @@ async function toggleBoeModulo(cicloId, moduloId) {
     <div v-if="show"
          class="fixed inset-0 z-[9000] flex items-start justify-center p-4 pt-10 bg-black/60 backdrop-blur-sm"
          @click.self="cerrar">
-      <div class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[85vh]
+      <div class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[calc(100dvh-5rem)]
                   flex flex-col border border-gray-100 overflow-hidden">
 
         <!-- Cabecera fija -->

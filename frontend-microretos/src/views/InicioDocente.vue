@@ -15,6 +15,7 @@ import api from '../api.js'
 import { useTareasPersonales } from '../composables/useTareasPersonales.js'
 import { ICONOS_NAV, SECCIONES, GRUPOS_NAV } from '../config/navegacion.js'
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
+import AvisoModulosDocente from '../components/AvisoModulosDocente.vue'
 import bannerCasoReal from '../assets/banner_caso_real.jpg'
 import bienvenidaCasoReal from '../assets/bienvenida_caso_real.jpg'
 
@@ -529,6 +530,9 @@ const irA = (ruta) => router.push(ruta)
   <div class="min-h-screen bg-[#F3F6FA] font-sans text-azul-noche pt-16">
     <div class="@container/page mx-auto max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8">
 
+      <!-- Sin «módulos que imparte»: modal la primera vez y franja mientras falten -->
+      <AvisoModulosDocente />
+
 
 
 
@@ -686,7 +690,7 @@ const irA = (ruta) => router.push(ruta)
                                 :fill="c.color" stroke="white" stroke-width="1.5" />
                       </g>
                       <rect v-for="(m, i) in impacto.meses.slice(0, impacto.n)" :key="'hit-' + m" :x="ix(i) - pasoImp / 2" y="0"
-                            :width="pasoImp" :height="CH.h" fill="transparent" @mouseenter="mesHoverImp = i" />
+                            :width="pasoImp" :height="CH.h" fill="transparent" @mouseenter="mesHoverImp = i" @click="mesHoverImp = i" />
                     </svg>
                     <div v-if="mesHoverImp !== null"
                          class="pointer-events-none absolute top-1 z-10 w-[230px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
@@ -895,7 +899,7 @@ const irA = (ruta) => router.push(ruta)
                       <span class="block truncate text-[11px] leading-tight text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo && `Clase ${e.grupo}`].filter(Boolean).join(' · ') }}</span>
                     </span>
                   </button>
-                  <button class="flex w-9 shrink-0 items-center justify-center rounded-r-xl text-gray-400 hover:text-centros"
+                  <button class="flex h-9 w-9 shrink-0 self-center items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-centros"
                           :aria-label="`Abrir ${tituloEnc(e)}`" @click="irA('/mis-grupos/' + e.id)">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </button>
@@ -921,9 +925,9 @@ const irA = (ruta) => router.push(ruta)
               </div>
               <div class="grid grid-cols-7">
                 <template v-for="(c, i) in calDias" :key="i">
-                  <span v-if="c.otroMes" class="flex h-5 items-center justify-center text-[11px] text-gray-300">{{ c.d }}</span>
+                  <span v-if="c.otroMes" class="flex h-6 items-center justify-center text-[11px] text-gray-300">{{ c.d }}</span>
                   <button v-else
-                          class="dia-cal relative mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] transition"
+                          class="dia-cal relative mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] transition"
                           :class="diaIluminado(c)
                           ? 'bg-centros font-bold text-white shadow-md shadow-centros/30'
                           : c.hoy
@@ -999,7 +1003,7 @@ const irA = (ruta) => router.push(ruta)
               <p v-else class="flex h-full items-center justify-center text-sm text-gray-500">{{ cargando ? 'Cargando…' : 'Todo al día 🎉' }}</p>
             </div>
             <!-- Pie fijo: paginación siempre en su sitio -->
-            <div class="mt-1 flex h-7 items-center justify-center gap-3 text-xs text-gray-500">
+            <div class="mt-1 flex h-9 items-center justify-center gap-3 text-xs text-gray-500">
               <button class="cal-nav disabled:opacity-30" aria-label="Tareas anteriores" :disabled="paginaTareasActual === 0" @click="moverPaginaTareas(-1)">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
               </button>
@@ -1163,8 +1167,8 @@ const irA = (ruta) => router.push(ruta)
 /* Zona táctil de ~36px alrededor del interruptor (16px de alto a la vista) */
 .interruptor::before { content: ''; position: absolute; inset: -10px -4px; }
 /* Zona táctil ampliada de los días del mini calendario (sin cambiar el círculo visible).
-   En vertical se limita para no invadir la fila de al lado (filas de 20px). */
-.dia-cal::before { content: ''; position: absolute; inset: -4px -8px; }
+   Días de 24px: la zona llega a 36×36px sin invadir de más la fila de al lado. */
+.dia-cal::before { content: ''; position: absolute; inset: -6px; }
 .dia-cal:disabled::before { display: none; }
 .font-manuscrita { font-family: 'Caveat', 'Segoe Script', cursive; font-weight: 600; }
 .cal-nav      { @apply flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }

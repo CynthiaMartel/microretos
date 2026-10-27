@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UpdatePerfilRequest;
+use App\Services\ModulosDocenteService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -99,6 +100,7 @@ class AdminAuthController extends Controller
 
         return response()->json([
             'success'             => true,
+            'id'                  => $user->id,
             'role'                => $user->role,
             'name'                => $user->name,
             'centro_educativo_id' => $user->centro_educativo_id,
@@ -106,6 +108,8 @@ class AdminAuthController extends Controller
             'centro_img'          => $user->centroEducativo?->img,
             'minutos_restantes'   => $this->minutosRestantesSesion($request),
             'recordado'           => $remember,
+            'tiene_modulos'       => $user->modulos()->exists(),
+            'imparte'             => app(ModulosDocenteService::class)->imparte($user),
             'message'             => 'Acceso concedido.',
         ]);
     }
@@ -149,6 +153,9 @@ class AdminAuthController extends Controller
                 'centro_img'          => $user->centroEducativo?->img,
                 'minutos_restantes'   => $this->minutosRestantesSesion($request),
                 'recordado'           => $this->sesionRecordada($request),
+                'tiene_modulos'       => $user->modulos()->exists(),
+                'imparte'             => app(ModulosDocenteService::class)->imparte($user),
+            'imparte'             => app(ModulosDocenteService::class)->imparte($user),
             ],
         ]);
     }

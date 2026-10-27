@@ -68,13 +68,18 @@ class ModulosDocenteController extends Controller
         return response()->json($this->respuesta($docente));
     }
 
-    /** @return array{asignados: array<int, int>, oferta: array<int, mixed>} */
+    /** @return array{asignados: array<int, int>, oferta: array<int, mixed>, en_proyectos: array<int, int>, num_proyectos: int} */
     private function respuesta(User $docente): array
     {
+        $uso = $this->modulos->usoEnProyectos($docente);
+
         return [
             // Solo los de la oferta actual: el selector no puede mostrar ni quitar los demás
             'asignados' => $this->modulos->idsValidosParaCentro($docente->centro_educativo_id, $this->modulos->asignados($docente)),
             'oferta'    => $this->modulos->oferta($docente->centro_educativo_id),
+            // Los módulos que usa en sus proyectos: solo como sugerencia (premarcar, punto en el editor)
+            'en_proyectos'  => $uso['modulos'],
+            'num_proyectos' => $uso['proyectos'],
         ];
     }
 

@@ -1,7 +1,10 @@
 <!-- Selector de los módulos que imparte un docente: ciclo de la oferta de su centro → módulos
      por curso (píldoras). Lo usan «Mi usuario» y la gestión de usuarios del admin.
      `oferta`: [{ id, nombre, familia, modulos: [{ id, nombre, curso, codigo }] }] (GET …/modulos).
-     v-model: array de ids de módulo. -->
+     v-model: array de ids de módulo.
+     `plegable`: cada curso se abre y cierra (cerrados al empezar) para que la tarjeta no crezca.
+     `resumen`: muestra la lista de módulos seleccionados al pie (desactivar si la vista ya la pinta).
+     `destacados`: ids que el docente usa en sus proyectos; llevan un punto y una leyenda al pie. -->
 <script setup>
 import { ref, computed, watch } from 'vue'
 
@@ -10,6 +13,9 @@ const seleccion = defineModel({ type: Array, default: () => [] })
 const props = defineProps({
   oferta:   { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
+  plegable: { type: Boolean, default: false },
+  resumen:  { type: Boolean, default: true },
+  destacados: { type: Array, default: () => [] },
 })
 
 // Ciclo abierto: el primero que ya tenga módulos elegidos, o el primero de la oferta
@@ -31,6 +37,17 @@ const modulosPorCurso = computed(() => {
   }
   return [...grupos.entries()]
 })
+
+// Cursos abiertos (solo con `plegable`); al cambiar de ciclo se vuelven a cerrar
+const abiertos = ref(new Set())
+watch(cicloId, () => { abiertos.value = new Set() })
+const estaAbierto = (curso) => !props.plegable || abiertos.value.has(curso)
+function alternarCurso(curso) {
+  const s = new Set(abiertos.value)
+  s.has(curso) ? s.delete(curso) : s.add(curso)
+  abiertos.value = s
+}
+const elegidosEnCurso = (modulos) => modulos.filter(m => seleccion.value.includes(m.id)).length
 
 const todos = computed(() => props.oferta.flatMap(c => c.modulos.map(m => ({ ...m, ciclo: c.nombre }))))
 const elegidos = computed(() => todos.value.filter(m => seleccion.value.includes(m.id)))
@@ -62,9 +79,24 @@ function alternar(id) {
         </select>
       </label>
 
-      <div v-for="[curso, modulos] in modulosPorCurso" :key="curso">
-        <p class="mb-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">{{ curso }}</p>
-        <div class="flex flex-wrap gap-1.5">
+      <div v-for="[curso, modulos] in modulosPorCurso" :key="curso"
+           :class="plegable && 'rounded-xl border border-gray-200'">
+        <button v-if="plegable" type="button" @click="alternarCurso(curso)" :aria-expanded="estaAbierto(curso)"
+                class="flex min-h-10 w-full items-center justify-between gap-2 px-3 py-2 text-left">
+          <span class="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">{{ curso }}</span>
+          <span class="flex shrink-0 items-center gap-2">
+            <span class="text-[11px] font-semibold"
+                  :class="elegidosEnCurso(modulos) ? 'text-centros' : 'text-gray-400'">
+              {{ elegidosEnCurso(modulos) }}/{{ modulos.length }}
+            </span>
+            <svg class="h-4 w-4 text-gray-400 transition-transform" :class="estaAbierto(curso) && 'rotate-180'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        <p v-else class="mb-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">{{ curso }}</p>
+        <div v-show="estaAbierto(curso)" class="flex flex-wrap gap-1.5" :class="plegable && 'px-3 pb-3'">
           <button v-for="m in modulos" :key="m.id" type="button" :disabled="disabled"
                   @click="alternar(m.id)" :aria-pressed="seleccion.includes(m.id)"
                   :class="['inline-flex min-h-9 max-w-full items-center rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition-colors disabled:cursor-not-allowed',
@@ -72,11 +104,20 @@ function alternar(id) {
                              ? 'border-centros bg-centros text-white'
                              : 'border-gray-200 bg-white text-gray-600 hover:border-centros/40 hover:text-centros']">
             <span class="break-words">{{ m.nombre }}</span>
+            <span v-if="destacados.includes(m.id)" class="ml-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                  :class="seleccion.includes(m.id) ? 'bg-white' : 'bg-centros'"
+                  title="Lo usas en tus proyectos" aria-hidden="true"></span>
+            <span v-if="destacados.includes(m.id)" class="sr-only">(lo usas en tus proyectos)</span>
           </button>
         </div>
       </div>
 
-      <div v-if="elegidos.length" class="rounded-xl bg-gray-50 px-3 py-2">
+      <p v-if="destacados.length" class="flex items-center gap-1.5 text-[11px] text-gray-500">
+        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-centros" aria-hidden="true"></span>
+        Lo usas en alguno de tus proyectos
+      </p>
+
+      <div v-if="resumen && elegidos.length" class="rounded-xl bg-gray-50 px-3 py-2">
         <p class="mb-1.5 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">
           {{ elegidos.length }} módulo{{ elegidos.length === 1 ? '' : 's' }} seleccionado{{ elegidos.length === 1 ? '' : 's' }}
         </p>

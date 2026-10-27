@@ -1,7 +1,6 @@
 <!-- Ruta: /usuarios (name: gestion-usuarios). Antes vivía en /admin/usuarios — ver router/index.js. Nota: el endpoint del backend sigue siendo /admin/usuarios, no confundir. -->
 <script setup>
-import SelectorModulosDocente from '../components/SelectorModulosDocente.vue'
-import { getModulosDocente, guardarModulosDocente } from '../services/modulosDocenteService.js'
+import PanelModulosDocente from '../components/PanelModulosDocente.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import api from '../api.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -45,45 +44,27 @@ const usuarioEditando    = ref(null)
 const formEditar         = ref({ name: '', email: '', password: '', password_confirmation: '', role: '2', centro_educativo_id: null, empresa_id: null })
 const confirmarCambioPassword = ref(false)   // switch que el admin debe marcar para autorizar el reseteo de contraseña
 
-// ── Módulos que imparte el docente (se guardan aparte: PUT /admin/usuarios/{id}/modulos) ──
-const ofertaModulosEditar    = ref([])
-const modulosEditar          = ref([])
-const modulosEditarGuardados = ref([])
-const cargandoModulosEditar  = ref(false)
-const guardandoModulosEditar = ref(false)
-const msgModulosEditar       = ref('')
-const modulosEditarCambiados = computed(() =>
-  [...modulosEditar.value].sort().join() !== [...modulosEditarGuardados.value].sort().join())
-
-async function cargarModulosEditar(usuario) {
-  ofertaModulosEditar.value = []; modulosEditar.value = []; modulosEditarGuardados.value = []; msgModulosEditar.value = ''
-  if (Number(usuario.role) !== 2) return
-  cargandoModulosEditar.value = true
-  try {
-    const data = await getModulosDocente(usuario.id)
-    // Si mientras tanto se abrió otro usuario, esta respuesta ya no le corresponde
-    if (usuarioEditando.value?.id !== usuario.id) return
-    ofertaModulosEditar.value    = data.oferta
-    modulosEditar.value          = data.asignados
-    modulosEditarGuardados.value = data.asignados
-  } catch { msgModulosEditar.value = 'No se pudieron cargar los módulos.' } finally {
-    cargandoModulosEditar.value = false
-  }
+// ── Módulos que imparte el docente: toda la lógica en PanelModulosDocente (la misma que «Mi
+//    usuario»), con los endpoints /admin/usuarios/{id}/modulos ──
+const modulosAbiertos = ref(new Set())   // filas de docente con el desplegable de módulos abierto
+const revModulos      = ref({})          // id → nº de guardados, para recargar el panel de la fila
+function alternarModulos(id) {
+  const abiertos = new Set(modulosAbiertos.value)
+  abiertos.has(id) ? abiertos.delete(id) : abiertos.add(id)
+  modulosAbiertos.value = abiertos
 }
-
-async function guardarModulosEditar() {
-  guardandoModulosEditar.value = true
-  msgModulosEditar.value = ''
-  try {
-    const data = await guardarModulosDocente(usuarioEditando.value.id, modulosEditar.value)
-    modulosEditar.value          = data.asignados
-    modulosEditarGuardados.value = data.asignados
-    mostrarToast('Módulos del docente guardados.')
-  } catch (e) {
-    msgModulosEditar.value = e.response?.data?.message || 'No se pudieron guardar los módulos.'
-  } finally {
-    guardandoModulosEditar.value = false
-  }
+function onModulosGuardados(ids) {
+  const id = usuarioEditando.value?.id
+  const fila = usuarios.value.find(u => u.id === id)
+  if (fila) fila.num_modulos = ids.length
+  revModulos.value = { ...revModulos.value, [id]: (revModulos.value[id] || 0) + 1 }
+  mostrarToast('Módulos del docente guardados.')
+}
+// Abre la edición del docente con su sección de módulos a la vista (fila o modal de cuenta creada)
+async function editarModulos(usuario) {
+  await abrirModalEditar(usuario)
+  await nextTick()
+  document.getElementById('modulos-docente-editar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 // ── Requisitos de contraseña (mismos que valida el backend: min 8, mayúscula, minúscula, número, símbolo) ──
@@ -119,7 +100,6 @@ async function abrirModalEditar(usuario) {
   formEditarErrors.value = {}
   msgEditar.value        = ''
   modalEditar.value      = true
-  cargarModulosEditar(usuario)
 
   if (authStore.isSuperAdmin) {
     await Promise.all([
@@ -232,19 +212,23 @@ const toast   = ref({ show: false, msg: '', ok: true })
 const busqueda      = ref('')
 const filtroCentro  = ref('')
 const filtroEstados = ref([])          // 'activada' | 'sin_activar' | 'bloqueada' (vale cualquiera)
+const filtroSinModulos = ref(false)    // docentes que aún no indicaron los módulos que imparten
 const orden         = ref('recientes') // 'recientes' | 'nombre' | 'pendientes'
 const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024)
 
 const listaVista = computed(() => vista.value === 'papelera' ? papelera.value : usuarios.value)
 const normal = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const estadoDe = (u) => u.is_blocked ? 'bloqueada' : u.is_active ? 'activada' : 'sin_activar'
+// num_modulos solo viene en el listado de activas; null = no calculado (papelera)
+const sinModulos = (u) => u.role === 2 && u.num_modulos === 0
 
 function cumpleFiltros(u, { omitirRol = false, omitirEstado = false } = {}) {
   const q = normal(busqueda.value.trim())
   return (!q || normal([u.name, u.email, u.centro_nombre, u.empresa_nombre].join(' ')).includes(q)) &&
     (!filtroCentro.value || u.centro_nombre === filtroCentro.value) &&
     (omitirRol || filtroRol.value === 0 || u.role === filtroRol.value) &&
-    (omitirEstado || !filtroEstados.value.length || filtroEstados.value.includes(estadoDe(u)))
+    (omitirEstado || !filtroEstados.value.length || filtroEstados.value.includes(estadoDe(u))) &&
+    (!filtroSinModulos.value || sinModulos(u))
 }
 
 const porNombre = (a, b) => (a.name || '').localeCompare(b.name || '', 'es')
@@ -292,10 +276,11 @@ const etiquetaEstado = (v) => ESTADOS.find(e => e.val === v)?.label || ''
 const centrosDisponibles = computed(() =>
   [...new Set(listaVista.value.map(u => u.centro_nombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')))
 
-const filtrosLateral    = computed(() => (filtroRol.value ? 1 : 0) + filtroEstados.value.length)
+const filtrosLateral    = computed(() => (filtroRol.value ? 1 : 0) + filtroEstados.value.length + (filtroSinModulos.value ? 1 : 0))
+const conteoSinModulos  = computed(() => listaVista.value.filter(u => sinModulos(u)).length)
 const hayFiltrosActivos = computed(() => !!(busqueda.value.trim() || filtroCentro.value || filtrosLateral.value))
 function limpiarFiltros() {
-  busqueda.value = ''; filtroCentro.value = ''; filtroRol.value = 0; filtroEstados.value = []
+  busqueda.value = ''; filtroCentro.value = ''; filtroRol.value = 0; filtroEstados.value = []; filtroSinModulos.value = false
 }
 const nivelesTitulo = computed(() => filtroCentro.value
   ? [{ etiqueta: 'Centro', valor: filtroCentro.value, quitar: () => { filtroCentro.value = '' } }]
@@ -304,7 +289,7 @@ const nivelesTitulo = computed(() => filtroCentro.value
 // ── Paginación (12 filas) ─────────────────────────────────────────────────────
 const POR_PAGINA = 12
 const { pagina, totalPaginas, itemsPagina } = usePaginacion(usuariosFiltrados, POR_PAGINA)
-watch([busqueda, filtroCentro, filtroRol, filtroEstados, orden, vista], () => { pagina.value = 0 })
+watch([busqueda, filtroCentro, filtroRol, filtroEstados, filtroSinModulos, orden, vista], () => { pagina.value = 0 })
 const paginasVisibles = computed(() => {
   const n = totalPaginas.value, a = pagina.value
   const ini = Math.max(0, Math.min(a - 2, n - 5)), fin = Math.min(n, ini + 5)
@@ -423,15 +408,19 @@ watch(formEditarEmailLocal, (local) => {
 })
 
 // ── API: usuarios ───────────────────────────────────────────────────
+// El backend envía como mucho las 1000 cuentas más recientes de cada lista (truncado = hay más)
+const truncado = ref({ activos: false, papelera: false })
 async function cargar() {
   cargando.value = true
   try {
     if (vista.value === 'papelera') {
       const { data } = await api.get('/admin/usuarios/papelera')
       papelera.value = data.data
+      truncado.value.papelera = !!data.truncado
     } else {
       const { data } = await api.get('/admin/usuarios')
       usuarios.value = data.data
+      truncado.value.activos = !!data.truncado
     }
   } catch (e) {
     mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
@@ -494,6 +483,13 @@ async function abrirModalCrear() {
       empresasList.value.length === 0 ? api.get('/empresas').then(r => { empresasList.value = r.data }) : Promise.resolve(),
     ])
   }
+}
+
+// Desde el modal de cuenta creada
+function asignarModulosRecienCreada() {
+  const cuenta = cuentaRecienCreada.value
+  cerrarModalExito()
+  if (cuenta) editarModulos(cuenta)
 }
 
 function cerrarModalExito() {
@@ -693,12 +689,12 @@ function cambiarVista(v) {
 // ── Formato ─────────────────────────────────────────────────────────
 // Chips y avatar por tipo de cuenta, con los colores de rol de la guía
 const ROLE_COLORS = {
-  2: { bg: 'bg-centros/10 text-centros border-centros/20',                       avatar: 'bg-centros/10 text-centros',                   label: 'Docente' },
-  3: { bg: 'bg-empresas/10 text-empresas-dark border-empresas/20',               avatar: 'bg-empresas/10 text-empresas-dark',            label: 'Empresa' },
-  4: { bg: 'bg-administraciones/10 text-administraciones-dark border-administraciones/20', avatar: 'bg-administraciones/10 text-administraciones-dark', label: 'Admin de centro' },
+  2: { bg: 'bg-centros/10 text-centros',                         punto: 'bg-centros',         avatar: 'bg-centros/10 text-centros',                   label: 'Docente' },
+  3: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas',        avatar: 'bg-empresas/10 text-empresas-dark',            label: 'Empresa' },
+  4: { bg: 'bg-administraciones/10 text-administraciones-dark',  punto: 'bg-administraciones', avatar: 'bg-administraciones/10 text-administraciones-dark', label: 'Admin de centro' },
 }
 function roleChip(role) {
-  return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-azul-noche border-gray-200', avatar: 'bg-gray-100 text-azul-noche', label: 'Superadmin' }
+  return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-azul-noche', punto: 'bg-azul-noche', avatar: 'bg-gray-100 text-azul-noche', label: 'Superadmin' }
 }
 function fmtDate(d) {
   if (!d) return '—'
@@ -714,6 +710,7 @@ onMounted(async () => {
     ])
     usuarios.value = resActivos.data.data
     papelera.value = resPapelera.data.data
+    truncado.value = { activos: !!resActivos.data.truncado, papelera: !!resPapelera.data.truncado }
   } catch (e) {
     mostrarToast(e.response?.data?.message ?? 'Error al cargar las cuentas.', false)
   } finally {
@@ -806,6 +803,17 @@ onMounted(async () => {
               <span class="shrink-0 text-xs text-texto-secundario">{{ conteoEstados[e.val] }}</span>
             </label>
           </div>
+
+          <div v-if="vista === 'activos' && (conteoSinModulos || filtroSinModulos)" class="mt-3 border-t border-borde pt-3"
+               role="group" aria-labelledby="titulo-filtro-modulos">
+            <p id="titulo-filtro-modulos" class="mb-1.5 text-sm font-semibold text-azul-noche">Módulos que imparte</p>
+            <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="checkbox" v-model="filtroSinModulos" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" aria-hidden="true" />
+              <span class="min-w-0 flex-1 text-sm leading-snug text-azul-noche">Docentes sin módulos</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ conteoSinModulos }}</span>
+            </label>
+          </div>
         </aside>
 
         <!-- ═══ Resultados ═══ -->
@@ -815,7 +823,10 @@ onMounted(async () => {
               <template v-if="cargando">Cargando cuentas…</template>
               <template v-else>{{ usuariosFiltrados.length }} {{ usuariosFiltrados.length === 1 ? 'cuenta' : 'cuentas' }}<template v-if="vista === 'papelera'"> en la papelera</template></template>
             </TituloResultados>
-            <div v-if="filtroRol || filtroEstados.length" class="flex w-full flex-wrap gap-1.5 sm:order-last">
+            <div v-if="filtroRol || filtroEstados.length || filtroSinModulos" class="flex w-full flex-wrap gap-1.5 sm:order-last">
+              <button v-if="filtroSinModulos" type="button" @click="filtroSinModulos = false" class="chip-filtro" aria-label="Quitar filtro Docentes sin módulos">
+                Sin módulos<span aria-hidden="true">✕</span>
+              </button>
               <button v-if="filtroRol" type="button" @click="filtroRol = 0" class="chip-filtro" :aria-label="`Quitar filtro ${etiquetaTipo(filtroRol)}`">
                 {{ etiquetaTipo(filtroRol) }}<span aria-hidden="true">✕</span>
               </button>
@@ -855,7 +866,7 @@ onMounted(async () => {
                con el menú lateral y los filtros abiertos o cerrados. Más estrecha, se apilan. -->
           <ul v-else class="flex flex-col gap-3">
             <li v-for="u in itemsPagina" :key="u.id"
-                class="relative flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md @xl/lista:flex-row @xl/lista:items-center @xl/lista:gap-5"
+                class="relative flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md @xl/lista:flex-row @xl/lista:flex-wrap @xl/lista:items-center @xl/lista:gap-5"
                 :class="[u.is_blocked ? 'border-red-200' : 'border-borde', { 'z-10': menuUsuario === u.id || highlightId === u.id }]">
               <div class="flex min-w-0 items-start gap-3 @xl/lista:flex-1 @xl/lista:items-center">
                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-heading text-base font-bold select-none"
@@ -864,15 +875,38 @@ onMounted(async () => {
                   <h3 class="truncate font-heading text-base font-bold leading-snug text-azul-noche" :title="u.name">{{ u.name }}</h3>
                   <p class="truncate text-sm text-texto-secundario" :title="u.email">{{ u.email }}</p>
 
-                  <!-- Tipo y estado -->
+                  <!-- Tipo y estado: etiquetas informativas (sin borde ni hover, con punto o icono) para
+                       que no se confundan con el único botón de esta línea, el de módulos -->
                   <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span class="rounded-full border px-2 py-0.5 text-xs font-semibold" :class="roleChip(u.role).bg">{{ roleChip(u.role).label }}</span>
-                    <span v-if="u.is_blocked" class="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">Bloqueada</span>
-                    <span v-else-if="u.is_active" class="inline-flex items-center gap-1 rounded-full border border-empresas/20 bg-empresas/10 px-2 py-0.5 text-xs font-semibold text-empresas-dark">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold" :class="roleChip(u.role).bg">
+                      <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="roleChip(u.role).punto" aria-hidden="true"></span>
+                      {{ roleChip(u.role).label }}
+                    </span>
+                    <span v-if="u.is_blocked" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.36 5.64L5.64 18.36M12 21a9 9 0 100-18 9 9 0 000 18z"/></svg>
+                      Bloqueada
+                    </span>
+                    <span v-else-if="u.is_active" class="inline-flex items-center gap-1 rounded-full bg-empresas/10 px-2 py-0.5 text-xs font-semibold text-empresas-dark">
                       <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                       Activada
                     </span>
-                    <span v-else class="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">Sin activar</span>
+                    <span v-else class="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                      <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 7v5l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      Sin activar
+                    </span>
+                    <!-- Docente: desplegable con sus módulos (misma ficha que «Mi usuario») -->
+                    <button v-if="vista === 'activos' && u.role === 2 && u.num_modulos != null" type="button"
+                            @click="alternarModulos(u.id)" :aria-expanded="modulosAbiertos.has(u.id)" :aria-controls="`modulos-fila-${u.id}`"
+                            class="relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors
+                                   before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']"
+                            :class="sinModulos(u) ? 'border-amber-300 bg-white text-amber-700 hover:bg-amber-50' : 'border-gray-300 bg-white text-azul-noche hover:bg-gray-50'"
+                            :title="sinModulos(u) ? 'Aún no ha indicado los módulos que imparte: no aparecerá como candidato a colaborar' : 'Ver los módulos que imparte'">
+                      {{ sinModulos(u) ? 'Sin módulos' : `${u.num_modulos} módulo${u.num_modulos === 1 ? '' : 's'}` }}
+                      <svg class="h-3 w-3 shrink-0 transition-transform" :class="modulosAbiertos.has(u.id) && 'rotate-180'"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -945,8 +979,28 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
+
+              <!-- Desplegable de módulos (ocupa todo el ancho también con la fila en horizontal) -->
+              <div v-if="vista === 'activos' && modulosAbiertos.has(u.id)" :id="`modulos-fila-${u.id}`"
+                   class="w-full space-y-3 border-t border-borde pt-4 @xl/lista:basis-full">
+                <PanelModulosDocente :key="`${u.id}-${revModulos[u.id] || 0}`" :usuario="u"
+                                     :cabecera="false" :explicacion="false" :editable="false" />
+                <div class="flex justify-end">
+                  <button type="button" @click="editarModulos(u)"
+                          class="inline-flex min-h-9 items-center rounded-full border border-rol-fuerte/40 bg-white px-4 py-1.5
+                                 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
+                    Editar módulos
+                  </button>
+                </div>
+              </div>
             </li>
           </ul>
+
+          <!-- Tope del listado alcanzado (el backend envía como mucho 1000 por lista) -->
+          <p v-if="!cargando && truncado[vista]" role="status"
+             class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Se muestran las 1000 cuentas más recientes; las más antiguas no aparecen en esta lista ni en la búsqueda.
+          </p>
 
           <!-- Paginación -->
           <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
@@ -983,7 +1037,7 @@ onMounted(async () => {
             <form @submit.prevent="crearUsuario" class="space-y-4">
               <!-- Nombre -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
                 <input v-model="form.name" type="text" placeholder="Nombre completo"
                   maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -992,13 +1046,13 @@ onMounted(async () => {
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formErrors.name" class="text-xs text-red-500">{{ formErrors.name }}</p>
                   <span v-else></span>
-                  <span class="text-[10px]" :class="(form.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (form.name || '').length }}/255</span>
+                  <span class="text-[11px] sm:text-[10px]" :class="(form.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (form.name || '').length }}/255</span>
                 </div>
               </div>
 
               <!-- Correo electrónico -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
                 <!-- Docente/Admin sin centro aún -->
                 <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role) && !activeEmailDomain"
                   class="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-600">
@@ -1027,13 +1081,13 @@ onMounted(async () => {
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formErrors.email" class="text-xs text-red-500">{{ formErrors.email }}</p>
                   <span v-else></span>
-                  <span v-if="activeEmailDomain" class="text-[10px]" :class="(form.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (form.email || '').length }}/254</span>
+                  <span v-if="activeEmailDomain" class="text-[11px] sm:text-[10px]" :class="(form.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (form.email || '').length }}/254</span>
                 </div>
               </div>
 
               <!-- Contraseña -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Contraseña temporal</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Contraseña temporal</label>
                 <input v-model="form.password" type="password" placeholder="Mín. 8 caracteres, mayúsculas, minúsculas, número y símbolo"
                   maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -1057,7 +1111,7 @@ onMounted(async () => {
 
               <!-- Repite contraseña -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la contraseña</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la contraseña</label>
                 <input v-model="form.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
                   maxlength="128"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -1068,7 +1122,7 @@ onMounted(async () => {
 
               <!-- Tipo de cuenta (solo visible para superadmin; admin de centro siempre crea docentes) -->
               <div v-if="authStore.isSuperAdmin">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
                   <button type="button"
@@ -1102,7 +1156,7 @@ onMounted(async () => {
                       class="mt-0.5 w-4 h-4 rounded accent-purple-600 shrink-0" />
                     <div>
                       <span class="text-xs font-bold text-gray-700">Administrador del centro</span>
-                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
+                      <p class="text-[11px] sm:text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
                     </div>
                   </label>
                 </div>
@@ -1112,7 +1166,7 @@ onMounted(async () => {
 
               <!-- Centro educativo (requerido para docente/admin) -->
               <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role)">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Centro educativo
                   <span class="text-red-400 ml-0.5">*</span>
                 </label>
@@ -1129,7 +1183,7 @@ onMounted(async () => {
 
               <!-- Empresa (requerida para role empresa) -->
               <div v-if="authStore.isSuperAdmin && form.role === '3'">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Empresa
                   <span class="text-red-400 ml-0.5">*</span>
                 </label>
@@ -1169,7 +1223,7 @@ onMounted(async () => {
             </div>
 
             <h2 class="text-xl font-black mb-2 text-azul-noche">¡Cuenta creada!</h2>
-            <p class="text-sm text-gray-500 leading-relaxed mb-2">
+            <p class="text-sm text-gray-500 leading-relaxed mb-2 break-words">
               La cuenta de
               <span class="text-[#1F2937] font-bold">{{ cuentaRecienCreada?.name }}</span>
               se ha creado correctamente.
@@ -1196,6 +1250,22 @@ onMounted(async () => {
                   de esta cuenta para habilitarla.
                 </p>
               </div>
+            </div>
+
+            <!-- Docente: recordar que indique sus módulos (o asignárselos ya) -->
+            <div v-if="cuentaRecienCreada?.role === 2"
+                 class="-mt-2 mb-6 rounded-xl bg-rol-fuerte/5 border border-rol-fuerte/20 px-4 py-3.5 text-left">
+              <p class="text-xs font-black text-rol-fuerte uppercase tracking-wider mb-0.5">Módulos que imparte</p>
+              <p class="text-xs text-gray-500 leading-relaxed break-words">
+                Recuerda a <span class="font-bold text-[#1F2937]">{{ cuentaRecienCreada?.name }}</span> que indique en
+                <span class="font-bold">Mi usuario</span> los módulos que imparte: sin ellos no podrá colaborar en los
+                encuentros de sus compañeros. También puedes asignárselos tú ahora.
+              </p>
+              <button type="button" @click="asignarModulosRecienCreada"
+                      class="mt-2.5 inline-flex min-h-9 items-center rounded-full border border-rol-fuerte/30 bg-white px-4 py-1.5
+                             text-xs font-black text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
+                Asignar módulos ahora
+              </button>
             </div>
 
             <button @click="cerrarModalExito"
@@ -1309,7 +1379,7 @@ onMounted(async () => {
             </div>
 
             <div class="px-6 py-4 border-t border-gray-100 shrink-0">
-              <p class="text-[10px] text-gray-400 text-center">
+              <p class="text-[11px] sm:text-[10px] text-gray-400 text-center">
                 {{ centrosFiltrados.length }} centro{{ centrosFiltrados.length !== 1 ? 's' : '' }} encontrado{{ centrosFiltrados.length !== 1 ? 's' : '' }}
               </p>
             </div>
@@ -1342,7 +1412,7 @@ onMounted(async () => {
             <form @submit.prevent="guardarEdicion" class="space-y-4">
               <!-- Nombre -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nombre</label>
                 <input v-model="formEditar.name" type="text" placeholder="Nombre completo"
                   maxlength="255"
                   class="w-full bg-gray-50 border rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -1351,13 +1421,13 @@ onMounted(async () => {
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formEditarErrors.name" class="text-xs text-red-500">{{ formEditarErrors.name }}</p>
                   <span v-else></span>
-                  <span class="text-[10px]" :class="(formEditar.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.name || '').length }}/255</span>
+                  <span class="text-[11px] sm:text-[10px]" :class="(formEditar.name || '').length >= 245 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.name || '').length }}/255</span>
                 </div>
               </div>
 
               <!-- Correo electrónico -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
                 <!-- Con dominio (centro o empresa): input dividido -->
                 <div v-if="activeEmailEditarDomain"
                   class="flex items-center bg-gray-50 border rounded-xl overflow-hidden transition-all
@@ -1376,13 +1446,13 @@ onMounted(async () => {
                 <div class="flex justify-between items-center mt-1">
                   <p v-if="formEditarErrors.email" class="text-xs text-red-500">{{ formEditarErrors.email }}</p>
                   <span v-else></span>
-                  <span class="text-[10px]" :class="(formEditar.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.email || '').length }}/254</span>
+                  <span class="text-[11px] sm:text-[10px]" :class="(formEditar.email || '').length >= 244 ? 'text-amber-500' : 'text-gray-300'">{{ (formEditar.email || '').length }}/254</span>
                 </div>
               </div>
 
               <!-- Nueva contraseña (opcional) -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nueva contraseña <span class="normal-case text-gray-400 font-normal">(opcional)</span></label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Nueva contraseña <span class="normal-case text-gray-400 font-normal">(opcional)</span></label>
                 <input v-model="formEditar.password" type="password" placeholder="Dejar en blanco para no cambiar"
                   maxlength="128"
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -1406,7 +1476,7 @@ onMounted(async () => {
 
               <!-- Repite nueva contraseña (solo si se ha escrito una) -->
               <div v-if="formEditar.password">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la nueva contraseña</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Repite la nueva contraseña</label>
                 <input v-model="formEditar.password_confirmation" type="password" placeholder="Vuelve a escribir la contraseña"
                   maxlength="128"
                   class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1F2937] placeholder-gray-300
@@ -1430,7 +1500,7 @@ onMounted(async () => {
                   </button>
                   <div>
                     <span class="text-xs font-black text-red-600">Confirmo que quiero cambiar la contraseña de esta cuenta</span>
-                    <p class="text-[10px] text-gray-500 mt-0.5">Se cerrará la sesión en todos los dispositivos donde estuviera conectada.</p>
+                    <p class="text-[11px] sm:text-[10px] text-gray-500 mt-0.5">Se cerrará la sesión en todos los dispositivos donde estuviera conectada.</p>
                   </div>
                 </label>
                 <p v-if="formEditarErrors.confirm_password_change" class="text-xs text-red-600 font-bold mt-2">{{ formEditarErrors.confirm_password_change }}</p>
@@ -1438,7 +1508,7 @@ onMounted(async () => {
 
               <!-- Tipo de cuenta (solo visible para superadmin) -->
               <div v-if="authStore.isSuperAdmin">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
                   <button type="button"
@@ -1472,7 +1542,7 @@ onMounted(async () => {
                       class="mt-0.5 w-4 h-4 rounded accent-purple-600 shrink-0" />
                     <div>
                       <span class="text-xs font-bold text-gray-700">Administrador del centro</span>
-                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
+                      <p class="text-[11px] sm:text-[10px] text-gray-400 mt-0.5">Gestiona los docentes de su centro educativo</p>
                     </div>
                   </label>
                 </div>
@@ -1480,7 +1550,7 @@ onMounted(async () => {
 
               <!-- Centro educativo (visible para cualquier docente) -->
               <div v-if="authStore.isSuperAdmin && ['2','4'].includes(formEditar.role)">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Centro educativo
                   <span class="text-red-400 ml-0.5">*</span>
                 </label>
@@ -1497,7 +1567,7 @@ onMounted(async () => {
 
               <!-- Empresa (requerida para role empresa) -->
               <div v-if="authStore.isSuperAdmin && formEditar.role === '3'">
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Empresa
                   <span class="text-red-400 ml-0.5">*</span>
                 </label>
@@ -1514,7 +1584,7 @@ onMounted(async () => {
 
               <!-- Switch de activación -->
               <div>
-                <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Activar aquí</label>
+                <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Activar aquí</label>
                 <div class="flex items-center gap-3">
                   <button type="button" role="switch" :aria-checked="!!usuarioEditando?.is_active"
                     :aria-label="usuarioEditando?.is_active ? 'Cuenta activada' : 'Activar la cuenta'"
@@ -1546,23 +1616,9 @@ onMounted(async () => {
             </form>
 
             <!-- Módulos que imparte (solo docentes): se guardan aparte del resto de la cuenta -->
-            <div v-if="Number(usuarioEditando?.role) === 2" class="mt-6 space-y-3 border-t border-gray-100 pt-5">
-              <div>
-                <p class="text-[10px] font-black uppercase tracking-widest text-gray-500">Módulos que imparte</p>
-                <p class="mt-1 text-[11px] text-gray-500 leading-relaxed">
-                  Con ellos, los compañeros del centro que compartan familia y módulo con un proyecto pueden invitarle como colaborador.
-                </p>
-              </div>
-              <div v-if="cargandoModulosEditar" class="h-20 bg-gray-100 rounded-xl animate-pulse"></div>
-              <SelectorModulosDocente v-else v-model="modulosEditar" :oferta="ofertaModulosEditar" :disabled="guardandoModulosEditar" />
-              <p v-if="msgModulosEditar" class="text-xs text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{{ msgModulosEditar }}</p>
-              <div class="flex justify-end">
-                <button type="button" @click="guardarModulosEditar" :disabled="guardandoModulosEditar || !modulosEditarCambiados"
-                        class="rounded-full bg-administraciones px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white
-                               transition-all hover:bg-administraciones/90 disabled:opacity-40 disabled:cursor-not-allowed">
-                  {{ guardandoModulosEditar ? 'Guardando…' : 'Guardar módulos' }}
-                </button>
-              </div>
+            <div v-if="Number(usuarioEditando?.role) === 2" id="modulos-docente-editar" class="mt-6 border-t border-gray-100 pt-5 scroll-mt-4">
+              <PanelModulosDocente :key="usuarioEditando.id" :usuario="usuarioEditando" :cabecera="false" :ficha="false"
+                                   @guardado="onModulosGuardados" />
             </div>
             </div>
     </Modal>
