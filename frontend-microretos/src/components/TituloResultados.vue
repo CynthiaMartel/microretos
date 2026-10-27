@@ -35,7 +35,7 @@ const ultimo = computed(() => props.niveles.at(-1))
               <span class="min-w-0 truncate font-semibold" :class="i === niveles.length - 1 ? 'text-rol-fuerte' : 'text-azul-noche'">{{ n.valor }}</span>
             </button>
             <button type="button" @click="n.quitar()" :aria-label="`Quitar filtro ${n.etiqueta}: ${n.valor}`" title="Quitar este filtro"
-                    class="mr-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-white hover:text-azul-noche">
+                    class="relative mr-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-texto-secundario before:absolute before:-inset-1 before:content-[''] hover:bg-white hover:text-azul-noche">
               <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </span>

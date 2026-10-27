@@ -45,7 +45,7 @@ onBeforeUnmount(() => {
     <template v-if="ayuda">
       <button type="button" @click.stop="abierta = !abierta" :aria-expanded="abierta" :aria-describedby="id"
               :aria-label="`¿Qué hace el rol ${info.label}?`"
-              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 hover:text-azul-noche">
+              class="relative inline-flex h-7 w-7 shrink-0 items-center before:absolute before:-inset-1 before:rounded-full before:content-[''] justify-center rounded-full text-texto-secundario hover:bg-gray-100 hover:text-azul-noche">
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       </button>
       <span :id="id" role="tooltip"

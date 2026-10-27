@@ -15,4 +15,5 @@ export const _reg = Object.freeze({
   _h: 'TcOhc3RlciBlbiBDaWJlcnNlZ3VyaWRhZCBlIEludGVsaWdlbmNpYSBkZSBEYXRvcw==',
   _i: 'RHVhTGFi',
   _j: 'MjAyNS0yMDI2',
+  _k: 'RGVzYXJyb2xsYWRvcmEgYWN0dWFsIGRlIER1YUxhYiDCtyBBbnRlcywgYWx1bW5hIGRlIHByw6FjdGljYXMgZGUgMsK6IERBTSAoMjAyNS0yMDI2KQ==',
 })

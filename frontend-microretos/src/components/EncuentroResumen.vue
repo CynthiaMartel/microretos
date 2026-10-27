@@ -42,7 +42,7 @@ const ICONOS = {
         </span>
         <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen del encuentro</h2>
         <button v-if="proyecto" type="button" @click="emit('ver-proyecto')"
-                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
                 aria-label="Ver la ficha del proyecto" title="Ver ficha del proyecto">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         </button>

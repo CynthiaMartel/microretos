@@ -139,7 +139,7 @@ const toggleRaExpandido = (raId) => {
           </span>
           <span v-else class="shrink-0 text-[10px] font-bold text-gray-400 bg-gray-100 px-2.5 py-0.5 rounded-full">La IA elegirá</span>
           <button v-if="resumenModulo(mod.id).ra > 0 && !disabled" type="button"
-                  class="shrink-0 text-[10px] font-bold text-red-500 hover:underline ml-1"
+                  class="shrink-0 -my-2 inline-flex min-h-9 items-center px-2 text-[10px] font-bold text-red-500 hover:underline"
                   @click.stop="vaciarModulo(mod.id)">Quitar</button>
         </div>
 
@@ -148,7 +148,7 @@ const toggleRaExpandido = (raId) => {
           <p v-if="cargando[mod.id]" class="px-4 py-3 text-xs text-gray-400 italic">Cargando RA/CE…</p>
           <p v-else-if="errorCarga[mod.id]" class="px-4 py-3 text-xs text-red-500">
             No se pudieron cargar los RA/CE.
-            <button type="button" class="font-bold underline" @click="cargarModulo(mod.id)">Reintentar</button>
+            <button type="button" class="-my-2 inline-flex min-h-9 items-center px-1 font-bold underline" @click="cargarModulo(mod.id)">Reintentar</button>
           </p>
           <p v-else-if="!rasPorModulo[mod.id]?.length" class="px-4 py-3 text-xs text-gray-400 italic">
             Este módulo no tiene RA/CE cargados todavía; la IA no podrá asignarle criterios.
@@ -157,19 +157,21 @@ const toggleRaExpandido = (raId) => {
             <div v-for="ra in rasPorModulo[mod.id]" :key="ra.id" :class="raEstado(ra) !== 'none' ? 'bg-centros/5' : ''">
               <div class="flex items-start gap-2 sm:gap-2.5 px-3 sm:px-4 py-3">
                 <button type="button" :disabled="disabled" @click="toggleRa(mod.id, ra)"
-                        class="mt-0.5 shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
+                        class="group/ra -m-2.5 shrink-0 w-9 h-9 flex items-center justify-center">
+                  <span class="mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
                         :class="raEstado(ra) === 'all' ? 'bg-centros border-centros'
                           : raEstado(ra) === 'some' ? 'bg-centros/30 border-centros'
-                          : 'bg-white border-gray-300 hover:border-centros/50'">
-                  <svg v-if="raEstado(ra) !== 'none'" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path v-if="raEstado(ra) === 'all'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"/>
-                  </svg>
+                          : 'bg-white border-gray-300 group-hover/ra:border-centros/50'">
+                    <svg v-if="raEstado(ra) !== 'none'" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path v-if="raEstado(ra) === 'all'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"/>
+                    </svg>
+                  </span>
                 </button>
                 <span class="shrink-0 mt-0.5 text-[9px] font-black uppercase tracking-widest text-centros bg-centros/10 px-2 py-0.5 rounded-full">RA{{ ra.orden }}</span>
                 <p class="flex-1 text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
                 <button type="button" @click="toggleRaExpandido(ra.id)"
-                        class="shrink-0 mt-0.5 ml-1 flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600">
+                        class="shrink-0 -my-2 min-h-9 px-2 inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600">
                   {{ ra.criterios.length }} CE
                   <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="raExpandido[ra.id] ? 'rotate-180' : ''"
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">

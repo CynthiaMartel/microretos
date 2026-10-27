@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { _reg } from '../config/app.js'
 import { _bt, _bv } from '../utils/tokens.js'
 import { useCredits } from '../composables/useCredits.js'
+import ModalTaller from './ModalTaller.vue'
 
 const _x = (s) =>
   decodeURIComponent(
@@ -13,7 +14,7 @@ const _app = computed(() => _x(_reg._i))
 const _yr  = computed(() => _x(_reg._j))
 
 const autores = computed(() => [
-  { nombre: _x(_reg._a), rol: _x(_reg._e), formacion: _x(_reg._g), icono: 'code'   },
+  { nombre: _x(_reg._a), rol: _x(_reg._e), formacion: _x(_reg._k), icono: 'code', actual: true },
   { nombre: _x(_reg._b), rol: _x(_reg._e), formacion: _x(_reg._g), icono: 'code'   },
   { nombre: _x(_reg._c), rol: _x(_reg._f), formacion: _x(_reg._h), icono: 'shield' },
 ])
@@ -40,8 +41,6 @@ const _xv = async () => {
 }
 
 onMounted(_xv)
-
-const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
 </script>
 
 <template>
@@ -55,8 +54,8 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
                    flex items-center justify-between gap-3
                    px-3 sm:px-5 text-[11px] text-white/35 select-none">
       <span class="min-w-0 truncate">
-        <span class="sm:hidden">Desarrollada por alumnado en prácticas</span>
-        <span class="hidden sm:inline">Web app desarrollada por alumnado de prácticas de empresa</span>
+        <span class="sm:hidden">Nacida de las prácticas de empresa {{ _yr }}</span>
+        <span class="hidden sm:inline">Aplicación nacida de las prácticas de empresa del curso {{ _yr }}.</span>
       </span>
       <!-- Acerca de: discreto, a juego con el texto del pie -->
       <button @click="abrir"
@@ -69,84 +68,83 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) cerrar() }
       </button>
     </footer>
 
-    <!-- ── Modal ────────────────────────────────────────────────────────────── -->
-    <Transition name="credit-fade">
-      <div v-if="abierto"
-        class="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        @click="onOverlay">
-
-        <div class="bg-white border border-gray-100 rounded-[2rem] shadow-2xl
-                    w-full max-w-lg overflow-hidden">
-
-          <!-- Cabecera -->
-          <div class="bg-[#F0FBF4] border-b border-[#BBE8D0] px-5 sm:px-8 py-5 sm:py-6 flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-1">{{ _app }}</p>
-              <h2 class="text-xl sm:text-2xl font-black tracking-tight text-azul-noche">Equipo de desarrollo</h2>
-              <p class="text-gray-500 text-xs mt-1">Aplicación desarrollada por alumnado de prácticas de empresa</p>
-            </div>
-            <button @click="cerrar" aria-label="Cerrar"
-              class="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-black/5 hover:text-gray-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Autores -->
-          <div class="px-5 sm:px-8 py-5 sm:py-6 space-y-3 bg-white">
-            <div v-for="(a, i) in autores" :key="i"
-              class="flex items-start gap-4 p-4 rounded-2xl bg-[#F8FAFC] border border-gray-100
-                     hover:border-[#BBE8D0] hover:bg-[#F0FBF4] transition-all">
-
-              <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-                :class="a.icono === 'shield'
-                  ? 'bg-violet-50 border border-violet-200'
-                  : 'bg-[#F0FBF4] border border-[#BBE8D0]'">
-                <svg v-if="a.icono === 'code'" class="w-5 h-5 text-primary-700"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-                </svg>
-                <svg v-else class="w-5 h-5 text-violet-500"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955
-                       11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824
-                       10.29 9 11.622 5.176-1.332 9-6.03 9-11.622
-                       0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-              </div>
-
-              <div class="min-w-0">
-                <p class="font-bold text-sm text-[#1F2937]">{{ a.nombre }}</p>
-                <p class="text-[11px] mt-0.5 leading-relaxed"
-                  :class="a.icono === 'shield' ? 'text-violet-600' : 'text-primary-700'">
-                  {{ a.rol }}
-                </p>
-                <p class="text-[10px] text-gray-400 mt-1">{{ a.formacion }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pie -->
-          <div class="bg-gray-50 border-t border-gray-100 px-5 sm:px-8 py-4 flex items-center justify-between gap-3">
-            <span class="text-[10px] text-gray-400">{{ _yr }}</span>
-            <span class="text-[10px] text-gray-400">Prácticas de empresa · {{ _yr }}</span>
-          </div>
+    <!-- ── Modal ──────────────────────────────────────────────────────────────
+         Misma estructura que los modales de bienvenida y «Proyecto en propuesta»:
+         ModalTaller con la barra de colores del logo, cabecera centrada y pie. -->
+    <ModalTaller :abierto="abierto" titulo="Equipo de desarrollo" marca
+                 ancho="w-[min(32rem,calc(100vw-2rem))]" @cerrar="cerrar">
+      <template #cabecera="{ idTitulo }">
+        <div class="pl-10 text-center">
+          <span class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-rol/15 text-rol-fuerte sm:h-16 sm:w-16 sm:rounded-2xl" aria-hidden="true">
+            <svg class="h-6 w-6 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+          </span>
+          <p class="mt-2 sm:mt-3">
+            <span class="inline-flex items-center gap-2 rounded-full border border-rol/30 bg-rol/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-rol-fuerte">
+              <span class="h-2 w-2 rounded-full bg-rol" aria-hidden="true" />
+              {{ _app }} · {{ _yr }}
+            </span>
+          </p>
+          <h2 :id="idTitulo" class="mt-2 font-heading text-xl font-bold text-azul-noche sm:mt-3 sm:text-3xl">
+            Equipo de <span class="text-rol-fuerte">desarrollo</span>
+          </h2>
+          <p class="mx-auto mt-2 max-w-md text-sm text-texto-secundario sm:text-base">
+            Aplicación nacida de las prácticas de empresa del curso {{ _yr }}.
+          </p>
         </div>
-      </div>
-    </Transition>
+      </template>
+
+      <ul class="space-y-3">
+        <li v-for="(a, i) in autores" :key="i"
+            class="flex items-start gap-3 rounded-2xl border p-4 sm:gap-4"
+            :class="a.icono === 'shield' ? 'border-administraciones/20 bg-administraciones/5' : 'border-rol/20 bg-rol/5'">
+          <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                :class="a.icono === 'shield' ? 'bg-administraciones/15 text-administraciones-dark' : 'bg-rol/15 text-rol-fuerte'"
+                aria-hidden="true">
+            <svg v-if="a.icono === 'code'" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955
+                   11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824
+                   10.29 9 11.622 5.176-1.332 9-6.03 9-11.622
+                   0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </span>
+          <div class="min-w-0">
+            <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="break-words text-sm font-bold text-azul-noche sm:text-base">{{ a.nombre }}</span>
+              <!-- Fuera de la firma HMAC: solo marca visual de quien sigue en el equipo -->
+              <span v-if="a.actual" class="inline-flex items-center gap-1.5 rounded-full border border-empresas/30 bg-empresas/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-empresas-dark">
+                <span class="h-1.5 w-1.5 rounded-full bg-empresas" aria-hidden="true" />
+                Equipo actual
+              </span>
+            </p>
+            <p class="mt-0.5 break-words text-sm font-semibold"
+               :class="a.icono === 'shield' ? 'text-administraciones-dark' : 'text-rol-fuerte'">
+              {{ a.rol }}
+            </p>
+            <p class="mt-1 break-words text-xs text-texto-secundario">{{ a.formacion }}</p>
+          </div>
+        </li>
+      </ul>
+
+      <template #pie>
+        <div class="flex justify-center">
+          <button type="button" @click="cerrar"
+                  class="inline-flex h-11 items-center justify-center rounded-full bg-rol-fuerte px-8 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90">
+            Cerrar
+          </button>
+        </div>
+      </template>
+    </ModalTaller>
 
   </template>
 </template>
 
 <style scoped>
-.credit-fade-enter-active,
-.credit-fade-leave-active { transition: opacity 0.2s ease; }
-.credit-fade-enter-from,
-.credit-fade-leave-to     { opacity: 0; }
-
 /* Botón del pie: 36px de alto (objetivo táctil mínimo) dentro de sus 2.5rem */
 .foot-btn {
   display: inline-flex; align-items: center; gap: 0.35rem;

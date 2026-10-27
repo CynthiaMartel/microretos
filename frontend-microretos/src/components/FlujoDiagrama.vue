@@ -1,6 +1,6 @@
 <!-- Flujo explicativo por fases (config/navegacion.js → SECCIONES[x].flujo). Es una explicación,
      no navegación: pasos numerados sobre una línea discontinua, sin cards ni hover.
-     En móvil la línea es vertical (timeline); desde lg, horizontal con las fases en fila.
+     En móvil la línea es vertical (timeline); desde xl, horizontal (en lg el panel lateral deja poco ancho para los pasos) con las fases en fila.
      Si una fase tiene `concepto`, su nombre se destaca: al pasar el cursor muestra la pregunta
      ("¿Qué es un reto?") y al pulsarlo abre un toast con la definición (ConceptoClave).
      Lo usan SeccionHub.vue y ComoFuncionaModal.vue. -->
@@ -48,15 +48,15 @@ onBeforeUnmount(cerrarConcepto)
 <template>
   <!-- En horizontal, cada fase ocupa en proporción a sus pasos (fr = nº de pasos) y comparte
        filas (subgrid) para que las etiquetas de distinta altura no desalineen la línea de pasos -->
-  <div class="flex flex-col px-1 sm:px-2 lg:grid lg:grid-rows-[auto_auto]"
+  <div class="flex flex-col px-1 sm:px-2 xl:grid xl:grid-rows-[auto_auto]"
        :style="{ gridTemplateColumns: fases.map(f => `${f.pasos.length}fr`).join(' ') }">
-    <div v-for="(fase, fi) in fases" :key="fase.nombre" class="lg:row-span-2 lg:grid lg:grid-rows-subgrid">
+    <div v-for="(fase, fi) in fases" :key="fase.nombre" class="xl:row-span-2 xl:grid xl:grid-rows-subgrid">
       <!-- Etiqueta de fase con su regla, a modo de llave sobre sus pasos -->
-      <div class="mb-3 flex items-end gap-2 lg:pr-6" :class="fase.texto">
+      <div class="mb-3 flex items-end gap-2 xl:pr-6" :class="fase.texto">
         <!-- Con concepto: nombre destacado, tooltip con la pregunta y toast al pulsar -->
         <span v-if="fase.concepto" class="group relative">
           <button type="button"
-                  class="flex items-center gap-1.5 rounded-md font-heading text-lg font-bold uppercase tracking-wider underline decoration-current/40 decoration-dashed decoration-2 underline-offset-4 transition hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 sm:text-xl"
+                  class="flex min-h-9 items-center gap-1.5 rounded-full font-heading text-lg font-bold uppercase tracking-wider underline decoration-current/40 decoration-dashed decoration-2 underline-offset-4 transition hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 sm:text-xl"
                   :aria-label="fase.concepto.pregunta" @click="abrirConcepto(fase.concepto)">
             {{ fase.nombre }}
             <span class="flex h-5 w-5 items-center justify-center rounded-full bg-current/15 text-xs no-underline" aria-hidden="true">?</span>
@@ -70,26 +70,26 @@ onBeforeUnmount(cerrarConcepto)
         <span class="mb-1.5 h-px flex-1 bg-current opacity-25" />
       </div>
 
-      <ol class="flex flex-col lg:flex-row">
-        <li v-for="(paso, pi) in fase.pasos" :key="paso.titulo" class="flex flex-1 gap-3 lg:block">
+      <ol class="flex flex-col xl:flex-row">
+        <li v-for="(paso, pi) in fase.pasos" :key="paso.titulo" class="flex flex-1 gap-3 xl:block">
           <!-- Marcador: número + línea hasta el siguiente paso -->
-          <div class="flex flex-col items-center lg:flex-row">
+          <div class="flex flex-col items-center xl:flex-row">
             <!-- Número con halo del color de su fase -->
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 bg-white font-heading text-sm font-bold ring-4"
                   :class="[fase.borde, fase.texto, fase.halo]">{{ paso.n }}</span>
             <span v-if="paso.n < totalPasos"
-                  class="relative my-2 w-0 flex-1 border-l-2 border-dashed border-gray-300 lg:mx-3 lg:my-0 lg:h-0 lg:border-l-0 lg:border-t-2">
+                  class="relative my-2 w-0 flex-1 border-l-2 border-dashed border-gray-300 xl:mx-3 xl:my-0 xl:h-0 xl:border-l-0 xl:border-t-2">
               <span v-if="conectorDe(fase, fi, pi)"
-                    class="absolute inset-x-0 bottom-1.5 hidden px-1 text-center text-xs italic leading-tight text-texto-secundario lg:block">
+                    class="absolute inset-x-0 bottom-1.5 hidden px-1 text-center text-xs italic leading-tight text-texto-secundario xl:block">
                 {{ conectorDe(fase, fi, pi) }}
               </span>
             </span>
           </div>
           <!-- Texto del paso -->
-          <div class="min-w-0 pb-5 pt-1 lg:pb-0 lg:pr-6 lg:pt-3">
+          <div class="min-w-0 pb-5 pt-1 xl:pb-0 xl:pr-6 xl:pt-3">
             <p class="text-sm font-semibold leading-snug">{{ paso.titulo }}</p>
             <p class="mt-1 text-xs leading-snug text-texto-secundario">{{ paso.desc }}</p>
-            <p v-if="conectorDe(fase, fi, pi)" class="mt-2 text-xs italic text-texto-secundario lg:hidden">↓ {{ conectorDe(fase, fi, pi) }}</p>
+            <p v-if="conectorDe(fase, fi, pi)" class="mt-2 text-xs italic text-texto-secundario xl:hidden">↓ {{ conectorDe(fase, fi, pi) }}</p>
           </div>
         </li>
       </ol>

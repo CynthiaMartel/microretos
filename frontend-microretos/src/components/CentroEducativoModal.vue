@@ -463,7 +463,7 @@ function resetear() {
                 <li>{{ impacto.afectados.encuentros }} encuentro(s) creados con este centro</li>
                 <li>{{ impacto.afectados.proyectos }} proyecto(s) con este centro asignado</li>
               </ul>
-              <div class="mt-4 flex gap-3">
+              <div class="mt-4 flex flex-col-reverse sm:flex-row gap-3">
                 <button type="button" @click="cancelarConfirmacionImpacto" class="cce-btn-ghost flex-1">
                   Cancelar
                 </button>
@@ -597,7 +597,7 @@ function resetear() {
 
             <!-- Empresas asociadas -->
             <div class="mt-6">
-              <div class="flex items-center justify-between mb-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <p class="cce-label mb-0">Empresas asociadas</p>
                 <div class="flex flex-col items-end gap-1.5">
                   <button type="button" @click="toggleSelectorEmpresas" class="cce-btn-add-empresa">
@@ -629,12 +629,12 @@ function resetear() {
 
               <Transition name="cce-fade">
                 <div v-if="mostrarSelectorEmpresas" class="cce-empresas-selector">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <input
                       v-model="busquedaEmpresa"
                       type="text"
                       placeholder="Buscar empresa por nombre..."
-                      class="cce-input cce-input-sm flex-1"
+                      class="cce-input cce-input-sm flex-1 min-w-0"
                     />
                     <button
                       type="button"
@@ -690,7 +690,7 @@ function resetear() {
 
                   <p v-if="errorEmpresas" class="cce-err mt-2">{{ errorEmpresas }}</p>
 
-                  <div class="flex justify-end gap-2 mt-3">
+                  <div class="flex flex-wrap justify-end gap-2 mt-3">
                     <button
                       type="button"
                       @click="mostrarSelectorEmpresas = false; empresasSeleccionadasNuevas = []; errorEmpresas = ''"
@@ -740,7 +740,7 @@ function resetear() {
             </div>
 
             <!-- X -->
-            <button type="button" class="cce-x" @click="$emit('cerrar')">
+            <button type="button" class="cce-x" @click="$emit('cerrar')" aria-label="Cerrar">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -775,7 +775,7 @@ function resetear() {
 .cce-scroll::-webkit-scrollbar       { width: 4px; }
 .cce-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
-.cce-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.cce-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; }
 .cce-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: rgba(31,41,55,0.9); border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .cce-icon-box--edit { background: rgba(180,83,9,0.12); }
 .cce-title    { font-size: 1.3rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
@@ -799,7 +799,7 @@ function resetear() {
   display: flex; align-items: center; gap: .35rem;
   font-size: .625rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
   color: #3072AA; background: rgba(48,114,170,.08); border: none; border-radius: 9999px;
-  padding: .4rem .7rem; cursor: pointer; transition: background .2s;
+  padding: .4rem .7rem; min-height: 36px; cursor: pointer; transition: background .2s;
 }
 .cce-btn-add-empresa:hover { background: rgba(48,114,170,.16); }
 
@@ -823,14 +823,14 @@ function resetear() {
   display: flex; align-items: center; gap: .3rem; flex-shrink: 0;
   font-size: .625rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
   color: #374151; background: #fff; border: 2px solid #e5e7eb; border-radius: 9999px;
-  padding: .5rem .7rem; cursor: pointer; transition: all .2s; white-space: nowrap;
+  padding: .5rem .7rem; min-height: 36px; cursor: pointer; transition: all .2s; white-space: nowrap;
 }
 .cce-btn-refresh:hover { border-color: #C7DCEC; color: #3072AA; }
 
 .cce-input-sm { padding: .55rem .8rem; font-size: .8rem; }
 
 .cce-btn-ghost-sm, .cce-btn-green-sm {
-  padding: .55rem 1rem; border-radius: 9999px; font-size: .625rem; font-weight: 900;
+  padding: .55rem 1rem; min-height: 36px; border-radius: 9999px; font-size: .625rem; font-weight: 900;
   letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: all .2s;
 }
 .cce-btn-ghost-sm { background: #fff; color: #6b7280; border: 2px solid #e5e7eb; }
@@ -851,11 +851,18 @@ function resetear() {
 .cce-btn-ghost:active { transform: scale(.97); }
 
 .cce-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .cce-x:hover { background: #e5e7eb; color: #1F2937; }
+
+/* Móvil (360px): menos relleno y acciones apiladas para que nada desborde (como InsertModifyEmpresa) */
+@media (max-width: 640px) {
+  .cce-card    { padding: 1.5rem 1.25rem; }
+  .cce-x       { top: .75rem; right: .75rem; }
+  .cce-actions { flex-direction: column-reverse; margin-top: 1.5rem; }
+}
 
 .cce-overlay-enter-active, .cce-overlay-leave-active { transition: opacity .3s ease; }
 .cce-overlay-enter-from,   .cce-overlay-leave-to    { opacity: 0; }

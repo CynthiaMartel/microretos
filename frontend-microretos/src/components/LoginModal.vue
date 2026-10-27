@@ -140,10 +140,16 @@ const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLo
   padding: 3rem 2.5rem 2.5rem;
   width: 100%;
   max-width: 420px;
+  max-height: 90dvh;
+  overflow-y: auto;
   box-shadow:
     0 0 0 1px rgba(48, 114, 170, 0.04),
     0 40px 80px rgba(0, 0, 0, 0.12),
     0 0 60px rgba(48, 114, 170, 0.06);
+}
+
+@media (max-width: 640px) {
+  .modal-card { padding: 2rem 1.25rem 1.5rem; }
 }
 
 .modal-header {
@@ -242,15 +248,19 @@ const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLo
 
 .toggle-password {
   position: absolute;
-  right: 0.9rem;
+  right: 0.4rem;
   background: none;
   border: none;
+  border-radius: 9999px;
   cursor: pointer;
   color: #9CA3AF;
-  padding: 0.2rem;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   transition: color 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .toggle-password:hover { color: #6B7280; }
@@ -334,8 +344,8 @@ const { form, errors, loginError, isLoading, showPassword, handleLogin } = useLo
   border: none;
   border-radius: 9999px;
   color: #9CA3AF;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   display: flex;

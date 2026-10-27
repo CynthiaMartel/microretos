@@ -49,7 +49,7 @@ const emit = defineEmits([
 ])
 
 const tabs = [
-  { id: 'basico',    label: 'Datos básicos', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z' },
+  { id: 'basico',    label: 'Datos básicos', corto: 'Básico', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1v1H9V7zm5 0h1v1h-1V7zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1zm-5 4h1v1H9v-1zm5 0h1v1h-1v-1z' },
   { id: 'contacto',  label: 'Contacto',      icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   { id: 'ubicacion', label: 'Ubicación',     icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z' },
 ]
@@ -536,7 +536,7 @@ defineExpose({ abrirTrasLogin })
                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon"/>
                 </svg>
-                <span>{{ tab.label }}</span>
+                <span class="sm:hidden">{{ tab.corto || tab.label }}</span><span class="hidden sm:inline">{{ tab.label }}</span>
                 <!-- Punto rojo: errores de validación en básico -->
                 <span v-if="tab.id === 'basico' && (nuevaErrors.nombre_comercial || nuevaErrors.sector || nuevaErrors.tamano || nuevaErrors.familia || nuevaErrors.centro_educativo)"
                   class="w-2 h-2 rounded-full bg-red-500 shrink-0"/>
@@ -584,7 +584,7 @@ defineExpose({ abrirTrasLogin })
                     :class="estadoActual(nuevaForm.estado_contacto)
                       ? [estadoActual(nuevaForm.estado_contacto).bg, estadoActual(nuevaForm.estado_contacto).text, estadoActual(nuevaForm.estado_contacto).border]
                       : 'bg-gray-100 text-gray-400 border-gray-200'"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity"
+                    class="inline-flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity"
                   >
                     <span v-if="estadoActual(nuevaForm.estado_contacto)"
                       :class="[estadoActual(nuevaForm.estado_contacto).dot, estadoActual(nuevaForm.estado_contacto).pulse ? 'animate-pulse' : '']"
@@ -936,7 +936,7 @@ defineExpose({ abrirTrasLogin })
                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon"/>
                 </svg>
-                <span>{{ tab.label }}</span>
+                <span class="sm:hidden">{{ tab.corto || tab.label }}</span><span class="hidden sm:inline">{{ tab.label }}</span>
                 <span v-if="tab.id === 'basico' && editarErrors.nombre_comercial"
                   class="w-2 h-2 rounded-full bg-red-500 shrink-0"/>
               </button>
@@ -954,7 +954,7 @@ defineExpose({ abrirTrasLogin })
                     :class="estadoActual(editarForm.estado_contacto)
                       ? [estadoActual(editarForm.estado_contacto).bg, estadoActual(editarForm.estado_contacto).text, estadoActual(editarForm.estado_contacto).border]
                       : 'bg-gray-100 text-gray-400 border-gray-200'"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity"
+                    class="inline-flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity"
                   >
                     <span v-if="estadoActual(editarForm.estado_contacto)"
                       :class="[estadoActual(editarForm.estado_contacto).dot, estadoActual(editarForm.estado_contacto).pulse ? 'animate-pulse' : '']"

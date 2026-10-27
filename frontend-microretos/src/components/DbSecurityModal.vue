@@ -116,7 +116,8 @@ function cancelar() {
                 <button
                   type="button"
                   @click="showPwd = !showPwd"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  :aria-label="showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <svg v-if="showPwd" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -157,7 +158,7 @@ function cancelar() {
             </div>
 
             <!-- X -->
-            <button type="button" class="dsm-x" @click="cancelar">
+            <button type="button" class="dsm-x" @click="cancelar" aria-label="Cerrar">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -182,10 +183,11 @@ function cancelar() {
   position: relative; background: #fff;
   border: 1px solid #e5e7eb; border-radius: 2rem; padding: 2.5rem;
   width: 100%; max-width: 480px;
+  max-height: 90dvh; overflow-y: auto;
   box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 24px 48px rgba(0,0,0,.22), 0 0 80px rgba(25,167,168,.06);
 }
 
-.dsm-header   { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+.dsm-header   { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; padding-right: 2.5rem; }
 .dsm-icon-box {
   flex-shrink: 0; width: 52px; height: 52px;
   background: rgba(31,41,55,0.9); border-radius: 1rem;
@@ -235,11 +237,17 @@ function cancelar() {
 .dsm-btn-ghost:active { transform: scale(.97); }
 
 .dsm-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #f3f4f6; border: none; border-radius: 9999px; color: #9ca3af;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .dsm-x:hover { background: #e5e7eb; color: #1F2937; }
+
+@media (max-width: 640px) {
+  .dsm-card    { padding: 1.5rem 1.25rem; }
+  .dsm-x       { top: 1rem; right: 1rem; }
+  .dsm-actions { flex-direction: column-reverse; }
+}
 
 .dsm-overlay-enter-active, .dsm-overlay-leave-active { transition: opacity .3s ease; }
 .dsm-overlay-enter-from,   .dsm-overlay-leave-to    { opacity: 0; }

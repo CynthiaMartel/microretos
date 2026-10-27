@@ -35,7 +35,8 @@ const emit = defineEmits(['confirm', 'cancel'])
       <div class="fila-pasos">
         <button type="button" @click="emit('cancel')" class="btn-paso-atras">Cancelar</button>
         <button type="button" @click="emit('confirm')" :disabled="loading" class="btn-paso">
-          {{ loading ? 'Validando…' : 'Confirmar validación' }}
+          <template v-if="loading">Validando…</template>
+          <template v-else><span class="sm:hidden">Confirmar</span><span class="hidden sm:inline">Confirmar validación</span></template>
         </button>
       </div>
     </template>

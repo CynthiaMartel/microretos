@@ -59,7 +59,7 @@ const ICONOS = {
       <div class="mb-2.5 flex items-center gap-2">
         <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen del proyecto</h2>
         <button v-if="hayReto" type="button" @click="emit('ver-ficha')"
-                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
                 aria-label="Ver la ficha completa del reto" title="Ver ficha completa">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </button>
@@ -69,7 +69,7 @@ const ICONOS = {
       <div class="relative">
         <MiniaturaReto :src="portadaUrl" class="flex aspect-[12/5] w-full" />
         <button v-if="puedeEditarImagen" type="button" @click="emit('editar-imagen')"
-                class="absolute bottom-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-rol-fuerte shadow-md hover:bg-gray-50"
+                class="absolute bottom-1.5 right-1.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-rol-fuerte shadow-md hover:bg-gray-50"
                 aria-label="Cambiar la imagen del proyecto" title="Cambiar imagen (paso 7)">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
         </button>
@@ -147,7 +147,7 @@ const ICONOS = {
         </svg>
         <h2 id="titulo-recursos-apoyo" class="min-w-0 flex-1 text-sm font-bold text-azul-noche">Recursos de apoyo</h2>
         <RouterLink to="/seccion/recursos" target="_blank"
-                    class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
                     aria-label="Ver todos los recursos (se abre en otra pestaña)" title="Ver todos los recursos">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </RouterLink>

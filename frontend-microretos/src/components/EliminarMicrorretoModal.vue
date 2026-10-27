@@ -257,7 +257,10 @@ async function confirmarEliminacion() {
 .emm-card::-webkit-scrollbar { width: 5px; }
 .emm-card::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 3px; }
 
-.emm-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.emm-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; } /* hueco para la ✕ absoluta */
+@media (max-width: 640px) {
+  .emm-card { padding: 1.25rem; }
+}
 .emm-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .emm-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .emm-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -307,7 +310,7 @@ async function confirmarEliminacion() {
 .emm-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
 .emm-btn-ghost:active { transform: scale(.97); }
 .emm-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #fef2f2; border: none; border-radius: 9999px; color: #f87171;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }

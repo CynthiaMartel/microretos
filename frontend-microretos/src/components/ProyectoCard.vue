@@ -259,9 +259,13 @@ const foto = computed(() => props.proyecto.reto_imagen_url || props.proyecto.ima
                 <span class="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] font-bold">Superadmin</span>
               </button>
               <span id="ayuda-escaparate" role="tooltip"
-                    class="pointer-events-none absolute bottom-full right-1 z-40 mb-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs font-normal leading-snug text-white shadow-lg group-hover/escaparate:block group-focus-within/escaparate:block">
+                    class="pointer-events-none absolute bottom-full right-1 z-40 mb-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs font-normal leading-snug text-white shadow-lg sm:group-hover/escaparate:block sm:group-focus-within/escaparate:block">
                 Escaparate de dualab.es: los proyectos publicados aparecen en la web pública, visibles para cualquiera sin iniciar sesión. Solo el superadmin puede publicarlos u ocultarlos.
               </span>
+              <!-- En móvil no hay hover: la explicación va como línea corta bajo la opción -->
+              <p class="px-4 pb-1 text-[11px] leading-snug text-texto-secundario sm:hidden" aria-hidden="true">
+                Visible en dualab.es sin iniciar sesión. Solo el superadmin puede cambiarlo.
+              </p>
             </div>
             <button type="button" role="menuitem" @click="cerrarMenu(); emit('eliminar', proyecto)"
                     class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Mover a la papelera</button>

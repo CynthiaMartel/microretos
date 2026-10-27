@@ -622,7 +622,7 @@ const irA = (ruta) => router.push(ruta)
               <h2 id="titulo-resumen" class="card-title">Resumen del curso</h2>
               <label class="sr-only" for="curso-sel">Curso académico</label>
               <select id="curso-sel" v-model.number="cursoSel"
-                      class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-centros/40">
+                      class="h-9 rounded-xl border border-gray-200 bg-white px-3 pr-8 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-centros/40">
                 <option v-for="c in cursosDisponibles" :key="c" :value="c">{{ etiquetaCurso(c) }}</option>
               </select>
             </div>
@@ -657,7 +657,7 @@ const irA = (ruta) => router.push(ruta)
                 <div v-if="cargando" class="h-[190px] animate-pulse rounded-xl bg-gray-100" />
                 <div v-else-if="!hayImpacto" class="flex h-[190px] flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
                   Tu impacto empieza a contar con el primer encuentro del curso.
-                  <button class="mt-2 font-semibold text-centros" @click="irA('/encuentros/crear')">Registrar un encuentro →</button>
+                  <button class="mt-2 inline-flex min-h-9 items-center font-semibold text-centros" @click="irA('/encuentros/crear')">Registrar un encuentro →</button>
                 </div>
                 <template v-else>
                   <div :ref="observarChart" class="relative w-full" @mouseleave="mesHoverImp = null">
@@ -779,7 +779,7 @@ const irA = (ruta) => router.push(ruta)
                 <div class="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Filtrar por estado">
                   <button v-for="f in FILTROS_PROY" :key="f.key" :aria-pressed="filtroProy === f.key"
                           @click="filtroProy = f.key"
-                          class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition"
+                          class="flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition"
                           :class="filtroProy === f.key
                           ? 'border-centros bg-centros text-white'
                           : 'border-gray-200 bg-white text-gray-600 hover:border-centros/40 hover:text-centros'">
@@ -794,7 +794,7 @@ const irA = (ruta) => router.push(ruta)
                   <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
                   <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
                     {{ filtroProy === 'todos' ? 'Aún no hay proyectos en este curso.' : 'No hay proyectos con este estado en el curso seleccionado.' }}
-                    <button class="mt-2 font-semibold text-centros" @click="irA('/proyectos/crear')">Crear proyecto →</button>
+                    <button class="mt-2 inline-flex min-h-9 items-center font-semibold text-centros" @click="irA('/proyectos/crear')">Crear proyecto →</button>
                   </div>
                   <ul v-else class="divide-y divide-gray-100">
                     <li v-for="p in proyectosPagina" :key="p.id" class="h-16">
@@ -848,7 +848,11 @@ const irA = (ruta) => router.push(ruta)
                       <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:scale-105" :class="h.tile">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS_NAV[h.icon] || ICONOS[h.icon]"/></svg>
                       </span>
-                      <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
+                      <span class="flex min-w-0 flex-col gap-0.5">
+                        <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
+                        <!-- En táctil no hay tooltip: la descripción se ve en móvil; desde sm queda en el title -->
+                        <span v-if="h.desc" class="line-clamp-2 text-[11px] leading-snug text-gray-500 sm:hidden" aria-hidden="true">{{ h.desc }}</span>
+                      </span>
                     </button>
                   </template>
                 </div>
@@ -871,7 +875,7 @@ const irA = (ruta) => router.push(ruta)
               <div v-if="cargando" class="space-y-1.5"><div v-for="n in 2" :key="n" class="h-[41px] animate-pulse rounded-lg bg-gray-100" /></div>
               <div v-else-if="!proximosEncuentros.length" class="flex h-full flex-col items-center justify-center text-center text-sm text-gray-500">
                 No tienes encuentros programados.
-                <button class="mt-1 font-semibold text-centros" @click="irA('/encuentros/crear')">Programar uno →</button>
+                <button class="mt-1 inline-flex min-h-9 items-center font-semibold text-centros" @click="irA('/encuentros/crear')">Programar uno →</button>
               </div>
               <ul v-else class="space-y-1.5">
                 <li v-for="e in proximosEncuentros" :key="e.id"
@@ -919,7 +923,7 @@ const irA = (ruta) => router.push(ruta)
                 <template v-for="(c, i) in calDias" :key="i">
                   <span v-if="c.otroMes" class="flex h-5 items-center justify-center text-[11px] text-gray-300">{{ c.d }}</span>
                   <button v-else
-                          class="relative mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] transition"
+                          class="dia-cal relative mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] transition"
                           :class="diaIluminado(c)
                           ? 'bg-centros font-bold text-white shadow-md shadow-centros/30'
                           : c.hoy
@@ -941,7 +945,7 @@ const irA = (ruta) => router.push(ruta)
                   <button class="min-w-0 flex-1 truncate text-left hover:text-centros" @click="irA('/mis-grupos/' + encuentrosSelDia[0].id)">
                     {{ tituloEnc(encuentrosSelDia[0]) }}<template v-if="encuentrosSelDia.length > 1"> (+{{ encuentrosSelDia.length - 1 }})</template> →
                   </button>
-                  <button class="shrink-0 text-gray-400 hover:text-gray-600" aria-label="Cerrar detalle del día" @click="selDia = null">×</button>
+                  <button class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 hover:text-gray-600" aria-label="Cerrar detalle del día" @click="selDia = null">×</button>
                 </div>
                 <div v-else class="flex h-full flex-wrap items-center justify-center gap-x-4 text-[11px] text-gray-500">
                   <span class="flex items-center gap-1.5"><span class="text-[11px] font-bold leading-none text-centros">14</span>Encuentro</span>
@@ -960,7 +964,7 @@ const irA = (ruta) => router.push(ruta)
                 <span v-if="pendientes" class="rounded-full bg-alumnos/15 px-2 py-0.5 text-xs font-bold text-alumnos-dark">{{ pendientes }}</span>
                 <!-- Aviso de que hay más tareas en las páginas siguientes -->
                 <button v-if="paginaTareasActual < totalPaginasTareas - 1"
-                        class="flex h-6 w-6 items-center justify-center rounded-full text-alumnos-dark hover:bg-alumnos/10"
+                        class="-my-1.5 flex h-9 w-9 items-center justify-center rounded-full text-alumnos-dark hover:bg-alumnos/10"
                         :aria-label="`Hay más tareas: ir a la página ${paginaTareasActual + 2}`" title="Hay más tareas en la página siguiente"
                         @click="moverPaginaTareas(1)">
                   <svg class="h-4 w-4 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -987,7 +991,7 @@ const irA = (ruta) => router.push(ruta)
                       <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
                     </button>
                     <span class="line-clamp-2 min-w-0 flex-1 break-words leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700'">{{ item.n.text }}</span>
-                    <button class="shrink-0 text-gray-300 opacity-0 transition hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                    <button class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-300 transition hover:text-red-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100"
                             :aria-label="`Borrar tarea: ${item.n.text}`" @click="borrarNota(item.n.id)">×</button>
                   </template>
                 </li>
@@ -1006,8 +1010,8 @@ const irA = (ruta) => router.push(ruta)
             </div>
             <form class="mt-2 flex gap-2" @submit.prevent="addNota">
               <input v-model="nuevaNota" maxlength="200" placeholder="Añadir tarea personal…"
-                     class="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
-              <button class="shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15" :disabled="!nuevaNota.trim()">Añadir</button>
+                     class="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
+              <button class="min-h-9 shrink-0 rounded-full bg-centros/10 px-3 text-sm font-semibold text-centros hover:bg-centros/15" :disabled="!nuevaNota.trim()">Añadir</button>
             </form>
           </article>
 
@@ -1060,8 +1064,8 @@ const irA = (ruta) => router.push(ruta)
               <span v-if="retoDestacado.nivel_grupo" class="rounded-full border px-2 py-0.5 font-bold" :class="nivelClase(retoDestacado.nivel_grupo)">{{ retoDestacado.nivel_grupo }}</span>
             </div>
             <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
-              <button class="rounded-full bg-alumnos px-3 py-2 text-xs font-semibold text-white hover:bg-alumnos/90" @click="abrirReto(retoDestacado)">Ver reto</button>
-              <button class="rounded-full px-3 py-2 text-xs font-semibold text-alumnos-dark ring-1 ring-alumnos/30 hover:bg-alumnos/5" @click="irA('/retos')">Más retos</button>
+              <button class="min-h-9 rounded-full bg-alumnos px-3 py-2 text-xs font-semibold text-white hover:bg-alumnos/90" @click="abrirReto(retoDestacado)">Ver reto</button>
+              <button class="min-h-9 rounded-full px-3 py-2 text-xs font-semibold text-alumnos-dark ring-1 ring-alumnos/30 hover:bg-alumnos/5" @click="irA('/retos')">Más retos</button>
             </div>
           </article>
         </div>
@@ -1110,7 +1114,7 @@ const irA = (ruta) => router.push(ruta)
                 Formación, talento, empresa e innovación <span class="text-centros">conectados</span>
               </p>
               <p class="mt-1 line-clamp-2 text-sm text-gray-600">DUALAB impulsa la FP dual con retos reales y colaboración entre todos los actores.</p>
-              <button class="mt-2 self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-centros ring-1 ring-centros/40 hover:bg-centros/5" @click="irA('/noticias/dualab')">
+              <button class="mt-2 inline-flex min-h-9 items-center self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-centros ring-1 ring-centros/40 hover:bg-centros/5" @click="irA('/noticias/dualab')">
                 Novedades de DUALAB →
               </button>
             </div>
@@ -1151,11 +1155,17 @@ const irA = (ruta) => router.push(ruta)
 
 .card         { @apply rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/70; }
 .card-title   { @apply font-heading text-lg font-bold text-azul-noche; }
-.link         { @apply text-sm font-semibold text-centros hover:underline; }
+.link         { @apply -my-2 inline-flex min-h-9 items-center text-sm font-semibold text-centros hover:underline; }
 .recurso      { @apply flex w-full items-center gap-3 rounded-lg p-2 text-left text-sm hover:bg-gray-50; }
 .recurso-icon { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold; }
 .interruptor  { @apply relative mt-0.5 inline-flex h-4 w-7.5 shrink-0 items-center rounded-full p-0.5 transition-colors; }
 .interruptor-bola { @apply h-3 w-3 rounded-full bg-white shadow transition-transform; }
+/* Zona táctil de ~36px alrededor del interruptor (16px de alto a la vista) */
+.interruptor::before { content: ''; position: absolute; inset: -10px -4px; }
+/* Zona táctil ampliada de los días del mini calendario (sin cambiar el círculo visible).
+   En vertical se limita para no invadir la fila de al lado (filas de 20px). */
+.dia-cal::before { content: ''; position: absolute; inset: -4px -8px; }
+.dia-cal:disabled::before { display: none; }
 .font-manuscrita { font-family: 'Caveat', 'Segoe Script', cursive; font-weight: 600; }
-.cal-nav      { @apply flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
+.cal-nav      { @apply flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros; }
 </style>

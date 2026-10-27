@@ -104,7 +104,7 @@ function youtubeId(url) {
       </div>
     </header>
 
-    <div class="relative z-10 flex-1 flex items-start justify-center px-4 py-10">
+    <div class="relative z-10 flex-1 flex items-start justify-center px-4 py-6 sm:py-10">
       <div class="w-full max-w-2xl"
            :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
            style="transition: opacity 0.4s ease, transform 0.4s ease">
@@ -199,8 +199,9 @@ function youtubeId(url) {
                     <h2 class="text-base font-black text-azul-noche">¿Qué es este portal y qué se espera de vosotros?</h2>
                   </div>
                 </div>
-                <button @click="guiaVisible = false"
-                        class="shrink-0 text-gray-300 hover:text-gray-500 transition-colors">
+                <button @click="guiaVisible = false" aria-label="Cerrar guía"
+                        class="-mr-2 -mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full
+                               text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
@@ -269,7 +270,7 @@ function youtubeId(url) {
               </div>
 
               <!-- Tiempo estimado + cerrar -->
-              <div class="flex items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
                 <div class="flex items-center gap-2">
                   <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -278,7 +279,7 @@ function youtubeId(url) {
                   <span class="text-[10px] text-gray-400">Tiempo estimado: <strong class="text-gray-600">3-5 minutos</strong></span>
                 </div>
                 <button @click="guiaVisible = false"
-                        class="text-xs font-bold text-empresas hover:text-empresas/70 transition-colors">
+                        class="inline-flex h-9 items-center rounded-full px-3 text-xs font-bold text-empresas hover:text-empresas/70 hover:bg-empresas/5 transition-colors">
                   Entendido, ir al proyecto →
                 </button>
               </div>
@@ -287,8 +288,8 @@ function youtubeId(url) {
 
           <!-- Botón para mostrar guía si se ocultó -->
           <button v-if="!guiaVisible" @click="guiaVisible = true"
-                  class="mb-4 text-[10px] font-bold text-gray-400 hover:text-empresas transition-colors
-                         flex items-center gap-1.5">
+                  class="mb-4 -ml-3 h-9 px-3 rounded-full text-[10px] font-bold text-gray-400 hover:text-empresas transition-colors
+                         inline-flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -405,16 +406,16 @@ function youtubeId(url) {
             <!-- Docente responsable -->
             <div v-if="proyecto.datos_centro?.docente_nombre">
               <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Docente responsable</p>
-              <div class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl">
+              <div class="flex flex-wrap items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl">
                 <div class="w-8 h-8 rounded-full bg-empresas/10 border border-empresas/20
                             flex items-center justify-center shrink-0 text-empresas font-black text-sm">
                   {{ proyecto.datos_centro.docente_nombre.charAt(0).toUpperCase() }}
                 </div>
-                <div>
-                  <p class="text-sm font-bold text-[#1F2937]">{{ proyecto.datos_centro.docente_nombre }}</p>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-bold text-[#1F2937] break-words">{{ proyecto.datos_centro.docente_nombre }}</p>
                   <a v-if="proyecto.datos_centro.docente_email"
                      :href="`mailto:${proyecto.datos_centro.docente_email}`"
-                     class="text-xs text-empresas hover:underline">
+                     class="text-xs text-empresas hover:underline break-all">
                     {{ proyecto.datos_centro.docente_email }}
                   </a>
                 </div>

@@ -359,7 +359,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
             </label>
             <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin alumnado en este curso.</p>
             <button v-if="familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
-                    class="mt-1 inline-flex h-8 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
+                    class="mt-1 inline-flex h-9 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
               {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${familiasPanel.length})` }}
             </button>
           </div>

@@ -18,12 +18,12 @@ defineProps({
     <div class="min-w-0 flex-1">
       <ol v-if="items.length" class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
         <li v-for="item in items" :key="item.label" class="flex min-w-0 items-center gap-1.5">
-          <RouterLink v-if="item.to" :to="item.to" class="inline-flex min-h-7 min-w-0 items-center truncate transition-colors hover:text-centros">
-            {{ item.label }}
+          <RouterLink v-if="item.to" :to="item.to" class="relative inline-flex min-h-7 min-w-0 items-center transition-colors before:absolute before:-inset-1 before:content-[''] hover:text-centros">
+            <span class="min-w-0 truncate">{{ item.label }}</span>
           </RouterLink>
           <button v-else type="button" @click="item.accion?.()"
-                  class="inline-flex min-h-7 min-w-0 items-center truncate uppercase tracking-[0.2em] transition-colors hover:text-centros">
-            {{ item.label }}
+                  class="relative inline-flex min-h-7 min-w-0 items-center uppercase tracking-[0.2em] transition-colors before:absolute before:-inset-1 before:content-[''] hover:text-centros">
+            <span class="min-w-0 truncate">{{ item.label }}</span>
           </button>
           <span aria-hidden="true">›</span>
         </li>

@@ -469,7 +469,7 @@ onMounted(cargar)
             </label>
             <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin encuentros en este curso.</p>
             <button v-if="familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
-                    class="mt-1 inline-flex h-8 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
+                    class="mt-1 inline-flex h-9 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
               {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${familiasPanel.length})` }}
             </button>
           </div>
@@ -749,12 +749,16 @@ onMounted(cargar)
 
                 <div v-if="equipo.codigo_acceso" class="flex flex-wrap items-center gap-1.5">
                   <span class="text-[11px] font-semibold uppercase tracking-widest text-texto-secundario">Código de acceso del grupo</span>
-                  <span @click.stop="copiarCodigo(equipo.codigo_acceso)"
-                        :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del grupo'"
-                        class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-centros/10 border border-centros/20 cursor-pointer">
-                    <span class="w-1 h-1 rounded-full bg-centros shrink-0"></span>
-                    <span class="text-xs font-semibold tracking-wider text-centros">{{ equipo.codigo_acceso }}</span>
-                  </span>
+                  <!-- Botón con zona táctil de 36px; la píldora visible conserva su tamaño -->
+                  <button type="button" @click.stop="copiarCodigo(equipo.codigo_acceso)"
+                          :title="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : 'Copiar código de acceso del grupo'"
+                          :aria-label="codigoCopiado === equipo.codigo_acceso ? '¡Copiado!' : `Copiar código de acceso del grupo ${equipo.codigo_acceso}`"
+                          class="inline-flex min-h-9 items-center rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-centros/40">
+                    <span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-centros/10 border border-centros/20">
+                      <span class="w-1 h-1 rounded-full bg-centros shrink-0"></span>
+                      <span class="text-xs font-semibold tracking-wider text-centros">{{ equipo.codigo_acceso }}</span>
+                    </span>
+                  </button>
                 </div>
 
                 <p v-if="equipo.reflexiones.length" class="text-[11px] font-semibold uppercase tracking-widest text-texto-secundario">

@@ -106,7 +106,7 @@ function quitarCe(i, j) { menu.value = null; emit('quitar-ce', i, j) }
               </span>
               <div class="relative shrink-0">
                 <button type="button" @click="abrir(`ce-${e._i}-${j}`)"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100"
                         :aria-expanded="menu === `ce-${e._i}-${j}`" aria-haspopup="menu"
                         :aria-label="`Opciones del criterio «${separarCodigo(ce).texto}»`">
                   <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>

@@ -43,7 +43,7 @@ const emit = defineEmits(['activar', 'omitir'])
           </button>
 
           <button @click="emit('omitir')"
-                  class="w-full text-center text-[11px] font-bold text-gray-400
+                  class="w-full min-h-9 text-center text-[11px] font-bold text-gray-400
                          hover:text-gray-600 transition-colors py-1">
             Entrar directamente
           </button>

@@ -223,7 +223,7 @@ const extenderDesdeToast = async () => {
     <div v-if="showIdleWarning"
       class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-[#1a2332] border border-white/10 rounded-[2rem] shadow-2xl
-                  max-w-sm w-full p-8 text-white text-center">
+                  max-w-sm w-full p-6 sm:p-8 text-white text-center">
 
         <!-- Icono -->
         <div class="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30
@@ -240,19 +240,19 @@ const extenderDesdeToast = async () => {
         </p>
 
         <!-- Contador -->
-        <div class="text-5xl font-black text-amber-400 tabular-nums mb-6">
+        <div class="text-3xl sm:text-5xl font-black text-amber-400 tabular-nums mb-6">
           {{ String(minutosModal).padStart(2, '0') }}:{{ String(segundosModal).padStart(2, '0') }}
         </div>
 
         <div class="flex gap-3">
           <button @click="cerrarSesionIdle"
-            class="flex-1 py-3 rounded-full font-bold text-xs uppercase tracking-widest
+            class="flex-1 py-3 rounded-full font-bold text-xs uppercase tracking-wide
                    border border-white/10 text-white/40
                    hover:bg-white/5 hover:text-white/60 transition-all">
             Cerrar sesión
           </button>
           <button @click="seguirConectado"
-            class="flex-1 py-3 rounded-full font-black text-xs uppercase tracking-widest
+            class="flex-1 py-3 rounded-full font-black text-xs uppercase tracking-wide
                    text-white transition-all shadow-md"
             :class="[theme.bg, theme.bgHover]">
             Seguir conectado
@@ -266,7 +266,7 @@ const extenderDesdeToast = async () => {
   <Transition name="toast-slide">
     <div
       v-if="showTokenToast"
-      class="fixed bottom-5 right-5 z-[9990] w-[300px] max-w-[calc(100vw-2.5rem)]
+      class="fixed bottom-14 right-5 z-[9990] w-[300px] max-w-[calc(100vw-2.5rem)]
              rounded-2xl shadow-2xl border p-4 backdrop-blur-sm"
       :class="authStore.minutosRestantes <= 5
         ? 'bg-red-950/95 border-red-500/40'
@@ -276,7 +276,7 @@ const extenderDesdeToast = async () => {
       <button
         @click="cerrarTokenToast"
         title="Cerrar aviso"
-        class="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center
+        class="absolute top-1 right-1 w-9 h-9 rounded-full flex items-center justify-center
                text-white/30 hover:text-white/70 hover:bg-white/10 transition-all"
       >
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
@@ -284,7 +284,7 @@ const extenderDesdeToast = async () => {
         </svg>
       </button>
 
-      <div class="flex items-start gap-3 pr-4">
+      <div class="flex items-start gap-3 pr-6">
         <div
           class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border"
           :class="authStore.minutosRestantes <= 5
@@ -309,7 +309,7 @@ const extenderDesdeToast = async () => {
         <button
           @click="extenderDesdeToast"
           :disabled="tokenToastRefreshing"
-          class="flex-1 py-2 rounded-full text-xs font-black uppercase tracking-widest
+          class="flex-1 min-h-9 py-2 rounded-full text-xs font-black uppercase tracking-widest
                  text-white transition-all shadow-md
                  disabled:opacity-50 disabled:cursor-not-allowed"
           :class="[theme.bg, theme.bgHover]"

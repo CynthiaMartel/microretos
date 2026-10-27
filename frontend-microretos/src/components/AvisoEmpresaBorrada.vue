@@ -24,7 +24,7 @@ const visible = computed(() => props.estado === 'papelera' || props.estado === '
       type="button"
       @click.stop.prevent="abierto = true"
       class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500 font-bold uppercase tracking-wider whitespace-nowrap transition-colors hover:border-gray-300 hover:text-gray-700"
-      :class="tamano === 'md' ? 'min-h-[36px] px-3 text-[10px] md:text-xs' : 'min-h-[28px] px-2.5 text-[8px]'"
+      :class="tamano === 'md' ? 'min-h-[36px] px-3 text-[10px] md:text-xs' : 'relative min-h-[28px] px-2.5 text-[8px] before:absolute before:-inset-1'"
       :aria-label="enPapelera ? 'Empresa en la papelera: más información' : 'Empresa eliminada: más información'"
     >
       <svg class="shrink-0" :class="tamano === 'md' ? 'w-3.5 h-3.5' : 'w-3 h-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">

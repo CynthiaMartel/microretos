@@ -94,7 +94,7 @@ const inputClase = (campo) => [
     <div v-if="abierto" class="fixed inset-0 z-[9999] flex items-center justify-center bg-azul-noche/60 backdrop-blur-sm p-4"
          @click.self="cerrar">
       <div role="dialog" aria-modal="true" aria-labelledby="soporte-titulo"
-           class="relative w-[min(36rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl bg-white p-5 sm:p-8 shadow-2xl">
+           class="relative w-[min(36rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[2rem] bg-white p-5 sm:p-8 shadow-2xl">
 
         <button type="button" aria-label="Cerrar" @click="cerrar"
                 class="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-azul-noche">
@@ -142,7 +142,7 @@ const inputClase = (campo) => [
             <legend class="block text-sm font-semibold text-azul-noche mb-1.5">Tipo de consulta</legend>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label v-for="t in TIPOS" :key="t.value"
-                     class="flex items-center gap-3 min-h-11 rounded-xl border px-3 cursor-pointer text-sm transition"
+                     class="flex items-center gap-3 min-h-11 rounded-full border px-3 cursor-pointer text-sm transition"
                      :class="form.tipo === t.value ? 'border-primary-500 bg-primary-50 text-azul-noche font-semibold' : 'border-gray-200 text-gray-700 hover:border-gray-300'">
                 <input v-model="form.tipo" type="radio" name="soporte-tipo" :value="t.value" class="w-4 h-4 text-primary-600 focus:ring-primary-500/30" />
                 {{ t.label }}

@@ -63,13 +63,13 @@ onMounted(cargar)
   <div class="min-h-screen bg-[#0C1220] text-white px-6 py-8">
     <div class="max-w-6xl mx-auto">
 
-      <div class="flex items-center justify-between mb-8">
-        <div>
+      <div class="flex items-center justify-between gap-3 mb-8">
+        <div class="min-w-0">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-centros mb-1">Pantalla de acceso — alumnado</p>
-          <h1 class="text-2xl font-black">{{ proyectoTitulo || 'Cargando...' }}</h1>
+          <h1 class="text-2xl font-black break-words">{{ proyectoTitulo || 'Cargando...' }}</h1>
         </div>
         <button @click="volver({ name: 'pantalla-acceso-lista' })"
-                class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all text-xs font-black uppercase tracking-wider">
+                class="shrink-0 inline-flex h-10 items-center px-4 rounded-full bg-white/10 hover:bg-white/20 transition-all text-xs font-black uppercase tracking-wider">
           ← Volver
         </button>
       </div>
@@ -89,7 +89,7 @@ onMounted(cargar)
           y escribe el código de su equipo.
         </p>
 
-        <div v-if="!equipos.length" class="rounded-3xl bg-white/5 border border-white/10 p-10 text-center text-gray-400">
+        <div v-if="!equipos.length" class="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-10 text-center text-gray-400">
           No hay equipos creados todavía para este proyecto.
         </div>
 

@@ -274,6 +274,20 @@ export const SECCIONES = {
   empresas: {
     titulo: 'Empresas', destacado: 'colaboradoras', color: 'text-empresas',
     subtitulo: 'Consulta y contacta con las empresas de tu centro y envíales tus propuestas de proyecto.',
+    // Qué papel tiene la empresa (mismo rol que describe ComoFuncionaModal.vue)
+    conceptos: [
+      { color: 'empresas', segmentos: [
+        { t: 'Una ' }, { t: 'EMPRESA COLABORADORA', b: true },
+        { t: ' aporta la necesidad real de la que nace el reto y ' }, { t: 'valida', b: true },
+        { t: ' la propuesta de proyecto que preparas para tu alumnado. No necesita cuenta: la revisa y responde desde el enlace que le llega por email.' },
+        { br: true },
+        { t: 'Sigue tus envíos en ' },
+        { t: 'propuestas a empresas', ruta: '/empresas/propuestas', routeName: 'propuestas-empresas', tip: 'Ir a propuestas a empresas' },
+        { t: ' o consulta sus datos de contacto en el ' },
+        { t: 'directorio de empresas', ruta: '/empresas', routeName: 'empresas', tip: 'Ir al directorio de empresas' },
+        { t: '.' },
+      ] },
+    ],
     cards: [
       { titulo: 'Propuestas a empresas', desc: 'Envía tus propuestas y sigue qué empresas han respondido.',
         cta: 'Ver propuestas', principal: true,
@@ -282,6 +296,32 @@ export const SECCIONES = {
         cta: 'Abrir directorio',
         ruta: '/empresas', routeName: 'empresas', icon: 'candado', tile: 'bg-empresas' },
     ],
+    // Del envío de la propuesta a su validación (MicroproyectoController::validarEmpresa).
+    // Mismas columnas que el tablero de PropuestasEmpresas.vue.
+    flujo: {
+      titulo: 'Mira cómo funciona',
+      fases: [
+        { nombre: 'Docente', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Le llega un enlace',
+          pasos: [
+            { titulo: 'Prepara la propuesta', conector: 'Guárdala',
+              desc: 'En «Generar proyecto» concretas el reto de la empresa: módulos, RA y CE, y grupos.' },
+            { titulo: 'Envíala a la empresa',
+              desc: 'En Propuestas a empresas ves las pendientes de enviar; el envío se hace desde la ficha del proyecto.' },
+          ] },
+        { nombre: 'Empresa', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Te avisamos',
+          pasos: [
+            { titulo: 'La revisa y responde',
+              desc: 'Sin cuenta, desde su enlace: la valida o contesta «No validar aún» con sus comentarios.' },
+          ] },
+        { nombre: 'Validación', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15',
+          pasos: [
+            { titulo: 'Lee su respuesta', conector: 'Validada',
+              desc: 'Te llega una notificación. Si pide cambios, ajusta la propuesta y vuelve a enviarla; si tarda, recuérdaselo.' },
+            { titulo: 'Proyecto listo',
+              desc: 'Validada por la empresa o por ti, pasa a ser proyecto y ya puedes trabajarlo en un encuentro.' },
+          ] },
+      ],
+    },
   },
   recursos: {
     titulo: 'Recursos', destacado: '', color: 'text-centros',

@@ -23,5 +23,5 @@ defineProps({
 <style scoped>
 @reference "../style.css";
 
-.flecha { @apply flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros disabled:opacity-30 disabled:hover:bg-transparent; }
+.flecha { @apply flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-centros disabled:opacity-30 disabled:hover:bg-transparent; }
 </style>

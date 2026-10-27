@@ -187,15 +187,18 @@ async function quitarColaborador(colaborador) {
 }
 .cem-card {
   position: relative; background: #fff; border: 1px solid #fde68a;
-  border-radius: 2rem; padding: 2.25rem; width: 100%; max-width: 480px;
+  border-radius: 2rem; padding: 1.25rem; width: 100%; max-width: 480px;
   max-height: 90vh; overflow-y: auto;
   box-shadow: 0 0 0 1px rgba(245,158,11,.08), 0 24px 48px rgba(0,0,0,.2), 0 0 80px rgba(245,158,11,.06);
   scrollbar-width: thin; scrollbar-color: #fde68a transparent;
 }
+@media (min-width: 640px) {
+  .cem-card { padding: 2.25rem; }
+}
 .cem-card::-webkit-scrollbar { width: 5px; }
 .cem-card::-webkit-scrollbar-thumb { background: #fde68a; border-radius: 3px; }
 
-.cem-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.cem-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; }
 .cem-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .cem-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .cem-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -210,10 +213,11 @@ async function quitarColaborador(colaborador) {
   font-size: .65rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em;
   padding: .35rem .6rem; border-radius: 9999px; background: #f3f4f6; color: #6b7280;
   border: none; cursor: pointer; white-space: nowrap; transition: all .15s;
+  min-height: 36px; /* objetivo táctil */
 }
 .cem-toggle-on { background: #d1fae5; color: #047857; }
 .cem-remove {
-  width: 26px; height: 26px; border-radius: 9999px; background: #fef2f2; color: #f87171;
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 9999px; background: #fef2f2; color: #f87171;
   border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s;
 }
 .cem-remove:hover { background: #fee2e2; color: #dc2626; }
@@ -238,7 +242,7 @@ async function quitarColaborador(colaborador) {
 .cem-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 
 .cem-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #fffbeb; border: none; border-radius: 9999px; color: #f59e0b;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }

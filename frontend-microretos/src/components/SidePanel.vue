@@ -4,25 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore, ROLE_DOCENTE, ROLE_EMPRESA } from '../stores/auth'
 import { useUiHighlightStore } from '../stores/uiHighlight'
 import { useUIState } from '../composables/useUIState.js'
-import { useCredits } from '../composables/useCredits.js'
 import { useSidePanel } from '../composables/useSidePanel.js'
-import { useRoleTheme } from '../composables/useRoleTheme.js'
+import ModalTaller from './ModalTaller.vue'
 import { GRUPOS_NAV, ICONOS_NAV } from '../config/navegacion.js'
 import { useNotificaciones } from '../composables/useNotificaciones.js'
 
 const authStore = useAuthStore()
-const { theme } = useRoleTheme()
 const uiHighlight = useUiHighlightStore()
 const { tourActivo, showWelcome, welcomeRole, welcomeName } = useUIState()
-const { abrirCreditos } = useCredits()
 const { mobileOpen, closeMobilePanel } = useSidePanel()
-
-// Mostrar autoría una vez tras cerrar el modal de bienvenida
-let _welShown = false
-watch(showWelcome, (val) => {
-  if (val) { _welShown = true }
-  else if (_welShown) { _welShown = false; setTimeout(abrirCreditos, 450) }
-})
 const route     = useRoute()
 const router    = useRouter()
 
@@ -281,79 +271,44 @@ watch(() => route.fullPath, () => {
   </Teleport>
 
   <!-- ── Modal de bienvenida por rol ── -->
-  <Transition name="welcome-overlay">
-    <div
-      v-if="showWelcome"
-      class="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6
-             bg-black/25 backdrop-blur-sm"
-      @click.self="showWelcome = false"
-    >
-      <Transition name="welcome-card" appear>
-        <div
-          v-if="showWelcome"
-          class="relative rounded-3xl p-6 pt-10 sm:p-10 max-w-sm w-full text-center
-                 bg-white border border-gray-100 shadow-xl"
-        >
-          <!-- Icono -->
-          <div class="mx-auto mb-6 w-16 h-16 rounded-2xl border
-                      flex items-center justify-center"
-               :class="[theme.bgSoft, theme.border]">
-            <svg class="w-8 h-8" :class="theme.text" fill="none" stroke="currentColor"
-                 viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-          </div>
-
-          <!-- Etiqueta -->
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] mb-4" :class="theme.text">
+  <!-- Misma estructura que el modal «Proyecto en propuesta» (ModalPropuestaValidacion):
+       ModalTaller accesible, cabecera centrada con icono, chip de estado y título con la
+       palabra clave en el color del rol, y la acción en el pie. -->
+  <ModalTaller :abierto="showWelcome" titulo="Te damos la bienvenida a DUALAB"
+               ancho="w-[min(28rem,calc(100vw-2rem))]" marca @cerrar="showWelcome = false">
+    <template #cabecera="{ idTitulo }">
+      <div class="pl-10 text-center">
+        <span class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-rol/15 text-rol-fuerte sm:h-16 sm:w-16 sm:rounded-2xl" aria-hidden="true">
+          <svg class="h-6 w-6 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </span>
+        <p class="mt-2 sm:mt-3">
+          <span class="inline-flex items-center gap-2 rounded-full border border-rol/30 bg-rol/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-rol-fuerte">
+            <span class="h-2 w-2 rounded-full bg-rol" aria-hidden="true" />
             Sesión iniciada
-          </p>
+          </span>
+        </p>
+        <h2 :id="idTitulo" class="mt-2 font-heading text-xl font-bold text-azul-noche break-words sm:mt-3 sm:text-3xl">
+          ¡Te damos la bienvenida a DUALAB para
+          <span class="text-rol-fuerte">{{ welcomeRole === ROLE_DOCENTE ? 'docentes' : welcomeRole === ROLE_EMPRESA ? 'empresas' : 'admin' }}</span>!
+        </h2>
+        <p v-if="welcomeName" class="mx-auto mt-2 max-w-md truncate text-sm text-texto-secundario sm:text-base">
+          Hola, {{ welcomeName }}
+        </p>
+      </div>
+    </template>
 
-          <!-- Mensaje principal -->
-          <h2 class="text-azul-noche text-xl font-bold leading-snug">
-            ¡Te damos la bienvenida<br>a DUALAB para
-          </h2>
-          <p class="text-3xl sm:text-4xl font-black tracking-tight mt-2 mb-1" :class="theme.text">
-            {{ welcomeRole === ROLE_DOCENTE ? 'docentes' : welcomeRole === ROLE_EMPRESA ? 'empresas' : 'admin' }}
-          </p>
-          <p class="text-[#121212] text-xl font-bold">!</p>
-
-          <!-- Nombre de usuario -->
-          <p v-if="welcomeName" class="mt-3 text-gray-400 text-sm">
-            {{ welcomeName }}
-          </p>
-
-          <!-- Separador -->
-          <div class="mt-8 border-t border-gray-100" />
-
-          <!-- Botón cerrar -->
-          <button
-            @click="showWelcome = false"
-            class="mt-6 w-full py-3 rounded-full text-white
-                   font-black text-xs uppercase tracking-widest
-                   transition-colors duration-200"
-            :class="[theme.bg, theme.bgHover]"
-          >
-            Continuar
-          </button>
-
-          <!-- X esquina -->
-          <button
-            @click="showWelcome = false"
-            class="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 rounded-full bg-gray-100
-                   hover:bg-gray-200 flex items-center justify-center
-                   text-gray-400 hover:text-gray-600 transition-all"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-      </Transition>
-    </div>
-  </Transition>
+    <template #pie>
+      <div class="flex justify-center">
+        <button type="button" @click="showWelcome = false"
+                class="inline-flex h-11 items-center justify-center rounded-full bg-rol-fuerte px-8 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90">
+          Continuar
+        </button>
+      </div>
+    </template>
+  </ModalTaller>
 </template>
 
 <style scoped>
@@ -481,16 +436,4 @@ nav::-webkit-scrollbar        { width: 3px; }
 nav::-webkit-scrollbar-track  { background: transparent; }
 nav::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 99px; }
 nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
-
-/* Modal de bienvenida — overlay */
-.welcome-overlay-enter-active,
-.welcome-overlay-leave-active { transition: opacity 0.25s ease; }
-.welcome-overlay-enter-from,
-.welcome-overlay-leave-to     { opacity: 0; }
-
-/* Modal de bienvenida — tarjeta */
-.welcome-card-enter-active { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.welcome-card-leave-active { transition: all 0.2s ease; }
-.welcome-card-enter-from   { opacity: 0; transform: scale(0.85) translateY(24px); }
-.welcome-card-leave-to     { opacity: 0; transform: scale(0.95) translateY(8px); }
 </style>

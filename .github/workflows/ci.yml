@@ -21,7 +21,7 @@ jobs:
     name: J1 · Secretos (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       # Escanea los commits del push/PR. Falsos positivos ya revisados: .gitleaksignore
@@ -33,7 +33,7 @@ jobs:
     name: J2 · SAST PHP (Larastan nivel 8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'   # = config.platform.php de composer.json (producción)
@@ -52,14 +52,14 @@ jobs:
     name: J3 · Dependencias (composer audit + npm audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           coverage: none
       - name: composer audit
         run: composer audit --locked
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -72,8 +72,8 @@ jobs:
     name: Build del frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm

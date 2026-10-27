@@ -1100,6 +1100,7 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', avisoAntesDeSalir);
   tourActivo.value = false;
   window.removeEventListener('scroll', onScrollGuia);
+  window.removeEventListener('resize', onScrollGuia);
 });
 
 watch(() => seleccion.value.empresaId, async (nuevoId) => {
@@ -1708,10 +1709,12 @@ watch(modoGuia, async (v) => {
   tourActivo.value = v
   if (v) {
     window.addEventListener('scroll', onScrollGuia, { passive: true })
+    window.addEventListener('resize', onScrollGuia, { passive: true })
     await nextTick()
     requestAnimationFrame(() => requestAnimationFrame(recalcularBocadillo))
   } else {
     window.removeEventListener('scroll', onScrollGuia)
+    window.removeEventListener('resize', onScrollGuia)
   }
 })
 
@@ -1771,14 +1774,14 @@ watch(modoGuia, async (v) => {
             <!-- Texto -->
             <p class="text-[13px] text-white/85 leading-relaxed mb-6">{{ guiaPasosActual[pasoGuia - 1].texto }}</p>
             <!-- Botones -->
-            <div class="flex items-center gap-2">
-              <button @click="avanzarGuia"
-                      class="flex-1 min-h-[36px] py-2.5 rounded-full bg-centros text-white text-[10px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
-                {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
-              </button>
+            <div class="flex items-center justify-between gap-2">
               <button @click="saltarGuia"
                       class="min-h-[36px] px-3 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest hover:text-white/60 transition-all">
                 Saltar
+              </button>
+              <button @click="avanzarGuia"
+                      class="ml-auto min-h-[36px] px-5 py-2.5 rounded-full bg-centros text-white text-[10px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
+                {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
               </button>
             </div>
           </div>
@@ -1814,14 +1817,14 @@ watch(modoGuia, async (v) => {
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }}/{{ guiaPasosActual.length }}</span>
             </div>
             <p class="text-[11px] text-white/85 leading-relaxed mb-3">{{ guiaPasosActual[pasoGuia - 1].texto }}</p>
-            <div class="flex items-center gap-2">
-              <button @click="avanzarGuia"
-                      class="flex-1 min-h-[36px] py-1.5 rounded-full bg-centros text-white text-[9px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
-                {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
-              </button>
+            <div class="flex items-center justify-between gap-2">
               <button @click="saltarGuia"
                       class="min-h-[36px] px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-[9px] font-black uppercase tracking-widest hover:text-white/60 transition-all">
                 Saltar
+              </button>
+              <button @click="avanzarGuia"
+                      class="ml-auto min-h-[36px] px-4 py-1.5 rounded-full bg-centros text-white text-[9px] font-black uppercase tracking-widest hover:bg-centros/90 transition-all">
+                {{ pasoGuia < guiaPasosActual.length ? 'Siguiente →' : 'Finalizar' }}
               </button>
             </div>
           </div>
@@ -2057,7 +2060,7 @@ watch(modoGuia, async (v) => {
                           Añadir una empresa nueva a mi centro
                         </h3>
                         <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-vias-nueva">
-                          <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                          <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
                             <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                           </span>
                           <span id="tip-vias-nueva" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0 sm:right-auto sm:left-0">
@@ -2172,7 +2175,7 @@ watch(modoGuia, async (v) => {
                       Empresas de mi centro educativo
                     </h3>
                     <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-empresas-centro">
-                      <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                      <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
                         <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                       </span>
                       <span id="tip-empresas-centro" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0 sm:right-auto sm:left-0">
@@ -2408,7 +2411,7 @@ watch(modoGuia, async (v) => {
                 <div class="w-2 h-5 bg-centros rounded-full shrink-0"></div>
                 <h3 class="font-black text-azul-noche uppercase tracking-widest text-xs">Ficha de empresa</h3>
                 <span v-if="!esModoDemo" class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-ficha-lectura">
-                  <span class="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
+                  <span class="relative w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
                     <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   </span>
                   <span id="tip-ficha-lectura" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 hidden group-hover/via:block group-focus/via:block w-[min(18rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl">
@@ -2969,7 +2972,7 @@ watch(modoGuia, async (v) => {
                     <div class="flex flex-wrap items-center gap-1.5 mb-1">
                       <strong class="text-azul-noche">Qué busca la empresa con esta familia</strong>
                       <span class="group/via sm:relative shrink-0" tabindex="0" aria-describedby="tip-interes-reto">
-                        <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                        <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
                           <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </span>
                         <span id="tip-interes-reto" role="tooltip" class="pointer-events-none absolute z-30 top-10 sm:top-full sm:mt-2 hidden group-hover/via:block group-focus/via:block sm:w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl left-3 right-3 sm:right-auto sm:left-0">
@@ -3065,7 +3068,7 @@ watch(modoGuia, async (v) => {
                         ¿Qué tipo de propuesta quieres trabajar? <span class="text-gray-400 normal-case font-medium">(opcional)</span>
                       </label>
                       <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-enfoque-reto">
-                        <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                        <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
                           <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </span>
                         <span id="tip-enfoque-reto" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0">
@@ -3563,7 +3566,7 @@ watch(modoGuia, async (v) => {
     <button
       v-if="pasoActual === 3"
       @click="scrollToTop"
-      class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-[#1F2937] text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-centros transition-all duration-300 hover:-translate-y-1 active:scale-95 border-2 border-white/10"
+      class="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-[#1F2937] text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-centros transition-all duration-300 hover:-translate-y-1 active:scale-95 border-2 border-white/10"
       title="Volver arriba"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3835,7 +3838,7 @@ watch(modoGuia, async (v) => {
                       </div>
 
                       <div class="space-y-6">
-                        <div v-for="(evalObj, ei) in reto.evaluacion_oficial" :key="evalObj.ra_id ?? `${evalObj.modulo}-${ei}`" class="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
+                        <div v-for="(evalObj, ei) in reto.evaluacion_oficial" :key="evalObj.ra_id ?? `${evalObj.modulo}-${ei}`" class="bg-white border border-gray-200 p-4 sm:p-6 rounded-2xl shadow-sm">
                           <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
                             <div>
                               <p class="text-xs uppercase font-bold text-gray-400 mb-1">Módulo</p>
@@ -3891,7 +3894,7 @@ watch(modoGuia, async (v) => {
                 <p class="text-gray-500 text-sm mb-8 sm:mb-12">Recomendaciones pedagógicas para dinamizar el reto.</p>
             
                 <div class="grid grid-cols-1 gap-6">
-                  <div v-for="(tip, i) in reto.tips_profesorado" :key="i" class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <div v-for="(tip, i) in reto.tips_profesorado" :key="i" class="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
                     <div class="text-sm text-gray-700 leading-relaxed">
                       <strong v-if="tip.includes(':')" class="text-centros block mb-2 uppercase tracking-wider text-xs">
                         <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,7 +3,8 @@
      clic fuera, y el foco vuelve al botón que lo abrió. Cuerpo con scroll propio
      (la página de detrás no se mueve) y botón «Volver arriba» cuando el cuerpo baja.
      Slots: `cabecera` (sustituye al título por defecto; el ✕ se mantiene), `barra` (fija bajo
-     el título: buscador, contadores…), default (cuerpo), `pie`. -->
+     el título: buscador, contadores…), default (cuerpo), `pie`.
+     Prop `marca`: barra superior con los colores del logo (centros, empresas, administraciones, alumnado). -->
 <script setup>
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 
@@ -12,6 +13,7 @@ const props = defineProps({
   titulo:    { type: String, required: true }, // también nombre accesible si hay slot `cabecera`
   subtitulo: { type: String, default: '' },
   ancho:     { type: String, default: 'w-[min(56rem,calc(100vw-2rem))]' },
+  marca:     { type: Boolean, default: false },
 })
 const emit = defineEmits(['cerrar'])
 
@@ -72,6 +74,10 @@ defineExpose({ subir })
         <div ref="panel" role="dialog" aria-modal="true" :aria-labelledby="idTitulo" tabindex="-1"
              class="relative flex max-h-[min(90dvh,56rem)] flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl outline-none"
              :class="ancho">
+
+          <span v-if="marca" aria-hidden="true" class="flex h-1.5 shrink-0">
+            <span class="flex-1 bg-centros" /><span class="flex-1 bg-empresas" /><span class="flex-1 bg-administraciones" /><span class="flex-1 bg-alumnos" />
+          </span>
 
           <header class="flex items-start gap-3 px-5 pt-5 sm:px-6"
                   :class="$slots.cabecera ? 'pb-1' : 'border-b border-borde pb-4'">

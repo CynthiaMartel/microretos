@@ -183,7 +183,7 @@ async function guardar() {
                   <option v-for="n in numEquipos" :key="n" :value="n">Grupo {{ n }}</option>
                 </select>
                 <button type="button" @click="addAlumno"
-                        class="shrink-0 px-3 py-2 bg-violet-500 text-white rounded-full
+                        class="min-h-9 shrink-0 px-3 py-2 bg-violet-500 text-white rounded-full
                                text-xs font-black hover:bg-violet-600 transition-all">
                   + Añadir alumno/a
                 </button>
@@ -245,14 +245,15 @@ async function guardar() {
               </div>
             </Transition>
 
-            <div class="req-actions">
-              <button type="button" @click="$emit('cerrar')" class="req-btn-ghost flex-1">Cancelar</button>
+            <div class="fila-pasos mt-6">
+              <button type="button" @click="$emit('cerrar')" class="btn-paso-atras">Cancelar</button>
               <button type="button" @click="guardar" :disabled="guardando || !alumnados.length"
-                      class="req-btn-primary flex-[2]">
+                      class="btn-paso">
                 <svg v-if="guardando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                 </svg>
-                {{ guardando ? 'Guardando...' : 'Guardar reparto' }}
+                <template v-if="guardando">Guardando...</template>
+                <template v-else><span class="sm:hidden">Guardar</span><span class="hidden sm:inline">Guardar reparto</span></template>
               </button>
             </div>
 
@@ -287,7 +288,7 @@ async function guardar() {
 .req-card::-webkit-scrollbar { width: 5px; }
 .req-card::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 3px; }
 
-.req-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.req-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; /* hueco para la ✕ de cerrar */ }
 .req-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .req-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .req-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -301,29 +302,9 @@ async function guardar() {
 
 .req-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 
-.req-actions { display: flex; flex-direction: column-reverse; gap: .75rem; margin-top: 1.5rem; }
-/* Móvil: botones apilados (Guardar arriba) para que "Guardar reparto" no se parta en dos líneas */
 @media (min-width: 640px) {
   .req-card { padding: 2.25rem; }
-  .req-actions { flex-direction: row; }
 }
-.req-btn-primary {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: 1rem 1.5rem; background: #7c3aed; color: #fff; border: none;
-  border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(124,58,237,.3); transition: all .2s;
-}
-.req-btn-primary:hover:not(:disabled)  { background: #6d28d9; transform: translateY(-1px); }
-.req-btn-primary:active:not(:disabled) { transform: scale(.97); }
-.req-btn-primary:disabled              { opacity: .4; cursor: not-allowed; }
-.req-btn-ghost {
-  display: flex; align-items: center; justify-content: center; gap: .4rem;
-  padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb;
-  border-radius: 9999px; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; transition: all .2s;
-}
-.req-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
-.req-btn-ghost:active { transform: scale(.97); }
 .req-x {
   position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px;
   background: #f5f3ff; border: none; border-radius: 9999px; color: #a78bfa;

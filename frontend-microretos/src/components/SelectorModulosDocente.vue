@@ -85,7 +85,7 @@ function alternar(id) {
                 class="inline-flex max-w-full items-center gap-1 rounded-full bg-centros/10 py-0.5 pl-2.5 pr-0.5 text-[11px] font-semibold text-centros">
             <span class="truncate" :title="`${m.nombre} · ${m.ciclo}`">{{ m.nombre }}</span>
             <button type="button" :disabled="disabled" @click="alternar(m.id)" :aria-label="`Quitar ${m.nombre}`"
-                    class="-my-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-centros/15 disabled:cursor-not-allowed">×</button>
+                    class="relative -my-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-centros/15 before:absolute before:-inset-0.5 before:content-[''] disabled:cursor-not-allowed">×</button>
           </span>
         </div>
       </div>

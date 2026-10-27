@@ -15,7 +15,6 @@ import { useAuthStore } from '../stores/auth.js';
 import TourPromptModal from '../components/TourPromptModal.vue';
 import ModalPropuestaValidacion from '../components/ModalPropuestaValidacion.vue';
 import MicroretoModal from '../components/MicroretoModal.vue';
-import RaCeGrid from '../components/RaCeGrid.vue';
 import { FASES_PROYECTO, CLASES_PROYECTO_DEFECTO, duracionPorFase, COLOR_MAP_FASES } from '../config/fasesProyecto.js';
 
 const route      = useRoute();
@@ -41,6 +40,9 @@ const errorMsg       = ref('');
 const publicadoExito = ref(false);
 const modalPublicarVisible   = ref(false);
 const dropdownEstadoAbierto  = ref(false);
+// Tooltip (i) de "Propuesta": en táctil se abre con clic (en escritorio sigue el hover)
+const infoPropuestaAbierta   = ref(false);
+watch(dropdownEstadoAbierto, (abierto) => { if (!abierto) infoPropuestaAbierta.value = false; });
 const modalRecurso           = ref(null); // { url, label, tipo: 'video'|'imagen'|'pdf'|'otro' }
 
 function abrirRecurso(item) {
@@ -1535,7 +1537,7 @@ onUnmounted(() => { tourActivo.value = false; });
             <!-- Selector de reto (creación, mientras no hay reto elegido) -->
             <div v-if="!uuid && !microretoVinculado"
                  class="bg-rol/[0.04] rounded-2xl border-2 border-rol/25 shadow-sm
-                        p-6 space-y-4 mb-8">
+                        p-4 sm:p-6 space-y-4 mb-8">
 
               <!-- Header -->
               <div class="flex items-start justify-between gap-3 pb-3 border-b border-rol/15">
@@ -1571,33 +1573,34 @@ onUnmounted(() => { tourActivo.value = false; });
                 <!-- Filtros -->
                 <div class="flex flex-wrap gap-2">
                   <select v-model="retoFiltroFamilia"
-                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
+                          class="h-9 text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
                                  bg-white text-texto-secundario hover:border-gray-300 transition-colors focus:outline-none
                                  focus:ring-1 focus:ring-rol/40">
                     <option value="">Familia</option>
                     <option v-for="f in familiasFiltroRetos" :key="f" :value="f">{{ f }}</option>
                   </select>
                   <select v-model="retoFiltroCiclo"
-                          class="text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
+                          class="h-9 text-xs font-medium px-3 py-1.5 rounded-xl border border-borde
                                  bg-white text-texto-secundario hover:border-gray-300 transition-colors focus:outline-none
                                  focus:ring-1 focus:ring-rol/40">
                     <option value="">Ciclo</option>
                     <option v-for="c in ciclosFiltroRetos" :key="c" :value="c">{{ c }}</option>
                   </select>
-                  <div class="flex rounded-full border border-borde overflow-hidden text-xs font-bold uppercase tracking-widest">
+                  <div class="flex max-w-full overflow-x-auto rounded-full border border-borde text-xs font-bold uppercase tracking-widest">
                     <button v-for="op in ['', '1º', '2º', 'ambos_cursos']" :key="op"
                             @click="retoFiltroCurso = op"
                             :title="op === 'ambos_cursos' ? 'Ambos Cursos: posibilidad 1º y 2º' : ''"
-                            :class="['px-3 py-1.5 rounded-full transition-colors',
+                            :class="['h-9 shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full transition-colors',
                                      retoFiltroCurso === op
                                        ? 'bg-rol-fuerte text-white'
                                        : 'bg-white text-texto-secundario hover:bg-gray-50']">
-                      {{ op === '' ? 'Todos' : op === 'ambos_cursos' ? 'Ambos Cursos' : op }}
+                      <template v-if="op === 'ambos_cursos'">Ambos<span class="hidden sm:inline"> Cursos</span></template>
+                      <template v-else>{{ op === '' ? 'Todos' : op }}</template>
                     </button>
                   </div>
                   <button v-if="retoBusqueda || retoFiltroFamilia || retoFiltroCiclo || retoFiltroCurso"
                           @click="retoBusqueda = ''; retoFiltroFamilia = ''; retoFiltroCiclo = ''; retoFiltroCurso = ''"
-                          class="text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full
+                          class="inline-flex h-9 items-center text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full
                                  border border-borde text-texto-secundario hover:border-red-200 hover:text-red-400
                                  transition-colors">
                     Limpiar
@@ -1661,7 +1664,7 @@ onUnmounted(() => { tourActivo.value = false; });
                       </div>
                     </button>
                     <button @click.stop="microretoModalId = mr.id"
-                            class="absolute bottom-2.5 right-3 flex items-center gap-1
+                            class="absolute bottom-1 right-1.5 inline-flex h-9 items-center gap-1 px-3 rounded-full
                                    text-xs font-bold uppercase tracking-widest
                                    text-texto-secundario hover:text-rol-fuerte transition-colors">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1975,7 +1978,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   puedes ajustar la selección o pedir una propuesta a la IA.
                 </p>
                 <button type="button" @click="raCeAutocompletado = false; modulosAutocompletados = false"
-                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
                         aria-label="Cerrar aviso">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -2164,10 +2167,10 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <div class="space-y-4">
             <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fundamentación</p>
                 <button @click="sugerirFundamentacion" :disabled="sugiriendoFundamentacion"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                        class="inline-flex h-9 items-center gap-1.5 px-3 py-1.5 rounded-full
                                bg-alumnos/10 border border-alumnos/30 text-azul-noche
                                text-xs font-bold uppercase tracking-wider
                                hover:bg-alumnos/15 transition-all active:scale-95
@@ -2246,7 +2249,8 @@ onUnmounted(() => { tourActivo.value = false; });
                     <div class="flex items-center justify-between">
                       <p class="text-sm font-bold text-azul-noche">Sesión {{ i + 1 }}</p>
                       <button @click="removeSesion(i)" type="button"
-                              class="text-texto-secundario hover:text-red-500 font-bold text-sm leading-none">×</button>
+                              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full -mr-2
+                                     text-texto-secundario hover:text-red-500 hover:bg-red-50 font-bold text-sm leading-none">×</button>
                     </div>
                     <div class="space-y-1.5">
                       <button v-for="f in FASES_PROYECTO" :key="f.num" type="button"
@@ -2279,7 +2283,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Cronograma general</p>
                 <p class="text-xs text-texto-secundario mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
               </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-3">
                 <div v-for="f in FASES_PROYECTO" :key="f.num"
                      class="rounded-2xl border p-3 space-y-1" :class="colorMapFases[f.color]">
                   <div class="flex items-center gap-1.5">
@@ -2300,10 +2304,10 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Metodología y resumen ejecutivo</p>
                 <button @click="sugerirMetodologia" :disabled="sugiriendoMetodologia"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                        class="inline-flex h-9 items-center gap-1.5 px-3 py-1.5 rounded-full
                                bg-alumnos/10 border border-alumnos/30 text-azul-noche
                                text-xs font-bold uppercase tracking-wider
                                hover:bg-alumnos/15 transition-all active:scale-95
@@ -2545,7 +2549,7 @@ onUnmounted(() => { tourActivo.value = false; });
                        class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-borde
                               hover:border-rol/20 hover:bg-rol/5/40 transition-colors group/vid">
                     <button @click="abrirRecurso(v)"
-                            class="w-7 h-7 rounded-full bg-rol/5 shrink-0 flex items-center justify-center
+                            class="w-9 h-9 rounded-full bg-rol/5 shrink-0 flex items-center justify-center
                                    group-hover/vid:bg-rol/10 transition-colors">
                       <svg class="w-3.5 h-3.5 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2557,7 +2561,7 @@ onUnmounted(() => { tourActivo.value = false; });
                       <p class="text-xs text-rol-fuerte/80 truncate">Cloudinary · {{ v.filename }}</p>
                     </button>
                     <button @click.stop="removeVideo(i)"
-                            class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
+                            class="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                       </svg>
@@ -2566,9 +2570,9 @@ onUnmounted(() => { tourActivo.value = false; });
                 </div>
 
                 <!-- Uploader -->
-                <div class="flex gap-2 items-center">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input v-model="labelVideo" type="text" placeholder="Nombre del vídeo (opcional)"
-                         class="w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
+                         class="w-full sm:w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
                                 text-azul-noche placeholder-gray-500 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-borde bg-gray-50
@@ -2609,14 +2613,14 @@ onUnmounted(() => { tourActivo.value = false; });
                                 transition-opacity flex items-center justify-center gap-1.5">
                       <button v-if="img.id !== imagenPortadaId" @click="marcarPortada(img)" type="button"
                               title="Marcar como portada" aria-label="Marcar como portada"
-                              class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-rol-fuerte hover:bg-white">
+                              class="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center text-rol-fuerte hover:bg-white">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                         </svg>
                       </button>
                       <button @click.stop="removeImagen(i)" type="button" aria-label="Quitar imagen" title="Quitar imagen"
-                              class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-red-400 hover:bg-white">
+                              class="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center text-red-400 hover:bg-white">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -2653,7 +2657,7 @@ onUnmounted(() => { tourActivo.value = false; });
                        class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-borde
                               hover:border-rol/30 hover:bg-rol/5 transition-colors group/doc">
                     <button @click="abrirRecurso(d)"
-                            class="w-7 h-7 rounded-full bg-rol/10 shrink-0 flex items-center justify-center
+                            class="w-9 h-9 rounded-full bg-rol/10 shrink-0 flex items-center justify-center
                                    group-hover/doc:bg-rol/20 transition-colors">
                       <svg class="w-3.5 h-3.5 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2665,7 +2669,7 @@ onUnmounted(() => { tourActivo.value = false; });
                       <p class="text-xs text-rol-fuerte/80 truncate">Cloudinary · {{ d.filename }}</p>
                     </button>
                     <button @click.stop="removeDocumento(i)"
-                            class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
+                            class="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors shrink-0">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                       </svg>
@@ -2674,9 +2678,9 @@ onUnmounted(() => { tourActivo.value = false; });
                 </div>
 
                 <!-- Uploader -->
-                <div class="flex gap-2 items-center">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input v-model="labelDocumento" type="text" placeholder="Nombre del documento (opcional)"
-                         class="w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
+                         class="w-full sm:w-44 shrink-0 bg-gray-50 border border-borde rounded-xl px-3 py-2 text-xs
                                 text-azul-noche placeholder-gray-500 focus:outline-none focus:border-rol-fuerte transition-colors"/>
                   <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                                 border-2 border-dashed border-borde bg-gray-50
@@ -2714,9 +2718,8 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
           </div>
 
-          <div class="fila-pasos">
-            <button @click="paso = 6" class="btn-paso-atras self-start">← Anterior</button>
-            <div class="flex min-w-0 flex-wrap gap-3 justify-end items-center">
+          <!-- Acciones del proyecto (fila propia, encima de los botones de paso) -->
+          <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
 
               <!-- ── Desplegable Estado del proyecto ── -->
               <div class="relative">
@@ -2804,13 +2807,16 @@ onUnmounted(() => { tourActivo.value = false; });
                       <!-- Tooltip (i) -->
                       <div class="relative group/info shrink-0">
                         <button type="button" aria-label="Qué significa marcarla como Propuesta"
-                                class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
+                                :aria-expanded="infoPropuestaAbierta"
+                                @click.stop="infoPropuestaAbierta = !infoPropuestaAbierta"
+                                class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
                           <svg class="w-3 h-3 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                           </svg>
                         </button>
-                        <div role="tooltip" class="absolute hidden group-hover/info:block group-focus-within/info:block bottom-full right-0 mb-2
+                        <div role="tooltip" :class="infoPropuestaAbierta ? 'block' : 'hidden'"
+                             class="absolute group-hover/info:block group-focus-within/info:block bottom-full right-0 mb-2
                                     bg-azul-noche text-white text-xs rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
                           Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-rol-fuerte">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
@@ -2843,12 +2849,15 @@ onUnmounted(() => { tourActivo.value = false; });
                 Biblioteca
               </button>
 
-              <!-- Publicar propuesta → muestra modal, guarda como borrador -->
-              <button @click="mostrarModalPublicar" :disabled="guardando || !form.titulo.trim()" class="btn-paso">
-                {{ guardando ? 'Guardando…' : 'Publicar propuesta' }}
-              </button>
+          </div>
 
-            </div>
+          <div class="fila-pasos">
+            <button @click="paso = 6" class="btn-paso-atras">← Anterior</button>
+            <!-- Publicar propuesta → muestra modal, guarda como borrador -->
+            <button @click="mostrarModalPublicar" :disabled="guardando || !form.titulo.trim()" class="btn-paso">
+              <template v-if="guardando">Guardando…</template>
+              <template v-else><span class="sm:hidden">Publicar</span><span class="hidden sm:inline">Publicar propuesta</span></template>
+            </button>
           </div>
           </template>
         </div>
@@ -2888,7 +2897,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8">
+      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto">
 
         <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100
                     flex items-center justify-center mb-5 mx-auto">
@@ -2957,7 +2966,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <div class="flex items-center justify-between px-5 py-4 border-b border-borde shrink-0">
           <p class="text-sm font-bold text-azul-noche truncate pr-4">{{ modalRecurso.label }}</p>
           <button @click="modalRecurso = null"
-                  class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                  class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center
                          text-texto-secundario hover:bg-gray-200 hover:text-texto-secundario transition-all shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -2986,7 +2995,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   class="w-full h-[70vh] border-0" />
 
           <!-- Otro (enlace externo) -->
-          <div v-else class="flex flex-col items-center gap-4 p-10 text-center">
+          <div v-else class="flex flex-col items-center gap-4 p-6 sm:p-10 text-center">
             <div class="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center">
               <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -3026,7 +3035,7 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <!-- Contenido -->
-      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8
+      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto
                   transform transition-all duration-200"
            :class="modalPublicarVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'">
 

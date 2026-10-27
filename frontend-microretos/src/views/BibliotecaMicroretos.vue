@@ -570,7 +570,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           <div class="mb-3 flex items-center justify-between gap-2">
             <h2 class="text-base font-bold text-azul-noche">Filtros rápidos</h2>
             <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros"
-                    class="inline-flex h-8 items-center rounded-full px-2 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">Limpiar</button>
+                    class="inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">Limpiar</button>
           </div>
 
           <div class="border-t border-borde pt-3" role="group" aria-labelledby="titulo-filtro-familia">
@@ -584,7 +584,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             </label>
             <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin retos en este curso.</p>
             <button v-if="familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
-                    class="mt-1 inline-flex h-8 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
+                    class="mt-1 inline-flex h-9 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
               {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${familiasPanel.length})` }}
             </button>
           </div>
@@ -656,12 +656,12 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             </label>
             <div class="flex rounded-full bg-gray-100 p-1" role="group" aria-label="Vista de los resultados">
               <button type="button" @click="vista = 'cuadricula'" :aria-pressed="vista === 'cuadricula'" aria-label="Vista en cuadrícula" title="Cuadrícula"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors"
                       :class="vista === 'cuadricula' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
               </button>
               <button type="button" @click="vista = 'lista'" :aria-pressed="vista === 'lista'" aria-label="Vista en lista" title="Lista"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors"
                       :class="vista === 'lista' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
               </button>
@@ -770,9 +770,13 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                           <span class="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] font-bold">Superadmin</span>
                         </button>
                         <span id="ayuda-escaparate-reto" role="tooltip"
-                              class="pointer-events-none absolute bottom-full right-1 z-40 mb-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs font-normal leading-snug text-white shadow-lg group-hover/escaparate:block group-focus-within/escaparate:block">
+                              class="pointer-events-none absolute bottom-full right-1 z-40 mb-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs font-normal leading-snug text-white shadow-lg sm:group-hover/escaparate:block sm:group-focus-within/escaparate:block">
                           Escaparate de dualab.es: los retos publicados aparecen en la web pública, visibles para cualquiera sin iniciar sesión. Solo el superadmin puede publicarlos u ocultarlos.
                         </span>
+                        <!-- En móvil no hay hover: la explicación va como línea corta bajo la opción -->
+                        <p class="px-4 pb-1 text-[11px] leading-snug text-texto-secundario sm:hidden" aria-hidden="true">
+                          Visible en dualab.es sin iniciar sesión. Solo el superadmin puede cambiarlo.
+                        </p>
                       </div>
                       <button type="button" role="menuitem" @click="menuReto = null; abrirModalEliminar(reto)"
                               class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Eliminar reto</button>
@@ -826,19 +830,19 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
   <Transition name="snack">
     <div
       v-if="snackbar.visible"
-      class="fixed bottom-6 right-6 z-[60] flex items-center gap-3
+      class="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[60] flex items-center gap-3
              px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold
-             max-w-sm bg-azul-noche text-white"
+             max-w-[calc(100vw-2rem)] sm:max-w-sm bg-azul-noche text-white"
     >
       <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
       </svg>
-      <span class="flex-1">{{ snackbar.mensaje }}</span>
+      <span class="flex-1 min-w-0 break-words">{{ snackbar.mensaje }}</span>
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-azul-noche text-xs font-bold uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 inline-flex h-9 items-center px-3 rounded-full bg-amber-400 text-azul-noche text-xs font-bold uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>

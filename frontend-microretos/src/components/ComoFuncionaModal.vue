@@ -218,18 +218,23 @@ const ir = (destino) => {
                         </button>
 
                         <!-- Herramientas que agrupa la sección -->
-                        <div v-if="item.herramientas.length" class="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
+                        <!-- Filas a todo el ancho con la descripción visible: en táctil no hay
+                             hover, y un title nunca llegaría a leerse antes de navegar. -->
+                        <div v-if="item.herramientas.length" class="mt-3 flex flex-col gap-1 border-t border-gray-100 pt-3">
                           <button
                             v-for="h in item.herramientas" :key="h.titulo" type="button"
                             :disabled="h.proximamente"
-                            :title="h.desc"
-                            class="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                            class="flex min-h-9 w-full flex-col rounded-xl px-2.5 py-1.5 text-left transition"
                             :class="h.proximamente
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-centros/5 text-centros ring-1 ring-centros/20 hover:bg-centros/10'"
+                              ? 'cursor-not-allowed text-gray-400'
+                              : 'text-centros hover:bg-centros/5'"
                             @click="ir(h)"
                           >
-                            {{ h.titulo }}<span v-if="h.proximamente"> · próximamente</span>
+                            <span class="text-[11px] font-semibold">
+                              {{ h.titulo }}<span v-if="h.proximamente" class="font-normal"> · próximamente</span>
+                            </span>
+                            <span v-if="h.desc" class="mt-0.5 text-[11px] leading-snug"
+                                  :class="h.proximamente ? 'text-gray-400' : 'text-gray-500'">{{ h.desc }}</span>
                           </button>
                         </div>
                       </article>

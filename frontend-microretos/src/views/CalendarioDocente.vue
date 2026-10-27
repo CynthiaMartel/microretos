@@ -311,9 +311,9 @@ function enviarTarea() {
             <ul v-if="notasDia.length" class="mt-2 space-y-1">
               <li v-for="n in notasDia" :key="n.id" class="group flex items-start gap-2 rounded-lg bg-alumnos/5 p-2 text-sm">
                 <span class="min-w-0 flex-1 break-words text-gray-700">{{ n.texto }}</span>
-                <button type="button" class="-my-1.5 inline-flex h-9 shrink-0 items-center rounded-full px-2 text-xs text-gray-500 transition hover:bg-centros/10 hover:text-centros sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 shrink-0 items-center rounded-full px-2 text-xs text-gray-500 transition hover:bg-centros/10 hover:text-centros [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100"
                         title="Quitar del calendario (se queda en tus notas)" @click="quitarFecha(n)">Sin fecha</button>
-                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100"
                         :aria-label="`Borrar nota: ${n.texto}`" @click="eliminarNota(n)">×</button>
               </li>
             </ul>
@@ -355,7 +355,7 @@ function enviarTarea() {
                     <span class="interruptor-bola" :class="item.hecha && 'translate-x-3.5'" />
                   </button>
                   <span class="min-w-0 flex-1 break-words leading-snug" :class="item.hecha ? 'text-gray-400 line-through' : 'text-gray-700'">{{ item.n.text }}</span>
-                  <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                  <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100"
                           :aria-label="`Borrar tarea: ${item.n.text}`" @click="borrarTarea(item.n.id)">×</button>
                 </template>
               </li>
@@ -391,7 +391,7 @@ function enviarTarea() {
             <ul v-if="notasSinFecha.length" class="mt-1 space-y-1">
               <li v-for="n in notasPagina" :key="n.id" class="group flex items-start gap-2 rounded-lg bg-gray-50 p-2 text-sm">
                 <span class="min-w-0 flex-1 whitespace-pre-line break-words text-gray-700">{{ n.texto }}</span>
-                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                <button type="button" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 transition hover:bg-red-50 hover:text-red-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100"
                         :aria-label="`Borrar nota: ${n.texto}`" @click="eliminarNota(n)">×</button>
               </li>
             </ul>

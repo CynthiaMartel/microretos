@@ -198,7 +198,7 @@ const resumen = computed(() => {
     <div class="flex items-start justify-between gap-3 mb-1">
       <p class="text-xs font-black uppercase tracking-widest text-[#1F2937]">Empresa ficticia con IA</p>
       <button type="button" @click="cerrar" :disabled="generando || guardando"
-        class="text-gray-400 hover:text-gray-600 shrink-0" aria-label="Cerrar">
+        class="-m-2 inline-flex w-9 h-9 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 shrink-0" aria-label="Cerrar">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -230,7 +230,7 @@ const resumen = computed(() => {
       <Transition name="cefi-aviso">
         <div v-if="avisoFamiliasVisible" role="note" class="relative mb-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-3 pr-9 shadow-lg shadow-amber-200/50 text-xs text-amber-900 leading-relaxed">
           <button type="button" @click="avisoFamiliasVisible = false" aria-label="Cerrar aviso"
-            class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-100">
+            class="absolute top-1 right-0 w-9 h-9 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-100">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
           <p class="font-black uppercase tracking-wide text-[11px] flex items-center gap-1.5">
@@ -248,7 +248,7 @@ const resumen = computed(() => {
         </div>
       </Transition>
       <button v-if="!avisoFamiliasVisible" type="button" @click="avisoFamiliasVisible = true"
-        class="mb-2 text-[11px] font-bold text-amber-700 hover:underline">¿Por qué solo aparecen estas familias?</button>
+        class="-mt-2 inline-flex min-h-9 items-center text-[11px] font-bold text-amber-700 hover:underline">¿Por qué solo aparecen estas familias?</button>
 
       <div class="flex flex-col sm:flex-row sm:items-center gap-2">
         <select v-model="familiaId" :disabled="generando" class="input-style !py-2 text-sm sm:flex-1" aria-label="Familia profesional de la empresa ficticia">
@@ -257,13 +257,13 @@ const resumen = computed(() => {
         </select>
         <div class="flex gap-2 shrink-0">
           <button type="button" @click="generar" :disabled="!familiaId || !destinoValido || generando"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm flex items-center justify-center gap-2"
+            class="flex-1 sm:flex-none min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm flex items-center justify-center gap-2"
             :class="!familiaId || !destinoValido || generando ? 'opacity-50 cursor-not-allowed bg-white text-gray-400 border-gray-200' : 'bg-[#1F2937] text-white border-[#1F2937] hover:bg-[#374151]'">
             <svg v-if="generando" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             {{ generando ? 'Generando…' : 'Generar propuesta' }}
           </button>
           <button type="button" @click="cerrar" :disabled="generando"
-            class="px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-gray-500 border-gray-200 hover:bg-gray-50">
+            class="min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-gray-500 border-gray-200 hover:bg-gray-50">
             Cancelar
           </button>
         </div>
@@ -293,16 +293,16 @@ const resumen = computed(() => {
       </div>
       <div class="flex flex-wrap gap-2 mt-3">
         <button type="button" @click="guardar" :disabled="guardando || generando"
-          class="px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm"
+          class="min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm"
           :class="guardando || generando ? 'opacity-50 cursor-not-allowed bg-white text-gray-400 border-gray-200' : 'bg-[#1F2937] text-white border-[#1F2937] hover:bg-[#374151]'">
           {{ guardando ? 'Guardando…' : 'Guardar en la base de datos' }}
         </button>
         <button type="button" @click="generar" :disabled="guardando || generando"
-          class="px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-[#1F2937] border-gray-200 hover:bg-gray-50">
+          class="min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-[#1F2937] border-gray-200 hover:bg-gray-50">
           {{ generando ? 'Generando…' : 'Generar otra' }}
         </button>
         <button type="button" @click="descartar" :disabled="guardando || generando"
-          class="px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-red-500 border-gray-200 hover:bg-red-50">
+          class="min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-red-500 border-gray-200 hover:bg-red-50">
           Descartar
         </button>
       </div>

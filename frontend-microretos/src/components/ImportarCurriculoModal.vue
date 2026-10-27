@@ -79,7 +79,7 @@ const hayNuevos = computed(() => (resumen.value?.modulos_nuevos?.length ?? 0) > 
   <Teleport to="body">
     <div v-if="ciclo" class="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
          style="z-index: 10020" @click.self="!cargando && emit('cerrar')">
-      <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl p-6 sm:p-8" role="dialog" aria-modal="true"
+      <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-[2rem] shadow-2xl p-6 sm:p-8" role="dialog" aria-modal="true"
            aria-labelledby="icm-titulo">
         <div class="flex items-start gap-3 mb-4">
           <div class="flex-1 min-w-0">
@@ -87,7 +87,7 @@ const hayNuevos = computed(() => (resumen.value?.modulos_nuevos?.length ?? 0) > 
             <h2 id="icm-titulo" class="font-black text-lg text-azul-noche break-words">{{ ciclo.nombre }}</h2>
           </div>
           <button type="button" @click="emit('cerrar')" :disabled="cargando" aria-label="Cerrar"
-            class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 shrink-0">
+            class="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>

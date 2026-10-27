@@ -248,7 +248,7 @@ async function confirmarEliminacion() {
               </div>
             </Transition>
 
-            <button type="button" class="eem-x" @click="$emit('cerrar')">
+            <button type="button" class="eem-x" @click="$emit('cerrar')" aria-label="Cerrar">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -278,7 +278,7 @@ async function confirmarEliminacion() {
 .eem-card::-webkit-scrollbar { width: 5px; }
 .eem-card::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 3px; }
 
-.eem-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.eem-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; }
 .eem-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .eem-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .eem-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -301,38 +301,17 @@ async function confirmarEliminacion() {
 .eem-hint-ok  { font-size: .7rem; color: #16a34a; font-weight: 700; margin-top: .4rem; margin-left: .25rem; }
 .eem-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 
-.eem-actions { display: flex; gap: .75rem; margin-top: .5rem; }
-.eem-btn-danger {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: 1rem 1.5rem; background: #dc2626; color: #fff; border: none;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 20px rgba(220,38,38,.3); transition: all .2s;
-}
-.eem-btn-danger:hover:not(:disabled)  { background: #b91c1c; transform: translateY(-1px); }
-.eem-btn-danger:active:not(:disabled) { transform: scale(.97); }
-.eem-btn-danger:disabled              { opacity: .4; cursor: not-allowed; }
-.eem-btn-danger-outline {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: 1rem 1.5rem; background: #fff; color: #dc2626; border: 2px solid #fca5a5;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; transition: all .2s;
-}
-.eem-btn-danger-outline:hover  { background: #fef2f2; border-color: #f87171; }
-.eem-btn-danger-outline:active { transform: scale(.97); }
-.eem-btn-ghost {
-  display: flex; align-items: center; justify-content: center; gap: .4rem;
-  padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; transition: all .2s;
-}
-.eem-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
-.eem-btn-ghost:active { transform: scale(.97); }
 .eem-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #fef2f2; border: none; border-radius: 9999px; color: #f87171;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
 }
 .eem-x:hover { background: #fee2e2; color: #dc2626; }
+
+@media (max-width: 640px) {
+  .eem-card { padding: 1.5rem 1.25rem; }
+  .eem-x    { top: 1rem; right: 1rem; }
+}
 
 .eem-overlay-enter-active, .eem-overlay-leave-active { transition: opacity .3s ease; }
 .eem-overlay-enter-from,   .eem-overlay-leave-to    { opacity: 0; }

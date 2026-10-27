@@ -507,7 +507,7 @@ async function completar() {
 
           <!-- Estado: Propuesta SÍ enviada por mail, pendiente de respuesta 🔵 -->
           <div v-else-if="proyecto.enviado_a_empresa_mail"
-               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
+               class="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-2xl
                       bg-blue-50 border border-blue-200 shadow-sm">
             <div class="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200
                         flex items-center justify-center shrink-0">
@@ -516,15 +516,15 @@ async function completar() {
                   d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
             </div>
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
               <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Pendiente de respuesta</p>
-              <p class="text-[10px] text-blue-500 mt-0.5 truncate">
+              <p class="text-[10px] text-blue-500 mt-0.5 break-words">
                 Esperando que {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} acceda y responda.
               </p>
             </div>
             <button v-if="!authStore.isEmpresa"
                     @click="abrirModalPropuesta('envio')"
-                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
+                    class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
                            bg-white text-blue-600 border-blue-200 hover:bg-blue-50 transition-all">
               Reenviar
             </button>
@@ -532,7 +532,7 @@ async function completar() {
 
           <!-- Estado: Propuesta NO enviada por mail aún 🟣 -->
           <div v-else
-               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
+               class="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-2xl
                       bg-violet-50 border border-violet-300 shadow-sm">
             <div class="w-9 h-9 rounded-xl bg-white border border-violet-200
                         flex items-center justify-center shrink-0">
@@ -541,7 +541,7 @@ async function completar() {
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </div>
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
               <p class="text-sm font-black text-violet-700">Propuesta pendiente de enviar a empresa</p>
               <p class="text-[10px] text-gray-400 mt-0.5">
                 El enlace está generado pero aún no se ha confirmado el envío a
@@ -550,7 +550,7 @@ async function completar() {
             </div>
             <button v-if="!authStore.isEmpresa"
                     @click="abrirModalPropuesta('envio')"
-                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
+                    class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
                            bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 transition-all">
               Enviar
             </button>
@@ -573,7 +573,7 @@ async function completar() {
           </div>
           <!-- Sin validación docente aún -->
           <div v-else-if="!authStore.isEmpresa"
-               class="flex items-center gap-3 px-4 py-3.5 rounded-2xl
+               class="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-2xl
                       bg-gray-50 border border-gray-100 shadow-sm">
             <div class="w-9 h-9 rounded-xl bg-white border border-gray-200
                         flex items-center justify-center shrink-0">
@@ -581,12 +581,12 @@ async function completar() {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
             </div>
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
               <p class="text-sm font-black text-gray-500">Pendiente de validación docente</p>
               <p class="text-[10px] text-gray-400 mt-0.5">Puedes validar el proyecto directamente como docente.</p>
             </div>
             <button @click="modalValidarDocente = true"
-                    class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border
+                    class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
                            bg-centros/10 text-centros border-centros/30 hover:bg-centros/20 transition-all">
               Validar
             </button>
@@ -606,7 +606,7 @@ async function completar() {
             <div class="space-y-0.5 text-xs text-gray-400">
               <p v-if="proyecto.datos_empresa.sector">{{ proyecto.datos_empresa.sector }}</p>
               <p v-if="proyecto.datos_empresa.persona_contacto">{{ proyecto.datos_empresa.persona_contacto }}</p>
-              <p v-if="proyecto.datos_empresa.email">{{ proyecto.datos_empresa.email }}</p>
+              <p v-if="proyecto.datos_empresa.email" class="break-all">{{ proyecto.datos_empresa.email }}</p>
               <p v-if="proyecto.datos_empresa.descripcion" class="mt-2 leading-relaxed text-gray-500">
                 {{ proyecto.datos_empresa.descripcion }}
               </p>
@@ -622,11 +622,11 @@ async function completar() {
                           bg-centros/10 border-centros/25 text-centros">
                 {{ proyecto.datos_centro.docente_nombre.charAt(0).toUpperCase() }}
               </div>
-              <div>
+              <div class="min-w-0">
                 <p class="text-sm font-bold text-[#1F2937]">{{ proyecto.datos_centro.docente_nombre }}</p>
                 <a v-if="proyecto.datos_centro.docente_email"
                    :href="`mailto:${proyecto.datos_centro.docente_email}`"
-                   class="text-xs hover:underline text-centros">
+                   class="text-xs hover:underline text-centros break-all">
                   {{ proyecto.datos_centro.docente_email }}
                 </a>
               </div>
@@ -776,11 +776,11 @@ async function completar() {
           <!-- Cronograma — hitos por fase -->
           <div v-if="proyecto.diseno_microproyecto?.clases?.length" class="card-section sm:col-span-2">
             <p class="section-label">Cronograma — hitos por fase</p>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-2">
-              <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3" :class="COLOR_MAP_FASES[f.color]">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-2">
+              <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3 min-w-0" :class="COLOR_MAP_FASES[f.color]">
                 <div class="flex items-center gap-1.5 mb-1">
                   <span class="text-base leading-none">{{ f.icono }}</span>
-                  <p class="font-black text-xs text-[#1F2937]">{{ f.label }}</p>
+                  <p class="font-black text-xs text-[#1F2937] min-w-0 break-words">{{ f.label }}</p>
                 </div>
                 <p class="text-[9px] font-bold uppercase tracking-wide opacity-70">
                   {{ duracionPorFase(proyecto.diseno_microproyecto.clases, f.num) }} sesión(es)
@@ -999,7 +999,7 @@ async function completar() {
 
             <div class="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
               <div v-for="(val, key) in proyecto.validacion_empresa.respuestas" :key="key"
-                   class="px-5 py-4 flex items-start gap-4">
+                   class="px-3 sm:px-5 py-4 flex items-start gap-3 sm:gap-4">
                 <!-- Icono respuesta -->
                 <div class="w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5"
                      :class="val === 'Sí'
@@ -1099,7 +1099,7 @@ async function completar() {
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <p class="text-sm font-black text-[#121212] truncate pr-4">{{ modalRecurso.label }}</p>
           <button @click="modalRecurso = null"
-                  class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                  class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center
                          text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-all shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -1188,7 +1188,7 @@ async function completar() {
 
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modalBorradorAviso = false" />
 
-      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8">
+      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[calc(100dvh-2rem)] overflow-y-auto">
 
         <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100
                     flex items-center justify-center mb-5 mx-auto">
@@ -1403,7 +1403,28 @@ async function completar() {
 
 @media (max-width: 640px) {
   .notebook-page {
-    padding: 1.5rem 1rem 2rem 4.5rem;
+    padding: 1.5rem 1rem 2rem 3rem;
+    background-image:
+      linear-gradient(90deg, #eef1f5 0, #eef1f5 2rem, transparent 2rem),
+      repeating-linear-gradient(
+        transparent,
+        transparent 31px,
+        #c8d9f0 31px,
+        #c8d9f0 32px
+      );
+  }
+  .notebook-margin {
+    left: 2.5rem;
+  }
+  .notebook-holes {
+    left: 0.6rem;
+  }
+  .notebook-hole {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+  .empresa-diferenciada {
+    padding: 0.75rem;
   }
   .meta-cell {
     flex: 1 0 100%;

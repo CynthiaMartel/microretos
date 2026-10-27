@@ -156,7 +156,7 @@ function cerrar() {
                     </svg>
                     DUALAB · Ficha de Reto
                   </p>
-                  <h1 class="text-2xl md:text-4xl font-black text-azul-noche tracking-tight leading-tight mb-2">
+                  <h1 class="text-2xl md:text-4xl font-black text-azul-noche tracking-tight leading-tight mb-2 break-words">
                     {{ reto.titulo }}
                   </h1>
                   <h2 class="text-base md:text-lg text-gray-600 font-bold leading-snug mb-2">

@@ -148,7 +148,7 @@ async function guardar() {
       <div class="max-w-lg">
 
       <!-- Tarjeta -->
-      <div class="bg-white border border-gray-200 rounded-[1.75rem] p-8 shadow-sm space-y-5">
+      <div class="bg-white border border-gray-200 rounded-[1.75rem] p-5 sm:p-8 shadow-sm space-y-5">
 
         <!-- Email (solo lectura) + recordatorio -->
         <div>
@@ -158,7 +158,7 @@ async function guardar() {
           <div v-if="cargando" class="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
           <div v-else
             class="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-2.5
-                   text-sm text-gray-400 select-none">
+                   text-sm text-gray-400 select-none break-all">
             {{ email }}
           </div>
           <!-- Aviso permanente -->

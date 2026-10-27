@@ -215,7 +215,7 @@ onMounted(cargarPapelera)
 
     <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
     <div class="bg-white border-b border-gray-100 shadow-sm">
-      <div class="max-w-4xl mx-auto px-6 py-6 pl-20 lg:pl-6">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <!-- Se llega desde varias bibliotecas: vuelve a la que se venía -->
         <BotonVolver fallback="/base-datos" class="mb-3" />
         <div class="flex items-start justify-between gap-4 flex-wrap">
@@ -262,7 +262,7 @@ onMounted(cargarPapelera)
         <div class="flex flex-wrap gap-1.5 mt-5">
           <button
             @click="filtroActivo = 'todos'"
-            class="px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150"
+            class="min-h-9 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150"
             :class="filtroActivo === 'todos'
               ? 'bg-[#1F2937] text-white'
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
@@ -275,7 +275,7 @@ onMounted(cargarPapelera)
             v-for="(cfg, tipo) in TIPOS"
             :key="tipo"
             @click="filtroActivo = tipo"
-            class="px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150"
+            class="min-h-9 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150"
             :class="filtroActivo === tipo
               ? 'text-white'
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
@@ -289,7 +289,7 @@ onMounted(cargarPapelera)
     </div>
 
     <!-- ═══ CONTENIDO ════════════════════════════════════════════════════════ -->
-    <div class="max-w-4xl mx-auto px-6 py-6 pl-20 lg:pl-6">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6">
 
       <!-- Estado cargando -->
       <div v-if="cargando" class="flex flex-col items-center justify-center py-20 gap-3">
@@ -337,7 +337,7 @@ onMounted(cargarPapelera)
           v-for="item in itemsFiltrados"
           :key="item.tipo + item.id"
           class="bg-white rounded-2xl border border-gray-100 shadow-sm
-                 flex items-center gap-4 px-5 py-4
+                 flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4
                  transition-all duration-150 hover:border-gray-200 hover:shadow"
         >
 
@@ -423,7 +423,8 @@ onMounted(cargarPapelera)
             <button
               @click="restaurar(item)"
               :disabled="restaurando === item.id + item.tipo"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full
+              aria-label="Restaurar" title="Restaurar"
+              class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                      bg-administraciones/10 border border-administraciones/20 text-administraciones
                      hover:bg-administraciones/20 hover:border-administraciones/40
                      font-bold text-xs transition-all duration-150
@@ -438,13 +439,14 @@ onMounted(cargarPapelera)
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Restaurar
+              <span class="hidden sm:inline">Restaurar</span>
             </button>
 
             <!-- Eliminar permanentemente -->
             <button
               @click="abrirModalEliminar(item)"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full
+              aria-label="Eliminar permanentemente" title="Eliminar permanentemente"
+              class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                      bg-red-50 border border-red-100 text-red-500
                      hover:bg-red-100 hover:border-red-200 hover:text-red-600
                      font-bold text-xs transition-all duration-150"
@@ -453,7 +455,7 @@ onMounted(cargarPapelera)
                 <polyline points="3 6 5 6 21 6" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Eliminar
+              <span class="hidden sm:inline">Eliminar</span>
             </button>
 
           </div>
@@ -469,7 +471,7 @@ onMounted(cargarPapelera)
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
         @click.self="cerrarModalEliminar"
       >
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-7">
 
           <!-- Icono de advertencia -->
           <div class="flex items-center gap-3 mb-5">
@@ -488,7 +490,7 @@ onMounted(cargarPapelera)
             Vas a eliminar definitivamente:
           </p>
           <div class="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 mb-5">
-            <p class="font-black text-[#1F2937] text-sm">{{ itemAEliminar?.nombre }}</p>
+            <p class="font-black text-[#1F2937] text-sm break-words">{{ itemAEliminar?.nombre }}</p>
             <p class="text-xs text-gray-400 mt-0.5">
               {{ TIPOS[itemAEliminar?.tipo]?.label }}
             </p>
@@ -538,7 +540,7 @@ onMounted(cargarPapelera)
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
         @click.self="cerrarModalVaciar"
       >
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-7">
 
           <div class="flex items-center gap-3 mb-5">
             <div class="w-10 h-10 rounded-2xl bg-red-100 border border-red-200 flex items-center justify-center shrink-0">

@@ -118,6 +118,8 @@ textarea.sfe-input { resize: vertical; line-height: 1.35; }
   position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 1.1rem; height: 1.1rem; border-radius: 9999px; background: #E5EEF6; color: #3072AA; cursor: help;
 }
+/* Zona táctil ampliada (~36px) sin cambiar el tamaño visual */
+.sfe-info::before { content: ''; position: absolute; inset: -.5rem; border-radius: 9999px; }
 .sfe-tip {
   display: none; position: absolute; z-index: 30; top: calc(100% + .4rem); right: 0;
   width: min(16rem, calc(100vw - 3rem)); padding: .6rem .75rem; border-radius: .75rem;

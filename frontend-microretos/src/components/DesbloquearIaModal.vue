@@ -41,7 +41,7 @@ async function verificarCodigo() {
     @click.self="!exitoso && $emit('cerrar')"
   >
     <div class="relative bg-[#1a2332] border border-white/10 rounded-[2rem]
-                shadow-2xl max-w-sm w-full p-6 sm:p-8 text-white">
+                shadow-2xl max-w-sm w-full p-6 sm:p-8 text-white max-h-[calc(100dvh-2rem)] overflow-y-auto">
 
       <div class="flex justify-center mb-6">
         <div class="w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500"
@@ -111,32 +111,30 @@ async function verificarCodigo() {
               </div>
             </Transition>
 
-            <button
-              type="submit"
-              :disabled="verificando || !codigoInput"
-              class="w-full py-3 rounded-full bg-violet-600 text-white font-black text-xs
-                     uppercase tracking-widest transition-all
-                     hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed
-                     flex items-center justify-center gap-2"
-            >
-              <svg v-if="verificando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
-              </svg>
-              {{ verificando ? 'Comprobando...' : 'Desbloquear' }}
-            </button>
+            <div class="fila-pasos pt-2">
+              <button
+                type="button"
+                @click="$emit('cerrar')"
+                class="btn-paso-atras border-white/10 bg-transparent text-white/60
+                       hover:border-white/20 hover:text-white/80"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Volver
+              </button>
 
-            <button
-              type="button"
-              @click="$emit('cerrar')"
-              class="w-full py-2.5 rounded-full bg-transparent text-white/40 font-bold text-xs
-                     uppercase tracking-widest transition-all border border-white/10
-                     hover:text-white/70 hover:border-white/20 flex items-center justify-center gap-2"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-              </svg>
-              Volver
-            </button>
+              <button
+                type="submit"
+                :disabled="verificando || !codigoInput"
+                class="btn-paso bg-violet-600 shadow-violet-600/25 hover:bg-violet-700"
+              >
+                <svg v-if="verificando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
+                </svg>
+                {{ verificando ? 'Comprobando...' : 'Desbloquear' }}
+              </button>
+            </div>
           </form>
         </div>
       </Transition>

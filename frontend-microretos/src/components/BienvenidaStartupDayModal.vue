@@ -8,7 +8,7 @@ const emit = defineEmits(['seleccionar'])
     <div v-if="show"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div class="relative bg-white border border-gray-200 rounded-[2rem]
-                  shadow-2xl max-w-md w-full p-8">
+                  shadow-2xl max-w-md w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto">
 
         <!-- Cabecera -->
         <div class="flex items-center gap-3 mb-2">
@@ -96,7 +96,7 @@ const emit = defineEmits(['seleccionar'])
         </div>
 
         <button @click="emit('seleccionar', 'trabajar')"
-                class="w-full text-center text-[10px] font-bold text-gray-400
+                class="w-full min-h-9 text-center text-[10px] font-bold text-gray-400
                        hover:text-gray-600 transition-colors py-1">
           Saltar
         </button>

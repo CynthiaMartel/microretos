@@ -99,7 +99,7 @@ const imagenFondo = computed(() => {
     <div v-else-if="reto" class="relative z-10 max-w-3xl mx-auto px-4 py-8 md:px-6 md:py-12">
 
       <!-- Logo + badge de acceso temporal -->
-      <div class="flex items-center justify-between mb-8
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-8
                   transition-all duration-700 ease-out"
            :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'">
         <span class="text-alumnos-dark font-black text-lg tracking-tight">DUALAB</span>

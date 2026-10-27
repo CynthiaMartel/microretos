@@ -423,7 +423,7 @@ const tituloCabecera = computed(() =>
              (contadores) y en su tarjeta (ring/badges). -->
         <section class="space-y-3 pt-6 border-t border-gray-100">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Fases del proyecto</p>
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div v-for="f in FASES" :key="f.num"
                  class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-1.5">
               <span :class="[FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text,
@@ -471,7 +471,7 @@ const tituloCabecera = computed(() =>
             <template #acciones-cabecera="{ equipo: eq }">
               <button v-if="eq.fases_completas === 5"
                       @click.stop="irADiagnostico(eq)"
-                      :class="['shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors text-[10px] font-black uppercase tracking-wider',
+                      :class="['shrink-0 inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-full transition-colors text-[10px] font-black uppercase tracking-wider',
                                eq.diagnostico_final
                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                                  : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100']">
@@ -490,7 +490,7 @@ const tituloCabecera = computed(() =>
               <!-- fieldset disabled: un colaborador de solo lectura ve la evaluación pero no la cambia -->
               <fieldset v-if="evaluacionForms[eq.id]" :disabled="!encuentro?.puede_editar"
                         class="mt-4 min-w-0 rounded-2xl border-2 border-centros/30 bg-centros/5 p-4 sm:p-5 space-y-3">
-                <div class="flex items-start gap-3">
+                <div class="flex flex-wrap items-start gap-x-3 gap-y-2">
                   <span class="shrink-0 w-9 h-9 rounded-xl bg-centros text-white flex items-center justify-center text-base">📋</span>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-black text-centros">Evaluación curricular (RA/CE)</p>
@@ -498,10 +498,13 @@ const tituloCabecera = computed(() =>
                       Valora el nivel alcanzado en cada resultado de aprendizaje. Se usa para el diagnóstico final.
                     </p>
                   </div>
-                  <span :class="['shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black',
-                                 eq.fases[4]?.validado_docente ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
-                    {{ eq.fases[4]?.validado_docente ? 'Evaluada' : 'Pendiente de evaluar' }}
-                  </span>
+                  <!-- En móvil la etiqueta baja a su línea, alineada con el texto (pl = icono + gap) -->
+                  <div class="basis-full sm:basis-auto shrink-0 pl-12 sm:pl-0">
+                    <span :class="['inline-block px-2 py-0.5 rounded-full text-[10px] font-black',
+                                   eq.fases[4]?.validado_docente ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                      {{ eq.fases[4]?.validado_docente ? 'Evaluada' : 'Pendiente de evaluar' }}
+                    </span>
+                  </div>
                 </div>
 
                 <p v-if="!evaluacionForms[eq.id].ras.length" class="text-xs text-gray-400 italic">
@@ -514,26 +517,26 @@ const tituloCabecera = computed(() =>
                   <div class="flex flex-wrap gap-1.5">
                     <button v-for="op in NIVEL_OPCIONES" :key="op.value"
                             @click="r.nivel = op.value"
-                            :class="['px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all',
+                            :class="['inline-flex min-h-9 items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all',
                                      r.nivel === op.value ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-emerald-300']">
                       {{ op.label }}
                     </button>
                   </div>
                   <input v-model="r.observaciones" type="text" placeholder="Observaciones (opcional)"
-                         class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white
+                         class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white
                                 focus:outline-none focus:border-emerald-400"/>
                 </div>
 
                 <div class="flex items-center gap-3">
                   <label class="text-xs font-black text-gray-500 uppercase tracking-wider shrink-0">Nota</label>
                   <input v-model.number="evaluacionForms[eq.id].nota_docente" type="number" min="0" max="10" step="0.1"
-                         class="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5
+                         class="w-20 text-sm border border-gray-200 rounded-xl px-2 py-1.5
                                 focus:outline-none focus:border-emerald-400"/>
                   <span class="text-xs text-gray-400">/ 10 (opcional)</span>
                 </div>
                 <textarea v-model="evaluacionForms[eq.id].observaciones_docente" rows="2"
                           placeholder="Observaciones generales del proyecto (opcional)"
-                          class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white resize-none
+                          class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white resize-none
                                  focus:outline-none focus:border-emerald-400"/>
 
                 <p v-if="errorEval" class="text-xs text-red-500 font-semibold">{{ errorEval }}</p>
@@ -557,38 +560,38 @@ const tituloCabecera = computed(() =>
                 <label class="block space-y-1">
                   <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Resumen</span>
                   <textarea v-model="diagnosticoForms[eq.id].resumen" rows="4" maxlength="3000"
-                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                            class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
                 </label>
                 <label class="block space-y-1">
                   <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fortalezas <span class="normal-case font-semibold text-gray-400">(una por línea)</span></span>
                   <textarea v-model="diagnosticoForms[eq.id].fortalezas" rows="4"
-                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                            class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
                 </label>
                 <label class="block space-y-1">
                   <span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Áreas de mejora <span class="normal-case font-semibold text-gray-400">(una por línea)</span></span>
                   <textarea v-model="diagnosticoForms[eq.id].areas_mejora" rows="4"
-                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                            class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
                 </label>
                 <label class="block space-y-1">
                   <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Valoración RA/CE</span>
                   <textarea v-model="diagnosticoForms[eq.id].valoracion_ra_ce" rows="3" maxlength="3000"
-                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                            class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
                 </label>
                 <label class="block space-y-1">
                   <span class="text-[10px] font-black uppercase tracking-wider text-gray-500">Conclusión</span>
                   <textarea v-model="diagnosticoForms[eq.id].conclusion" rows="2" maxlength="1000"
-                            class="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
+                            class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 resize-y focus:outline-none focus:border-amber-400"/>
                 </label>
                 <div class="flex flex-wrap items-center gap-2">
                   <button @click="guardarDiagnostico(eq)"
                           :disabled="guardandoDiagnostico[eq.id] || !diagnosticoForms[eq.id].resumen.trim()"
-                          class="px-3 py-1.5 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors
+                          class="min-h-9 px-3 py-1.5 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors
                                  text-[10px] font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed">
                     {{ guardandoDiagnostico[eq.id] ? 'Guardando…' : 'Guardar cambios' }}
                   </button>
                   <button @click="cancelarEdicionDiagnostico(eq)"
                           :disabled="guardandoDiagnostico[eq.id]"
-                          class="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50
+                          class="min-h-9 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50
                                  transition-colors text-[10px] font-black uppercase tracking-wider">
                     Cancelar
                   </button>
@@ -609,7 +612,7 @@ const tituloCabecera = computed(() =>
                         @animationend="terminarHalo(eq.id)"
                         aria-hidden="true" />
                   <button @click="verDiagnostico(eq)"
-                          class="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-200
+                          class="relative inline-flex min-h-9 items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-200
                                  hover:bg-emerald-600 transition-colors text-[10px] font-black uppercase tracking-wider">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -620,13 +623,13 @@ const tituloCabecera = computed(() =>
                 </span>
                 <button v-if="eq.diagnostico_final && encuentro?.puede_editar"
                         @click="editarDiagnostico(eq)"
-                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
+                        class="shrink-0 inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                hover:bg-amber-100 transition-colors text-[10px] font-black uppercase tracking-wider">
                   ✏️ Editar manualmente
                 </button>
                 <button v-if="encuentro?.puede_editar" @click="generarDiagnostico(eq)"
                         :disabled="generandoDiagnostico[eq.id]"
-                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
+                        class="shrink-0 inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                hover:bg-violet-100 transition-colors text-[10px] font-black uppercase tracking-wider
                                disabled:opacity-50 disabled:cursor-not-allowed">
                   ✨ {{ generandoDiagnostico[eq.id] ? 'La IA está redactando…' : (eq.diagnostico_final ? 'Regenerar diagnóstico con IA' : 'Generar diagnóstico con IA') }}

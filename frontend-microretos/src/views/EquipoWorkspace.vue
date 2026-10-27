@@ -662,6 +662,9 @@ function esTareaQA(tarea) {
   return tarea.descripcion.includes('QA')
 }
 
+// Explicación de «🔒 Obligatoria» visible al pulsar (en táctil no hay title)
+const obligatoriaAbierta = ref(null)
+
 function tooltipObligatoria(tarea) {
   if (esTareaQA(tarea)) {
     return 'No se puede eliminar. QA = control de calidad: repasad entre todo el equipo que el trabajo esté bien hecho antes de darlo por terminado.'
@@ -1234,7 +1237,7 @@ watch(workspace, (val) => {
                             {{ pf }}
                             <button @click="m.fortalezas.splice(pi, 1)" type="button"
                                     aria-label="Quitar punto fuerte"
-                                    class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full font-black text-emerald-400 hover:bg-emerald-100 hover:text-emerald-700">✕</button>
+                                    class="-mr-1 relative inline-flex h-6 w-6 items-center justify-center rounded-full before:absolute before:-inset-1.5 before:rounded-full font-black text-emerald-400 hover:bg-emerald-100 hover:text-emerald-700">✕</button>
                           </span>
                         </div>
                       </div>
@@ -1260,7 +1263,7 @@ watch(workspace, (val) => {
                             {{ pm }}
                             <button @click="m.puntosMejora.splice(pmi, 1)" type="button"
                                     aria-label="Quitar punto a mejorar"
-                                    class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full font-black text-amber-400 hover:bg-amber-100 hover:text-amber-700">✕</button>
+                                    class="-mr-1 relative inline-flex h-6 w-6 items-center justify-center rounded-full before:absolute before:-inset-1.5 before:rounded-full font-black text-amber-400 hover:bg-amber-100 hover:text-amber-700">✕</button>
                           </span>
                         </div>
                       </div>
@@ -1620,11 +1623,16 @@ watch(workspace, (val) => {
                           <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap"
                              :class="{ 'line-through text-gray-400': t.estado === 'realizado' }">
                             {{ t.descripcion }}
-                            <span v-if="t.obligatoria"
+                            <button v-if="t.obligatoria" type="button"
                                   :title="tooltipObligatoria(t)"
-                                  class="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help">
+                                  :aria-expanded="obligatoriaAbierta === t.id"
+                                  @click="obligatoriaAbierta = obligatoriaAbierta === t.id ? null : t.id"
+                                  class="relative shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help before:absolute before:-inset-2 before:content-['']">
                               🔒 Obligatoria
-                            </span>
+                            </button>
+                          </p>
+                          <p v-if="t.obligatoria && obligatoriaAbierta === t.id" class="mt-0.5 text-[10px] text-slate-500 leading-snug break-words">
+                            {{ tooltipObligatoria(t) }}
                           </p>
                           <select :value="t.responsable ?? ''" @change="actualizarResponsableTarea(t, $event.target)"
                                  class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
@@ -1686,7 +1694,7 @@ watch(workspace, (val) => {
                 <p class="text-sm text-gray-400">🔒 Completad primero la propuesta inicial de solución de arriba para desbloquear esta sección.</p>
               </div>
               <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
-                <div class="flex items-center justify-between mb-1">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
                   <p class="text-[9px] font-black uppercase tracking-widest text-violet-500">Sugerencias de soluciones</p>
                   <button @click="sugerirTareas" :disabled="sugiriendoTareas"
                           class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
@@ -1885,8 +1893,8 @@ watch(workspace, (val) => {
                 <button @click="onCompletarF2" :disabled="guardando"
                         :class="['btn-paso',
                                  f2Valido ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
-                  <span class="sm:hidden">{{ f2Valido ? 'Ir a Entrega →' : 'Continuar →' }}</span>
-                  <span class="hidden sm:inline">{{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}</span>
+                  <span class="md:hidden">{{ f2Valido ? 'Ir a Entrega →' : 'Continuar →' }}</span>
+                  <span class="hidden md:inline">{{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}</span>
                 </button>
               </div>
               <div v-if="intentoF2 && !f2Valido" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
@@ -2138,7 +2146,7 @@ watch(workspace, (val) => {
                   <div v-if="reflexionGrupal">
                     <div v-for="r in reflexionGrupal.respuestas" :key="r.pregunta" class="mb-3 last:mb-0">
                       <p class="text-[11px] font-bold text-gray-500 mb-0.5">{{ r.pregunta }}</p>
-                      <p class="text-sm text-[#1F2937]">{{ r.respuesta }}</p>
+                      <p class="text-sm text-[#1F2937] break-words">{{ r.respuesta }}</p>
                     </div>
                   </div>
                   <button v-else @click="abrirReflexion('grupal')"
@@ -2159,7 +2167,7 @@ watch(workspace, (val) => {
                       <p class="text-xs font-black text-alumnos-dark mb-1.5">{{ r.autor_nombre }}</p>
                       <div v-for="resp in r.respuestas.slice(0,2)" :key="resp.pregunta" class="mb-1.5 last:mb-0">
                         <p class="text-[10px] text-gray-400">{{ resp.pregunta }}</p>
-                        <p class="text-xs text-[#1F2937]">{{ resp.respuesta }}</p>
+                        <p class="text-xs text-[#1F2937] break-words">{{ resp.respuesta }}</p>
                       </div>
                     </div>
                   </div>
@@ -2219,33 +2227,33 @@ watch(workspace, (val) => {
                   <div class="space-y-4">
                     <div v-if="informeCierre.retoFrase">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">El reto</p>
-                      <p class="text-sm text-[#1F2937] font-semibold">{{ informeCierre.retoFrase }}</p>
+                      <p class="text-sm text-[#1F2937] font-semibold break-words">{{ informeCierre.retoFrase }}</p>
                     </div>
 
                     <div v-if="informeCierre.hallazgos.length">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Hallazgos clave</p>
                       <ul class="space-y-0.5">
-                        <li v-for="(h, i) in informeCierre.hallazgos.filter(x => x.trim())" :key="i" class="text-sm text-[#1F2937] flex gap-2">
-                          <span class="text-gray-300 shrink-0">·</span>{{ h }}
+                        <li v-for="(h, i) in informeCierre.hallazgos.filter(x => x.trim())" :key="i" class="text-sm text-[#1F2937] flex gap-2 min-w-0 break-words">
+                          <span class="text-gray-300 shrink-0">·</span><span class="min-w-0 break-words">{{ h }}</span>
                         </li>
                       </ul>
                     </div>
 
                     <div v-if="informeCierre.propuesta">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Propuesta inicial de solución</p>
-                      <p class="text-sm text-[#1F2937]">{{ informeCierre.propuesta }}</p>
-                      <p v-if="informeCierre.explicacionPropuesta" class="text-sm text-gray-500 mt-1">{{ informeCierre.explicacionPropuesta }}</p>
+                      <p class="text-sm text-[#1F2937] break-words">{{ informeCierre.propuesta }}</p>
+                      <p v-if="informeCierre.explicacionPropuesta" class="text-sm text-gray-500 mt-1 break-words">{{ informeCierre.explicacionPropuesta }}</p>
                     </div>
 
                     <div v-if="informeCierre.solucionFinal">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Solución final propuesta</p>
-                      <p class="text-sm text-[#1F2937]">{{ informeCierre.solucionFinal }}</p>
-                      <p v-if="informeCierre.justificacionSolucionFinal" class="text-sm text-gray-500 mt-1">{{ informeCierre.justificacionSolucionFinal }}</p>
+                      <p class="text-sm text-[#1F2937] break-words">{{ informeCierre.solucionFinal }}</p>
+                      <p v-if="informeCierre.justificacionSolucionFinal" class="text-sm text-gray-500 mt-1 break-words">{{ informeCierre.justificacionSolucionFinal }}</p>
                     </div>
 
                     <div v-if="informeCierre.tipoPrototipo">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Prototipo</p>
-                      <p class="text-sm text-[#1F2937]">
+                      <p class="text-sm text-[#1F2937] break-words">
                         {{ informeCierre.tipoPrototipo }}
                         <a v-if="informeCierre.prototipoUrl" :href="informeCierre.prototipoUrl" target="_blank" rel="noopener"
                            class="text-blue-600 hover:underline ml-1">(enlace)</a>
@@ -2260,9 +2268,9 @@ watch(workspace, (val) => {
 
                     <div v-if="informeCierre.entregableDesc">
                       <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Entregable final</p>
-                      <p class="text-sm text-[#1F2937]">{{ informeCierre.entregableDesc }}</p>
+                      <p class="text-sm text-[#1F2937] break-words">{{ informeCierre.entregableDesc }}</p>
                       <a v-if="informeCierre.entregableUrl" :href="informeCierre.entregableUrl" target="_blank" rel="noopener"
-                         class="text-xs text-blue-600 hover:underline">{{ informeCierre.entregableUrl }}</a>
+                         class="text-xs text-blue-600 hover:underline break-all">{{ informeCierre.entregableUrl }}</a>
                       <p v-if="archivosEntregable.length" class="text-xs text-gray-400 mt-1">{{ archivosEntregable.length }} archivo(s) adjunto(s)</p>
                     </div>
                   </div>
@@ -2360,14 +2368,14 @@ watch(workspace, (val) => {
                               transition-opacity flex items-center justify-center gap-1">
                     <button v-if="img.id !== imagenPortadaId" @click="marcarPortadaImagen(img)" type="button"
                             title="Marcar como portada" aria-label="Marcar como portada"
-                            class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-alumnos">
+                            class="relative w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-alumnos before:absolute before:-inset-0.5 before:rounded-full">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                       </svg>
                     </button>
                     <button @click.stop="eliminarImagen(img)" type="button" title="Eliminar imagen" aria-label="Eliminar imagen"
-                            class="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-red-400">
+                            class="relative w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-red-400 before:absolute before:-inset-0.5 before:rounded-full">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                       </svg>

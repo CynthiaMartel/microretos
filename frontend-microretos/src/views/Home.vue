@@ -53,7 +53,7 @@ const irABiblioteca = () => {
             </p>
           </div>
 
-          <div class="flex flex-col sm:flex-row items-center gap-3 pt-1 transition-all duration-700 delay-300 ease-out transform"
+          <div class="flex flex-col sm:flex-row items-center sm:justify-center md:justify-start gap-3 pt-1 transition-all duration-700 delay-300 ease-out transform"
                :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
 
             <!-- Sesión no iniciada: botón principal de login -->

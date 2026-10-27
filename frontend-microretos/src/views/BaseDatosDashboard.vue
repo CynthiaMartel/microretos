@@ -671,9 +671,11 @@ watch(modoGuia, (val) => {
   tourActivo.value = val
   if (val) {
     window.addEventListener('scroll', onScrollGuia, { passive: true })
+    window.addEventListener('resize', onScrollGuia, { passive: true })
     nextTick(scrollYRecalcular)
   } else {
     window.removeEventListener('scroll', onScrollGuia)
+    window.removeEventListener('resize', onScrollGuia)
   }
 })
 
@@ -686,6 +688,7 @@ function saltarGuia() { modoGuia.value = false; pasoGuia.value = 1 }
 onUnmounted(() => {
   tourActivo.value = false
   window.removeEventListener('scroll', onScrollGuia)
+  window.removeEventListener('resize', onScrollGuia)
 })
 
 onBeforeRouteUpdate(async () => {
@@ -762,18 +765,18 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <p class="text-[11px] text-white/85 leading-relaxed mb-3">{{ pasoActual.texto }}</p>
 
-            <div class="flex items-center gap-2">
-              <button @click="avanzarPaso"
-                      class="flex-1 py-1.5 rounded-full bg-administraciones text-white
-                             text-[9px] font-black uppercase tracking-widest
-                             hover:bg-administraciones/90 transition-all">
-                {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
-              </button>
+            <div class="flex items-center justify-between gap-2">
               <button @click="saltarGuia"
-                      class="px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
+                      class="relative before:absolute before:-inset-y-2 before:inset-x-0 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
                              text-white/40 text-[9px] font-black uppercase tracking-widest
                              hover:text-white/60 transition-all">
                 Saltar
+              </button>
+              <button @click="avanzarPaso"
+                      class="relative before:absolute before:-inset-y-2 before:inset-x-0 px-4 py-1.5 rounded-full bg-administraciones text-white
+                             text-[9px] font-black uppercase tracking-widest
+                             hover:bg-administraciones/90 transition-all">
+                {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
               </button>
             </div>
           </div>
@@ -835,9 +838,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <!-- Desplegable -->
               <Transition name="dropdown-fade">
                 <div v-if="zonaPeligroAbierta"
-                  class="absolute right-0 top-full mt-2 z-30
+                  class="absolute left-0 md:left-auto md:right-0 top-full mt-2 z-30
                          bg-white border border-red-100 rounded-2xl shadow-xl
-                         w-64 overflow-hidden">
+                         w-[min(16rem,calc(100vw-2rem))] overflow-hidden">
                   <div class="px-4 pt-3 pb-2 border-b border-red-50">
                     <p class="text-[10px] font-black uppercase tracking-widest text-red-400">Acciones críticas</p>
                     <p class="text-[10px] text-gray-400 mt-0.5">Afectan a toda la base de datos</p>
@@ -1067,12 +1070,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             v-model="busqueda"
             type="text"
             placeholder="Buscar por nombre, CIF, municipio o contacto..."
-            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200
+            class="w-full pl-10 pr-11 py-2.5 rounded-xl border border-gray-200
                    text-sm focus:outline-none focus:ring-2 focus:ring-administraciones/30
                    focus:border-administraciones transition-all"
           />
-          <button v-if="busqueda" @click="busqueda = ''"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button v-if="busqueda" @click="busqueda = ''" aria-label="Borrar búsqueda"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -1153,7 +1156,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
         <div
           v-for="centro in centrosOrdenados"
           :key="centro"
-          class="bg-white rounded-[1.75rem] border shadow-sm overflow-hidden transition-all duration-500"
+          class="bg-white rounded-[1.75rem] border shadow-sm overflow-hidden has-[[data-menu-estado]]:overflow-visible transition-all duration-500"
           :class="centrosResaltados.has(centro)
             ? 'border-administraciones/40 centro-resaltado'
             : 'border-gray-100'"
@@ -1162,7 +1165,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           <div class="flex items-center pr-3 gap-1">
             <button
               @click="toggleCentro(centro)"
-              class="flex-1 flex items-center gap-4 px-6 py-5
+              class="flex-1 flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-5
                      hover:bg-gray-50/80 transition-colors duration-150 text-left min-w-0"
             >
               <div class="w-10 h-10 rounded-2xl bg-[#1F2937] flex items-center justify-center shrink-0">
@@ -1172,7 +1175,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="font-black text-lg text-azul-noche truncate">{{ centro }}</h2>
+                <h2 class="font-black text-lg text-azul-noche truncate" :title="centro">{{ centro }}</h2>
                 <p class="text-xs text-gray-400 font-medium mt-0.5">
                   {{ Object.values(datosPorCentro[centro].familias).reduce((n,f) => n + f.empresas.length, 0) }}
                   {{ Object.values(datosPorCentro[centro].familias).reduce((n,f) => n + f.empresas.length, 0) === 1 ? 'empresa' : 'empresas' }}
@@ -1199,6 +1202,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <div class="relative group/edit-tip shrink-0">
                 <button
                   @click.stop="pedirEditarCentro(centro)"
+                  aria-label="Editar centro, familias y ciclos"
                   class="w-9 h-9 rounded-full flex items-center justify-center
                          text-gray-300 hover:text-administraciones hover:bg-administraciones/10
                          border border-transparent hover:border-administraciones/30
@@ -1210,14 +1214,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   </svg>
                 </button>
                 <!-- Tooltip -->
-                <div class="pointer-events-none absolute right-0 top-full mt-2 z-20
+                <div class="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-2 z-20
                             w-max max-w-[180px] px-3 py-2 rounded-xl
                             bg-[#1F2937] text-white text-[11px] font-semibold leading-snug
-                            shadow-lg opacity-0 group-hover/edit-tip:opacity-100
-                            translate-y-1 group-hover/edit-tip:translate-y-0
+                            shadow-lg opacity-0 group-hover/edit-tip:opacity-100 group-focus-within/edit-tip:opacity-100
+                            translate-x-1 group-hover/edit-tip:translate-x-0 group-focus-within/edit-tip:translate-x-0
                             transition-all duration-150">
                   Editar centro, familias y ciclos
-                  <div class="absolute -top-1 right-3 w-2 h-2 bg-[#1F2937] rotate-45"></div>
+                  <div class="absolute top-1/2 -translate-y-1/2 -right-1 w-2 h-2 bg-[#1F2937] rotate-45"></div>
                 </div>
               </div>
               <!-- Botón eliminar -->
@@ -1307,12 +1311,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   class="border-t border-gray-50"
                 >
                   <!-- Fila empresa (summary) -->
-                  <div class="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-12 pr-3 sm:pr-4 py-3.5 hover:bg-gray-50/50 transition-colors">
+                  <!-- La fila entera despliega la empresa mediante la capa ::after del botón
+                       del nombre; píldora de estado y acciones van por encima (z-10) como
+                       hermanos, sin anidar botones. -->
+                  <div class="relative flex items-center gap-2 sm:gap-3 pl-4 sm:pl-12 pr-3 sm:pr-4 py-3.5 hover:bg-gray-50/50 transition-colors">
                     <!-- Info rápida -->
-                    <button
-                      @click="toggleEmpresa(empresa.id)"
-                      class="flex-1 flex items-center gap-4 min-w-0 text-left"
-                    >
+                    <div class="flex-1 flex items-center gap-4 min-w-0">
                       <div class="w-8 h-8 rounded-xl bg-administraciones/10 flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4 text-administraciones" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1321,46 +1325,56 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       </div>
                       <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class="font-bold text-sm text-[#1F2937] truncate">
+                          <button
+                            type="button"
+                            @click="toggleEmpresa(empresa.id)"
+                            :aria-expanded="empresaExpandida === empresa.id"
+                            class="max-w-full truncate text-left font-bold text-sm text-[#1F2937]
+                                   after:absolute after:inset-0 after:content-[''] focus:outline-none
+                                   focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-administraciones/40"
+                          >
                             {{ empresa.nombre_comercial }}
-                          </span>
+                          </button>
                           <span v-if="empresa.sector"
                                 class="text-[10px] font-bold uppercase tracking-wider
-                                       bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">
+                                       bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full max-w-full truncate"
+                                :title="empresa.sector">
                             {{ empresa.sector }}
                           </span>
                           <span v-if="empresa.tamano"
                                 class="text-[10px] font-bold uppercase tracking-wider
-                                       bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full shrink-0">
+                                       bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full max-w-full truncate"
+                                :title="empresa.tamano">
                             {{ empresa.tamano }}
                           </span>
                           <!-- Varias familias: la empresa se lista una sola vez; aquí se ven las demás -->
                           <span v-if="otrasFamilias(empresa, familia).length"
                                 :title="'También vinculada a: ' + otrasFamilias(empresa, familia).join(' · ')"
                                 class="text-[10px] font-bold bg-administraciones/10 text-administraciones
-                                       px-2 py-0.5 rounded-full shrink-0">
+                                       px-2 py-0.5 rounded-full max-w-full truncate">
                             + {{ otrasFamilias(empresa, familia).join(' · ') }}
                           </span>
-                          <div class="relative inline-block shrink-0" @click.stop>
+                          <div class="relative inline-block max-w-full min-w-0"
+                               :class="estadoDropdownAbierto === empresa.id ? 'z-30' : 'z-10'">
                             <button
                               @click="estadoEditandoId = null; estadoDropdownAbierto = estadoDropdownAbierto === empresa.id ? null : empresa.id"
                               :disabled="guardandoEstado.has(empresa.id)"
                               :class="empresa.estado_contacto
                                 ? [estadoBadge(empresa.estado_contacto).bg, estadoBadge(empresa.estado_contacto).text, estadoBadge(empresa.estado_contacto).border]
                                 : 'bg-gray-100 text-gray-400 border-gray-200'"
-                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
+                              class="inline-flex max-w-full min-h-9 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
                             >
                               <span v-if="empresa.estado_contacto"
                                 :class="[estadoBadge(empresa.estado_contacto).dot, estadoBadge(empresa.estado_contacto).pulse ? 'animate-pulse' : '']"
                                 class="w-1.5 h-1.5 rounded-full shrink-0"></span>
-                              {{ empresa.estado_contacto || 'Sin estado' }}
-                              <svg class="w-2.5 h-2.5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <span class="truncate">{{ empresa.estado_contacto || 'Sin estado' }}</span>
+                              <svg class="w-2.5 h-2.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                               </svg>
                             </button>
                             <Transition name="dropdown-fade">
-                              <div v-if="estadoDropdownAbierto === empresa.id"
-                                class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[220px]">
+                              <div data-menu-estado v-if="estadoDropdownAbierto === empresa.id"
+                                class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden w-[min(220px,calc(100vw-3rem))] sm:w-auto sm:min-w-[220px]">
 
                                 <!-- Modo visualización: estado actual + botón editar -->
                                 <template v-if="estadoEditandoId !== empresa.id">
@@ -1431,14 +1445,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                       </svg>
-                    </button>
+                    </div>
 
                     <!-- Acciones -->
-                    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div class="relative z-10 flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         @click="pedirEdicion(empresa)"
                         title="Modificar empresa"
-                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
+                        class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                                bg-administraciones/10 border border-administraciones/20 text-administraciones
                                hover:bg-administraciones/20 hover:border-administraciones/40
                                font-bold text-xs transition-all duration-150"
@@ -1452,7 +1466,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                       <button
                         @click="pedirEliminacion(empresa)"
                         title="Eliminar empresa"
-                        class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
+                        class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                                bg-red-50 border border-red-200 text-red-500
                                hover:bg-red-100 hover:border-red-300
                                font-bold text-xs transition-all duration-150"
@@ -1566,7 +1580,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                     :class="empresa.estado_contacto
                                       ? [estadoBadge(empresa.estado_contacto).bg, estadoBadge(empresa.estado_contacto).text, estadoBadge(empresa.estado_contacto).border]
                                       : 'bg-gray-100 text-gray-400 border-gray-200'"
-                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
+                                    class="inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
                                   >
                                     <span v-if="empresa.estado_contacto"
                                       :class="[estadoBadge(empresa.estado_contacto).dot, estadoBadge(empresa.estado_contacto).pulse ? 'animate-pulse' : '']"
@@ -1577,8 +1591,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                     </svg>
                                   </button>
                                   <Transition name="dropdown-fade">
-                                    <div v-if="estadoDropdownAbierto === `det-${empresa.id}`"
-                                      class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[220px]">
+                                    <div data-menu-estado v-if="estadoDropdownAbierto === `det-${empresa.id}`"
+                                      class="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden w-[min(220px,calc(100vw-3rem))] sm:w-auto sm:min-w-[220px]">
 
                                       <!-- Modo visualización -->
                                       <template v-if="estadoEditandoId !== empresa.id">
@@ -1832,7 +1846,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       <Transition name="expand">
         <div
           v-if="!cargando && !errorCarga && empresasHuerfanas.length > 0"
-          class="mt-6 rounded-[1.75rem] border border-amber-200 bg-amber-50/60 overflow-hidden"
+          class="mt-6 rounded-[1.75rem] border border-amber-200 bg-amber-50/60 overflow-hidden has-[[data-menu-estado]]:overflow-visible"
         >
           <!-- Cabecera sección -->
           <div class="flex items-center gap-4 px-6 py-5 border-b border-amber-200/70">
@@ -1860,12 +1874,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               class="border-b border-amber-100 last:border-b-0"
             >
               <!-- Fila empresa -->
-              <div class="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6 pr-3 sm:pr-4 py-3.5
+              <div class="relative flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6 pr-3 sm:pr-4 py-3.5
                           hover:bg-amber-100/50 transition-colors">
-                <button
-                  @click="toggleEmpresa(empresa.id)"
-                  class="flex-1 flex items-center gap-4 min-w-0 text-left"
-                >
+                <div class="flex-1 flex items-center gap-4 min-w-0">
                   <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                     <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1874,34 +1885,43 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                      <span class="font-bold text-sm text-amber-900 truncate">
+                      <button
+                        type="button"
+                        @click="toggleEmpresa(empresa.id)"
+                        :aria-expanded="empresaExpandida === empresa.id"
+                        class="max-w-full truncate text-left font-bold text-sm text-amber-900
+                               after:absolute after:inset-0 after:content-[''] focus:outline-none
+                               focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-amber-400/50"
+                      >
                         {{ empresa.nombre_comercial }}
-                      </span>
+                      </button>
                       <span v-if="empresa.sector"
                             class="text-[10px] font-bold uppercase tracking-wider
-                                   bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full shrink-0">
+                                   bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full max-w-full truncate"
+                            :title="empresa.sector">
                         {{ empresa.sector }}
                       </span>
-                      <div class="relative inline-block shrink-0" @click.stop>
+                      <div class="relative inline-block max-w-full min-w-0"
+                               :class="estadoDropdownAbierto === empresa.id ? 'z-30' : 'z-10'">
                         <button
                           @click="estadoDropdownAbierto = estadoDropdownAbierto === empresa.id ? null : empresa.id"
                           :disabled="guardandoEstado.has(empresa.id)"
                           :class="empresa.estado_contacto
                             ? [estadoBadge(empresa.estado_contacto).bg, estadoBadge(empresa.estado_contacto).text, estadoBadge(empresa.estado_contacto).border]
                             : 'bg-gray-100 text-gray-400 border-gray-200'"
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
+                          class="inline-flex max-w-full min-h-9 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-40"
                         >
                           <span v-if="empresa.estado_contacto"
                             :class="[estadoBadge(empresa.estado_contacto).dot, estadoBadge(empresa.estado_contacto).pulse ? 'animate-pulse' : '']"
                             class="w-1.5 h-1.5 rounded-full shrink-0"></span>
-                          {{ empresa.estado_contacto || 'Sin estado' }}
-                          <svg class="w-2.5 h-2.5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <span class="truncate">{{ empresa.estado_contacto || 'Sin estado' }}</span>
+                          <svg class="w-2.5 h-2.5 ml-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                           </svg>
                         </button>
                         <Transition name="dropdown-fade">
-                          <div v-if="estadoDropdownAbierto === empresa.id"
-                            class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden min-w-[220px]">
+                          <div data-menu-estado v-if="estadoDropdownAbierto === empresa.id"
+                            class="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden w-[min(220px,calc(100vw-3rem))] sm:w-auto sm:min-w-[220px]">
                             <button
                               v-for="opcion in ESTADOS_OPCIONES" :key="opcion"
                               @click="guardarEstadoContacto(empresa, opcion)"
@@ -1936,14 +1956,14 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                   </svg>
-                </button>
+                </div>
 
                 <!-- Acciones -->
-                <div class="flex items-center gap-1.5 shrink-0">
+                <div class="relative z-10 flex items-center gap-1.5 shrink-0">
                   <button
                     @click="pedirEdicion(empresa)"
                     title="Editar y reasignar centro"
-                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
+                    class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                            bg-amber-100 border border-amber-300 text-amber-700
                            hover:bg-amber-200 hover:border-amber-400
                            font-bold text-xs transition-all duration-150"
@@ -1957,7 +1977,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   <button
                     @click="pedirEliminacion(empresa)"
                     title="Eliminar empresa"
-                    class="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-full
+                    class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                            bg-red-50 border border-red-200 text-red-500
                            hover:bg-red-100 hover:border-red-300
                            font-bold text-xs transition-all duration-150"
@@ -2242,7 +2262,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                   v-model="passwordCatalogo"
                   :type="mostrarPasswordCatalogo ? 'text' : 'password'"
                   placeholder="Contraseña"
-                  class="w-full px-4 py-3 rounded-xl border text-sm font-medium
+                  class="w-full pl-4 pr-11 py-3 rounded-xl border text-sm font-medium
                          focus:outline-none focus:ring-2 transition-all"
                   :class="passwordCatalogoErr
                     ? 'border-red-300 focus:ring-red-200 bg-red-50'
@@ -2254,7 +2274,8 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                 <button
                   type="button"
                   @click="mostrarPasswordCatalogo = !mostrarPasswordCatalogo"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  :aria-label="mostrarPasswordCatalogo ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <svg v-if="!mostrarPasswordCatalogo" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -2431,9 +2452,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
     <Transition name="snack">
       <div
         v-if="snackbar.visible"
-        class="fixed bottom-6 right-6 z-[60] flex items-center gap-3
+        class="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[60] flex items-center gap-3
                px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold
-               max-w-sm"
+               max-w-[calc(100vw-2rem)] sm:max-w-sm"
         :class="snackbar.tipo === 'ok'
           ? 'bg-white text-[#1F2937] border border-gray-200 shadow-lg'
           : 'bg-red-50 text-red-700 border border-red-200'"
@@ -2451,11 +2472,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <span class="flex-1">{{ snackbar.mensaje }}</span>
+        <span class="flex-1 min-w-0 break-words">{{ snackbar.mensaje }}</span>
         <button
           v-if="snackbar.accion"
           @click="snackbar.accion.fn(); snackbar.visible = false"
-          class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+          class="ml-1 shrink-0 min-h-9 px-3 py-1.5 rounded-full bg-amber-400 text-[#1F2937] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
         >
           {{ snackbar.accion.label }}
         </button>

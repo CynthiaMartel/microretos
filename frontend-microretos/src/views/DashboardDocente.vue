@@ -723,7 +723,7 @@ function formatFecha(isoDate) {
     </Transition>
 
     <!-- Fondo decorativo -->
-    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[min(600px,100vw)] h-[400px]
                 bg-rol-fuerte opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <!-- Asistente de 4 pasos + columna derecha (diseño crear_encuentro.png) -->
@@ -855,7 +855,7 @@ function formatFecha(isoDate) {
                       <button v-for="op in [{ val: '', label: 'Todos' }, { val: '1º', label: '1º' }, { val: '2º', label: '2º' }]"
                               :key="op.val"
                               @click="filtroProyCurso = op.val"
-                              class="flex-1 py-2 rounded-full text-xs font-bold uppercase tracking-widest
+                              class="flex-1 inline-flex h-9 items-center justify-center rounded-full text-xs font-bold uppercase tracking-widest
                                      border transition-all"
                               :class="filtroProyCurso === op.val
                                 ? 'bg-primary-400 border-primary-400 text-white'
@@ -878,12 +878,12 @@ function formatFecha(isoDate) {
                   <div class="flex gap-3">
                     <button v-if="filtroProyCurso || filtroProyCiclo || filtroProyEstado || busquedaProy"
                             @click="filtroProyCurso = ''; filtroProyCiclo = ''; filtroProyEstado = ''; busquedaProy = ''"
-                            class="px-2 py-2 text-xs font-bold uppercase tracking-widest text-texto-secundario
+                            class="min-h-9 rounded-full px-2 py-2 text-xs font-bold uppercase tracking-widest text-texto-secundario
                                    hover:text-red-400 transition-colors">
                       Limpiar
                     </button>
                     <button @click="cerrarBuscadorProy"
-                            class="px-2 py-2 text-xs font-bold uppercase tracking-widest text-texto-secundario
+                            class="min-h-9 rounded-full px-2 py-2 text-xs font-bold uppercase tracking-widest text-texto-secundario
                                    hover:text-texto-secundario transition-colors">
                       Cancelar
                     </button>
@@ -1127,7 +1127,7 @@ function formatFecha(isoDate) {
                   <div v-if="encuentrosParaCopiar.length">
                     <button v-if="!copiandoAlumnado" type="button" @click="copiandoAlumnado = true; mensajeCopiaAlumnado = ''"
                             :disabled="!fechaEstablecida"
-                            class="inline-flex items-center gap-1.5 rounded-full border border-rol/30 bg-white px-3 py-2
+                            class="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-rol/30 bg-white px-3 py-2
                                    text-xs font-bold text-rol-fuerte transition-all hover:bg-rol/5
                                    disabled:opacity-40 disabled:cursor-not-allowed">
                       <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -1152,11 +1152,11 @@ function formatFecha(isoDate) {
                       </label>
                       <div class="flex flex-wrap justify-end gap-2">
                         <button type="button" @click="copiandoAlumnado = false; encuentroACopiar = ''"
-                                class="rounded-full px-3 py-2 text-xs font-bold text-texto-secundario hover:text-azul-noche">
+                                class="min-h-9 rounded-full px-3 py-2 text-xs font-bold text-texto-secundario hover:text-azul-noche">
                           Cancelar
                         </button>
                         <button type="button" @click="copiarAlumnadoDeEncuentro" :disabled="!encuentroACopiar"
-                                class="rounded-full bg-rol-fuerte px-4 py-2 text-xs font-bold text-white transition-all hover:bg-rol/90
+                                class="min-h-9 rounded-full bg-rol-fuerte px-4 py-2 text-xs font-bold text-white transition-all hover:bg-rol/90
                                        disabled:opacity-40 disabled:cursor-not-allowed">
                           Copiar alumnado
                         </button>
@@ -1198,7 +1198,7 @@ function formatFecha(isoDate) {
                           <span class="flex-1 min-w-0 truncate font-medium text-azul-noche">{{ a.alias }}</span>
                           <select :value="a.equipo_num" @change="form.alumnados[a._i].equipo_num = Number($event.target.value)"
                                   :aria-label="`Grupo de ${a.alias}`"
-                                  class="h-8 shrink-0 cursor-pointer rounded-xl border border-borde bg-white px-1.5 text-xs font-bold text-texto-secundario">
+                                  class="h-9 shrink-0 cursor-pointer rounded-xl border border-borde bg-white px-1.5 text-xs font-bold text-texto-secundario">
                             <option v-for="g in (form.num_equipos || 3)" :key="g" :value="g">G{{ g }}</option>
                           </select>
                           <RegenerarAliasButton :alias="a.alias" :usados="aliasUsados"
@@ -1222,7 +1222,7 @@ function formatFecha(isoDate) {
                         <span class="flex-1 min-w-0 truncate font-medium text-amber-700">{{ a.alias }}</span>
                         <select :value="''" @change="form.alumnados[a._i].equipo_num = Number($event.target.value)"
                                 :aria-label="`Asignar grupo a ${a.alias}`"
-                                class="h-8 shrink-0 cursor-pointer rounded-xl border border-amber-200 bg-white px-1.5 text-xs font-bold text-amber-700">
+                                class="h-9 shrink-0 cursor-pointer rounded-xl border border-amber-200 bg-white px-1.5 text-xs font-bold text-amber-700">
                           <option value="" disabled>Grupo</option>
                           <option v-for="g in (form.num_equipos || 3)" :key="g" :value="g">G{{ g }}</option>
                         </select>

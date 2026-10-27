@@ -600,7 +600,7 @@ async function copiarEmail(email) {
           </div>
 
           <button @click="abrirBienvenida('listar')"
-                  class="w-full text-center text-[10px] font-bold text-gray-400
+                  class="w-full min-h-9 rounded-full text-center text-[10px] font-bold text-gray-400
                          hover:text-gray-600 transition-colors py-1">
             Saltar
           </button>
@@ -627,8 +627,8 @@ async function copiarEmail(email) {
                 {{ modoEjemplo === 'contactar' ? 'el formulario de contacto' : 'el formulario de validación' }}
               </p>
             </div>
-            <button @click="mostrarEjemplo = false"
-                    class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200
+            <button @click="mostrarEjemplo = false" aria-label="Cerrar"
+                    class="w-9 h-9 shrink-0 rounded-full bg-gray-100 hover:bg-gray-200
                            flex items-center justify-center transition-colors">
               <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -749,7 +749,7 @@ async function copiarEmail(email) {
                 <div class="space-y-3">
                   <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</p>
 
-                  <div class="grid grid-cols-2 gap-2 items-end">
+                  <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 items-end">
 
                     <!-- Botón Enviar email -->
                     <div class="flex flex-col items-stretch gap-1">
@@ -1226,7 +1226,7 @@ async function copiarEmail(email) {
                               <div class="space-y-3">
                                 <p class="text-sm font-semibold text-texto-secundario">Acciones</p>
 
-                                <div class="grid grid-cols-2 gap-2">
+                                <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
                                   <button
                                     @click="abrirPanel('email')"
                                     :class="[

@@ -169,7 +169,7 @@ function formatItemFase(item) {
          @keydown.enter="!expandidoSiempre && emit('toggle-equipo')"
          :role="expandidoSiempre ? undefined : 'button'"
          :tabindex="expandidoSiempre ? undefined : 0"
-         :class="['w-full px-5 py-4 flex items-center gap-4 transition-colors text-left',
+         :class="['w-full px-5 py-4 flex flex-wrap xl:flex-nowrap items-center gap-x-4 gap-y-3 transition-colors text-left',
                   expandidoSiempre ? '' : 'hover:bg-gray-50 cursor-pointer']">
 
       <!-- Progreso circular -->
@@ -252,21 +252,27 @@ function formatItemFase(item) {
         </template>
       </div>
 
-      <!-- Sin token (colaborador de solo lectura) no hay acceso al workspace del alumnado -->
-      <router-link v-if="equipo.token"
-        :to="{ name: 'equipo-workspace', params: { token: equipo.token } }"
-        target="_blank"
-        rel="noopener"
-        @click.stop
-        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-600 text-[10px] font-black uppercase tracking-wide hover:bg-violet-100 transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-        </svg>
-        Ver en workspace
-      </router-link>
+      <!-- Acciones (workspace + slot): por debajo de xl van en una segunda fila a todo el
+           ancho para no aplastar nombre y miembros; empty:hidden si no hay ninguna -->
+      <div class="order-last basis-full xl:order-none xl:basis-auto xl:shrink-0 flex flex-wrap items-center gap-2 sm:pl-16 xl:pl-0 empty:hidden">
+        <!-- Sin token (colaborador de solo lectura) no hay acceso al workspace del alumnado -->
+        <router-link v-if="equipo.token"
+          :to="{ name: 'equipo-workspace', params: { token: equipo.token } }"
+          target="_blank"
+          rel="noopener"
+          @click.stop
+          title="Ver en workspace"
+          aria-label="Ver en workspace"
+          class="shrink-0 inline-flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-600 text-[10px] font-black uppercase tracking-wide hover:bg-violet-100 transition-colors"
+        >
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+          <span class="hidden sm:inline">Ver en workspace</span>
+        </router-link>
 
-      <slot name="acciones-cabecera" :equipo="equipo" />
+        <slot name="acciones-cabecera" :equipo="equipo" />
+      </div>
 
       <svg v-if="!expandidoSiempre"
            :class="['w-4 h-4 text-gray-400 shrink-0 transition-transform', equipoEstaAbierto ? 'rotate-180' : '']"
@@ -276,7 +282,7 @@ function formatItemFase(item) {
     </div>
 
     <!-- Detalle del equipo -->
-    <div v-if="equipoEstaAbierto" class="border-t border-gray-100 px-5 py-4 space-y-3">
+    <div v-if="equipoEstaAbierto" class="border-t border-gray-100 px-3 sm:px-5 py-4 space-y-3">
 
       <!-- Fases -->
       <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Progreso por fases</p>
@@ -284,19 +290,20 @@ function formatItemFase(item) {
         <div v-for="f in FASES" :key="f.num" class="rounded-2xl border border-gray-100 overflow-hidden">
 
           <div @click="!expandidoSiempre && emit('toggle-fase', f.num)"
-               :class="['w-full px-4 py-3 flex items-center gap-3 transition-colors text-left',
+               :class="['w-full px-3 sm:px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2 transition-colors text-left',
                         expandidoSiempre ? '' : 'hover:bg-gray-50 cursor-pointer']">
+            <!-- flex-wrap: en móvil el bloque de estado/acciones baja a su línea (alineado con el texto) -->
             <span :class="['w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0',
                            FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">{{ f.icono }}</span>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-[#1F2937] flex items-center gap-1.5">
-                <span :class="['px-1.5 py-px rounded-full text-[9px] font-black uppercase tracking-wide shrink-0',
+              <p class="text-sm font-bold text-[#1F2937] break-words">
+                <span :class="['inline-block align-middle mr-1 px-1.5 py-px rounded-full text-[9px] font-black uppercase tracking-wide',
                                FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">F{{ f.num }}</span>
                 {{ f.label }}
               </p>
-              <p class="text-xs text-gray-400">{{ f.desc }}</p>
+              <p class="text-xs text-gray-400 break-words">{{ f.desc }}</p>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-2 basis-full sm:basis-auto shrink-0 pl-11 sm:pl-0">
               <span v-if="equipo.fases[f.num]?.validado_docente"
                     class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">
                 Validado
@@ -318,16 +325,17 @@ function formatItemFase(item) {
                 rel="noopener"
                 @click.stop
                 title="Ver esta fase en el workspace"
-                :class="['inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wide hover:brightness-95 transition-all',
+                aria-label="Ver esta fase en el workspace"
+                :class="['inline-flex items-center justify-center gap-1 h-9 w-9 sm:w-auto sm:px-2.5 rounded-full text-[9px] font-black uppercase tracking-wide hover:brightness-95 transition-all',
                          FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]"
               >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
-                Workspace
+                <span class="hidden sm:inline">Workspace</span>
               </router-link>
               <svg v-if="!expandidoSiempre"
-                   :class="['w-3.5 h-3.5 text-gray-400 transition-transform', faseEstaAbierta(f.num) ? 'rotate-180' : '']"
+                   :class="['w-3.5 h-3.5 text-gray-400 transition-transform shrink-0 ml-auto sm:ml-0', faseEstaAbierta(f.num) ? 'rotate-180' : '']"
                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
               </svg>
@@ -335,27 +343,27 @@ function formatItemFase(item) {
           </div>
 
           <!-- Contenido de la fase -->
-          <div v-if="faseEstaAbierta(f.num)" class="px-4 pb-4 border-t border-gray-50 pt-3">
+          <div v-if="faseEstaAbierta(f.num)" class="px-3 sm:px-4 pb-4 border-t border-gray-50 pt-3">
             <template v-if="equipo.fases[f.num]?.datos">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div v-for="entry in formatDatos(equipo.fases[f.num].datos)" :key="entry.clave"
-                     :class="['rounded-xl border border-gray-100 bg-gray-50 p-3',
+                     :class="['min-w-0 rounded-xl border border-gray-100 bg-gray-50 p-3',
                               entry.tipo !== 'texto' || entry.valor?.length > 70 ? 'sm:col-span-2' : '']">
-                  <p :class="['flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider mb-2', FASE_COLORS[f.color].text]">
+                  <p :class="['flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider mb-2 break-words', FASE_COLORS[f.color].text]">
                     <span :class="['w-1.5 h-1.5 rounded-full shrink-0', FASE_COLORS[f.color].dot]"></span>
                     {{ entry.clave }}
                   </p>
 
-                  <p v-if="entry.tipo === 'texto'" class="text-sm text-[#1F2937] leading-relaxed whitespace-pre-line">{{ entry.valor }}</p>
+                  <p v-if="entry.tipo === 'texto'" class="text-sm text-[#1F2937] leading-relaxed whitespace-pre-line break-words">{{ entry.valor }}</p>
 
                   <div v-else-if="entry.tipo === 'preguntas'" class="space-y-3">
                     <div v-for="(item, i) in entry.items" :key="i" class="space-y-1.5">
-                      <p :class="['flex items-start gap-2 text-sm font-black leading-snug rounded-xl px-3 py-2',
+                      <p :class="['flex items-start gap-2 text-sm font-black leading-snug rounded-xl px-3 py-2 break-words',
                                   FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">
                         <span class="shrink-0 w-5 h-5 rounded-full bg-white/70 flex items-center justify-center text-[11px] font-black">{{ i + 1 }}</span>
-                        {{ item.pregunta }}
+                        <span class="min-w-0 break-words">{{ item.pregunta }}</span>
                       </p>
-                      <p class="text-sm text-[#1F2937] leading-relaxed bg-white
+                      <p class="text-sm text-[#1F2937] leading-relaxed break-words bg-white
                                 border border-gray-100 border-l-4 border-l-centros rounded-lg px-2.5 py-1.5 ml-3">
                         <span v-if="item.respuesta">{{ item.respuesta }}</span>
                         <span v-else class="text-gray-400 italic">Sin responder</span>
@@ -365,7 +373,7 @@ function formatItemFase(item) {
 
                   <ul v-else class="space-y-1.5">
                     <li v-for="(item, i) in entry.items" :key="i"
-                        class="text-sm text-[#1F2937] leading-relaxed border-l-2 border-centros/30 pl-2.5">
+                        class="text-sm text-[#1F2937] leading-relaxed break-words border-l-2 border-centros/30 pl-2.5">
                       {{ item }}
                     </li>
                   </ul>

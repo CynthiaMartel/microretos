@@ -255,7 +255,7 @@ async function confirmarEliminacion() {
             </Transition>
 
             <!-- X -->
-            <button type="button" class="ecc-x" @click="$emit('cerrar')">
+            <button type="button" class="ecc-x" @click="$emit('cerrar')" aria-label="Cerrar">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -286,7 +286,7 @@ async function confirmarEliminacion() {
 .ecc-card::-webkit-scrollbar       { width: 5px; }
 .ecc-card::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 3px; }
 
-.ecc-header   { display: flex; align-items: flex-start; gap: 1rem; }
+.ecc-header   { display: flex; align-items: flex-start; gap: 1rem; padding-right: 2.5rem; }
 .ecc-icon-box { flex-shrink: 0; width: 52px; height: 52px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 1rem; display: flex; align-items: center; justify-content: center; }
 .ecc-title    { font-size: 1.2rem; font-weight: 900; color: #1F2937; letter-spacing: -.025em; line-height: 1.2; }
 .ecc-sub      { font-size: .78rem; color: #6b7280; margin-top: .3rem; font-weight: 500; }
@@ -315,44 +315,17 @@ async function confirmarEliminacion() {
 
 .ecc-alert-error { display: flex; align-items: center; gap: .75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 1rem; padding: .75rem 1rem; color: #dc2626; font-size: .78rem; font-weight: 700; }
 
-/* Botones */
-.ecc-actions { display: flex; gap: .75rem; margin-top: .5rem; }
-
-.ecc-btn-danger {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: 1rem 1.5rem; background: #dc2626; color: #fff; border: none;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer;
-  box-shadow: 0 6px 20px rgba(220,38,38,.3); transition: all .2s;
-}
-.ecc-btn-danger:hover:not(:disabled)  { background: #b91c1c; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(220,38,38,.4); }
-.ecc-btn-danger:active:not(:disabled) { transform: scale(.97); }
-.ecc-btn-danger:disabled              { opacity: .4; cursor: not-allowed; }
-
-.ecc-btn-danger-outline {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: 1rem 1.5rem; background: #fff; color: #dc2626;
-  border: 2px solid #fca5a5; border-radius: 1rem; font-weight: 900; font-size: .7rem;
-  letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: all .2s;
-}
-.ecc-btn-danger-outline:hover  { background: #fef2f2; border-color: #f87171; }
-.ecc-btn-danger-outline:active { transform: scale(.97); }
-
-.ecc-btn-ghost {
-  display: flex; align-items: center; justify-content: center; gap: .4rem;
-  padding: 1rem 1.5rem; background: #fff; color: #6b7280; border: 2px solid #e5e7eb;
-  border-radius: 1rem; font-weight: 900; font-size: .7rem; letter-spacing: .15em;
-  text-transform: uppercase; cursor: pointer; transition: all .2s;
-}
-.ecc-btn-ghost:hover  { border-color: #d1d5db; color: #374151; }
-.ecc-btn-ghost:active { transform: scale(.97); }
-
 .ecc-x {
-  position: absolute; top: 1.25rem; right: 1.25rem; width: 32px; height: 32px;
+  position: absolute; top: 1.25rem; right: 1.25rem; width: 36px; height: 36px;
   background: #fef2f2; border: none; border-radius: 9999px; color: #f87171;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s, color .2s;
 }
 .ecc-x:hover { background: #fee2e2; color: #dc2626; }
+
+@media (max-width: 640px) {
+  .ecc-card { padding: 1.5rem 1.25rem; }
+  .ecc-x    { top: 1rem; right: 1rem; }
+}
 
 /* Transiciones */
 .ecc-overlay-enter-active, .ecc-overlay-leave-active { transition: opacity .3s ease; }

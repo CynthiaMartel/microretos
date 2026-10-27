@@ -191,7 +191,7 @@ function irAPaginaCompleta() {
             <div class="flex items-center gap-2 shrink-0 ml-auto">
               <button v-if="proyecto"
                       @click="descargarPDF(proyecto)"
-                      class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest
+                      class="min-h-9 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest
                              text-white shadow-sm transition-all flex items-center gap-1.5"
                       :class="[theme.bg, theme.bgHover]">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,7 +315,7 @@ function irAPaginaCompleta() {
                     <div class="flex items-center gap-2">
                       <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 min-w-0">{{ landingUrl }}</p>
                       <button @click="copiarUrl"
-                              :class="['shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all',
+                              :class="['shrink-0 min-h-9 px-3 py-2 rounded-full text-xs font-bold border transition-all',
                                         urlCopiada ? [theme.bg5, theme.text, theme.border20] : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]]">
                         {{ urlCopiada ? '¡Copiado!' : 'Copiar' }}
                       </button>
@@ -415,7 +415,7 @@ function irAPaginaCompleta() {
                     <div class="space-y-0.5 text-xs text-gray-400">
                       <p v-if="proyecto.datos_empresa.sector">{{ proyecto.datos_empresa.sector }}</p>
                       <p v-if="proyecto.datos_empresa.persona_contacto">{{ proyecto.datos_empresa.persona_contacto }}</p>
-                      <p v-if="proyecto.datos_empresa.email">{{ proyecto.datos_empresa.email }}</p>
+                      <p v-if="proyecto.datos_empresa.email" class="break-all">{{ proyecto.datos_empresa.email }}</p>
                       <p v-if="proyecto.datos_empresa.descripcion" class="mt-2 leading-relaxed text-gray-500">{{ proyecto.datos_empresa.descripcion }}</p>
                     </div>
                   </div>
@@ -427,9 +427,9 @@ function irAPaginaCompleta() {
                            :class="[theme.bg5, theme.border20, theme.text]">
                         {{ proyecto.datos_centro.docente_nombre.charAt(0).toUpperCase() }}
                       </div>
-                      <div>
+                      <div class="min-w-0">
                         <p class="text-sm font-bold text-[#1F2937]">{{ proyecto.datos_centro.docente_nombre }}</p>
-                        <a v-if="proyecto.datos_centro.docente_email" :href="`mailto:${proyecto.datos_centro.docente_email}`" class="text-xs hover:underline" :class="theme.text">
+                        <a v-if="proyecto.datos_centro.docente_email" :href="`mailto:${proyecto.datos_centro.docente_email}`" class="text-xs hover:underline break-all" :class="theme.text">
                           {{ proyecto.datos_centro.docente_email }}
                         </a>
                       </div>
@@ -456,7 +456,7 @@ function irAPaginaCompleta() {
                   </div>
 
                   <div v-if="raCeBlocks.length" class="card-section sm:col-span-2">
-                    <button @click="raCeAbierto = !raCeAbierto" type="button" class="w-full flex items-center justify-between text-left">
+                    <button @click="raCeAbierto = !raCeAbierto" type="button" class="w-full min-h-9 flex items-center justify-between text-left">
                       <p class="section-label">Resultados de Aprendizaje y Criterios de Evaluación</p>
                       <svg :class="['w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0', raCeAbierto ? 'rotate-180' : '']"
                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,7 +490,7 @@ function irAPaginaCompleta() {
                      class="flex flex-wrap items-center justify-between gap-2">
                   <p class="group-header !mb-0">El reto</p>
                   <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
-                          class="px-3 py-1.5 rounded-full border-2 text-[10px] font-black
+                          class="min-h-9 px-3 py-1.5 rounded-full border-2 text-[10px] font-black
                                  uppercase tracking-wider hover:text-white transition-all mb-3"
                           :class="[theme.bg5, theme.border, theme.text, theme.bgHover]">
                     📎 Ver ficha reto original
@@ -566,7 +566,7 @@ function irAPaginaCompleta() {
 
                   <div v-if="proyecto.diseno_microproyecto?.clases?.length" class="card-section sm:col-span-2">
                     <p class="section-label">Cronograma — hitos por fase</p>
-                    <div class="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-5 gap-3 mt-2">
+                    <div class="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
                       <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3" :class="COLOR_MAP_FASES[f.color]">
                         <div class="flex items-center gap-1.5 mb-1">
                           <span class="text-base leading-none">{{ f.icono }}</span>
@@ -651,7 +651,7 @@ function irAPaginaCompleta() {
                             <div v-for="(v, i) in videos" :key="i"
                                  class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
                                         hover:border-blue-200 hover:bg-blue-50/40 transition-colors group/vid">
-                              <button @click="abrirRecurso(v)" class="w-8 h-8 rounded-full bg-blue-50 shrink-0 flex items-center justify-center group-hover/vid:bg-blue-100 transition-colors">
+                              <button @click="abrirRecurso(v)" class="w-9 h-9 rounded-full bg-blue-50 shrink-0 flex items-center justify-center group-hover/vid:bg-blue-100 transition-colors">
                                 <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
@@ -671,7 +671,7 @@ function irAPaginaCompleta() {
                                  class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100
                                         transition-colors group/doc"
                                  :class="paletteExtra[theme.key].hoverBorderBgDoc">
-                              <button @click="abrirRecurso(d)" class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center transition-colors"
+                              <button @click="abrirRecurso(d)" class="w-9 h-9 rounded-full shrink-0 flex items-center justify-center transition-colors"
                                       :class="[theme.bg5, paletteExtra[theme.key].groupHoverBgDoc]">
                                 <svg class="w-3.5 h-3.5" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -732,7 +732,7 @@ function irAPaginaCompleta() {
                   <div class="bg-white border rounded-[1.5rem] shadow-sm overflow-hidden"
                        :class="proyecto.empresa_validado ? theme.border20 : proyecto.empresa_no_valida_aun ? 'border-red-200' : 'border-gray-100'">
                     <div class="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-                      <div v-for="(val, key) in proyecto.validacion_empresa.respuestas" :key="key" class="px-5 py-4 flex items-start gap-4">
+                      <div v-for="(val, key) in proyecto.validacion_empresa.respuestas" :key="key" class="px-3 sm:px-5 py-4 flex items-start gap-3 sm:gap-4">
                         <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
                              :class="val === 'Sí' ? [theme.bg5, 'border', theme.border20] : val === 'No' ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'">
                           <svg class="w-4 h-4" :class="val === 'Sí' ? theme.text : val === 'No' ? 'text-red-500' : 'text-amber-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -809,7 +809,7 @@ function irAPaginaCompleta() {
         <div class="relative max-w-4xl w-full max-h-[85vh] flex flex-col">
           <div class="flex items-center justify-between mb-3">
             <p class="text-white text-sm font-bold truncate">{{ modalRecurso.label }}</p>
-            <button @click="modalRecurso = null" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all shrink-0">
+            <button @click="modalRecurso = null" class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all shrink-0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -965,6 +965,7 @@ function irAPaginaCompleta() {
   .notebook-holes { left: .55rem; }
   .meta-cell { flex: 1 0 100%; border-right: none; border-bottom: 1px solid #dde3ed; }
   .meta-cell:last-child { border-bottom: none; }
+  .empresa-diferenciada { padding: .75rem; }
 }
 
 .proyecto-ficha-modal-enter-active,

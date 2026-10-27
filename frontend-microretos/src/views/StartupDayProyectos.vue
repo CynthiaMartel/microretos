@@ -111,9 +111,11 @@ watch(modoGuia, (val) => {
   tourActivo.value = val;
   if (val) {
     window.addEventListener('scroll', onScrollGuia, { passive: true });
+    window.addEventListener('resize', onScrollGuia, { passive: true });
     nextTick(scrollYRecalcular);
   } else {
     window.removeEventListener('scroll', onScrollGuia);
+    window.removeEventListener('resize', onScrollGuia);
   }
 });
 
@@ -161,6 +163,7 @@ onMounted(() => {
 onUnmounted(() => {
   tourActivo.value = false;
   window.removeEventListener('scroll', onScrollGuia);
+  window.removeEventListener('resize', onScrollGuia);
 });
 
 // ── Curso académico compartido (store): todo lo que se lista y cuenta sale de aquí ──
@@ -436,17 +439,17 @@ function mostrarSnack(mensaje, accion = null) {
             <p class="text-xs text-white/80 leading-relaxed mb-3">{{ pasoActual?.texto }}</p>
             <div class="flex items-center justify-between gap-2">
               <button @click="cerrarGuia"
-                      class="text-[10px] font-bold text-white/30 hover:text-white/60 transition-colors">
+                      class="-ml-3 inline-flex h-9 items-center rounded-full px-3 text-[10px] font-bold text-white/30 hover:text-white/60 transition-colors">
                 Cerrar
               </button>
               <div class="flex gap-2">
                 <button v-if="pasoGuia > 1" @click="retrocederPaso"
-                        class="px-3 py-1.5 rounded-full bg-white/10 text-white text-[11px] font-black
+                        class="inline-flex h-9 items-center px-3 py-1.5 rounded-full bg-white/10 text-white text-[11px] font-black
                                hover:bg-white/20 transition-all">
                   ← Ant.
                 </button>
                 <button @click="avanzarPaso"
-                        class="px-3 py-1.5 rounded-full text-white text-[11px] font-black
+                        class="inline-flex h-9 items-center px-3 py-1.5 rounded-full text-white text-[11px] font-black
                                transition-all" :class="[theme.bg, theme.bgHover]">
                   {{ pasoGuia < guiaPasosData.length ? 'Siguiente →' : 'Finalizar' }}
                 </button>
@@ -634,7 +637,7 @@ function mostrarSnack(mensaje, accion = null) {
             </label>
             <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin proyectos en este curso.</p>
             <button v-if="familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
-                    class="mt-1 inline-flex h-8 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
+                    class="mt-1 inline-flex h-9 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
               {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${familiasPanel.length})` }}
             </button>
           </div>
@@ -772,19 +775,19 @@ function mostrarSnack(mensaje, accion = null) {
   <Transition name="sp-snack">
     <div
       v-if="snackbar.visible"
-      class="fixed bottom-6 right-6 z-[60] flex items-center gap-3
+      class="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[60] flex items-center gap-3
              px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold
-             max-w-sm bg-[#1a2332] text-white border border-white/10"
+             max-w-[calc(100vw-2rem)] sm:max-w-sm bg-[#1a2332] text-white border border-white/10"
     >
       <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
       </svg>
-      <span class="flex-1">{{ snackbar.mensaje }}</span>
+      <span class="flex-1 min-w-0 break-words">{{ snackbar.mensaje }}</span>
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"
-        class="ml-1 shrink-0 px-3 py-1.5 rounded-full bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
+        class="ml-1 shrink-0 inline-flex h-9 items-center px-3 py-1.5 rounded-full bg-amber-400 text-[#1a2332] text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-all"
       >
         {{ snackbar.accion.label }}
       </button>

@@ -268,7 +268,8 @@ const confirmarDocente = () =>
       <div class="fila-pasos">
         <button type="button" @click="irA('principal')" class="btn-paso-atras">Cancelar</button>
         <button type="button" @click="confirmarDocente" :disabled="trabajando" class="btn-paso">
-          {{ trabajando ? 'Validando…' : 'Confirmar validación' }}
+          <template v-if="trabajando">Validando…</template>
+          <template v-else><span class="sm:hidden">Confirmar</span><span class="hidden sm:inline">Confirmar validación</span></template>
         </button>
       </div>
     </div>

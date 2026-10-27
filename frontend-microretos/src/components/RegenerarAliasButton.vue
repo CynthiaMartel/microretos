@@ -1,4 +1,5 @@
 <script setup>
+import { ref, onBeforeUnmount } from 'vue'
 import { generarAliasAleatorio, nombreDeAlias } from '../utils/alias.js'
 
 const props = defineProps({
@@ -9,7 +10,21 @@ const props = defineProps({
 })
 const emit = defineEmits(['generado'])
 
+// En dispositivos sin hover (táctil) el tooltip se muestra unos segundos al pulsar
+const tooltipTactil = ref(false)
+let temporizadorTooltip = null
+
+function mostrarTooltipTactil() {
+  if (typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(hover: hover)').matches) return
+  tooltipTactil.value = true
+  clearTimeout(temporizadorTooltip)
+  temporizadorTooltip = setTimeout(() => { tooltipTactil.value = false }, 2500)
+}
+
+onBeforeUnmount(() => clearTimeout(temporizadorTooltip))
+
 function generar() {
+  mostrarTooltipTactil()
   emit('generado', generarAliasAleatorio(nombreDeAlias(props.alias), props.usados))
 }
 </script>
@@ -20,7 +35,7 @@ function generar() {
             class="dice-btn" aria-label="Generador de alias: cambia el animal y el color">
       <span class="dice-emoji">🎲</span>
     </button>
-    <span class="dice-tooltip" role="tooltip">Generador de alias</span>
+    <span class="dice-tooltip" :class="{ 'is-visible': tooltipTactil }" role="tooltip">Generador de alias</span>
   </span>
 </template>
 
@@ -104,7 +119,8 @@ function generar() {
     transform: translateX(-50%) translateY(0);
   }
 }
-.dice-btn:focus-visible ~ .dice-tooltip {
+.dice-btn:focus-visible ~ .dice-tooltip,
+.dice-tooltip.is-visible {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);

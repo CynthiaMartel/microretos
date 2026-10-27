@@ -918,8 +918,8 @@ async function copiarUrl() {
               </p>
               <h3 class="text-lg font-black text-azul-noche">QR del Reto</h3>
             </div>
-            <button @click="showQrModal = false"
-                    class="w-8 h-8 flex items-center justify-center rounded-full
+            <button @click="showQrModal = false" aria-label="Cerrar"
+                    class="h-9 w-9 shrink-0 flex items-center justify-center rounded-full
                            bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -1000,8 +1000,9 @@ async function copiarUrl() {
                 <span class="flex-1 truncate">{{ qrUrl }}</span>
                 <button @click="copiarUrl"
                         :class="urlCopiada ? theme.text : ['text-gray-400', paletteExtra[theme.key].hoverText]"
-                        class="shrink-0 transition-colors"
-                        :title="urlCopiada ? 'Copiado' : 'Copiar URL'">
+                        class="shrink-0 -my-2.5 -mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                        :title="urlCopiada ? 'Copiado' : 'Copiar URL'"
+                        :aria-label="urlCopiada ? 'Copiado' : 'Copiar URL'">
                   <svg v-if="!urlCopiada" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2
