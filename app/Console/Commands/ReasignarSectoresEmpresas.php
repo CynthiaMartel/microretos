@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\DB;
 class ReasignarSectoresEmpresas extends Command
 {
     protected $signature = 'empresas:reasignar-sectores
+                            {--catalogo : Solo las plantillas del catálogo DuaLab (no toca empresas de centros).}
+                            {--centro= : Solo las empresas de este centro (id).}
                             {--commit : Aplica los cambios. Sin esta opción es un dry-run.}';
 
     protected $description = 'Reasigna el sector de las empresas a la lista cerrada (dry-run por defecto).';
@@ -112,7 +114,9 @@ class ReasignarSectoresEmpresas extends Command
         $sinPropuesta = [];
 
         // Lote acotado: el listado completo de empresas ronda las 160 (sin paginar en el dashboard)
-        Empresa::query()->orderBy('id')->chunkById(200, function ($empresas) use ($porEmpresa, &$cambios, &$sinPropuesta) {
+        Empresa::query()->when($this->option('catalogo'), fn ($q) => $q->where('es_catalogo', true))
+            ->when($this->option('centro'), fn ($q) => $q->where('centro_id', (int) $this->option('centro')))
+            ->orderBy('id')->chunkById(200, function ($empresas) use ($porEmpresa, &$cambios, &$sinPropuesta) {
             foreach ($empresas as $empresa) {
                 $actual = trim((string) $empresa->sector);
                 if (SectoresEmpresa::esValido($actual)) continue;

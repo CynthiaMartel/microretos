@@ -17,6 +17,15 @@ import api from '../api.js'
 import CentroEducativoModal from './CentroEducativoModal.vue'
 import SelectorFamiliasEmpresa from './SelectorFamiliasEmpresa.vue'
 import { SECTORES_EMPRESA, esSectorDeLista } from '../config/sectoresEmpresa'
+import { TAMANOS_EMPRESA } from '../config/tamanosEmpresa'
+
+// Mismos valores que Empresa::NIVELES_DIGITALIZACION (backend); '' = sin indicar
+const NIVELES_DIGITALIZACION = [
+  { valor: '',      texto: 'Sin indicar' },
+  { valor: 'Bajo',  texto: 'Bajo (papel, correo, hoja de cálculo)' },
+  { valor: 'Medio', texto: 'Medio (herramientas digitales habituales)' },
+  { valor: 'Alto',  texto: 'Alto (sistemas integrados, automatización)' },
+]
 import { useAuthStore } from '../stores/auth'
 
 // Real ↔ ficticia de una empresa ya creada: solo superadmin (DuaLab). El backend lo
@@ -90,7 +99,7 @@ const tabNueva                = ref('basico')
 const nuevaLoading            = ref(false)
 const nuevaErrors             = reactive({})
 const nuevaForm               = reactive({
-  nombre_comercial: '', razon_social: '', cif: '', sector: '', tamano: '',
+  nombre_comercial: '', razon_social: '', cif: '', sector: '', tamano: '', nivel_digitalizacion: '',
   web: '', centro_educativo: '', persona_contacto: '',
   telefono: '', email_general: '', direccion: '', municipio: '',
   provincia: '', codigo_postal: '', actividad: '',
@@ -256,6 +265,7 @@ async function guardarNueva() {
       cif:             nuevaForm.cif              || null,
       sector:          nuevaForm.sector,
       tamano:          nuevaForm.tamano,
+      nivelDigitalizacion: nuevaForm.nivel_digitalizacion || null,
       web:             nuevaForm.web              || null,
       centroEducativo: nuevaForm.centro_educativo || null,
       ciclosIds: [],
@@ -315,7 +325,7 @@ const estadoDropdownNuevaAbierto  = ref(false)
 const estadoDropdownEditarAbierto = ref(false)
 
 const editarForm               = reactive({
-  nombre_comercial: '', razon_social: '', cif: '', sector: '', tamano: '',
+  nombre_comercial: '', razon_social: '', cif: '', sector: '', tamano: '', nivel_digitalizacion: '',
   web: '', centro_educativo: '', persona_contacto: '', telefono: '',
   email_general: '', direccion: '', municipio: '', provincia: '',
   codigo_postal: '', actividad: '', estado_contacto: '', es_simulada: false,
@@ -348,6 +358,7 @@ watch(() => props.mostrarEditarEmpresa, (v) => {
     editarForm.cif              = e.cif              || ''
     editarForm.sector           = e.sector           || ''
     editarForm.tamano           = e.tamano           || ''
+    editarForm.nivel_digitalizacion = e.nivel_digitalizacion || ''
     editarForm.web              = e.web              || ''
     editarForm.centro_educativo = e.centro_educativo || ''
     editarForm.persona_contacto = e.persona_contacto || ''
@@ -401,6 +412,7 @@ async function guardarEdicion() {
       cif:             editarForm.cif              || null,
       sector:          editarForm.sector           || null,
       tamano:          editarForm.tamano           || null,
+      nivelDigitalizacion: editarForm.nivel_digitalizacion || null,
       web:             editarForm.web              || null,
       centroEducativo: editarForm.centro_educativo || null,
       // Conjunto completo: el backend añade y quita según esta lista
@@ -472,7 +484,7 @@ defineExpose({ abrirTrasLogin })
               </div>
               <div class="min-w-0 flex-1">
                 <h2 class="ime-title">Registrar nueva empresa</h2>
-                <p class="ime-sub">
+                <p class="ime-sub break-words">
                   "<span class="text-centros font-black">{{ nombreBuscado }}</span>"
                   no está en DUALAB — completa los datos para añadirla
                 </p>
@@ -663,16 +675,22 @@ defineExpose({ abrirTrasLogin })
                   <label class="ime-label">Tamaño de la Empresa *</label>
                   <select v-model="nuevaForm.tamano" class="ime-input" :class="{'ime-input-err': nuevaErrors.tamano}">
                     <option value="">Selecciona...</option>
-                    <option value="Micropyme (1-10)">Micropyme (1 a 10 empleados)</option>
-                    <option value="Pequeña (10-50)">Pequeña (10 a 50 empleados)</option>
-                    <option value="Mediana (50-250)">Mediana (50 a 250 empleados)</option>
-                    <option value="Grande (+250)">Grande (Más de 250 empleados)</option>
+                    <option v-for="t in TAMANOS_EMPRESA" :key="t.valor" :value="t.valor">{{ t.texto }}</option>
                   </select>
                   <p v-if="nuevaErrors.tamano" class="ime-err">{{ nuevaErrors.tamano }}</p>
                 </div>
                 <div>
                   <label class="ime-label">Web</label>
                   <input v-model="nuevaForm.web" class="ime-input" placeholder="https://..."/>
+                </div>
+              </div>
+              <div class="ime-g2">
+                <div>
+                  <label class="ime-label">Nivel de digitalización</label>
+                  <select v-model="nuevaForm.nivel_digitalizacion" class="ime-input">
+                    <option v-for="n in NIVELES_DIGITALIZACION" :key="n.valor" :value="n.valor">{{ n.texto }}</option>
+                  </select>
+                  <p class="ime-hint">Ajusta los retos a lo que la empresa puede adoptar.</p>
                 </div>
               </div>
               <div class="ime-g2">
@@ -876,7 +894,7 @@ defineExpose({ abrirTrasLogin })
               </div>
               <div class="min-w-0 flex-1">
                 <h2 class="ime-title">Editar empresa</h2>
-                <p class="ime-sub">
+                <p class="ime-sub break-words">
                   Modificando:
                   <span class="font-black text-[#1F2937]">{{ empresaAEditar?.nombre_comercial }}</span>
                 </p>
@@ -1029,15 +1047,21 @@ defineExpose({ abrirTrasLogin })
                   <label class="ime-label">Tamaño de la Empresa</label>
                   <select v-model="editarForm.tamano" class="ime-input">
                     <option value="">Selecciona...</option>
-                    <option value="Micropyme (1-10)">Micropyme (1 a 10 empleados)</option>
-                    <option value="Pequeña (10-50)">Pequeña (10 a 50 empleados)</option>
-                    <option value="Mediana (50-250)">Mediana (50 a 250 empleados)</option>
-                    <option value="Grande (+250)">Grande (Más de 250 empleados)</option>
+                    <option v-for="t in TAMANOS_EMPRESA" :key="t.valor" :value="t.valor">{{ t.texto }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="ime-label">Web</label>
                   <input v-model="editarForm.web" class="ime-input" placeholder="https://..."/>
+                </div>
+              </div>
+              <div class="ime-g2">
+                <div>
+                  <label class="ime-label">Nivel de digitalización</label>
+                  <select v-model="editarForm.nivel_digitalizacion" class="ime-input">
+                    <option v-for="n in NIVELES_DIGITALIZACION" :key="n.valor" :value="n.valor">{{ n.texto }}</option>
+                  </select>
+                  <p class="ime-hint">Ajusta los retos a lo que la empresa puede adoptar.</p>
                 </div>
               </div>
               <div class="ime-g2">

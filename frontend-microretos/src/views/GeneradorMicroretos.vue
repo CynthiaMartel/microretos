@@ -17,6 +17,7 @@ import SelectorRaCeModulos from '../components/SelectorRaCeModulos.vue';
 import CrearEmpresaFicticiaIA from '../components/CrearEmpresaFicticiaIA.vue';
 import { ejemploInteres } from '../config/ejemplosInteresFamilia.js';
 import { SECTORES_EMPRESA } from '../config/sectoresEmpresa.js';
+import { TAMANOS_EMPRESA } from '../config/tamanosEmpresa.js';
 import { queryRedirect } from '../utils/redirectLogin.js';
 
 const authStore = useAuthStore();
@@ -2557,10 +2558,7 @@ watch(modoGuia, async (v) => {
                   <label class="label-style" :class="!seleccion.empresaTamano && (seleccion.empresaId || seleccion.empresaNombre) ? 'text-red-500' : ''">Tamaño de la Empresa *</label>
                   <select v-model="seleccion.empresaTamano" :disabled="esModoDemo || estaPasoBloqueado(1) || datosFichaBloqueados" :title="tituloDemo" class="input-style" :class="!seleccion.empresaTamano && (seleccion.empresaId || seleccion.empresaNombre) ? 'border-red-500 bg-red-900/30 text-red-400 focus:border-red-500 focus:bg-red-900/40' : ''">
                     <option value="" disabled selected>¡FALTA INFO! Selecciona...</option>
-                    <option value="Micropyme (1-10)">Micropyme (1 a 10 empleados)</option>
-                    <option value="Pequeña (10-50)">Pequeña (10 a 50 empleados)</option>
-                    <option value="Mediana (50-250)">Mediana (50 a 250 empleados)</option>
-                    <option value="Grande (+250)">Grande (Más de 250 empleados)</option>
+                    <option v-for="t in TAMANOS_EMPRESA" :key="t.valor" :value="t.valor">{{ t.texto }}</option>
                   </select>
                 </div>
 

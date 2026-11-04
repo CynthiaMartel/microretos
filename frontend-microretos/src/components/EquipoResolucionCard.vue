@@ -14,6 +14,7 @@ import { computed } from 'vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
 import RolGrupo from './RolGrupo.vue'
+import { useAuthStore } from '../stores/auth.js'
 
 const props = defineProps({
   equipo: { type: Object, required: true },
@@ -29,6 +30,9 @@ const props = defineProps({
   diagnosticoResaltado: { type: Boolean, default: false },
 })
 const emit = defineEmits(['toggle-equipo', 'toggle-fase'])
+
+// Workspace en solo lectura: rol docente/admin (la ficha del proyecto también la ve la empresa)
+const puedeVerWorkspace = useAuthStore().canAccess('equipo-workspace-docente')
 
 const FASES = FASES_PROYECTO
 
@@ -255,14 +259,15 @@ function formatItemFase(item) {
       <!-- Acciones (workspace + slot): por debajo de xl van en una segunda fila a todo el
            ancho para no aplastar nombre y miembros; empty:hidden si no hay ninguna -->
       <div class="order-last basis-full xl:order-none xl:basis-auto xl:shrink-0 flex flex-wrap items-center gap-2 sm:pl-16 xl:pl-0 empty:hidden">
-        <!-- Sin token (colaborador de solo lectura) no hay acceso al workspace del alumnado -->
-        <router-link v-if="equipo.token"
-          :to="{ name: 'equipo-workspace', params: { token: equipo.token } }"
+        <!-- Workspace del grupo en solo lectura (vista del docente, por id: sin token no se puede
+             escribir nada). También para colaboradores de solo lectura; la empresa no tiene acceso. -->
+        <router-link v-if="puedeVerWorkspace"
+          :to="{ name: 'equipo-workspace-docente', params: { equipoId: equipo.id } }"
           target="_blank"
           rel="noopener"
           @click.stop
-          title="Ver en workspace"
-          aria-label="Ver en workspace"
+          title="Ver en workspace (solo lectura)"
+          aria-label="Ver el workspace del grupo en solo lectura"
           class="shrink-0 inline-flex items-center justify-center gap-1.5 h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-600 text-[10px] font-black uppercase tracking-wide hover:bg-violet-100 transition-colors"
         >
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -319,8 +324,8 @@ function formatItemFase(item) {
               <span v-else class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 text-[10px] font-semibold">
                 Pendiente
               </span>
-              <router-link v-if="equipo.token"
-                :to="{ name: 'equipo-workspace', params: { token: equipo.token }, query: { fase: f.num } }"
+              <router-link v-if="puedeVerWorkspace"
+                :to="{ name: 'equipo-workspace-docente', params: { equipoId: equipo.id }, query: { fase: f.num } }"
                 target="_blank"
                 rel="noopener"
                 @click.stop

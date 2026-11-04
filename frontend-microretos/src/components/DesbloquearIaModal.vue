@@ -132,7 +132,8 @@ async function verificarCodigo() {
                 <svg v-if="verificando" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/>
                 </svg>
-                {{ verificando ? 'Comprobando...' : 'Desbloquear' }}
+                <template v-if="verificando"><span class="sm:hidden">Comprobando</span><span class="hidden sm:inline">Comprobando...</span></template>
+                <template v-else>Desbloquear</template>
               </button>
             </div>
           </form>

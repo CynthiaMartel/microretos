@@ -5,8 +5,12 @@ defineProps({
   cargandoRaCe: { type: Boolean, default: false },
   raCeBlocks: { type: Array, default: () => [] },
   modulosExpandidos: { type: Set, default: () => new Set() },
+  // Con `enlaces`, cada alias lleva a su ficha en el Listado de alumnado (ver-alumno) y cada
+  // grupo con id real (grupoConWorkspace) ofrece «Ver detalle» (ver-grupo).
+  enlaces: { type: Boolean, default: false },
+  grupoConWorkspace: { type: Function, default: () => false },
 })
-defineEmits(['toggle-modulo'])
+defineEmits(['toggle-modulo', 'ver-alumno', 'ver-grupo'])
 </script>
 
 <template>
@@ -21,16 +25,31 @@ defineEmits(['toggle-modulo'])
         <div class="flex items-center gap-1.5 mb-2">
           <span class="w-5 h-5 rounded-full bg-centros/10 text-centros font-black text-[9px]
                        flex items-center justify-center shrink-0">{{ n }}</span>
-          <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+          <p class="min-w-0 flex-1 text-[9px] font-black uppercase tracking-widest text-gray-400">
             Grupo {{ n }}
           </p>
+          <button v-if="enlaces && grupoConWorkspace(n)" type="button" @click="$emit('ver-grupo', n)"
+                  :title="`Ver el detalle del grupo ${n}`"
+                  class="inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-rol-fuerte hover:bg-rol/10">
+            Ver detalle
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </button>
         </div>
         <div v-if="alumnadosDelEquipo(n).length" class="flex flex-wrap gap-1">
-          <span v-for="a in alumnadosDelEquipo(n)" :key="a.alias"
-                class="text-[11px] font-semibold text-[#1F2937] bg-white border border-gray-200
-                       rounded-full px-2 py-0.5">
-            {{ a.alias }}
-          </span>
+          <template v-for="a in alumnadosDelEquipo(n)" :key="a.alias">
+            <!-- Alias → su ficha en el Listado de alumnado (desplegada y resaltada) -->
+            <button v-if="enlaces" type="button" @click="$emit('ver-alumno', a.alias)"
+                    :title="`Ver a ${a.alias} en el listado de alumnado`"
+                    class="inline-flex min-h-9 max-w-full items-center rounded-full border border-gray-200 bg-white px-3 text-left
+                           text-[11px] font-semibold text-[#1F2937] transition-colors hover:border-rol-fuerte/40 hover:bg-rol/5 hover:text-rol-fuerte">
+              <span class="break-words">{{ a.alias }}</span>
+            </button>
+            <span v-else
+                  class="text-[11px] font-semibold text-[#1F2937] bg-white border border-gray-200
+                         rounded-full px-2 py-0.5">
+              {{ a.alias }}
+            </span>
+          </template>
         </div>
         <p v-else class="text-[10px] text-gray-300 italic">Sin alumnos</p>
       </div>

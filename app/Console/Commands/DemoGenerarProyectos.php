@@ -4,6 +4,10 @@ namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\InvocaControladoresReales;
 use App\Http\Controllers\MicroproyectoController;
+use App\Http\Requests\SugerirFundamentacionRequest;
+use App\Http\Requests\SugerirKpisRequest;
+use App\Http\Requests\SugerirMetodologiaRequest;
+use App\Http\Requests\SugerirObjetivosRequest;
 use App\Http\Requests\UpdateMicroproyectoRequest;
 use App\Http\Requests\ValidarPropuestaEmpresaRequest;
 use App\Models\CentroEducativo;
@@ -43,12 +47,27 @@ class DemoGenerarProyectos extends Command
                             {--max=4 : Máximo de proyectos a generar por reto.}
                             {--limit=0 : Tope de RETOS a procesar en esta ejecución (0 = todos los pendientes).}
                             {--force : Vuelve a procesar retos que ya tienen proyectos simulados (añade más, no borra los existentes).}
+                            {--validar= : Ids de proyectos demo ya generados a llevar a validado (flujo real: propuesta → validación empresa → docente), sin generar nada más.}
                             {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste.}';
 
     protected $description = 'Genera microproyectos (Taller de Ideas) para los microretos simulados, con estados variados (nunca completado).';
 
     private const USUARIO_ID = 48; // DuaLab — único propietario de todo lo generado en este comando
     private const CENTRO_ID  = 10; // DuaLab
+
+    /** @var array<string, class-string<\Illuminate\Foundation\Http\FormRequest>> */
+    private const REQUEST_SUGERENCIA = [
+        'sugerirFundamentacion' => SugerirFundamentacionRequest::class,
+        'sugerirMetodologia'    => SugerirMetodologiaRequest::class,
+        'sugerirObjetivos'      => SugerirObjetivosRequest::class,
+        'sugerirKpis'           => SugerirKpisRequest::class,
+    ];
+
+    // Límites de esos FormRequest para los campos de texto que envía este comando
+    private const MAX_SUGERENCIA = [
+        'titulo' => 300, 'pregunta_reto' => 1000, 'descripcion' => 2000, 'contexto' => 2000,
+        'reto_origen' => 3000, 'ciclo' => 255, 'curso' => 20, 'empresa' => 500, 'modulos' => 1000, 'fases' => 500,
+    ];
 
     // Reparto de estado por posición global (índice % 10): nunca 'completado' aquí —
     // ese cierre lo hace demo:generar-encuentros-equipos vía el flujo real de equipo.
@@ -79,6 +98,10 @@ class DemoGenerarProyectos extends Command
         }
         $this->actuarComo($usuario);
 
+        if ($this->option('validar')) {
+            return $this->validarExistentes($usuario, $commit);
+        }
+
         // Scoped a empresa.centro_id=10: 'es_simulado' es un flag genérico que ya usan
         // otros microretos de prueba ajenos a este flujo (de otros centros, o sin empresa
         // asociada) — sin este filtro se les generarían proyectos que no corresponden a
@@ -108,7 +131,13 @@ class DemoGenerarProyectos extends Command
 
         foreach ($retos as $reto) {
             $empresa = $reto->empresa;
-            $familia = $empresa?->familias->first();
+            // La familia del proyecto es la del ciclo del reto: una empresa puede tener varias
+            // familias, y cada reto es de una sola (ver DemoGenerarRetos::familiasYCiclos()).
+            $familiaCiclo = \App\Models\CicloFormativo::whereKey($reto->ciclo_id)->value('familia_id');
+            /** @var \App\Models\Familia|null $familia */
+            $familia = ($familiaCiclo ? $empresa?->familias->firstWhere('id', $familiaCiclo) : null)
+                ?? ($familiaCiclo ? \App\Models\Familia::find($familiaCiclo) : null)
+                ?? $empresa?->familias->first();
             if (!$empresa || !$familia) {
                 $this->warn("Reto #{$reto->id} ({$reto->titulo}) sin empresa/familia asociada — omitido.");
                 continue;
@@ -325,6 +354,36 @@ class DemoGenerarProyectos extends Command
      * $this->authorize('update', $proyecto) vía MicroproyectoPolicy — ya cubierto por
      * Auth::setUser() en actuarComo() al principio de handle().
      */
+    /**
+     * --validar: lleva proyectos demo ya generados a 'validado' por el flujo real, p. ej. para
+     * poder completarlos después con demo:generar-encuentros-equipos --proyectos.
+     */
+    private function validarExistentes(User $usuario, bool $commit): int
+    {
+        $ids = array_filter(array_map('intval', explode(',', (string) $this->option('validar'))));
+        $proyectos = Microproyecto::whereIn('id', $ids)->where('es_demo', true)->where('centro_id', self::CENTRO_ID)->get();
+
+        foreach ($proyectos as $proyecto) {
+            $this->line("Proyecto #{$proyecto->id} \"{$proyecto->titulo}\": {$proyecto->estado} → validado");
+            // Valor en bruto: el PHPDoc de Microproyecto::$estado está desfasado (borrador/publicado/archivado)
+            $estado = (string) $proyecto->getRawOriginal('estado');
+            if (!$commit || $estado === 'validado') continue;
+
+            if ($estado === 'en_edicion') {
+                $req = $this->peticion(UpdateMicroproyectoRequest::class, ['estado' => 'propuesta'], $usuario);
+                app(MicroproyectoController::class)->update($req, $proyecto->uuid);
+                $estado = (string) Microproyecto::whereKey($proyecto->id)->value('estado');
+            }
+            if ($estado === 'propuesta') {
+                $this->avanzarAValidado($proyecto, $usuario);
+            }
+            $this->info("  ✓ estado final: " . $proyecto->fresh()?->estado);
+        }
+
+        $this->info(($commit ? 'Hecho: ' : 'Dry-run: ') . $proyectos->count() . ' proyectos.');
+        return self::SUCCESS;
+    }
+
     private function avanzarAValidado(Microproyecto $proyecto, User $usuario): void
     {
         // Mismas claves y valores que envía el formulario real (StartupDayLanding.vue):
@@ -361,8 +420,8 @@ class DemoGenerarProyectos extends Command
     }
 
     /**
-     * Invoca uno de los métodos "sugerirX" de MicroproyectoController (todos con la misma
-     * forma: Request plano, validate() inline, sin FormRequest ni $request->user()).
+     * Invoca uno de los métodos "sugerirX" de MicroproyectoController, cada uno con su
+     * FormRequest (REQUEST_SUGERENCIA), como usuario DuaLab.
      *
      * OJO — sin reintento a propósito: estos métodos cachean su resultado con
      * Cache::remember(..., 6h) por md5(contexto), INCLUSO cuando la IA falla (el closure
@@ -374,7 +433,20 @@ class DemoGenerarProyectos extends Command
      */
     private function llamarSugerencia(string $metodo, array $payload): array
     {
-        $request   = $this->peticion(Request::class, $payload);
+        // Desde 5104c66 cada sugerencia valida con su FormRequest (exige usuario y límites de
+        // longitud): se recorta como lo haría el formulario del Taller para no fallar la validación.
+        $clase = self::REQUEST_SUGERENCIA[$metodo];
+        foreach (self::MAX_SUGERENCIA as $campo => $max) {
+            if (is_string($payload[$campo] ?? null)) $payload[$campo] = mb_substr($payload[$campo], 0, $max);
+        }
+        /** @var \App\Models\User $usuario  actuarComo() ya fijó la cuenta DuaLab */
+        $usuario = \Illuminate\Support\Facades\Auth::user();
+        try {
+            $request = $this->peticion($clase, $payload, $usuario);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->warn("  … {$metodo}() no pasó la validación: " . json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+            return [];
+        }
         $respuesta = app(MicroproyectoController::class)->{$metodo}($request);
         $data      = json_decode($respuesta->getContent(), true);
 

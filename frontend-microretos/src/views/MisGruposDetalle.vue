@@ -6,7 +6,8 @@
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import api from '../api.js'
+import { getWorkspaceEncuentro } from '../services/encuentroService.js'
+import { evaluarEquipo, generarDiagnosticoFinal, guardarDiagnosticoFinal } from '../services/equipoService.js'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import DiagnosticoModal from '../components/DiagnosticoModal.vue'
 import EquipoResolucionCard from '../components/EquipoResolucionCard.vue'
@@ -53,7 +54,7 @@ const progresoMedio       = computed(() => {
 async function cargar() {
   cargando.value = true; error.value = ''
   try {
-    const res = await api.get(`/encuentros/${route.params.id}/workspace`)
+    const res = await getWorkspaceEncuentro(route.params.id)
     encuentro.value = res.data.encuentro
     proyecto.value = res.data.proyecto
     equipos.value  = res.data.equipos
@@ -134,7 +135,7 @@ async function enviarEvaluacion(equipo) {
   guardandoEval.value = true
   errorEval.value = ''
   try {
-    await api.patch(`/startup/equipos/${equipo.id}/evaluar`, {
+    await evaluarEquipo(equipo.id, {
       evaluacion: {
         ras:           form.ras.filter(r => r.nivel),
         nota_opcional: form.nota_docente,
@@ -235,7 +236,7 @@ async function generarDiagnostico(equipo) {
   generandoDiagnostico.value = { ...generandoDiagnostico.value, [equipo.id]: true }
   errorDiagnostico.value = { ...errorDiagnostico.value, [equipo.id]: '' }
   try {
-    const res = await api.post(`/startup/equipos/${equipo.id}/diagnostico-final`)
+    const res = await generarDiagnosticoFinal(equipo.id)
     equipo.diagnostico_final = res.data.diagnostico
     equipo.diagnostico_generado_en = res.data.generado_en
   } catch (e) {
@@ -279,7 +280,7 @@ async function guardarDiagnostico(equipo) {
   guardandoDiagnostico.value = { ...guardandoDiagnostico.value, [equipo.id]: true }
   errorDiagnostico.value = { ...errorDiagnostico.value, [equipo.id]: '' }
   try {
-    const res = await api.patch(`/startup/equipos/${equipo.id}/diagnostico-final`, {
+    const res = await guardarDiagnosticoFinal(equipo.id, {
       resumen:          form.resumen.trim(),
       fortalezas:       aLista(form.fortalezas),
       areas_mejora:     aLista(form.areas_mejora),
@@ -304,13 +305,28 @@ function progresoPct(equipo) {
   return progresoPonderado(equipo.fases)
 }
 
-// Llegada desde /mis-grupos con ?equipo=&ver=diagnostico (aviso "Aquí puedes ver el
-// diagnóstico del equipo"): tras cargar, abrir ese equipo y llevar el scroll a su diagnóstico.
+// «Ver detalle del grupo» de un grupo concreto (Encuentros, Listado de alumnado, Mis grupos):
+// abre ese grupo y lleva el scroll hasta su tarjeta, resaltándola un momento.
+const equipoResaltado = ref(null)
+async function irAEquipo(equipo) {
+  if (equipoAbierto.value !== equipo.id) toggleEquipo(equipo.id)
+  await nextTick()
+  const el = document.getElementById(`equipo-${equipo.id}`)
+  if (!el) return
+  el.scrollIntoView({ behavior: reducirMovimiento() ? 'auto' : 'smooth', block: 'start' })
+  equipoResaltado.value = equipo.id
+  clearTimeout(timerResaltado)
+  timerResaltado = setTimeout(() => { equipoResaltado.value = null }, 2500)
+}
+
+// Llegada con ?equipo= (y ?ver=diagnostico desde el aviso "Aquí puedes ver el diagnóstico
+// del equipo"): tras cargar, abrir ese equipo y llevar el scroll a él o a su diagnóstico.
 onMounted(async () => {
   await cargar()
-  if (route.query.ver !== 'diagnostico') return
   const equipo = equipos.value.find(e => String(e.id) === String(route.query.equipo))
-  if (equipo) irADiagnostico(equipo)
+  if (!equipo) return
+  if (route.query.ver === 'diagnostico') irADiagnostico(equipo)
+  else irAEquipo(equipo)
 })
 
 // Fecha del encuentro legible (la API la manda en ISO: «2026-10-06T00:00:00.000000Z»)
@@ -329,9 +345,9 @@ const tituloCabecera = computed(() =>
   <div class="min-h-screen bg-[#F8FAFC] pt-16">
     <!-- Cabecera común (sustituye a la barra fija propia, que repetía título y botones): el
          proyecto como título, «Detalle de grupos» (y «solo lectura» si es un encuentro compartido)
-         como antetítulo, volver a Mis grupos y «Ver proyecto» como acción. -->
+         como antetítulo, volver al seguimiento de grupos y «Ver proyecto» como acción. -->
     <div class="mx-auto max-w-[90rem] px-4 pt-5 pb-4 sm:px-6 lg:px-8">
-      <CabeceraSeccion :titulo="tituloCabecera" :volver="{ name: 'mis-grupos' }" volver-label="Volver a Mis grupos"
+      <CabeceraSeccion :titulo="tituloCabecera" :volver="{ name: 'encuentros-registrados', query: { ver: 'seguimiento', encuentro: route.params.id } }" volver-label="Volver al seguimiento de grupos"
                        :antetitulo="encuentro && encuentro.puede_editar === false ? 'Detalle de grupos · solo lectura' : 'Detalle de grupos'"
                        subtitulo="Avance de cada grupo del encuentro, fase a fase.">
         <button v-if="proyecto?.uuid" type="button" class="accion-secundaria"
@@ -458,6 +474,8 @@ const tituloCabecera = computed(() =>
 
           <EquipoResolucionCard
             v-for="equipo in equipos" :key="equipo.id"
+            :id="`equipo-${equipo.id}`"
+            :class="['scroll-mt-24 transition-shadow duration-500', equipoResaltado === equipo.id ? 'ring-2 ring-rol-fuerte/50 ring-offset-4' : '']"
             :equipo="equipo"
             :abierto="equipoAbierto === equipo.id"
             :fases-abiertas="fasesAbiertas"

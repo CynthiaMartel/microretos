@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
+import { getWorkspaceDocente } from '../services/equipoService.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
 import DesbloquearIaModal from '../components/DesbloquearIaModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
@@ -36,6 +37,11 @@ const msgOk     = ref('')
 const msgError  = ref('')
 
 const token = route.params.token
+
+// Vista del docente (/grupos/:equipoId/workspace): el mismo workspace en solo lectura, cargado
+// con su sesión y por id. No hay token, así que ninguna llamada de escritura puede funcionar;
+// además, los controles de edición se desactivan (fieldset) y no se guarda nada en el navegador.
+const soloLectura = route.name === 'equipo-workspace-docente'
 
 // ── Desbloqueo IA — código repartido por el docente, gatea "Sugerir con IA" ──
 const mostrarModalIa    = ref(false)
@@ -130,7 +136,7 @@ function pctFase(n) {
 onMounted(async () => {
   setTimeout(() => { isLoaded.value = true }, 60)
   try {
-    const res = await api.get(`/equipo/${token}`)
+    const res = soloLectura ? await getWorkspaceDocente(route.params.equipoId) : await api.get(`/equipo/${token}`)
     workspace.value = res.data
     // Enlaces "Ver en workspace" desde la ficha de proyecto completado abren directamente
     // en la fase indicada (?fase=1); si no es una fase visible para el equipo, se cae a
@@ -139,9 +145,12 @@ onMounted(async () => {
     faseVista.value = Number.isInteger(faseSolicitada) && puedeVerFase(faseSolicitada)
       ? faseSolicitada
       : equipo.value.fase_actual
-    localStorage.setItem('dualab_equipo_token', token)
-    localStorage.setItem('dualab_equipo_nombre', equipo.value.nombre)
-    localStorage.setItem('dualab_proyecto_titulo', proyecto.value.titulo)
+    // Reentrada del alumnado (EntrarWorkspace): nunca desde la vista del docente
+    if (!soloLectura) {
+      localStorage.setItem('dualab_equipo_token', token)
+      localStorage.setItem('dualab_equipo_nombre', equipo.value.nombre)
+      localStorage.setItem('dualab_proyecto_titulo', proyecto.value.titulo)
+    }
   } catch {
     error.value = true
   } finally {
@@ -151,6 +160,7 @@ onMounted(async () => {
 
 // ── Guardar fase ──────────────────────────────────────────────────────────
 async function guardarFase(n, datos) {
+  if (soloLectura) return
   guardando.value = true
   try {
     await api.put(`/equipo/${token}/fase/${n}`, { datos })
@@ -1027,15 +1037,35 @@ watch(workspace, (val) => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
       </div>
-      <h2 class="text-lg font-black text-azul-noche mb-2">Enlace no válido</h2>
-      <p class="text-sm text-gray-500 mb-6">Este enlace no existe o ha caducado. Comprueba el código con tu docente.</p>
-      <button @click="router.push({ name: 'unirse-equipo' })"
+      <h2 class="text-lg font-black text-azul-noche mb-2">{{ soloLectura ? 'No se puede abrir este workspace' : 'Enlace no válido' }}</h2>
+      <p class="text-sm text-gray-500 mb-6">{{ soloLectura ? 'El grupo no existe o no tienes acceso a su encuentro.' : 'Este enlace no existe o ha caducado. Comprueba el código con tu docente.' }}</p>
+      <button @click="soloLectura ? router.push({ name: 'encuentros-registrados', query: { ver: 'seguimiento' } }) : router.push({ name: 'unirse-equipo' })"
               class="px-6 py-3 rounded-full bg-alumnos text-white text-sm font-black uppercase tracking-widest">
         Volver
       </button>
     </div>
 
     <template v-else-if="workspace">
+
+      <!-- ══ AVISO: VISTA DEL DOCENTE EN SOLO LECTURA ══ -->
+      <div v-if="soloLectura" class="border-b border-amber-200 bg-amber-50" role="status">
+        <div class="max-w-[1380px] mx-auto flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-8">
+          <p class="flex min-w-0 flex-1 items-start gap-2 text-sm text-amber-900">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            <span><strong class="font-bold">Vista del docente · solo lectura.</strong> Ves el trabajo del grupo tal y como lo tiene; desde aquí no se puede cambiar nada.</span>
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button v-if="workspace.microreto_id" type="button" @click="verFichaReto = true"
+                    class="inline-flex h-9 items-center rounded-full border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+              Ficha del reto
+            </button>
+            <button type="button" @click="router.push({ name: 'mis-grupos-detalle', params: { id: workspace.encuentro_id }, query: { equipo: equipo.id } })"
+                    class="inline-flex h-9 items-center rounded-full bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600">
+              Detalle del grupo
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- ══ CABECERA OSCURA ══ -->
       <div class="bg-[#0C1220] text-white">
@@ -1051,8 +1081,14 @@ watch(workspace, (val) => {
             </h1>
             <div class="flex gap-1.5 sm:gap-2 flex-wrap">
               <span v-if="proyecto.empresa_nombre"
-                    class="text-[10px] sm:text-[11px] font-bold bg-white/10 text-white px-2.5 py-1 rounded-full">
+                    class="max-w-full break-words text-[10px] sm:text-[11px] font-bold bg-white/10 text-white px-2.5 py-1 rounded-full">
                 {{ proyecto.empresa_nombre }}
+              </span>
+              <!-- Perfil desde el que trabaja el equipo: la empresa puede ser de otro sector -->
+              <span v-if="proyecto.ciclo || proyecto.familia"
+                    class="max-w-full whitespace-normal break-words text-[10px] sm:text-[11px] font-bold bg-alumnos/20 text-white px-2.5 py-1 rounded-full"
+                    :title="[proyecto.ciclo, proyecto.familia].filter(Boolean).join(' · ')">
+                {{ proyecto.ciclo || proyecto.familia }}
               </span>
               <span v-if="proyecto.curso"
                     class="text-[10px] sm:text-[11px] font-bold bg-white/10 text-white px-2.5 py-1 rounded-full">
@@ -1076,38 +1112,31 @@ watch(workspace, (val) => {
 
       <!-- ══ BARRA DE FASES ══ -->
       <div class="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div class="max-w-[1380px] mx-auto">
-          <div class="flex overflow-x-auto scrollbar-none">
+        <!-- Pestañas en píldora dentro de un carril en píldora (mismo patrón que GestionUsuarios);
+             en móvil el carril se desliza si las cinco fases no caben -->
+        <div class="max-w-[1380px] mx-auto px-3 sm:px-6 py-2">
+          <div class="flex gap-1 overflow-x-auto scrollbar-none rounded-full border border-borde bg-white p-1"
+               role="group" aria-label="Fases del reto">
             <button
-              v-for="f in fasesConfig" :key="f.num"
+              v-for="f in fasesConfig" :key="f.num" type="button"
               @click="puedeVerFase(f.num) && alCambiarFase(f.num)"
-              class="flex-1 min-w-[72px] sm:min-w-[110px] flex flex-col items-center gap-0.5
-                     py-3 sm:py-3.5 px-1.5 sm:px-3 border-b-2 transition-all duration-200"
+              :aria-pressed="faseVista === f.num" :aria-disabled="!puedeVerFase(f.num)" :title="f.label"
+              class="inline-flex h-10 flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap
+                     rounded-full px-3 sm:px-4 text-xs sm:text-sm font-semibold transition-colors"
               :class="[
                 faseVista === f.num
-                  ? 'border-alumnos'
+                  ? 'bg-alumnos text-white shadow-sm'
                   : puedeVerFase(f.num)
-                    ? 'border-transparent hover:border-gray-200 cursor-pointer'
-                    : 'border-transparent cursor-default',
+                    ? 'text-texto-secundario hover:bg-gray-50 hover:text-azul-noche cursor-pointer'
+                    : 'text-gray-300 cursor-default',
               ]">
-              <span class="text-[9px] font-black uppercase tracking-wider"
-                    :class="faseVista === f.num ? 'text-alumnos-dark' : 'text-gray-400'">
-                <template v-if="getFase(f.num).completada">✓ </template>
-                F{{ f.num }}
+              <span class="text-[10px] font-black uppercase tracking-wider"
+                    :class="faseVista === f.num ? 'text-white/80' : puedeVerFase(f.num) ? 'text-gray-400' : 'text-gray-300'">
+                <template v-if="getFase(f.num).completada">✓ </template>F{{ f.num }}
               </span>
-              <!-- Label completo en sm+, abreviado en móvil -->
-              <span class="hidden sm:block text-[11px] font-bold leading-tight text-center"
-                    :class="faseVista === f.num
-                      ? 'text-alumnos-dark'
-                      : puedeVerFase(f.num) ? 'text-gray-600' : 'text-gray-300'">
-                {{ f.label }}
-              </span>
-              <span class="sm:hidden text-[10px] font-bold leading-tight text-center"
-                    :class="faseVista === f.num
-                      ? 'text-alumnos-dark'
-                      : puedeVerFase(f.num) ? 'text-gray-600' : 'text-gray-300'">
-                {{ f.shortLabel }}
-              </span>
+              <!-- Label completo en xl+ (en una línea no cabe antes), abreviado por debajo -->
+              <span class="hidden xl:inline">{{ f.label }}</span>
+              <span class="xl:hidden">{{ f.shortLabel }}</span>
             </button>
           </div>
         </div>
@@ -1135,7 +1164,9 @@ watch(workspace, (val) => {
 
       <!-- ══ LAYOUT DOS COLUMNAS ══ -->
       <div class="max-w-[1380px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
-        <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
+        <!-- fieldset: en la vista del docente desactiva de una vez todos los campos y botones de
+             edición de las fases y del lateral (la barra de fases, fuera, sigue funcionando) -->
+        <fieldset :disabled="soloLectura" class="m-0 flex min-w-0 flex-col gap-4 border-0 p-0 sm:gap-6 lg:flex-row items-start">
 
           <!-- ─────────────────────────────────────────────── -->
           <!--  CONTENIDO PRINCIPAL (fases)                    -->
@@ -1150,7 +1181,7 @@ watch(workspace, (val) => {
             <!-- Tarjeta intro de la fase activa -->
             <div class="bg-[#F0FDF4] border border-alumnos/20 rounded-2xl px-5 py-4 flex gap-3 items-start">
               <span class="text-2xl mt-0.5 shrink-0">{{ fasesConfig[faseVista].icono }}</span>
-              <div>
+              <div class="min-w-0">
                 <p class="text-sm font-black text-[#065F46] mb-0.5">
                   {{ fasesConfig[faseVista].label }}
                   <span v-if="duracionFase(faseVista)" class="font-normal text-[#047857]/80"> · {{ duracionFase(faseVista) }} clase(s)</span>
@@ -1168,9 +1199,9 @@ watch(workspace, (val) => {
               <div v-if="getFase(0).validado_docente"
                    class="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3">
                 <span class="text-green-600 text-lg">✓</span>
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-bold text-green-700">Fase validada por el docente</p>
-                  <p v-if="getFase(0).nota_docente" class="text-xs text-green-600">
+                  <p v-if="getFase(0).nota_docente" class="text-xs text-green-600 break-words">
                     Nota: {{ getFase(0).nota_docente }}/10 · {{ getFase(0).observaciones_docente }}
                   </p>
                 </div>
@@ -1221,11 +1252,11 @@ watch(workspace, (val) => {
                         <p class="text-[10px] font-black uppercase tracking-wider text-emerald-600 mb-1.5">Puntos fuertes</p>
                         <div class="flex gap-1.5 mb-2">
                           <input v-model="m.nuevaFortaleza" type="text" placeholder="Escribe tus puntos fuertes…" maxlength="40"
-                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white
+                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl min-h-9 px-2.5 py-1.5 bg-white
                                         focus:outline-none focus:border-emerald-400"
                                  @keydown.enter.prevent="addFortaleza(m)" />
                           <button @click="addFortaleza(m)" type="button"
-                                  class="shrink-0 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700
+                                  class="shrink-0 inline-flex min-h-9 items-center justify-center px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700
                                          text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100">
                             + Añadir
                           </button>
@@ -1247,11 +1278,11 @@ watch(workspace, (val) => {
                         <p class="text-[10px] font-black uppercase tracking-wider text-amber-600 mb-1.5">Puntos a mejorar</p>
                         <div class="flex gap-1.5 mb-2">
                           <input v-model="m.nuevoPuntoMejora" type="text" placeholder="Escribe tus puntos a mejorar…" maxlength="40"
-                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white
+                                 class="flex-1 min-w-0 text-xs border border-gray-200 rounded-xl min-h-9 px-2.5 py-1.5 bg-white
                                         focus:outline-none focus:border-amber-400"
                                  @keydown.enter.prevent="addPuntoMejora(m)" />
                           <button @click="addPuntoMejora(m)" type="button"
-                                  class="shrink-0 px-2.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
+                                  class="shrink-0 inline-flex min-h-9 items-center justify-center px-2.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
                                          text-[10px] font-black uppercase tracking-wider hover:bg-amber-100">
                             + Añadir
                           </button>
@@ -1288,7 +1319,7 @@ watch(workspace, (val) => {
                     <option v-for="r in rolesOpciones" :key="r" :value="r" class="capitalize">{{ r }}</option>
                   </select>
                   <button @click="addMiembro"
-                          class="px-4 py-2 rounded-full bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
+                          class="inline-flex min-h-9 items-center justify-center px-4 py-2 rounded-full bg-slate-600 text-white text-xs font-black uppercase tracking-wider">
                     + Añadir integrante
                   </button>
                 </div>
@@ -1328,12 +1359,15 @@ watch(workspace, (val) => {
                 </label>
               </div>
 
-              <!-- Acciones F0 -->
-              <div class="fila-pasos">
-                <button @click="guardarF0" :disabled="guardando"
-                        class="btn-paso-atras border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-700">
-                  <span class="sm:hidden">Guardar</span><span class="hidden sm:inline">Guardar borrador</span>
+              <!-- Acciones F0. Guardar va fuera de .fila-pasos (ahí solo Anterior | avanzar);
+                   F0 es la primera fase: sin Anterior, el botón de avanzar queda a la derecha -->
+              <div class="flex justify-end">
+                <button type="button" @click="guardarF0" :disabled="guardando"
+                        class="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50">
+                  Guardar borrador
                 </button>
+              </div>
+              <div class="fila-pasos">
                 <button @click="onCompletarF0" :disabled="guardando"
                         :class="['btn-paso',
                                  f0Valido ? 'bg-slate-600 text-white hover:bg-slate-700 shadow-slate-600/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
@@ -1356,9 +1390,9 @@ watch(workspace, (val) => {
               <div v-if="getFase(1).validado_docente"
                    class="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3">
                 <span class="text-green-600 text-lg">✓</span>
-                <div>
+                <div class="min-w-0">
                   <p class="text-sm font-bold text-green-700">Fase validada por el docente</p>
-                  <p v-if="getFase(1).observaciones_docente" class="text-xs text-green-600">{{ getFase(1).observaciones_docente }}</p>
+                  <p v-if="getFase(1).observaciones_docente" class="text-xs text-green-600 break-words">{{ getFase(1).observaciones_docente }}</p>
                 </div>
               </div>
               <div v-else-if="getFase(1).datos && !getFase(1).validado_docente && getFase(1).completada"
@@ -1371,7 +1405,7 @@ watch(workspace, (val) => {
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <p class="text-[9px] font-black uppercase tracking-widest text-blue-500">B · Diagnóstico de la empresa</p>
                   <button @click="verFichaReto = true" type="button"
-                          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200
+                          class="shrink-0 inline-flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200
                                  text-blue-700 text-[10px] font-black uppercase tracking-wider hover:bg-blue-100 transition-all">
                     👁 Ver reto
                   </button>
@@ -1381,22 +1415,29 @@ watch(workspace, (val) => {
                 </p>
 
                 <div class="space-y-3">
+                  <!-- Primero lo que la empresa busca de vuestra familia: puede no ser la de su sector -->
+                  <div v-if="diagnostico.interes_familia" class="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-orange-600 mb-1">
+                      Qué necesita de vosotros{{ proyecto.familia ? ` (${proyecto.familia})` : '' }}
+                    </p>
+                    <p class="text-sm text-[#1F2937] leading-relaxed break-words">{{ diagnostico.interes_familia }}</p>
+                  </div>
                   <div v-if="diagnostico.quien_es" class="bg-blue-50 rounded-xl px-4 py-3">
                     <p class="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">¿Quiénes son?</p>
-                    <p class="text-sm text-[#1F2937] leading-relaxed">{{ diagnostico.quien_es }}</p>
+                    <p class="text-sm text-[#1F2937] leading-relaxed break-words">{{ diagnostico.quien_es }}</p>
                   </div>
                   <div v-if="diagnostico.dia_a_dia" class="bg-blue-50 rounded-xl px-4 py-3">
                     <p class="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">Su día a día</p>
-                    <p class="text-sm text-[#1F2937] leading-relaxed">{{ diagnostico.dia_a_dia }}</p>
+                    <p class="text-sm text-[#1F2937] leading-relaxed break-words">{{ diagnostico.dia_a_dia }}</p>
                   </div>
                   <div v-if="diagnostico.pregunta_reto" class="bg-slate-800 rounded-xl px-4 py-3">
                     <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-1">El reto que os proponen</p>
-                    <p class="text-sm font-bold text-white leading-relaxed">{{ diagnostico.pregunta_reto }}</p>
+                    <p class="text-sm font-bold text-white leading-relaxed break-words">{{ diagnostico.pregunta_reto }}</p>
                   </div>
                   <div v-if="diagnostico.que_necesitan?.length" class="bg-blue-50 rounded-xl px-4 py-3">
                     <p class="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">Qué necesitan</p>
                     <ul class="space-y-1">
-                      <li v-for="(n, i) in diagnostico.que_necesitan" :key="i" class="text-sm text-[#1F2937] flex gap-2">
+                      <li v-for="(n, i) in diagnostico.que_necesitan" :key="i" class="text-sm text-[#1F2937] flex gap-2 min-w-0 break-words">
                         <span class="text-blue-400 shrink-0">·</span>{{ n }}
                       </li>
                     </ul>
@@ -1404,7 +1445,7 @@ watch(workspace, (val) => {
                   <div v-if="diagnostico.dificultades?.length" class="bg-orange-50 rounded-xl px-4 py-3">
                     <p class="text-[9px] font-black uppercase tracking-widest text-orange-400 mb-1">Dificultades</p>
                     <ul class="space-y-1">
-                      <li v-for="(d, i) in diagnostico.dificultades" :key="i" class="text-sm text-[#1F2937] flex gap-2">
+                      <li v-for="(d, i) in diagnostico.dificultades" :key="i" class="text-sm text-[#1F2937] flex gap-2 min-w-0 break-words">
                         <span class="text-orange-400 shrink-0">·</span>{{ d }}
                       </li>
                     </ul>
@@ -1446,7 +1487,7 @@ watch(workspace, (val) => {
                       </span>
                     </div>
                     <button @click="sugerirHallazgo" :disabled="sugiriendoHallazgo"
-                            class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
+                            class="shrink-0 inline-flex min-h-9 items-center justify-center px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                    text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
                       {{ sugiriendoHallazgo ? 'Generando…' : (equipo?.ia_desbloqueada ? '✨ Sugerir con IA' : '🔒 Sugerir con IA') }}
                     </button>
@@ -1471,14 +1512,14 @@ watch(workspace, (val) => {
                             {{ h.trim() || `Hallazgo ${i + 1} (vacío)` }}
                           </span>
                           <svg class="w-4 h-4 text-gray-400 shrink-0 transition-transform"
-                               :class="{ 'rotate-180': hallazgoAbierto === i }"
+                               :class="{ 'rotate-180': hallazgoAbierto === i || soloLectura }"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                           </svg>
                         </button>
                         <button @click="removeHallazgo(i)" aria-label="Quitar hallazgo" class="-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black text-gray-300 hover:bg-red-50 hover:text-red-400">✕</button>
                       </div>
-                      <div v-if="hallazgoAbierto === i" class="px-3 pb-3">
+                      <div v-if="hallazgoAbierto === i || soloLectura" class="px-3 pb-3">
                         <textarea v-model="f1.hallazgos[i]" rows="3" :maxlength="HALLAZGO_MAXLEN"
                                   :placeholder="`Hallazgo ${i + 1}`"
                                   class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white resize-none
@@ -1493,7 +1534,7 @@ watch(workspace, (val) => {
                                   focus:outline-none focus:border-blue-400 bg-gray-50"
                            @keydown.enter="addHallazgo"/>
                     <button @click="addHallazgo"
-                            class="px-4 py-2 rounded-full bg-blue-500 text-white text-xs font-black">+ Añadir</button>
+                            class="inline-flex min-h-9 items-center justify-center px-4 py-2 rounded-full bg-blue-500 text-white text-xs font-black">+ Añadir</button>
                   </div>
                   <div class="flex items-center gap-2 mt-1.5">
                     <div class="flex gap-1">
@@ -1513,7 +1554,7 @@ watch(workspace, (val) => {
                   </label>
                   <div v-if="diagnostico?.pregunta_reto" class="bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-2.5 mb-2">
                     <p class="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">Pregunta del reto</p>
-                    <p class="text-sm font-bold text-blue-900 leading-snug">"{{ diagnostico.pregunta_reto }}"</p>
+                    <p class="text-sm font-bold text-blue-900 leading-snug break-words">"{{ diagnostico.pregunta_reto }}"</p>
                   </div>
                   <p v-if="diagnostico?.pregunta_reto" class="text-[11px] text-gray-400 mb-2">
                     Lo que escribáis aquí es vuestra respuesta inicial a esa pregunta.
@@ -1526,10 +1567,15 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
+              <div class="flex justify-end">
+                <button type="button" @click="guardarF1" :disabled="guardando"
+                        class="inline-flex h-10 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50">
+                  Guardar borrador
+                </button>
+              </div>
               <div class="fila-pasos">
-                <button @click="guardarF1" :disabled="guardando"
-                        class="btn-paso-atras border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-200 hover:text-blue-700">
-                  Guardar
+                <button type="button" @click="alCambiarFase(0)" class="btn-paso-atras">
+                  <span class="hidden sm:inline" aria-hidden="true">←</span> Anterior
                 </button>
                 <button @click="onCompletarF1" :disabled="guardando"
                         :class="['btn-paso',
@@ -1554,7 +1600,7 @@ watch(workspace, (val) => {
               <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 space-y-4">
                 <div v-if="diagnostico?.pregunta_reto" class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
                   <p class="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Pregunta del reto</p>
-                  <p class="text-sm font-bold text-amber-900 leading-snug">"{{ diagnostico.pregunta_reto }}"</p>
+                  <p class="text-sm font-bold text-amber-900 leading-snug break-words">"{{ diagnostico.pregunta_reto }}"</p>
                 </div>
 
                 <div ref="f2PropuestaRef" class="rounded-xl transition-all"
@@ -1589,7 +1635,7 @@ watch(workspace, (val) => {
                     <p class="text-[9px] font-black uppercase tracking-widest text-amber-500">Tareas</p>
                     <button @click="restablecerTareasGenericas" :disabled="restableciendoGenericas"
                             title="Vuelve a añadir las tareas precargadas que hayáis borrado"
-                            class="shrink-0 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-500
+                            class="shrink-0 inline-flex min-h-9 items-center justify-center px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-500
                                    text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all disabled:opacity-50">
                       {{ restableciendoGenericas ? 'Restableciendo…' : '↺ Restablecer precargadas' }}
                     </button>
@@ -1608,7 +1654,7 @@ watch(workspace, (val) => {
                              'border-gray-100 bg-gray-50':   t.estado === 'pendiente',
                            }">
                         <select :value="t.estado" @change="cambiarEstadoTarea(t, $event.target.value)"
-                                class="basis-full sm:basis-auto text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
+                                class="basis-full sm:basis-auto min-h-9 text-[10px] font-black uppercase tracking-wider border-0 bg-transparent
                                        focus:outline-none cursor-pointer"
                                 :class="{
                                   'text-green-600': t.estado === 'realizado',
@@ -1620,14 +1666,14 @@ watch(workspace, (val) => {
                           <option value="realizado">✅ Realizado</option>
                         </select>
                         <div class="flex-1 min-w-0">
-                          <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap"
+                          <p class="text-sm font-semibold text-[#1F2937] leading-snug flex items-center gap-1.5 flex-wrap min-w-0 break-words"
                              :class="{ 'line-through text-gray-400': t.estado === 'realizado' }">
-                            {{ t.descripcion }}
+                            <span class="min-w-0 break-words">{{ t.descripcion }}</span>
                             <button v-if="t.obligatoria" type="button"
                                   :title="tooltipObligatoria(t)"
                                   :aria-expanded="obligatoriaAbierta === t.id"
                                   @click="obligatoriaAbierta = obligatoriaAbierta === t.id ? null : t.id"
-                                  class="relative shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help before:absolute before:-inset-2 before:content-['']">
+                                  class="relative shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider cursor-help before:absolute before:-inset-2.5 before:content-['']">
                               🔒 Obligatoria
                             </button>
                           </p>
@@ -1635,7 +1681,7 @@ watch(workspace, (val) => {
                             {{ tooltipObligatoria(t) }}
                           </p>
                           <select :value="t.responsable ?? ''" @change="actualizarResponsableTarea(t, $event.target)"
-                                 class="mt-0.5 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
+                                 class="mt-0.5 min-h-9 text-[10px] text-gray-500 bg-transparent border-0 border-b border-dashed
                                         border-gray-200 focus:outline-none focus:border-amber-400 px-0 py-0.5 cursor-pointer">
                             <option value="">+ responsable</option>
                             <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
@@ -1678,7 +1724,7 @@ watch(workspace, (val) => {
                         <option v-for="m in miembrosEquipo" :key="m.id" :value="m.alias">{{ m.alias }}</option>
                       </select>
                       <button @click="addTareaGenerica" :disabled="!nuevaTareaGenerica.descripcion.trim() || cargandoTareaGenerica"
-                              class="px-4 py-2 rounded-full bg-amber-500 text-white text-xs font-black
+                              class="inline-flex min-h-9 items-center justify-center px-4 py-2 rounded-full bg-amber-500 text-white text-xs font-black
                                      uppercase tracking-wider disabled:opacity-50 hover:bg-amber-600 transition-all">
                         + Tarea
                       </button>
@@ -1697,7 +1743,7 @@ watch(workspace, (val) => {
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
                   <p class="text-[9px] font-black uppercase tracking-widest text-violet-500">Sugerencias de soluciones</p>
                   <button @click="sugerirTareas" :disabled="sugiriendoTareas"
-                          class="shrink-0 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
+                          class="shrink-0 inline-flex min-h-9 items-center justify-center px-3 py-1.5 rounded-full bg-violet-50 border border-violet-200 text-violet-700
                                  text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all disabled:opacity-50">
                     {{ sugiriendoTareas ? 'Generando…' : (equipo?.ia_desbloqueada ? '✨ Sugerir con IA' : '🔒 Sugerir con IA') }}
                   </button>
@@ -1736,7 +1782,7 @@ watch(workspace, (val) => {
                                   focus:outline-none focus:border-violet-400 bg-gray-50"
                            @keydown.enter="addTareaCompleja"/>
                     <button @click="addTareaCompleja" :disabled="!nuevaTareaCompleja.descripcion.trim() || cargandoTareaCompleja"
-                            class="px-4 py-2 rounded-full bg-violet-500 text-white text-xs font-black
+                            class="inline-flex min-h-9 items-center justify-center px-4 py-2 rounded-full bg-violet-500 text-white text-xs font-black
                                    uppercase tracking-wider disabled:opacity-50 hover:bg-violet-600 transition-all">
                       + Añadir
                     </button>
@@ -1818,7 +1864,7 @@ watch(workspace, (val) => {
 
                   <!-- Subir archivo -->
                   <div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full
+                    <label class="inline-flex min-h-9 items-center gap-2 cursor-pointer px-4 py-2 rounded-full
                                   border border-dashed border-amber-300 bg-amber-50 text-amber-700
                                   text-xs font-black uppercase tracking-wider hover:bg-amber-100 transition-all
                                   select-none"
@@ -1867,11 +1913,12 @@ watch(workspace, (val) => {
                   <p class="basis-full sm:basis-auto text-xs text-gray-400">¿Es la primera versión o habéis mejorado el prototipo?</p>
                 </div>
 
-                <button @click="guardarF2" :disabled="guardando"
-                        class="w-full py-2.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700
-                               text-xs font-black uppercase tracking-wider hover:bg-amber-100 transition-all disabled:opacity-50">
-                  Guardar prototipo
-                </button>
+                <div class="flex justify-end">
+                  <button type="button" @click="guardarF2" :disabled="guardando"
+                          class="inline-flex h-10 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-5 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50">
+                    Guardar prototipo
+                  </button>
+                </div>
               </div>
 
               <!-- Progreso: última sección antes de poder pasar a la siguiente fase -->
@@ -1890,11 +1937,15 @@ watch(workspace, (val) => {
               </div>
 
               <div class="fila-pasos">
+                <button type="button" @click="alCambiarFase(1)" class="btn-paso-atras">
+                  <span class="hidden sm:inline" aria-hidden="true">←</span> Anterior
+                </button>
                 <button @click="onCompletarF2" :disabled="guardando"
                         :class="['btn-paso',
                                  f2Valido ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
-                  <span class="md:hidden">{{ f2Valido ? 'Ir a Entrega →' : 'Continuar →' }}</span>
-                  <span class="hidden md:inline">{{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}</span>
+                  <!-- El texto largo (~600px) solo cabe junto a Anterior desde xl -->
+                  <span class="xl:hidden">{{ f2Valido ? 'Ir a Entrega →' : 'Continuar →' }}</span>
+                  <span class="hidden xl:inline">{{ f2Valido ? 'Todo listo — Ir a Entrega →' : 'Elegid el tipo de prototipo y completad todas las tareas para continuar' }}</span>
                 </button>
               </div>
               <div v-if="intentoF2 && !f2Valido" class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">
@@ -1973,7 +2024,7 @@ watch(workspace, (val) => {
 
                   <!-- Subir archivo -->
                   <div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer px-4 py-2 rounded-full
+                    <label class="inline-flex min-h-9 items-center gap-2 cursor-pointer px-4 py-2 rounded-full
                                   border border-dashed border-orange-300 bg-orange-50 text-orange-700
                                   text-xs font-black uppercase tracking-wider hover:bg-orange-100 transition-all
                                   select-none"
@@ -2011,10 +2062,15 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
+              <div class="flex justify-end">
+                <button type="button" @click="guardarF3" :disabled="guardando"
+                        class="inline-flex h-10 items-center justify-center rounded-full border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-100 disabled:opacity-50">
+                  Guardar borrador
+                </button>
+              </div>
               <div class="fila-pasos">
-                <button @click="guardarF3" :disabled="guardando"
-                        class="btn-paso-atras border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-200 hover:text-orange-700">
-                  Guardar
+                <button type="button" @click="alCambiarFase(2)" class="btn-paso-atras">
+                  <span class="hidden sm:inline" aria-hidden="true">←</span> Anterior
                 </button>
                 <button @click="onCompletarF3" :disabled="guardando"
                         :class="['btn-paso',
@@ -2043,12 +2099,12 @@ watch(workspace, (val) => {
                   </label>
                   <p class="text-[11px] text-gray-400 mb-2">Consultad al docente o dinamizador.</p>
                   <div class="flex gap-5">
-                    <label class="flex items-center gap-2 cursor-pointer">
+                    <label class="flex min-h-9 items-center gap-2 cursor-pointer">
                       <input type="radio" :value="true" v-model="f4.expone_clase" @change="guardarF4"
                              class="w-4 h-4 accent-alumnos cursor-pointer"/>
                       <span class="text-sm font-semibold text-[#1F2937]">Sí</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
+                    <label class="flex min-h-9 items-center gap-2 cursor-pointer">
                       <input type="radio" :value="false" v-model="f4.expone_clase" @change="guardarF4"
                              class="w-4 h-4 accent-alumnos cursor-pointer"/>
                       <span class="text-sm font-semibold text-[#1F2937]">No</span>
@@ -2062,12 +2118,12 @@ watch(workspace, (val) => {
                   <div class="mb-4">
                     <label class="block text-xs font-bold text-[#1F2937] mb-1.5">¿Quién expone?</label>
                     <div class="space-y-1.5">
-                      <label class="flex items-center gap-2 cursor-pointer">
+                      <label class="flex min-h-9 items-center gap-2 cursor-pointer">
                         <input type="radio" value="todos" v-model="f4.organizacion.modo_intervencion" @change="guardarF4"
                                class="w-4 h-4 accent-alumnos cursor-pointer"/>
                         <span class="text-sm text-[#1F2937]">Todo el alumnado expone una parte (tiempos repartidos)</span>
                       </label>
-                      <label class="flex items-center gap-2 cursor-pointer">
+                      <label class="flex min-h-9 items-center gap-2 cursor-pointer">
                         <input type="radio" value="portavoz" v-model="f4.organizacion.modo_intervencion" @change="guardarF4"
                                class="w-4 h-4 accent-alumnos cursor-pointer"/>
                         <span class="text-sm text-[#1F2937]">Solo el portavoz expone</span>
@@ -2079,7 +2135,7 @@ watch(workspace, (val) => {
                     <label class="block text-xs font-bold text-[#1F2937] mb-1.5">Tipo de exposición</label>
                     <div class="flex flex-wrap gap-2">
                       <label v-for="tipo in TIPOS_EXPOSICION" :key="tipo"
-                             class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer
+                             class="flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer
                                     text-xs font-semibold transition-all"
                              :class="f4.organizacion.tipo_exposicion.includes(tipo)
                                ? 'bg-alumnos/10 border-alumnos/30 text-alumnos-dark'
@@ -2187,12 +2243,12 @@ watch(workspace, (val) => {
                   <div v-if="evaluacionRaCe.length" class="space-y-2">
                     <div v-for="(r, i) in evaluacionRaCe" :key="i" class="bg-green-50 rounded-xl px-4 py-3">
                       <div class="flex items-start justify-between gap-2">
-                        <p class="text-xs font-semibold text-[#1F2937] flex-1">{{ r.ra }}</p>
+                        <p class="text-xs font-semibold text-[#1F2937] flex-1 min-w-0 break-words">{{ r.ra }}</p>
                         <span :class="['shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black', NIVEL_COLORS[r.nivel]]">
                           {{ NIVEL_LABELS[r.nivel] || r.nivel }}
                         </span>
                       </div>
-                      <p v-if="r.observaciones" class="text-[11px] text-gray-500 mt-1">{{ r.observaciones }}</p>
+                      <p v-if="r.observaciones" class="text-[11px] text-gray-500 mt-1 break-words">{{ r.observaciones }}</p>
                     </div>
                   </div>
                   <p v-if="getFase(4).observaciones_docente" class="text-xs text-green-600 mt-3">
@@ -2206,6 +2262,9 @@ watch(workspace, (val) => {
                 </div>
 
                 <div class="fila-pasos">
+                  <button type="button" @click="alCambiarFase(3)" class="btn-paso-atras">
+                    <span class="hidden sm:inline" aria-hidden="true">←</span> Anterior
+                  </button>
                   <button @click="onCompletarF4" :disabled="guardando"
                           :class="['btn-paso',
                                    f4ValidoParaCompletar ? 'bg-alumnos text-white hover:bg-alumnos/90 shadow-alumnos/25' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 shadow-none']">
@@ -2284,7 +2343,10 @@ watch(workspace, (val) => {
           <!--  SIDEBAR DERECHO                                -->
           <!-- ─────────────────────────────────────────────── -->
           <!-- Separador visual del sidebar solo en móvil -->
-          <aside class="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-[62px]
+          <!-- Columna lateral desde lg (como el resto de la app); en tablet, sus tarjetas
+               en dos columnas debajo del contenido para no dejar una tira larga -->
+          <aside class="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 md:grid md:grid-cols-2 md:items-start md:gap-4 md:space-y-0
+                        lg:block lg:space-y-4 lg:sticky lg:top-[62px]
                          border-t border-gray-200 pt-4 lg:border-t-0 lg:pt-0">
 
             <!-- Tarjeta equipo + miembros -->
@@ -2364,7 +2426,7 @@ watch(workspace, (val) => {
                   <span v-if="img.id === imagenPortadaId"
                         class="absolute top-0.5 left-0.5 bg-alumnos text-white text-[7px] font-black
                                uppercase tracking-wider px-1 py-0.5 rounded-full">Portada</span>
-                  <div class="absolute inset-0 bg-black/50 opacity-100 lg:opacity-0 lg:group-hover/img:opacity-100
+                  <div class="absolute inset-0 bg-black/50 opacity-100 lg:[@media(hover:hover)]:opacity-0 lg:group-hover/img:opacity-100 lg:group-focus-within/img:opacity-100
                               transition-opacity flex items-center justify-center gap-1">
                     <button v-if="img.id !== imagenPortadaId" @click="marcarPortadaImagen(img)" type="button"
                             title="Marcar como portada" aria-label="Marcar como portada"
@@ -2384,7 +2446,7 @@ watch(workspace, (val) => {
                 </div>
               </div>
 
-              <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full
+              <label class="flex min-h-9 items-center justify-center gap-1.5 px-3 py-2 rounded-full
                             border-2 border-dashed border-gray-200 bg-gray-50 text-center
                             cursor-pointer hover:border-alumnos/40 hover:bg-alumnos/5 transition-all"
                      :class="subiendoImagen ? 'opacity-50 pointer-events-none' : ''">
@@ -2410,12 +2472,15 @@ watch(workspace, (val) => {
 
           </aside><!-- /sidebar -->
 
-        </div>
+        </fieldset>
       </div>
 
     </template>
 
-    <MicroretoModal :token="verFichaReto ? token : null" @close="verFichaReto = false" />
+    <!-- Alumnado: ficha por el token del grupo. Docente: por id, con su sesión -->
+    <MicroretoModal :token="verFichaReto && !soloLectura ? token : null"
+                    :microreto-id="verFichaReto && soloLectura ? workspace?.microreto_id : null"
+                    @close="verFichaReto = false" />
 
     <DesbloquearIaModal
       v-if="mostrarModalIa"

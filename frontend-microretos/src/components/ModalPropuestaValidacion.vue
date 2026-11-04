@@ -75,7 +75,7 @@ const confirmarDocente = () =>
   <ModalTaller :abierto="abierto" titulo="Proyecto en propuesta" ancho="w-[min(44rem,calc(100vw-2rem))]"
                @cerrar="emit('cerrar')">
     <template #cabecera="{ idTitulo }">
-      <div class="pl-10 text-center">
+      <div class="pl-0 sm:pl-10 text-center">
         <!-- En móvil, cabecera compacta: deja sitio a las dos vías (la cabecera no hace scroll) -->
         <span class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-xl bg-alumnos/15 text-alumnos-dark sm:h-16 sm:w-16 sm:rounded-2xl" aria-hidden="true">
           <svg class="h-5 w-5 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12L3.27 3.13a59.77 59.77 0 0118.22 8.88 59.77 59.77 0 01-18.22 8.88L6 12zm0 0h7.5"/></svg>

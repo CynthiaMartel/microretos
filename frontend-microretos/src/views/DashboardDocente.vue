@@ -621,7 +621,7 @@ const CONSEJO_PASO_ENC = {
   1: 'Verifica que el proyecto y los datos sean correctos. Podrás modificar la información del encuentro más adelante.',
   2: 'Usa solo alias (nombre de pila + animal + color): nunca nombres reales completos del alumnado.',
   3: 'Revisa el resumen. Al guardar, los grupos quedarán listos para generar su código de acceso.',
-  4: 'Desde «Mis grupos» generarás el código de acceso y seguirás el avance de cada grupo.',
+  4: 'En la biblioteca de encuentros generarás el código de acceso y, en «Seguimiento de grupos», seguirás el avance de cada grupo.',
 }
 const antesDeContinuarEnc = computed(() => {
   if (intentoAvanzar.value && faltantesPaso.value.length && pasoEnc.value < 4)
@@ -1292,10 +1292,10 @@ function formatFecha(isoDate) {
         </span>
         <h2 id="titulo-completado" class="mt-4 text-xl font-bold text-azul-noche sm:text-2xl">Encuentro creado</h2>
         <p class="mx-auto mt-2 max-w-md text-sm text-texto-secundario">
-          Ya tienes los grupos listos. Desde «Mis grupos» generarás el código de acceso del alumnado y seguirás su avance.
+          Ya tienes los grupos listos. En la biblioteca de encuentros generarás el código de acceso del alumnado y, en «Seguimiento de grupos», seguirás su avance.
         </p>
         <div class="mt-6 flex flex-wrap justify-center gap-2">
-          <RouterLink :to="{ name: 'mis-grupos' }" class="accion-principal">Ir a Mis grupos</RouterLink>
+          <RouterLink :to="{ name: 'encuentros-registrados', query: { ver: 'seguimiento' } }" class="accion-principal">Ir al seguimiento de grupos</RouterLink>
           <RouterLink to="/encuentros" class="accion-secundaria">Ver encuentros</RouterLink>
           <button type="button" @click="crearOtroEncuentro" class="accion-secundaria">Crear otro encuentro</button>
         </div>

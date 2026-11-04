@@ -498,12 +498,10 @@ const pendientes = computed(() => tareasAuto.value.filter(t => !autoHecha(t)).le
 // Herramientas: títulos, iconos y colores salen de config/navegacion.js (la misma fuente que el
 // SidePanel y las secciones /seccion/:seccion), para que el panel coincida siempre con el menú.
 const tarjetaNav = (seccion, ruta) => SECCIONES[seccion]?.cards?.find(c => c.ruta === ruta)
-const itemMisEquipos = GRUPOS_NAV.flatMap(g => g.items).find(i => i.key === 'mis-grupos')
 const herramientas = [
   { grupo: 'Proyectos',  items: [tarjetaNav('retos-proyectos', '/proyectos/crear'), tarjetaNav('retos-proyectos', '/proyectos')] },
   { grupo: 'Encuentros', items: [tarjetaNav('encuentros', '/encuentros/crear'), tarjetaNav('encuentros', '/encuentros')] },
-  { grupo: 'Equipos',    items: [itemMisEquipos && { titulo: itemMisEquipos.label, desc: itemMisEquipos.tip, ruta: itemMisEquipos.ruta,
-                                                     icon: itemMisEquipos.icon, tile: 'bg-alumnos' }] },
+  { grupo: 'Grupos',     items: [tarjetaNav('encuentros', '/encuentros?ver=seguimiento') && { ...tarjetaNav('encuentros', '/encuentros?ver=seguimiento'), tile: 'bg-alumnos' }] },
 ].map(g => ({ ...g, items: g.items.filter(Boolean) })).filter(g => g.items.length)
 
 const ICONOS = {

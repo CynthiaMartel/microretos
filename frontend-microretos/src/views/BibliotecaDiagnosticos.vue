@@ -361,8 +361,8 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
           <!-- Vacíos -->
           <div v-else-if="!error && !todos.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
             <h3 class="text-lg font-bold text-azul-noche">Todavía no hay diagnósticos finales</h3>
-            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Se generan desde Mis grupos cuando un grupo termina su proyecto.</p>
-            <button type="button" class="accion-secundaria mt-4" @click="router.push('/mis-grupos')">Ir a Mis grupos</button>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Se generan desde el seguimiento de grupos cuando un grupo termina su proyecto.</p>
+            <button type="button" class="accion-secundaria mt-4" @click="router.push({ name: 'encuentros-registrados', query: { ver: 'seguimiento' } })">Ir al seguimiento de grupos</button>
           </div>
           <div v-else-if="!error && !filtrados.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
             <h3 class="text-lg font-bold text-azul-noche">Ningún encuentro con diagnósticos coincide con estos filtros</h3>
@@ -436,7 +436,7 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
               </div>
 
               <span class="min-h-3 flex-1" aria-hidden="true" />
-              <!-- Pie (siempre abajo): cuántos grupos tienen diagnóstico + «Ver encuentro» y «⋯» -->
+              <!-- Pie (siempre abajo): cuántos grupos tienen diagnóstico + «Detalle de grupos» y «⋯» -->
               <div class="flex flex-wrap items-center gap-2 border-t border-borde pt-3">
                 <!-- Una sola línea (si saltara a dos, esa tarjeta sería más alta que las demás) -->
                 <span class="min-w-0 flex-1 truncate text-xs text-texto-secundario"
@@ -444,7 +444,7 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
                 <button type="button" @click="irAEncuentro(x)"
                         class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-                  Ver encuentro
+                  Detalle de grupos
                 </button>
                 <div class="relative shrink-0" data-menu-raiz>
                   <button type="button" @click="menuDiag = menuDiag === claveDe(x) ? null : claveDe(x)"

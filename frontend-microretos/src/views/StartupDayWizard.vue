@@ -127,12 +127,17 @@ const contextoRetoOrigen = computed(() => {
   if (!mr) return undefined
   const partes = []
   if (mr.empresa?.nombre_comercial) partes.push(`Empresa: ${mr.empresa.nombre_comercial}`)
+  if (mr.empresa?.sector) partes.push(`Sector de la empresa: ${mr.empresa.sector}`)
+  // La familia del reto puede no ser la del sector: la propuesta responde a lo que la empresa busca de ella
+  if (mr.interes_familia) partes.push(`Qué busca la empresa con la familia «${mr.familia}» (la propuesta debe responder a esto): ${mr.interes_familia}`)
   if (mr.quien_es)      partes.push(`Quién es la empresa: ${mr.quien_es}`)
   if (mr.dia_a_dia)     partes.push(`Día a día: ${mr.dia_a_dia}`)
   if (mr.que_necesitan) partes.push(`Qué necesitan: ${Array.isArray(mr.que_necesitan) ? mr.que_necesitan.join('; ') : mr.que_necesitan}`)
   if (mr.dificultades)  partes.push(`Dificultades: ${Array.isArray(mr.dificultades) ? mr.dificultades.join('; ') : mr.dificultades}`)
   if (mr.limitaciones)  partes.push(`Limitaciones: ${Array.isArray(mr.limitaciones) ? mr.limitaciones.join('; ') : mr.limitaciones}`)
-  return partes.length ? partes.join('\n') : undefined
+  // reto_origen admite 3000 caracteres (Sugerir*Request): se recorta por el final, donde
+  // va lo menos importante, para no perder la sugerencia con un 422
+  return partes.length ? partes.join('\n').slice(0, 3000) : undefined
 })
 
 const retoEmpresaNombre = computed(() =>
@@ -1372,7 +1377,7 @@ onUnmounted(() => { tourActivo.value = false; });
       <div v-if="modoGuia" class="fixed inset-0 z-[9990] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/55 pointer-events-auto" />
         <div class="relative pointer-events-auto w-full max-w-md bg-azul-noche border border-white/15
-                    rounded-3xl shadow-2xl p-7 text-white"
+                    rounded-[2rem] shadow-2xl p-7 text-white"
              @click.stop>
           <!-- Cabecera con progreso -->
           <div class="flex items-center gap-3 mb-5">
@@ -1531,6 +1536,8 @@ onUnmounted(() => { tourActivo.value = false; });
                                  :familia="microretoVinculado.familia || ''"
                                  :curso="cursoLabel(microretoVinculado.curso) ? `${cursoLabel(microretoVinculado.curso)} curso` : ''"
                                  :ciclo="microretoVinculado.ciclo || ''"
+                                 :sector="microretoVinculado.empresa?.sector || ''"
+                                 :interes="microretoVinculado.interes_familia || ''"
                                  :puede-cambiar="!uuid"
                                  @cambiar="limpiarReto" />
 
@@ -1684,7 +1691,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-5">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-5">
               <div class="pb-3 border-b border-borde">
                 <p class="text-xs font-bold text-azul-noche">Datos de la propuesta</p>
                 <p class="text-xs text-texto-secundario mt-0.5">Completa la información básica de tu propuesta.</p>
@@ -1838,7 +1845,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Aviso: composición del equipo de alumnado -->
-            <div class="bg-[#F8FAFC] rounded-3xl border border-rol/20/60 px-5 py-4 mt-4 flex items-start gap-3">
+            <div class="bg-[#F8FAFC] rounded-2xl border border-rol/20 px-5 py-4 mt-4 flex items-start gap-3">
               <svg class="w-4 h-4 text-rol-fuerte shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1864,7 +1871,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 2: Empresa ═══ -->
         <div v-if="paso === 2">
 
-          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
 
             <!-- Cabecera "Del reto" cuando es read-only -->
             <div v-if="empresaDesdeReto"
@@ -2166,7 +2173,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 4">
 
           <div class="space-y-4">
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fundamentación</p>
                 <button @click="sugerirFundamentacion" :disabled="sugiriendoFundamentacion"
@@ -2194,7 +2201,7 @@ onUnmounted(() => { tourActivo.value = false; });
                           placeholder="¿Qué tiene de innovador esta propuesta?" /></div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Diseño del reto</p>
               <div><label class="field-label">Descripción del reto *</label>
                 <textarea v-model="form.diseno_reto.descripcion" rows="3" class="field-input resize-none" required
@@ -2221,7 +2228,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 5">
 
           <div class="space-y-4">
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div>
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fases de la propuesta</p>
                 <p class="text-xs text-texto-secundario mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
@@ -2269,7 +2276,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   </div>
                 </div>
                 <button @click="addSesion" type="button"
-                        class="mt-3 px-4 py-2 rounded-full border border-dashed border-rol/40 text-rol-fuerte
+                        class="mt-3 inline-flex min-h-9 items-center px-4 py-2 rounded-full border border-dashed border-rol/40 text-rol-fuerte
                                text-xs font-bold uppercase tracking-widest hover:bg-rol/5 transition-all">
                   + Añadir sesión
                 </button>
@@ -2278,7 +2285,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Cronograma general — hitos derivados de las fases + el calendario de arriba -->
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div>
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Cronograma general</p>
                 <p class="text-xs text-texto-secundario mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
@@ -2303,7 +2310,7 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 space-y-4">
+            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Metodología y resumen ejecutivo</p>
                 <button @click="sugerirMetodologia" :disabled="sugiriendoMetodologia"
@@ -2484,7 +2491,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
 
           <!-- Resumen -->
-          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 mb-4">
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
             <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario mb-4">Resumen de la propuesta</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div class="p-3 bg-gray-50 rounded-2xl">
@@ -2515,7 +2522,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
 
           <!-- Recursos: vídeos y documentos para la empresa (almacenados en Cloudinary) -->
-          <div class="bg-white rounded-2xl border border-borde shadow-sm p-6 mb-4">
+          <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
             <div class="flex items-center gap-3 mb-1">
               <div class="w-8 h-8 rounded-xl bg-rol/10 border border-rol/20
                           flex items-center justify-center shrink-0">
@@ -2547,7 +2554,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 <div v-if="videosLocales.length" class="space-y-2 mb-3">
                   <div v-for="(v, i) in videosLocales" :key="i"
                        class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-borde
-                              hover:border-rol/20 hover:bg-rol/5/40 transition-colors group/vid">
+                              hover:border-rol/20 hover:bg-rol/5 transition-colors group/vid">
                     <button @click="abrirRecurso(v)"
                             class="w-9 h-9 rounded-full bg-rol/5 shrink-0 flex items-center justify-center
                                    group-hover/vid:bg-rol/10 transition-colors">
@@ -2897,7 +2904,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto">
+      <div class="relative bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto">
 
         <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100
                     flex items-center justify-center mb-5 mx-auto">
@@ -2959,7 +2966,7 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="absolute inset-0 bg-black/70 backdrop-blur-md" @click="modalRecurso = null" />
 
       <!-- Panel -->
-      <div class="relative z-10 bg-white rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden
+      <div class="relative z-10 bg-white rounded-[2rem] shadow-2xl max-w-3xl w-full overflow-hidden
                   flex flex-col max-h-[90vh]">
 
         <!-- Cabecera -->
@@ -3035,7 +3042,7 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <!-- Contenido -->
-      <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto
+      <div class="relative bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto
                   transform transition-all duration-200"
            :class="modalPublicarVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'">
 

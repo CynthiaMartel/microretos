@@ -32,7 +32,7 @@ const props = defineProps({
 
 const route = useRoute()
 const seccionActiva = computed(() =>
-  GRUPOS_NAV.flatMap(g => g.items).find(i => i.activa?.(route.path))?.label || '')
+  GRUPOS_NAV.flatMap(g => g.items).find(i => i.activa?.(route.path, route.query))?.label || '')
 const antetituloFinal = computed(() =>
   props.sinAntetitulo ? '' : (props.antetitulo || seccionActiva.value))
 </script>

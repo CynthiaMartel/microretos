@@ -60,6 +60,7 @@ class DemoGenerarEncuentrosEquipos extends Command
                             {--limit=0 : Tope de proyectos a procesar en esta ejecución (0 = sin tope adicional al del porcentaje).}
                             {--corregir-sintesis : Regenera con IA la síntesis F1 de equipos YA EXISTENTES (para corregir contenido antiguo tipo "dato de demo"), sin tocar nada más. Ignora --porcentaje.}
                             {--corregir-reflexiones : Regenera con IA la reflexión grupal Y añade las individuales (una por miembro) que faltaban en equipos YA EXISTENTES. Ignora --porcentaje.}
+                            {--proyectos= : Ids de proyectos concretos (validados y sin encuentro) a los que limitar la selección.}
                             {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste.}';
 
     protected $description = 'Crea encuentros + equipos para un % de los proyectos simulados validados y los lleva a completado (diagnóstico final incluido).';
@@ -127,6 +128,7 @@ class DemoGenerarEncuentrosEquipos extends Command
             ->where('es_demo', true)
             ->where('centro_id', self::CENTRO_ID) // redundante con es_demo, pero explícito: nunca tocar otro centro
             ->whereDoesntHave('encuentros')
+            ->when($this->option('proyectos'), fn ($q) => $q->whereIn('id', array_map('intval', explode(',', (string) $this->option('proyectos')))))
             ->orderBy('id')
             ->get();
 
@@ -353,7 +355,7 @@ class DemoGenerarEncuentrosEquipos extends Command
 
         // F2 se GUARDA pero no se completa a propósito: es la fase en la que "está" ahora
         // mismo el equipo, con trabajo empezado y sin terminar.
-        $tipoPrototipo = collect($microreto?->prototipos ?? [])->first() ?? 'Prototipo funcional sencillo';
+        $tipoPrototipo = $this->tipoPrototipo($microreto?->prototipos);
         $necesidad     = collect($microreto?->que_necesitan ?? [])->first() ?? 'una solución sencilla y aplicable';
         $this->guardarFase($token, 2, [
             'propuesta'             => "El equipo propone desarrollar {$necesidad}, adaptado a las limitaciones de la empresa.",
@@ -463,7 +465,7 @@ class DemoGenerarEncuentrosEquipos extends Command
                 'respuestas' => collect(self::PREGUNTAS_GRUPAL)
                     ->map(fn ($p, $i) => ['pregunta' => $p, 'respuesta' => $reflexionFinal['grupal'][$i]])
                     ->values()->all(),
-            ]);
+            ], null, ['token' => $equipo->token]);
             app(EquipoPublicoController::class)->storeReflexion($reqGrupal, $equipo->token);
 
             foreach ($miembros->values() as $i => $miembro) {
@@ -475,7 +477,7 @@ class DemoGenerarEncuentrosEquipos extends Command
                     'tipo'         => 'individual',
                     'autor_nombre' => $miembro->alias,
                     'respuestas'   => $respuestasIndiv,
-                ]);
+                ], null, ['token' => $equipo->token]);
                 app(EquipoPublicoController::class)->storeReflexion($reqIndiv, $equipo->token);
             }
 
@@ -699,7 +701,7 @@ class DemoGenerarEncuentrosEquipos extends Command
         $this->completarFase($token, 1); // auto-siembra las tareas genéricas de F2
 
         // F2 — Diseño de la solución: propuesta + prototipo elegido.
-        $tipoPrototipo = collect($microreto?->prototipos ?? [])->first() ?? 'Prototipo funcional sencillo';
+        $tipoPrototipo = $this->tipoPrototipo($microreto?->prototipos);
         $necesidad     = collect($microreto?->que_necesitan ?? [])->first() ?? 'una solución sencilla y aplicable';
         $this->guardarFase($token, 2, [
             'propuesta'                    => "El equipo propone desarrollar {$necesidad}, adaptado a las limitaciones de la empresa.",
@@ -738,7 +740,7 @@ class DemoGenerarEncuentrosEquipos extends Command
             'respuestas' => collect(self::PREGUNTAS_GRUPAL)
                 ->map(fn ($p, $i) => ['pregunta' => $p, 'respuesta' => $reflexionFinal['grupal'][$i]])
                 ->values()->all(),
-        ]);
+        ], null, ['token' => $token]);
         app(EquipoPublicoController::class)->storeReflexion($reqGrupal, $token);
 
         foreach ($miembros->values() as $i => $miembro) {
@@ -750,7 +752,7 @@ class DemoGenerarEncuentrosEquipos extends Command
                 'tipo'         => 'individual',
                 'autor_nombre' => $miembro->alias,
                 'respuestas'   => $respuestasIndiv,
-            ]);
+            ], null, ['token' => $token]);
             app(EquipoPublicoController::class)->storeReflexion($reqIndiv, $token);
         }
 
@@ -786,9 +788,29 @@ class DemoGenerarEncuentrosEquipos extends Command
         app(EquipoGestionController::class)->diagnosticoFinal($reqDiagnostico, $equipo->id);
     }
 
+    /**
+     * Tipo de prototipo de F2 a partir del primer prototipo del reto. Desde que los retos
+     * describen el alcance («… de 6 pasos con 3 plantillas») superan los 100 caracteres que
+     * admite GuardarFaseEquipoRequest: se corta en la primera coma o, si no, sin partir palabras.
+     *
+     * @param  mixed  $prototipos
+     */
+    private function tipoPrototipo($prototipos): string
+    {
+        $primero = is_array($prototipos) ? trim((string) ($prototipos[0] ?? '')) : '';
+        if ($primero === '') return 'Prototipo funcional sencillo';
+
+        $corto = trim(explode(',', $primero)[0]);
+        if (mb_strlen($corto) > 100) {
+            $corto = mb_substr($corto, 0, 100);
+            $corto = preg_replace('/\s+\S*$/u', '', $corto) ?: $corto;
+        }
+        return $corto;
+    }
+
     private function guardarFase(string $token, int $numeroFase, array $datos): void
     {
-        $request = $this->peticion(GuardarFaseEquipoRequest::class, ['datos' => $datos]);
+        $request = $this->peticion(GuardarFaseEquipoRequest::class, ['datos' => $datos], null, ['token' => $token, 'fase' => $numeroFase]);
         app(EquipoPublicoController::class)->guardarFase($request, $token, $numeroFase);
     }
 

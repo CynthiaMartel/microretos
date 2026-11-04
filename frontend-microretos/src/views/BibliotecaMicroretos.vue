@@ -679,7 +679,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
           <!-- Vacío -->
           <div v-else-if="!microretosFiltrados.length && !errorCarga"
-               class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+               class="rounded-2xl border border-dashed border-borde bg-white px-4 py-10 text-center sm:px-6 sm:py-14">
             <span class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-rol/10 text-rol-fuerte" aria-hidden="true">
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
             </span>
@@ -737,14 +737,20 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
               </p>
 
               <div class="mt-3 flex items-center gap-2 border-t border-borde pt-3">
-                <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-empresas/10 text-empresas-dark" aria-hidden="true">
+                <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-empresas/10 text-empresas-dark sm:inline-flex" aria-hidden="true">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 </span>
-                <span class="min-w-0 flex-1 truncate text-sm text-azul-noche" :title="reto.empresa_nombre">{{ reto.empresa_nombre }}</span>
-                <button type="button" @click="irADetalle(reto)"
-                        class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
+                <!-- Sector debajo: una empresa de otro sector puede pedir esta familia (p. ej. una
+                     energética que busca Marketing); el interés va en el title y en el detalle -->
+                <span class="min-w-0 flex-1" :title="[reto.empresa_nombre, reto.empresa?.sector, reto.interes_familia && `Qué busca con ${reto.familia}: ${reto.interes_familia}`].filter(Boolean).join(' · ')">
+                  <span class="block truncate text-sm text-azul-noche">{{ reto.empresa_nombre }}</span>
+                  <span v-if="reto.empresa?.sector" class="block truncate text-xs text-texto-secundario">{{ reto.empresa.sector }}</span>
+                </span>
+                <!-- En móvil solo el icono: deja sitio a empresa y sector -->
+                <button type="button" @click="irADetalle(reto)" :aria-label="`Ver reto «${reto.titulo}»`"
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-0 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5 sm:w-auto sm:px-4">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-                  Ver reto
+                  <span class="hidden sm:inline">Ver reto</span>
                 </button>
                 <!-- Menú «⋯»: PDF; escaparate y eliminar solo para quien puede gestionar -->
                 <div class="relative shrink-0" data-menu-raiz>
@@ -771,11 +777,11 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                         </button>
                         <span id="ayuda-escaparate-reto" role="tooltip"
                               class="pointer-events-none absolute bottom-full right-1 z-40 mb-1 hidden w-60 rounded-xl bg-azul-noche px-3 py-2 text-xs font-normal leading-snug text-white shadow-lg sm:group-hover/escaparate:block sm:group-focus-within/escaparate:block">
-                          Escaparate de dualab.es: los retos publicados aparecen en la web pública, visibles para cualquiera sin iniciar sesión. Solo el superadmin puede publicarlos u ocultarlos.
+                          Escaparate de dualab.es: el reto aparece en la web pública, visible sin iniciar sesión, cuando además tiene un proyecto completado y publicado. Solo el superadmin puede publicarlo u ocultarlo.
                         </span>
                         <!-- En móvil no hay hover: la explicación va como línea corta bajo la opción -->
                         <p class="px-4 pb-1 text-[11px] leading-snug text-texto-secundario sm:hidden" aria-hidden="true">
-                          Visible en dualab.es sin iniciar sesión. Solo el superadmin puede cambiarlo.
+                          Sale en dualab.es si tiene un proyecto completado y publicado. Solo el superadmin puede cambiarlo.
                         </p>
                       </div>
                       <button type="button" role="menuitem" @click="menuReto = null; abrirModalEliminar(reto)"
@@ -830,15 +836,15 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
   <Transition name="snack">
     <div
       v-if="snackbar.visible"
-      class="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[60] flex items-center gap-3
-             px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold
+      class="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[60] flex flex-wrap items-center gap-3
+             max-h-[40vh] overflow-y-auto px-5 py-3.5 rounded-2xl shadow-xl text-sm font-bold
              max-w-[calc(100vw-2rem)] sm:max-w-sm bg-azul-noche text-white"
     >
       <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
       </svg>
-      <span class="flex-1 min-w-0 break-words">{{ snackbar.mensaje }}</span>
+      <span class="flex-1 min-w-0 break-words line-clamp-3" :title="snackbar.mensaje">{{ snackbar.mensaje }}</span>
       <button
         v-if="snackbar.accion"
         @click="snackbar.accion.fn(); snackbar.visible = false"

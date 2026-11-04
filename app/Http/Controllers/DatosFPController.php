@@ -543,6 +543,7 @@ class DatosFPController extends Controller
         'cif'              => 'cif',
         'sector'           => 'sector',
         'tamano'           => 'tamano',
+        'nivelDigitalizacion' => 'nivel_digitalizacion',
         'web'              => 'web',
         'actividad'        => 'actividad',
         'personaContacto'  => 'persona_contacto',

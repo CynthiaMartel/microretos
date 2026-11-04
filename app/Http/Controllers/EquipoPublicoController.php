@@ -122,15 +122,7 @@ class EquipoPublicoController extends Controller
      */
     public function show($token)
     {
-        $equipo = Equipo::with([
-            'microproyecto.microreto',
-            'microproyecto.recursos',
-            'miembros',
-            'fases',
-            'tareas',
-            'reflexiones',
-            'prototipos',
-        ])->where('token', $token)->first();
+        $equipo = Equipo::with(self::RELACIONES_WORKSPACE)->where('token', $token)->first();
 
         if (!$equipo) {
             return response()->json(['error' => 'Enlace no válido.'], 404);
@@ -141,6 +133,48 @@ class EquipoPublicoController extends Controller
         }
 
         return response()->json($this->formatWorkspace($equipo));
+    }
+
+    // Todo lo que pinta el workspace (show y showDocente)
+    private const RELACIONES_WORKSPACE = [
+        'microproyecto.microreto',
+        'microproyecto.recursos',
+        'microproyecto.familia:id,nombre',
+        'microproyecto.cicloFormativo:id,nombre',
+        'miembros',
+        'fases',
+        'tareas',
+        'reflexiones',
+        'prototipos',
+    ];
+
+    /**
+     * GET /api/startup/equipos/{id}/workspace (auth:sanctum + docente)
+     * El workspace de un grupo visto por el docente, en solo lectura: con su sesión y por id,
+     * nunca con el token del grupo. Sin token, el frontend no puede llamar a ninguna de las
+     * rutas de escritura de /equipo/{token}, así que no hay forma de cambiar el trabajo del
+     * alumnado desde esta vista. Basta con poder VER el encuentro (visiblesPara): los
+     * colaboradores de solo lectura también pueden consultarlo.
+     */
+    public function showDocente(Request $request, int $equipoId)
+    {
+        $equipo = Equipo::with(self::RELACIONES_WORKSPACE)
+            ->where('id', $equipoId)
+            ->whereHas('encuentro', fn ($q) => $q->visiblesPara($request->user()))
+            ->firstOrFail();
+
+        $workspace = $this->formatWorkspace($equipo);
+        // Con el código de acceso se entra en el workspace y se puede escribir: solo para quien
+        // puede editar el encuentro (misma regla que EquipoProgresoResource)
+        if (!$equipo->encuentro?->esEditablePor($request->user())) {
+            $workspace['equipo']['codigo_acceso'] = null;
+        }
+
+        return response()->json(array_merge($workspace, [
+            // Para volver al Detalle de grupos y abrir la ficha del reto con la sesión del docente
+            'encuentro_id' => $equipo->encuentro_id,
+            'microreto_id' => $equipo->microproyecto?->microreto_id,
+        ]));
     }
 
     /**
@@ -874,6 +908,10 @@ class EquipoPublicoController extends Controller
             'proyecto' => [
                 'titulo'        => $mp->titulo,
                 'curso'         => $mp->curso,
+                // Familia y ciclo del proyecto: la empresa puede ser de otro sector (una
+                // energética que pide Marketing) y el equipo debe saber desde qué perfil trabaja
+                'familia'       => $mp?->familia?->nombre,
+                'ciclo'         => $mp?->cicloFormativo?->nombre,
                 'empresa_nombre' => $mp->datos_empresa['nombre'] ?? null,
                 'centro_nombre'  => $mp->datos_centro['nombre'] ?? null,
                 'docente_nombre' => $mp->datos_centro['docente_nombre'] ?? null,
@@ -889,6 +927,8 @@ class EquipoPublicoController extends Controller
             ],
             // Diagnóstico de empresa del microreto origen (solo lectura en F0)
             'diagnostico' => $mr ? [
+                // Para qué quería la empresa al alumnado de esta familia (copia guardada en el reto)
+                'interes_familia' => is_array($mr->diagnostico_empresa) ? ($mr->diagnostico_empresa['interes'] ?? null) : null,
                 'quien_es'      => $mr->quien_es,
                 'dia_a_dia'     => $mr->dia_a_dia,
                 'pregunta_reto' => $mr->pregunta_reto,

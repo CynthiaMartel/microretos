@@ -31,6 +31,7 @@ RESUMEN_*.pdf
 
 # Notas internas de tareas pendientes — no debe ser público
 /TAREAS_PENDIENTES.txt
+/TAREAS_PENDIENTES_NOTIFICACIONES.md
 
 # Scripts sueltos de prueba manual en la raíz (Playwright ad-hoc, no son tests del repo)
 /test_*.js
@@ -64,3 +65,7 @@ desahucio_.png
 
 # Diseños de referencia (maquetas PNG en la raíz) — no se versionan
 /*.png
+
+# Paquete de datos de importación (revisión interna, no versionar)
+/DUALAB_PAQUETE_REVISION_IMPORTACION/
+/LD-14-attachments.zip

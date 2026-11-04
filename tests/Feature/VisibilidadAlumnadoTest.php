@@ -130,6 +130,7 @@ class VisibilidadAlumnadoTest extends TestCase
         $this->assertEmpty($this->getJson('/api/encuentros')->assertOk()->json());
         $this->assertEmpty($this->getJson('/api/alumnado')->assertOk()->json());
         $this->getJson("/api/encuentros/{$this->encuentro->id}/workspace")->assertNotFound();
+        $this->getJson("/api/startup/equipos/{$this->equipo->id}/workspace")->assertNotFound();
     }
 
     public function test_colaborador_de_solo_lectura_ve_el_alumnado_pero_no_los_codigos_ni_puede_mutar(): void
@@ -144,11 +145,11 @@ class VisibilidadAlumnadoTest extends TestCase
 
         $workspace = $this->getJson("/api/encuentros/{$this->encuentro->id}/workspace")->assertOk()->json();
         $this->assertSame('Lucía Panda Azul', $workspace['equipos'][0]['miembros'][0]['alias']);
-        $this->assertNull($workspace['equipos'][0]['token']);
+        $this->assertArrayNotHasKey('token', $workspace['equipos'][0]);
         $this->assertNull($workspace['equipos'][0]['codigo_acceso']);
 
         $misGrupos = $this->getJson('/api/encuentros/mis-grupos')->assertOk()->json();
-        $this->assertNull($misGrupos[0]['equipos'][0]['token']);
+        $this->assertArrayNotHasKey('token', $misGrupos[0]['equipos'][0]);
         $this->assertNull($misGrupos[0]['encuentro']['codigo_clase']);
 
         $alias = collect($this->getJson('/api/alumnado')->assertOk()->json())->pluck('alias');
@@ -156,7 +157,14 @@ class VisibilidadAlumnadoTest extends TestCase
 
         $uuid = DB::table('microproyectos')->where('id', $this->encuentro->microproyecto_id)->value('uuid');
         $this->getJson("/api/startup/proyectos/{$uuid}/pantalla-acceso")->assertNotFound();
-        $this->getJson("/api/startup/proyectos/{$uuid}/equipos")->assertOk()->assertJsonPath('equipos.0.token', null);
+        $this->getJson("/api/startup/proyectos/{$uuid}/equipos")->assertOk()->assertJsonMissingPath('equipos.0.token');
+
+        // Workspace del grupo en solo lectura: lo ve, pero sin token ni código de acceso
+        $this->getJson("/api/startup/equipos/{$this->equipo->id}/workspace")->assertOk()
+            ->assertJsonPath('equipo.miembros.0.alias', 'Lucía Panda Azul')
+            ->assertJsonPath('equipo.codigo_acceso', null)
+            ->assertJsonPath('encuentro_id', $this->encuentro->id)
+            ->assertJsonMissingPath('equipo.token');
         $this->postJson("/api/encuentros/{$this->encuentro->id}/crear-codigo")->assertNotFound();
         $this->deleteJson("/api/encuentros/{$this->encuentro->id}")->assertNotFound();
     }
@@ -169,14 +177,19 @@ class VisibilidadAlumnadoTest extends TestCase
         $uuid = DB::table('microproyectos')->where('id', $this->encuentro->microproyecto_id)->value('uuid');
         $this->getJson("/api/startup/proyectos/{$uuid}/pantalla-acceso")->assertOk()
             ->assertJsonPath('equipos.0.token', $this->equipo->token);
+        // El token ya no se envía nunca al docente: ve el workspace del grupo por id, en solo lectura
         $this->getJson("/api/encuentros/{$this->encuentro->id}/workspace")->assertOk()
-            ->assertJsonPath('equipos.0.token', $this->equipo->token);
+            ->assertJsonMissingPath('equipos.0.token');
+        $this->getJson("/api/startup/equipos/{$this->equipo->id}/workspace")->assertOk()
+            ->assertJsonPath('equipo.codigo_acceso', $this->equipo->fresh()->codigo_acceso)
+            ->assertJsonMissingPath('equipo.token');
     }
 
     public function test_un_docente_de_otro_centro_nunca_ve_el_encuentro(): void
     {
         Sanctum::actingAs($this->pedro);
         $this->getJson("/api/encuentros/{$this->encuentro->id}/workspace")->assertNotFound();
+        $this->getJson("/api/startup/equipos/{$this->equipo->id}/workspace")->assertNotFound();
         $this->assertEmpty($this->getJson('/api/alumnado')->assertOk()->json());
     }
 

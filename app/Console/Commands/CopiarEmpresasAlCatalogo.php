@@ -57,7 +57,7 @@ class CopiarEmpresasAlCatalogo extends Command
 
             $plantilla = DB::transaction(function () use ($original) {
                 // Copia de todos los datos (ficha + diagnóstico), sin centro ni estado de contacto.
-                $plantilla = $original->replicate(['es_catalogo', 'copiada_de_id', 'estado_contacto', 'fecha_cita', 'centro_id', 'centro_educativo']);
+                $plantilla = $original->replicate(['es_catalogo', 'copiada_de_id', 'id_externo', 'estado_contacto', 'fecha_cita', 'centro_id', 'centro_educativo']);
                 $plantilla->forceFill([
                     'nombre_comercial' => Empresa::nombreLibreEnCentro(null, (string) $original->nombre_comercial),
                     'centro_id'        => null,

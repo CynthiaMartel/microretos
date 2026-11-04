@@ -79,7 +79,7 @@ const abrir = (card) => {
 
       <!-- Herramientas de la sección. Las marcadas `principal` llevan el botón relleno -->
       <!-- auto-rows-fr: todas las cards miden lo mismo aunque cambie el largo de su descripción -->
-      <div class="grid auto-rows-fr gap-4 sm:grid-cols-2">
+      <div class="grid auto-rows-fr gap-4 sm:grid-cols-2" :class="cards.length === 3 && 'lg:grid-cols-3'">
         <!-- `integrada`: la card entera es la acción (tintada, flecha a la derecha, sin CTA aparte);
              `ancho`: igual, pero ocupando la fila completa -->
         <article v-for="card in cards" :key="card.titulo"

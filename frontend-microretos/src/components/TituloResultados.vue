@@ -25,11 +25,11 @@ const ultimo = computed(() => props.niveles.at(-1))
         <!-- Cada «›» va pegado a su píldora: al saltar de línea no queda suelto al principio -->
         <span v-for="(n, i) in niveles" :key="n.etiqueta" class="inline-flex min-w-0 max-w-full items-center gap-1">
           <svg v-if="i > 0" class="h-3.5 w-3.5 shrink-0 text-texto-secundario" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-          <span class="inline-flex min-h-8 min-w-0 max-w-full items-center rounded-full border"
+          <span class="inline-flex min-h-9 min-w-0 max-w-full items-center rounded-full border"
                 :class="i === niveles.length - 1 ? 'border-rol-fuerte/30 bg-rol/10' : 'border-borde bg-white'">
             <button type="button" @click="n.subir()" :disabled="i === niveles.length - 1"
                     :title="i === niveles.length - 1 ? n.valor : `Volver a ${n.valor}`"
-                    class="inline-flex min-w-0 items-center gap-1.5 rounded-l-full py-1 pl-2.5 pr-1 text-left enabled:hover:underline disabled:cursor-default">
+                    class="inline-flex min-w-0 items-center gap-1.5 self-stretch rounded-l-full py-1 pl-2.5 pr-1 text-left enabled:hover:underline disabled:cursor-default">
               <svg class="h-3.5 w-3.5 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path :d="iconoFiltro(n.etiqueta)" /></svg>
               <span class="shrink-0 text-texto-secundario">{{ n.etiqueta }}:</span>
               <span class="min-w-0 truncate font-semibold" :class="i === niveles.length - 1 ? 'text-rol-fuerte' : 'text-azul-noche'">{{ n.valor }}</span>

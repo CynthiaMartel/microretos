@@ -1,6 +1,10 @@
-<!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js. -->
+<!-- Ruta: /encuentros (name: encuentros-registrados). Antes vivía en /dashboard/encuentros — ver router/index.js.
+     Biblioteca de encuentros con dos pestañas sobre la misma lista y los mismos filtros:
+     · «Gestión» (por defecto): fechas, códigos del alumnado, reparto de grupos, compartir…
+     · «Seguimiento de grupos» (?ver=seguimiento): el avance de los grupos de cada encuentro. Antes era
+       la vista Mis grupos (/mis-grupos, que ahora redirige aquí); su tarjeta es TarjetaSeguimientoEncuentro. -->
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import MiniaturaReto from '../components/MiniaturaReto.vue'
 import TituloResultados from '../components/TituloResultados.vue'
@@ -16,15 +20,16 @@ import BienvenidaModal from '../components/BienvenidaModal_DashboardDocente.vue'
 import ReestructurarEquipoModal from '../components/ReestructurarEquipoModal.vue'
 import CompartirEncuentroModal from '../components/CompartirEncuentroModal.vue'
 import EncuentroEquiposYRaCe from '../components/EncuentroEquiposYRaCe.vue'
+import TarjetaSeguimientoEncuentro from '../components/TarjetaSeguimientoEncuentro.vue'
 import { useCursoAcademicoStore, cursoDeEncuentro } from '../stores/cursoAcademico.js'
 import SelectorCurso from '../components/SelectorCurso.vue'
 import FiltrosPanel from '../components/FiltrosPanel.vue'
 import FiltroSegmentado from '../components/FiltroSegmentado.vue'
 import FiltroSelect from '../components/FiltroSelect.vue'
-import api from '../api.js'
+import { getEncuentros, getMisGrupos, actualizarEncuentro, crearCodigoAcceso, crearCodigoIa as crearCodigoIaApi } from '../services/encuentroService.js'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
-import { FASES_PROYECTO } from '../config/fasesProyecto.js'
+import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
 
@@ -37,6 +42,7 @@ function gruposDe(s) {
       .sort((a, b) => (a.numero_equipo ?? 0) - (b.numero_equipo ?? 0))
       .map(e => ({
         clave:   e.id,
+        equipoId: e.id,
         nombre:  nombreGrupo(e),
         alumnos: e.miembros?.length || 0,
         fase:    FASE_LABEL[e.fase_actual] ?? null,
@@ -45,7 +51,7 @@ function gruposDe(s) {
   const porNum = new Map()
   ;(s.alumnados || []).forEach(a => { if (a.equipo_num) porNum.set(a.equipo_num, (porNum.get(a.equipo_num) || 0) + 1) })
   return [...porNum.entries()].sort((a, b) => a[0] - b[0])
-    .map(([n, alumnos]) => ({ clave: 'n' + n, nombre: `Grupo ${n}`, alumnos, fase: null }))
+    .map(([n, alumnos]) => ({ clave: 'n' + n, equipoId: null, nombre: `Grupo ${n}`, alumnos, fase: null }))
 }
 
 const router  = useRouter()
@@ -73,7 +79,7 @@ const encuentros = ref([])
 async function cargarEncuentros() {
   cargando.value = true
   try {
-    const res = await api.get('/encuentros')
+    const res = await getEncuentros()
     encuentros.value = res.data
   } catch (e) {
     console.error('Error cargando encuentros:', e)
@@ -127,7 +133,7 @@ function mostrarSnack(mensaje, accion = null) {
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 // Biblioteca de encuentros con el mismo esquema que el explorador de retos: filtros arriba,
-// «Filtros rápidos» a la izquierda (familias —varias—, acceso, propiedad, fechas) y resultados.
+// «Filtros rápidos» a la izquierda (lo propio de la pestaña, familias —varias—, propiedad, fechas) y resultados.
 const filtros = ref({
   titulo:    '',
   desde:     '',
@@ -138,10 +144,12 @@ const filtros = ref({
   ciclo:     '',
   modulo:    '',
   centro:    '',
-  acceso:    '',   // '' | 'con' (ya tiene código del alumnado) | 'sin'
+  acceso:    '',   // '' | 'con' (ya tiene código del alumnado) | 'sin'      — solo «Gestión»
   propiedad: '',   // '' | 'mios' | 'compartidos'
+  estado:    '',   // '' | 'en_curso' | 'sin_iniciar' | 'completado' (de cada grupo) — solo «Seguimiento»
+  diagnostico: false, // solo encuentros con algún diagnóstico listo           — solo «Seguimiento»
 })
-const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familias: [], ciclo: '', modulo: '', centro: '', acceso: '', propiedad: '' }
+const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familias: [], ciclo: '', modulo: '', centro: '', acceso: '', propiedad: '', estado: '', diagnostico: false }
 
 // Encuentros cuyo proyecto no tiene familia: opción propia en el filtro
 const SIN_FAMILIA = '__sin_familia__'
@@ -193,8 +201,9 @@ const encuentrosUnicos = computed(() => {
   return { centros, familias, ciclos, modulos, familiasPanel, acceso, propiedad }
 })
 
-const encuentrosFiltrados = computed(() => {
-  let lista = [...encuentrosCurso.value].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
+// Filtros comunes a las dos pestañas (barra superior, familia, propiedad y fechas)
+function aplicarComunes(base) {
+  let lista = [...base].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
 
   if (filtros.value.titulo.trim()) {
     const q = filtros.value.titulo.trim().toLowerCase()
@@ -216,22 +225,169 @@ const encuentrosFiltrados = computed(() => {
     lista = lista.filter(s => modulosDeEncuentro(s).includes(filtros.value.modulo))
   if (filtros.value.centro)
     lista = lista.filter(s => s.centro_educativo === filtros.value.centro)
-  if (filtros.value.acceso)
-    lista = lista.filter(s => filtros.value.acceso === 'con' ? !!s.codigo_clase : !s.codigo_clase)
   if (filtros.value.propiedad)
     lista = lista.filter(s => filtros.value.propiedad === 'mios' ? s.es_propietario : !s.es_propietario)
+  return lista
+}
+const ordenar = (lista) => {
   if (orden.value === 'antiguos') lista.reverse()
   else if (orden.value === 'titulo') lista.sort((a, b) => (a.proyecto_titulo || '').localeCompare(b.proyecto_titulo || '', 'es'))
-
+  else if (orden.value === 'avance') lista.sort((a, b) => avanceMedio(b) - avanceMedio(a))
   return lista
+}
+const comunesFiltrados = computed(() => aplicarComunes(encuentrosCurso.value))
+
+// «Gestión»: + acceso del alumnado
+const encuentrosFiltrados = computed(() => ordenar(filtros.value.acceso
+  ? comunesFiltrados.value.filter(s => filtros.value.acceso === 'con' ? !!s.codigo_clase : !s.codigo_clase)
+  : [...comunesFiltrados.value]))
+
+// ─── Pestaña «Seguimiento de grupos» (?ver=seguimiento) ──────────────────────
+// Avance de los grupos (GET /encuentros/mis-grupos), indexado por encuentro. Se carga al entrar
+// en la pestaña: es más pesado que el listado y en «Gestión» no hace falta.
+const ver = computed(() => (route.query.ver === 'seguimiento' ? 'seguimiento' : 'gestion'))
+const progresoGrupos       = ref(null)   // Map encuentroId → equipos con progreso; null = sin cargar
+const cargandoSeguimiento  = ref(false)
+const errorSeguimiento     = ref('')
+async function cargarSeguimiento() {
+  if (progresoGrupos.value || cargandoSeguimiento.value) return
+  cargandoSeguimiento.value = true
+  errorSeguimiento.value = ''
+  try {
+    const { data } = await getMisGrupos()
+    progresoGrupos.value = new Map(data.map(g => [g.encuentro.id, g.equipos]))
+  } catch {
+    errorSeguimiento.value = 'No se ha podido cargar el avance de los grupos.'
+  } finally {
+    cargandoSeguimiento.value = false
+  }
+}
+
+// Mismos tres estados que en Detalle de grupos (mutuamente excluyentes)
+function estadoEquipo(equipo) {
+  if (equipo.fases_completas === 5) return 'completado'
+  if (equipo.fase_actual === 0 && equipo.fases_completas === 0) return 'sin_iniciar'
+  return 'en_curso'
+}
+const equiposDe = (s) => progresoGrupos.value?.get(s.id) || []
+// Grupos a mostrar: con un estado elegido, solo los que lo cumplen
+const equiposVisibles = (s) => filtros.value.estado ? equiposDe(s).filter(e => estadoEquipo(e) === filtros.value.estado) : equiposDe(s)
+const avanceMedio = (s) => { const eqs = equiposDe(s); return eqs.length ? eqs.reduce((t, e) => t + progresoPonderado(e.fases), 0) / eqs.length : 0 }
+const grupoCompletado = (s) => equiposDe(s).length > 0 && equiposDe(s).every(e => e.fases_completas === 5)
+const tieneDiagnostico = (s) => equiposDe(s).some(e => e.diagnostico_final)
+
+// En la pestaña solo los encuentros con grupos; cada contador del lateral, sin su propio filtro.
+// Sin cargar todavía, el número de la pestaña sale de los grupos que trae el listado.
+function aplicarSeguimiento(lista, { sinEstado = false, sinDiagnostico = false } = {}) {
+  if (!progresoGrupos.value) return lista.filter(s => s.equipos?.length)
+  return lista.filter(s => equiposDe(s).length
+    && (sinEstado || !filtros.value.estado || equiposVisibles(s).length)
+    && (sinDiagnostico || !filtros.value.diagnostico || tieneDiagnostico(s)))
+}
+// En curso primero y completados después (con su cabecera), salvo con un estado elegido
+const seguimientoFiltrados = computed(() => {
+  const lista = ordenar(aplicarSeguimiento(comunesFiltrados.value))
+  return filtros.value.estado ? lista : [...lista.filter(s => !grupoCompletado(s)), ...lista.filter(grupoCompletado)]
 })
+const numEnProgreso  = computed(() => seguimientoFiltrados.value.filter(s => !grupoCompletado(s)).length)
+const numCompletados = computed(() => seguimientoFiltrados.value.length - numEnProgreso.value)
+const totalGruposVisibles = computed(() => seguimientoFiltrados.value.reduce((t, s) => t + equiposVisibles(s).length, 0))
+
+const ESTADOS_GRUPO = [
+  { value: '',            label: 'Todos',       punto: 'bg-gray-300' },
+  { value: 'en_curso',    label: 'En curso',    punto: 'bg-centros' },
+  { value: 'sin_iniciar', label: 'Sin iniciar', punto: 'bg-amber-500' },
+  { value: 'completado',  label: 'Completados', punto: 'bg-empresas' },
+]
+// Cuenta grupos, no encuentros
+const conteoEstados = computed(() => {
+  const grupos = aplicarSeguimiento(comunesFiltrados.value, { sinEstado: true }).flatMap(equiposDe)
+  return Object.fromEntries(ESTADOS_GRUPO.map(e => [e.value, e.value ? grupos.filter(g => estadoEquipo(g) === e.value).length : grupos.length]))
+})
+// Cuenta encuentros
+const conteoDiagnostico = computed(() => aplicarSeguimiento(comunesFiltrados.value, { sinDiagnostico: true }).filter(tieneDiagnostico).length)
+
+// Lista de la pestaña activa (paginación y título de resultados)
+const listaActiva = computed(() => (ver.value === 'seguimiento' ? seguimientoFiltrados.value : encuentrosFiltrados.value))
+// Cabecera «En progreso / Completados» antes del primer encuentro de cada tipo en la página
+const muestraCabeceraBloque = (idx) => !filtros.value.estado
+  && (idx === 0 || grupoCompletado(encuentrosPagina.value[idx - 1]) !== grupoCompletado(encuentrosPagina.value[idx]))
+
+// Desplegables de la pestaña (en el padre para poder abrir uno al llegar desde un enlace)
+const encuentrosAbiertos = ref(new Set())
+const equiposAbiertos    = ref(new Set())
+// (En la plantilla los refs llegan desenvueltos: por eso una función por desplegable.)
+const alternado = (set, id) => { const n = new Set(set); n.has(id) ? n.delete(id) : n.add(id); return n }
+function alternarEncuentro(id) { encuentrosAbiertos.value = alternado(encuentrosAbiertos.value, id) }
+function alternarEquipo(id)    { equiposAbiertos.value = alternado(equiposAbiertos.value, id) }
+function desplegarTodo(s) {
+  encuentrosAbiertos.value = new Set([...encuentrosAbiertos.value, s.id])
+  equiposAbiertos.value = new Set([...equiposAbiertos.value, ...equiposVisibles(s).map(e => e.id)])
+}
+// Al elegir un estado se despliegan los encuentros y grupos que lo cumplen (si no, habría que
+// abrir cada acordeón para ver cuál lo cumple); al quitarlo se repliegan.
+watch(() => filtros.value.estado, (estado) => {
+  if (!estado) { encuentrosAbiertos.value = new Set(); equiposAbiertos.value = new Set(); return }
+  const conGrupos = seguimientoFiltrados.value.filter(s => equiposVisibles(s).length)
+  encuentrosAbiertos.value = new Set(conGrupos.map(s => s.id))
+  equiposAbiertos.value = new Set(conGrupos.flatMap(s => equiposVisibles(s).map(e => e.id)))
+})
+
+// Cada pestaña tiene su filtro propio: al cambiar se quita el de la otra. Primero la URL y
+// después los filtros (mismo orden que la Biblioteca de proyectos).
+async function elegirVer(valor) {
+  if (valor === ver.value) return
+  await router.replace({ query: { ...route.query, ver: valor === 'seguimiento' ? 'seguimiento' : undefined, encuentro: undefined, equipo: undefined } })
+  filtros.value.acceso = ''
+  filtros.value.estado = ''
+  filtros.value.diagnostico = false
+  if (orden.value === 'avance') orden.value = 'recientes'
+}
+watch(ver, (v) => { if (v === 'seguimiento') cargarSeguimiento() }, { immediate: true })
+
+// ── Llegada a un encuentro concreto: ?ver=seguimiento&encuentro=<id>[&equipo=<id>] ──
+// (tarjeta de Gestión, enlaces antiguos a /mis-grupos, «Volver» de Detalle de grupos). Si no
+// se ve con los filtros actuales, se quitan (y se ajusta el curso académico); después se va a
+// su página, se despliega (con ese grupo abierto) y se resalta un momento.
+const encuentroResaltado = ref(null)
+let timerResaltado = null
+const reducirMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+async function enfocarSeguimientoDeRuta() {
+  const { encuentro, equipo } = route.query
+  if (ver.value !== 'seguimiento' || !encuentro || !progresoGrupos.value || cargando.value) return
+  const s = encuentros.value.find(x => String(x.id) === String(encuentro))
+  const idx = () => seguimientoFiltrados.value.findIndex(x => x.id === s.id)
+  if (s && idx() < 0) {
+    limpiarFiltros()
+    const curso = cursoDeEncuentro(s)
+    if (!cursoStore.coincide(curso)) cursoStore.curso = curso
+    await nextTick()   // los watches de filtros reinician la página: esperar antes de fijarla
+  }
+  const i = s ? idx() : -1
+  if (i >= 0) {
+    pagina.value = Math.floor(i / POR_PAGINA)
+    encuentrosAbiertos.value = new Set([...encuentrosAbiertos.value, s.id])
+    const eq = equiposDe(s).find(e => String(e.id) === String(equipo))
+    if (eq) equiposAbiertos.value = new Set([...equiposAbiertos.value, eq.id])
+    await nextTick()
+    const el = document.getElementById(eq ? `seguimiento-equipo-${eq.id}` : `seguimiento-${s.id}`)
+    el?.scrollIntoView({ behavior: reducirMovimiento() ? 'auto' : 'smooth', block: 'start' })
+    encuentroResaltado.value = s.id
+    clearTimeout(timerResaltado)
+    timerResaltado = setTimeout(() => { encuentroResaltado.value = null }, 3000)
+  }
+  // Ya usada: quitarla para que recargar no vuelva a mover la página
+  router.replace({ query: { ...route.query, encuentro: undefined, equipo: undefined } })
+}
+watch([() => route.query.encuentro, progresoGrupos, cargando], enfocarSeguimientoDeRuta)
 
 const OPCIONES_NIVEL = [{ value: '', label: 'Todos' }, { value: '1º', label: '1º' }, { value: '2º', label: '2º' }]
 const OPCIONES_CLASE = [{ value: '', label: 'Todas' }, ...['A', 'B', 'C', 'D'].map(g => ({ value: g, label: g }))]
 
-const hayFiltrosActivos = computed(() =>
-  Object.values(filtros.value).some(v => Array.isArray(v) ? v.length : v !== '')
-)
+// Los filtros propios de la otra pestaña no cuentan (y se quitan al cambiar de pestaña)
+const hayFiltrosActivos = computed(() => Object.entries(filtros.value).some(([k, v]) =>
+  (ver.value === 'seguimiento' ? k !== 'acceso' : !['estado', 'diagnostico'].includes(k))
+  && (Array.isArray(v) ? v.length : v !== '' && v !== false)))
 function alternarFamilia(valor) {
   const l = filtros.value.familias
   filtros.value.familias = l.includes(valor) ? l.filter(v => v !== valor) : [...l, valor]
@@ -239,7 +395,7 @@ function alternarFamilia(valor) {
 const nombreFamilia = (v) => v === SIN_FAMILIA ? 'Sin familia asignada' : v
 
 // Orden, vista, panel lateral y paginación (mismo comportamiento que el explorador de retos)
-const orden = ref('recientes')   // 'recientes' | 'antiguos' | 'titulo'
+const orden = ref('recientes')   // 'recientes' | 'antiguos' | 'titulo' | 'avance' (solo Seguimiento)
 const VISTA_KEY = 'dualab_encuentros_vista'
 const vista = ref((() => { try { return localStorage.getItem(VISTA_KEY) || 'cuadricula' } catch { return 'cuadricula' } })())
 watch(vista, v => { try { localStorage.setItem(VISTA_KEY, v) } catch { /* sin almacenamiento */ } })
@@ -257,8 +413,8 @@ const hayVariosCentros = computed(() => encuentrosUnicos.value.centros.length > 
 // 12 por página: se reparte entero en 1, 2, 3 o 4 columnas (con 9, a 2 columnas quedaba
 // una tarjeta sola en la última fila y un hueco a su derecha)
 const POR_PAGINA = 12
-const { pagina, totalPaginas, itemsPagina: encuentrosPagina } = usePaginacion(encuentrosFiltrados, POR_PAGINA)
-watch(encuentrosFiltrados, () => { pagina.value = 0 })
+const { pagina, totalPaginas, itemsPagina: encuentrosPagina } = usePaginacion(listaActiva, POR_PAGINA)
+watch(listaActiva, () => { pagina.value = 0 })
 const paginasVisibles = computed(() => {
   const n = totalPaginas.value, a = pagina.value
   const ini = Math.max(0, Math.min(a - 2, n - 5)), fin = Math.min(n, ini + 5)
@@ -317,6 +473,30 @@ function alumnadosDelEquipoAbierto(n) {
     .map(a => ({ alias: a.alias }))
 }
 
+// ─── Enlaces del encuentro: Seguimiento, Detalle de grupos y Listado de alumnado ──
+// Tarjeta de Gestión → pestaña Seguimiento con este encuentro desplegado y resaltado (y, desde la
+// etiqueta de un grupo, también ese grupo). push y no replace: «atrás» vuelve a Gestión.
+function verSeguimiento(s, equipoId = null) {
+  router.push({ query: { ...route.query, ver: 'seguimiento', encuentro: s.id, equipo: equipoId ?? undefined } })
+}
+// «Ver detalle de grupos» lleva al trabajo de los grupos; con equipo, abre y resalta ese grupo.
+function verEnWorkspace(s, equipoId = null) {
+  cerrarEncuentro()
+  router.push({ name: 'mis-grupos-detalle', params: { id: s.id }, query: equipoId ? { equipo: equipoId } : {} })
+}
+const equipoAbiertoNum = (n) => (encuentroAbierto.value?.equipos || []).find(e => e.numero_equipo === n)
+// Solo los grupos con equipo real (los encuentros antiguos solo tienen el reparto plano)
+const grupoConWorkspace = (n) => !!(encuentroAbierto.value?.microproyecto_uuid && equipoAbiertoNum(n))
+function verGrupoEnWorkspace(n) { verEnWorkspace(encuentroAbierto.value, equipoAbiertoNum(n)?.id) }
+
+// Chip de un alias → su ficha en el Listado de alumnado, desplegada y resaltada.
+// El alias es único dentro de su encuentro: alias + encuentro identifican la participación.
+function verAlumno(alias) {
+  const id = encuentroAbierto.value.id
+  cerrarEncuentro()
+  router.push({ name: 'alumnado-listado', query: { alumno: alias, encuentro: id } })
+}
+
 // ─── Reestructurar equipo ──────────────────────────────────────────────────────
 const reestructurando = ref(null)
 
@@ -372,7 +552,7 @@ async function guardarFechaFin() {
   guardandoFechaFin.value = true
   errorFechaFin.value     = ''
   try {
-    const res = await api.put(`/encuentros/${encuentroAbierto.value.id}`, { fecha_fin: fechaFinInput.value || null })
+    const res = await actualizarEncuentro(encuentroAbierto.value.id, { fecha_fin: fechaFinInput.value || null })
     encuentroAbierto.value = { ...encuentroAbierto.value, fecha_fin: res.data.fecha_fin }
     encuentros.value = encuentros.value.map(s => s.id === encuentroAbierto.value.id ? { ...s, fecha_fin: res.data.fecha_fin } : s)
     editandoFechaFin.value = false
@@ -403,7 +583,7 @@ async function crearCodigo(encuentro) {
   creandoCodigo.value = { ...creandoCodigo.value, [encuentro.id]: true }
   errorCodigo.value   = { ...errorCodigo.value,   [encuentro.id]: '' }
   try {
-    const res = await api.post(`/encuentros/${encuentro.id}/crear-codigo`)
+    const res = await crearCodigoAcceso(encuentro.id)
     const nuevoCodigo = res.data.codigo_clase
     encuentros.value = encuentros.value.map(s =>
       s.id === encuentro.id ? { ...s, codigo_clase: nuevoCodigo } : s
@@ -427,7 +607,7 @@ async function crearCodigoIa(encuentro) {
   creandoCodigoIa.value = { ...creandoCodigoIa.value, [encuentro.id]: true }
   errorCodigoIa.value   = { ...errorCodigoIa.value,   [encuentro.id]: '' }
   try {
-    const res = await api.post(`/encuentros/${encuentro.id}/codigo-ia`)
+    const res = await crearCodigoIaApi(encuentro.id)
     const nuevoCodigo = res.data.codigo_ia
     encuentros.value = encuentros.value.map(s =>
       s.id === encuentro.id ? { ...s, codigo_ia: nuevoCodigo } : s
@@ -484,8 +664,8 @@ function formatFecha(isoDate) {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8" @keydown.esc="menuEncuentro = null; menuLlave = null">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) + acciones de la vista -->
-      <CabeceraSeccion titulo="Encuentros" destacado="registrados" color="text-centros" volver="/seccion/encuentros"
-                       subtitulo="Consulta y filtra todo el historial de encuentros de trabajo con retos."
+      <CabeceraSeccion titulo="Encuentros y" destacado="grupos" color="text-centros" volver="/seccion/encuentros"
+                       subtitulo="Gestiona tus encuentros con el alumnado y sigue el avance de sus grupos, fase a fase."
                        class="mb-6">
         <div class="flex flex-wrap items-center gap-2">
           <!-- ¿Qué necesitas? — abre el modal de opciones (guiaBienvenida) -->
@@ -517,6 +697,33 @@ function formatFecha(isoDate) {
           </button>
         </div>
       </CabeceraSeccion>
+
+      <!-- ═══ Pestañas: Gestión | Seguimiento de grupos (en la URL: ?ver=seguimiento) ═══
+           Misma lista y mismos filtros; el número cuenta lo que se vería en cada pestaña. A la
+           derecha (en móvil, debajo), qué se hace en la activa: así se distingue a simple vista
+           en qué pestaña se está, no solo por la píldora resaltada. -->
+      <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div class="flex max-w-full rounded-full sm:w-fit">
+          <div class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué ver de los encuentros">
+            <button v-for="t in [
+                      { v: 'gestion', label: 'Gestión', corta: 'Gestión', n: encuentrosFiltrados.length, icono: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                      { v: 'seguimiento', label: 'Seguimiento de grupos', corta: 'Seguimiento', n: seguimientoFiltrados.length, icono: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                    ]" :key="t.v" type="button" @click="elegirVer(t.v)" :aria-pressed="ver === t.v"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold transition-colors sm:flex-none sm:gap-2 sm:px-5"
+                    :class="ver === t.v ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:bg-gray-50 hover:text-azul-noche'">
+              <svg class="hidden h-4 w-4 shrink-0 min-[400px]:block" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path :d="t.icono" /></svg>
+              <span class="truncate sm:hidden">{{ t.corta }}</span><span class="hidden truncate sm:inline">{{ t.label }}</span>
+              <span class="rounded-full px-2 py-0.5 text-xs font-bold"
+                    :class="ver === t.v ? 'bg-white/20 text-white' : 'bg-gray-100 text-azul-noche'">{{ cargando ? '…' : t.n }}</span>
+            </button>
+          </div>
+        </div>
+        <p class="flex min-w-0 items-start gap-2 text-sm text-texto-secundario lg:max-w-xl lg:items-center lg:text-right" aria-live="polite">
+          <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte lg:mt-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span v-if="ver === 'gestion'"><strong class="font-semibold text-azul-noche">Gestión:</strong> fechas, códigos de acceso del alumnado, reparto de grupos y compartir con otros docentes.</span>
+          <span v-else><strong class="font-semibold text-azul-noche">Seguimiento de grupos:</strong> en qué fase va cada grupo, lo que entrega y su diagnóstico final.</span>
+        </p>
+      </div>
 
       <!-- ─── Filtros (mismo panel que el explorador de retos) ─────────────── -->
       <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del proyecto…">
@@ -558,7 +765,39 @@ function formatFecha(isoDate) {
                     class="inline-flex h-9 items-center rounded-full px-2 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">Limpiar</button>
           </div>
 
-          <div class="border-t border-borde pt-3" role="group" aria-labelledby="enc-filtro-familia">
+          <!-- Lo propio de cada pestaña: un solo grupo y el primero del panel (como en Proyectos) -->
+          <div v-if="ver === 'seguimiento'" class="border-t border-borde pt-3" role="group" aria-labelledby="enc-filtro-estado">
+            <p id="enc-filtro-estado" class="mb-1.5 text-sm font-semibold text-azul-noche">Estado de los grupos</p>
+            <label v-for="e in ESTADOS_GRUPO" :key="e.value || 'todos'"
+                   class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="radio" name="enc-estado" :value="e.value" v-model="filtros.estado" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="e.punto" aria-hidden="true" />
+              <span class="min-w-0 flex-1 truncate text-sm text-azul-noche">{{ e.label }}</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ progresoGrupos ? conteoEstados[e.value] : '…' }}</span>
+            </label>
+            <label class="mt-1 flex cursor-pointer items-center gap-2.5 rounded-lg border-t border-dashed border-borde px-1 pb-2 pt-3 hover:bg-gray-50">
+              <input type="checkbox" v-model="filtros.diagnostico" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="min-w-0 flex-1 text-sm text-azul-noche">Solo con diagnóstico listo</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ progresoGrupos ? conteoDiagnostico : '…' }}</span>
+            </label>
+          </div>
+          <div v-if="ver === 'gestion'" class="border-t border-borde pt-3" role="radiogroup" aria-labelledby="enc-filtro-acceso">
+            <p id="enc-filtro-acceso" class="mb-1.5 text-sm font-semibold text-azul-noche">Acceso del alumnado</p>
+            <label v-for="o in [
+                     { v: '', label: 'Todos', n: encuentrosUnicos.acceso.con + encuentrosUnicos.acceso.sin, cls: 'bg-gray-100 text-azul-noche', icono: 'M4 6h16M4 12h16M4 18h16' },
+                     { v: 'con', label: 'Con código de acceso', n: encuentrosUnicos.acceso.con, cls: 'bg-empresas/10 text-empresas-dark', icono: 'M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z' },
+                     { v: 'sin', label: 'Sin código todavía', n: encuentrosUnicos.acceso.sin, cls: 'bg-amber-50 text-amber-800', icono: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+                   ]" :key="'a' + o.v" class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input type="radio" name="enc-acceso" :value="o.v" v-model="filtros.acceso" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" :class="o.cls" aria-hidden="true">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="o.icono"/></svg>
+              </span>
+              <span class="min-w-0 flex-1 text-sm text-azul-noche">{{ o.label }}</span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ o.n }}</span>
+            </label>
+          </div>
+
+          <div class="mt-3 border-t border-borde pt-3" role="group" aria-labelledby="enc-filtro-familia">
             <p id="enc-filtro-familia" class="mb-1.5 text-sm font-semibold text-azul-noche">Familia profesional</p>
             <label v-for="f in familiasPanelVisibles" :key="f.value"
                    class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
@@ -574,21 +813,6 @@ function formatFecha(isoDate) {
             </button>
           </div>
 
-          <div class="mt-3 border-t border-borde pt-3" role="radiogroup" aria-labelledby="enc-filtro-acceso">
-            <p id="enc-filtro-acceso" class="mb-1.5 text-sm font-semibold text-azul-noche">Acceso del alumnado</p>
-            <label v-for="o in [
-                     { v: '', label: 'Todos', n: encuentrosUnicos.acceso.con + encuentrosUnicos.acceso.sin, cls: 'bg-gray-100 text-azul-noche', icono: 'M4 6h16M4 12h16M4 18h16' },
-                     { v: 'con', label: 'Con código de acceso', n: encuentrosUnicos.acceso.con, cls: 'bg-empresas/10 text-empresas-dark', icono: 'M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z' },
-                     { v: 'sin', label: 'Sin código todavía', n: encuentrosUnicos.acceso.sin, cls: 'bg-amber-50 text-amber-800', icono: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-                   ]" :key="'a' + o.v" class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
-              <input type="radio" name="enc-acceso" :value="o.v" v-model="filtros.acceso" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
-              <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" :class="o.cls" aria-hidden="true">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="o.icono"/></svg>
-              </span>
-              <span class="min-w-0 flex-1 text-sm text-azul-noche">{{ o.label }}</span>
-              <span class="shrink-0 text-xs text-texto-secundario">{{ o.n }}</span>
-            </label>
-          </div>
 
           <div v-if="encuentrosUnicos.propiedad.compartidos" class="mt-3 border-t border-borde pt-3" role="radiogroup" aria-labelledby="enc-filtro-propiedad">
             <p id="enc-filtro-propiedad" class="mb-1.5 text-sm font-semibold text-azul-noche">De quién es</p>
@@ -626,9 +850,13 @@ function formatFecha(isoDate) {
           <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
               <template v-if="cargando">Cargando encuentros…</template>
-              <template v-else>{{ encuentrosFiltrados.length }} {{ encuentrosFiltrados.length === 1 ? 'encuentro encontrado' : 'encuentros encontrados' }}</template>
+              <template v-else-if="ver === 'seguimiento'">
+                Seguimiento · {{ listaActiva.length }} {{ listaActiva.length === 1 ? 'encuentro' : 'encuentros' }}
+                <span v-if="progresoGrupos" class="font-normal text-texto-secundario">· {{ totalGruposVisibles }} {{ totalGruposVisibles === 1 ? 'grupo' : 'grupos' }}</span>
+              </template>
+              <template v-else>Gestión · {{ listaActiva.length }} {{ listaActiva.length === 1 ? 'encuentro' : 'encuentros' }}</template>
               <template #extra>
-                <p v-if="stats.total && !cargando" class="text-xs text-texto-secundario">
+                <p v-if="stats.total && !cargando && ver === 'gestion'" class="text-xs text-texto-secundario">
                   {{ stats.microretos }} {{ stats.microretos === 1 ? 'reto distinto trabajado' : 'retos distintos trabajados' }} en el curso
                 </p>
               </template>
@@ -646,9 +874,11 @@ function formatFecha(isoDate) {
                 <option value="recientes">Más recientes</option>
                 <option value="antiguos">Más antiguos</option>
                 <option value="titulo">Proyecto (A-Z)</option>
+                <option v-if="ver === 'seguimiento'" value="avance">Más avance</option>
               </select>
             </label>
-            <div class="flex rounded-full bg-gray-100 p-1" role="group" aria-label="Vista de los resultados">
+            <!-- Cuadrícula o lista solo en Gestión: el seguimiento despliega los grupos a todo el ancho -->
+            <div v-if="ver === 'gestion'" class="flex rounded-full bg-gray-100 p-1" role="group" aria-label="Vista de los resultados">
               <button type="button" @click="vista = 'cuadricula'" :aria-pressed="vista === 'cuadricula'" aria-label="Vista en cuadrícula" title="Cuadrícula"
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors"
                       :class="vista === 'cuadricula' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
@@ -681,15 +911,31 @@ function formatFecha(isoDate) {
             <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal mt-4">Nuevo encuentro</button>
           </div>
 
+          <!-- Seguimiento: cargando el avance, error o ningún encuentro con grupos -->
+          <div v-else-if="ver === 'seguimiento' && !progresoGrupos && !errorSeguimiento" class="space-y-3" aria-busy="true">
+            <div v-for="n in 4" :key="n" class="animate-pulse space-y-2 rounded-2xl border border-borde bg-white p-5">
+              <div class="h-4 w-1/2 rounded-full bg-gray-200" /><div class="h-3 w-1/3 rounded-full bg-gray-200" /><div class="h-3 w-2/3 rounded-full bg-gray-100" />
+            </div>
+            <span class="sr-only">Cargando el avance de los grupos…</span>
+          </div>
+          <div v-else-if="ver === 'seguimiento' && errorSeguimiento" class="flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center" role="alert">
+            <p class="min-w-0 flex-1 text-sm font-medium text-red-700">{{ errorSeguimiento }}</p>
+            <button type="button" @click="cargarSeguimiento" class="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100">Reintentar</button>
+          </div>
+          <div v-else-if="ver === 'seguimiento' && !aplicarSeguimiento(encuentrosCurso).length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+            <h3 class="text-lg font-bold text-azul-noche">Ningún encuentro de este curso tiene grupos todavía</h3>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Cuando crees los grupos de un encuentro, aquí verás su avance fase a fase.</p>
+          </div>
+
           <!-- Sin resultados con filtros -->
-          <div v-else-if="encuentrosFiltrados.length === 0" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+          <div v-else-if="listaActiva.length === 0" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
             <h3 class="text-lg font-bold text-azul-noche">No hay encuentros con estos filtros</h3>
             <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Prueba a quitar algún filtro.</p>
             <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros" class="accion-secundaria mt-4">Limpiar filtros</button>
           </div>
 
           <!-- Tarjetas -->
-          <ul v-else :class="vista === 'cuadricula' ? ['grid grid-cols-1 gap-4', columnasEncuentros] : 'space-y-3'">
+          <ul v-else-if="ver === 'gestion'" :class="vista === 'cuadricula' ? ['grid grid-cols-1 gap-4', columnasEncuentros] : 'space-y-3'">
             <li v-for="s in encuentrosPagina" :key="s.id"
                 class="group flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
               <div class="flex min-w-0 gap-3">
@@ -733,23 +979,41 @@ function formatFecha(isoDate) {
               </div>
 
               <!-- Grupos con su fase -->
+              <!-- Cada etiqueta con grupo real lleva a ese grupo en la pestaña Seguimiento. Área táctil de 36px
+                   con un ::before invisible, sin agrandar la etiqueta ni la tarjeta. -->
               <ul v-if="gruposDe(s).length" class="mt-2 flex flex-wrap gap-1.5" :aria-label="`${gruposDe(s).length} grupos`">
-                <li v-for="g in gruposDe(s).slice(0, 4)" :key="g.clave"
-                    class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-borde bg-gray-50 px-2 py-0.5 text-xs">
-                  <span class="font-semibold text-azul-noche">{{ g.nombre }}</span>
-                  <span v-if="g.fase" class="truncate text-alumnos-dark">· {{ g.fase }}</span>
+                <li v-for="g in gruposDe(s).slice(0, 4)" :key="g.clave" class="max-w-full">
+                  <button v-if="g.equipoId" type="button" @click="verSeguimiento(s, g.equipoId)"
+                          :title="`Ver el seguimiento de ${g.nombre}`"
+                          class="relative inline-flex max-w-full items-center gap-1.5 rounded-full border border-borde bg-gray-50 px-2 py-0.5 text-xs transition-colors
+                                 before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-[''] hover:border-rol-fuerte/40 hover:bg-rol/5">
+                    <span class="font-semibold text-azul-noche">{{ g.nombre }}</span>
+                    <span v-if="g.fase" class="truncate text-alumnos-dark">· {{ g.fase }}</span>
+                  </button>
+                  <span v-else class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-borde bg-gray-50 px-2 py-0.5 text-xs">
+                    <span class="font-semibold text-azul-noche">{{ g.nombre }}</span>
+                  </span>
                 </li>
                 <li v-if="gruposDe(s).length > 4" class="inline-flex items-center px-1 text-xs text-texto-secundario">+{{ gruposDe(s).length - 4 }}</li>
               </ul>
 
-              <div class="mt-auto pt-3">
-                <div class="relative flex items-center gap-2 border-t border-borde pt-3">
-                  <!-- Hueco flexible: los grupos ya se ven en sus etiquetas, arriba -->
-                  <span class="min-w-0 flex-1" aria-hidden="true" />
+              <!-- @container: la tarjeta mide 300-450px según columnas y panel de filtros, así que
+                   el texto de «Ver seguimiento» depende de su ancho, no del de la pantalla -->
+              <div class="@container mt-auto pt-3">
+                <!-- Acciones a la derecha (los grupos ya se ven en sus etiquetas, arriba); gap
+                     corto para que quepan en 300px: workspace (icono) + Más información + llave + ⋯ -->
+                <div class="relative flex items-center justify-end gap-1.5 border-t border-borde pt-3">
+                  <!-- Avance de los grupos del encuentro (pestaña Seguimiento); en tarjetas estrechas, solo icono -->
+                  <button v-if="s.equipos?.length" type="button" @click="verSeguimiento(s)"
+                          :aria-label="`Ver el seguimiento de los grupos de «${s.proyecto_titulo || 'encuentro'}»`" title="Ver seguimiento"
+                          class="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @md:w-auto @md:px-4">
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="hidden @md:inline">Ver seguimiento</span>
+                  </button>
                   <button type="button" @click="verEncuentro(s)"
                           class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-                    Ver encuentro
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Más información
                   </button>
                   <!-- Llave: códigos del alumnado (acceso al espacio de trabajo y sugerencia IA),
                        para copiarlos o generarlos. El punto verde indica que ya hay acceso dado.
@@ -856,9 +1120,32 @@ function formatFecha(isoDate) {
             </li>
           </ul>
 
+          <!-- Seguimiento de grupos: una tarjeta por encuentro, en progreso primero y completados después -->
+          <div v-else class="space-y-3">
+            <template v-for="(s, idx) in encuentrosPagina" :key="s.id">
+              <h3 v-if="muestraCabeceraBloque(idx)" class="flex items-center gap-2 pt-2 text-sm font-semibold text-azul-noche">
+                <span class="h-2.5 w-2.5 rounded-full" :class="grupoCompletado(s) ? 'bg-empresas' : 'bg-centros'" aria-hidden="true" />
+                {{ grupoCompletado(s) ? `Completados (${numCompletados})` : `En progreso (${numEnProgreso})` }}
+              </h3>
+              <TarjetaSeguimientoEncuentro
+                :encuentro="s"
+                :equipos="equiposVisibles(s)"
+                :abierto="encuentrosAbiertos.has(s.id)"
+                :equipos-abiertos="equiposAbiertos"
+                :resaltado="encuentroResaltado === s.id"
+                :modulo-activo="filtros.modulo"
+                @toggle="alternarEncuentro(s.id)"
+                @toggle-equipo="alternarEquipo"
+                @desplegar-todo="desplegarTodo(s)"
+                @mas-informacion="verEncuentro(s)"
+                @copiar="copiarCodigo"
+              />
+            </template>
+          </div>
+
           <!-- Paginación -->
           <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
-            <p class="text-sm text-texto-secundario">Mostrando {{ encuentrosPagina.length }} de {{ encuentrosFiltrados.length }} encuentros</p>
+            <p class="text-sm text-texto-secundario">Mostrando {{ encuentrosPagina.length }} de {{ listaActiva.length }} encuentros</p>
             <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de encuentros">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">«</button>
@@ -889,7 +1176,7 @@ function formatFecha(isoDate) {
         <div @click="cerrarEncuentro"
              class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-        <div class="relative bg-white rounded-[1.75rem] shadow-2xl max-w-2xl w-full max-h-[92vh]
+        <div class="relative bg-white rounded-[2rem] shadow-2xl max-w-2xl w-full max-h-[92dvh]
                     overflow-hidden border border-borde flex flex-col">
           <!-- Cabecera -->
           <div class="px-5 sm:px-7 pt-6 sm:pt-7 pb-5 border-b border-borde flex-shrink-0">
@@ -989,7 +1276,11 @@ function formatFecha(isoDate) {
               :cargando-ra-ce="cargandoRaCe"
               :ra-ce-blocks="raCeBlocksEncuentro"
               :modulos-expandidos="modulosExpandidos"
+              enlaces
+              :grupo-con-workspace="grupoConWorkspace"
               @toggle-modulo="toggleModulo"
+              @ver-alumno="verAlumno"
+              @ver-grupo="verGrupoEnWorkspace"
             />
           </div>
 
@@ -1108,8 +1399,9 @@ function formatFecha(isoDate) {
           <!-- Pie -->
           <div class="px-5 sm:px-7 py-4 bg-[#F8FAFC] border-t border-borde flex-shrink-0 space-y-3">
 
-            <!-- Acciones (mismo estilo que la card de encuentro) -->
-            <div class="grid grid-cols-2 gap-1.5">
+            <!-- Acciones (mismo estilo que la card de encuentro): ancho según el texto y salto de
+                 línea entre botones; en una rejilla de 2 columnas, a 360px el texto se partía -->
+            <div class="flex flex-wrap gap-1.5">
               <button v-if="encuentroAbierto.puede_editar"
                       @click="abrirReestructurar(encuentroAbierto)"
                       class="inline-flex min-h-9 items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full
@@ -1172,7 +1464,7 @@ function formatFecha(isoDate) {
             <!-- Acciones principales -->
             <div class="flex flex-wrap items-center gap-2 border-t border-borde pt-3">
               <button v-if="encuentroAbierto.microproyecto_uuid"
-                      @click="router.push({ name: 'mis-grupos-detalle', params: { id: encuentroAbierto.id } }); cerrarEncuentro()"
+                      @click="verEnWorkspace(encuentroAbierto)"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-rol/20
                              bg-rol/5 text-azul-noche text-xs font-bold uppercase tracking-widest
                              hover:bg-rol/10 transition-all">
@@ -1180,7 +1472,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                 </svg>
-                Workspace
+                Ver detalle de grupos
               </button>
               <button v-if="encuentroAbierto.codigo_clase && encuentroAbierto.microproyecto_uuid"
                       @click="router.push({ name: 'pantalla-acceso', params: { uuid: encuentroAbierto.microproyecto_uuid } }); cerrarEncuentro()"

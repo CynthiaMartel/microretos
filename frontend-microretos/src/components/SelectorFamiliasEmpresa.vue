@@ -102,7 +102,8 @@ function alternar(nombre) {
 .sfe-box-err  { border-color: #fca5a5 !important; background: #fff5f5 !important; }
 .sfe-box-off  { opacity: .7; }
 .sfe-chip {
-  display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .7rem; border-radius: 9999px;
+  /* min-height: objetivo táctil de 36px */
+  display: inline-flex; align-items: center; gap: .3rem; padding: .45rem .8rem; min-height: 36px; border-radius: 9999px;
   font-size: .72rem; font-weight: 700; color: #3072AA; background: #fff; border: 1.5px solid #BAD5EC;
   transition: all .15s;
 }

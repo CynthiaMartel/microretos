@@ -563,21 +563,21 @@ function resetear() {
                     </div>
                     <div v-else-if="ciclosPorFamilia[familia.id]?.length">
                       <!-- Seleccionar todos -->
-                      <label class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500
+                      <label class="flex items-center gap-2 min-h-9 text-xs font-black uppercase tracking-widest text-gray-500
                                    cursor-pointer pb-2 mb-2 border-b border-gray-100 hover:text-centros">
                         <input
                           type="checkbox"
                           :checked="todosDeFamiliaSeleccionados(familia.id)"
                           @change="toggleTodosDeFamilia(familia.id)"
-                          class="accent-centros w-3.5 h-3.5 shrink-0"
+                          class="accent-centros w-4 h-4 shrink-0"
                         />
                         Seleccionar todos
                       </label>
-                      <div class="flex flex-col gap-1.5">
+                      <div class="flex flex-col gap-0.5">
                         <label
                           v-for="ciclo in ciclosPorFamilia[familia.id]"
                           :key="ciclo.id"
-                          class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-0.5"
+                          class="flex items-center gap-2 min-h-9 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-0.5"
                         >
                           <input
                             type="checkbox"
@@ -650,11 +650,11 @@ function resetear() {
                     </button>
                   </div>
 
-                  <label class="flex items-center gap-2 text-[11px] font-semibold text-gray-500 mt-2 cursor-pointer">
+                  <label class="flex items-center gap-2 min-h-9 text-[11px] font-semibold text-gray-500 mt-2 cursor-pointer">
                     <input
                       type="checkbox"
                       v-model="filtrarPorFamilia"
-                      class="accent-centros w-3.5 h-3.5 shrink-0"
+                      class="accent-centros w-4 h-4 shrink-0"
                     />
                     Mostrar solo empresas de las familias que imparte este centro
                   </label>
@@ -667,7 +667,7 @@ function resetear() {
                     <label
                       v-for="e in empresasCandidatas"
                       :key="e.id"
-                      class="flex items-center gap-2 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-1.5"
+                      class="flex items-center gap-2 min-h-9 text-sm text-[#1F2937] cursor-pointer hover:text-centros py-1.5"
                     >
                       <input
                         type="checkbox"

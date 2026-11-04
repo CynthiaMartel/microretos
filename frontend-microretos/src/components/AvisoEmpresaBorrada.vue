@@ -37,7 +37,7 @@ const visible = computed(() => props.estado === 'papelera' || props.estado === '
       <div v-if="abierto" class="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true"
         @keydown.esc="abierto = false">
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="abierto = false" />
-        <div class="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div class="relative w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-[2rem] bg-white p-5 sm:p-6 shadow-2xl">
           <div class="flex items-start gap-3">
             <div class="w-9 h-9 shrink-0 rounded-xl bg-gray-100 flex items-center justify-center">
               <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

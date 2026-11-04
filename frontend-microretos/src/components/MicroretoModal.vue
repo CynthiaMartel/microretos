@@ -79,7 +79,7 @@ function cerrar() {
 
           <!-- ── Barra superior fija con botón cerrar ── -->
           <div class="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100
-                      px-6 py-3 flex items-center justify-between gap-4">
+                      px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4">
             <p class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
               Ficha del reto
             </p>
@@ -244,7 +244,7 @@ function cerrar() {
               </div>
 
               <!-- Cuerpo de la ficha -->
-              <div class="px-6 py-8 md:px-12 md:py-10 space-y-10">
+              <div class="px-4 py-6 sm:px-6 sm:py-8 md:px-12 md:py-10 space-y-8 sm:space-y-10">
 
                 <!-- Datos recogidos de la empresa: diagnóstico crudo, tal cual lo aportó el
                      docente/empresa — es la materia prima que la IA resume debajo. -->
@@ -289,28 +289,28 @@ function cerrar() {
                     </div>
                     <div v-if="reto.empresa.dia_a_normal" class="bg-white/70 rounded-xl p-4 border border-orange-100">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Su día a día</p>
-                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.dia_a_normal }}</p>
+                      <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.dia_a_normal }}</p>
                     </div>
                     <div v-if="reto.empresa.friccion_area || reto.empresa.friccion_problema" class="bg-white/70 rounded-xl p-4 border border-orange-100">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Fricciones de la empresa</p>
-                      <p v-if="reto.empresa.friccion_area" class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.friccion_area }}</p>
-                      <p v-if="reto.empresa.friccion_problema" class="text-sm text-gray-700 leading-relaxed mt-1">{{ reto.empresa.friccion_problema }}</p>
+                      <p v-if="reto.empresa.friccion_area" class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.friccion_area }}</p>
+                      <p v-if="reto.empresa.friccion_problema" class="text-sm text-gray-700 leading-relaxed mt-1 break-words">{{ reto.empresa.friccion_problema }}</p>
                     </div>
                     <div v-if="reto.empresa.consecuencias" class="bg-white/70 rounded-xl p-4 border border-orange-100">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Consecuencias</p>
-                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.consecuencias }}</p>
+                      <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.consecuencias }}</p>
                     </div>
                     <div v-if="reto.empresa.restricciones" class="bg-white/70 rounded-xl p-4 border border-orange-100">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Restricciones</p>
-                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.restricciones }}</p>
+                      <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.restricciones }}</p>
                     </div>
                     <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
-                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+                      <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.lo_que_no_quieren }}</p>
                     </div>
                     <div v-if="reto.empresa.expectativas_alumno" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
                       <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Qué esperan del alumnado</p>
-                      <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.expectativas_alumno }}</p>
+                      <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.empresa.expectativas_alumno }}</p>
                     </div>
                   </div>
                 </div>
@@ -343,7 +343,7 @@ function cerrar() {
                         </svg>
                         ¿Quién es {{ reto.empresa_nombre }}?
                       </h3>
-                      <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
+                      <p class="text-gray-600 text-sm leading-relaxed break-words">{{ reto.quien_es }}</p>
                     </div>
                     <div v-if="reto.dia_a_dia">
                       <h3 class="section-title text-centros">
@@ -353,7 +353,7 @@ function cerrar() {
                         </svg>
                         Su día a día
                       </h3>
-                      <p class="text-gray-600 text-sm leading-relaxed">{{ reto.dia_a_dia }}</p>
+                      <p class="text-gray-600 text-sm leading-relaxed break-words">{{ reto.dia_a_dia }}</p>
                     </div>
                   </div>
 
@@ -371,14 +371,14 @@ function cerrar() {
                       <li v-for="(item, i) in reto.dificultades" :key="i"
                           class="flex items-start gap-3 text-sm text-gray-700">
                         <span class="text-yellow-500 font-black mt-0.5 shrink-0">•</span>
-                        <span>{{ item }}</span>
+                        <span class="min-w-0 break-words">{{ item }}</span>
                       </li>
                     </ul>
                   </div>
 
                   <!-- Pregunta del reto -->
                   <div class="bg-gradient-to-r from-gray-50 to-white border-l-4 border-centros
-                              p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
+                              p-4 sm:p-6 rounded-r-2xl shadow-sm border-y border-r border-gray-100">
                     <h3 class="text-centros font-black uppercase text-[10px] tracking-[0.2em] mb-3">
                       Este reto consiste en responder a:
                     </h3>
@@ -402,7 +402,7 @@ function cerrar() {
                         <li v-for="(item, i) in reto.que_necesitan" :key="i"
                             class="flex items-start gap-3 text-sm text-gray-700">
                           <span class="text-centros font-black mt-0.5 shrink-0">•</span>
-                          <span>{{ item }}</span>
+                          <span class="min-w-0 break-words">{{ item }}</span>
                         </li>
                       </ul>
                     </div>
@@ -419,7 +419,7 @@ function cerrar() {
                         <li v-for="(item, i) in reto.limitaciones" :key="i"
                             class="flex items-start gap-3 text-sm text-gray-700">
                           <span class="text-red-500 font-black mt-0.5 shrink-0">•</span>
-                          <span>{{ item }}</span>
+                          <span class="min-w-0 break-words">{{ item }}</span>
                         </li>
                       </ul>
                     </div>
@@ -440,7 +440,7 @@ function cerrar() {
                       <li v-for="(item, i) in reto.prototipos" :key="i"
                           class="flex items-start gap-3 text-sm text-gray-700">
                         <span class="text-centros font-black mt-0.5 shrink-0">•</span>
-                        <span>{{ item }}</span>
+                        <span class="min-w-0 break-words">{{ item }}</span>
                       </li>
                     </ul>
                   </div>
@@ -501,7 +501,7 @@ function cerrar() {
                       <p class="font-black text-[#1F2937] text-base mb-4">{{ evalObj.modulo }}</p>
                       <div class="mb-4">
                         <p class="text-[10px] uppercase font-bold text-centros mb-1">Resultado de Aprendizaje</p>
-                        <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100 break-words">
                           {{ evalObj.ra }}
                         </p>
                       </div>
@@ -511,12 +511,12 @@ function cerrar() {
                           <li v-for="(ce, i) in evalObj.ce" :key="i"
                               class="text-sm text-gray-600 flex items-start gap-2">
                             <span class="text-centros font-bold mt-0.5 shrink-0">✓</span>
-                            <span>{{ ce }}</span>
+                            <span class="min-w-0 break-words">{{ ce }}</span>
                           </li>
                         </ul>
                       </div>
                       <div v-if="evalObj.aplicacion" class="mt-3 pt-3 border-t border-gray-100">
-                        <p class="text-sm text-gray-500 italic">
+                        <p class="text-sm text-gray-500 italic break-words">
                           <span class="font-bold not-italic text-[#1F2937]">Aplicación: </span>
                           {{ evalObj.aplicacion }}
                         </p>
@@ -539,7 +539,7 @@ function cerrar() {
                         class="text-sm text-gray-700 bg-gray-50 border border-gray-200 p-4 rounded-xl">
                       <template v-if="varItem.includes(':')">
                         <strong class="text-[#1F2937] block mb-1">{{ varItem.split(':')[0] }}</strong>
-                        <span>{{ varItem.substring(varItem.indexOf(':') + 1).trim() }}</span>
+                        <span class="min-w-0 break-words">{{ varItem.substring(varItem.indexOf(':') + 1).trim() }}</span>
                       </template>
                       <template v-else>{{ varItem }}</template>
                     </li>
@@ -552,7 +552,7 @@ function cerrar() {
             <!-- GUÍA DOCENTE -->
             <div v-if="reto.tips_profesorado?.length"
                  class="relative mx-0 bg-gray-50 border-t border-gray-200
-                        px-6 py-8 md:px-12 md:py-10">
+                        px-4 py-6 sm:px-6 sm:py-8 md:px-12 md:py-10">
               <div class="absolute top-0 right-0 bg-white border-b border-l border-gray-200
                           text-gray-400 px-4 py-1.5 font-black text-[9px] tracking-widest uppercase
                           rounded-bl-2xl">
@@ -582,7 +582,7 @@ function cerrar() {
                         </svg>
                         {{ tip.split(':')[0] }}
                       </strong>
-                      <span class="block text-gray-600">
+                      <span class="block text-gray-600 break-words">
                         {{ tip.substring(tip.indexOf(':') + 1).trim() }}
                       </span>
                     </template>
@@ -595,7 +595,7 @@ function cerrar() {
             </div>
 
             <!-- Pie del modal -->
-            <div class="px-6 py-5 md:px-12 bg-white border-t border-gray-100
+            <div class="px-4 sm:px-6 py-5 md:px-12 bg-white border-t border-gray-100
                         flex items-center justify-end">
               <button @click="cerrar"
                       class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full

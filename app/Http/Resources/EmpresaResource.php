@@ -29,6 +29,7 @@ class EmpresaResource extends JsonResource
             'sector'              => $this->sector,
             'actividad'           => $this->actividad,
             'tamano'              => $this->tamano,
+            'nivel_digitalizacion' => $this->nivel_digitalizacion,
             'web'                 => $this->web,
             'estado_contacto'     => $this->estado_contacto,
 

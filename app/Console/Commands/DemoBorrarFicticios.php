@@ -48,6 +48,7 @@ use Illuminate\Support\Facades\DB;
 class DemoBorrarFicticios extends Command
 {
     protected $signature = 'demo:borrar-ficticios
+                            {--conservar-empresas : Borra retos, proyectos, encuentros y equipos de demo, pero NO las empresas (para regenerar la demo sobre empresas ya mejoradas).}
                             {--force : Ejecuta el borrado de verdad. Sin esta opción es un dry-run que solo lista qué se borraría.}';
 
     protected $description = 'Borra en cascada todos los datos de demo generados por los comandos demo:generar-* (empresas, retos, proyectos, encuentros y equipos).';
@@ -68,6 +69,8 @@ class DemoBorrarFicticios extends Command
         $empresaIds   = Empresa::withTrashed()->where('es_simulada', true)
             ->where('centro_id', self::CENTRO_ID)
             ->pluck('id');
+        // Las empresas siguen sirviendo para encontrar sus proyectos, pero no se borran
+        $conservarEmpresas = (bool) $this->option('conservar-empresas');
 
         $microproyectoIds = Microproyecto::withTrashed()
             ->where(function ($q) use ($microretoIds, $empresaIds) {
@@ -83,7 +86,7 @@ class DemoBorrarFicticios extends Command
             ->pluck('id');
 
         $this->table(['Entidad', 'Nº registros'], [
-            ['Empresas simuladas',    $empresaIds->count()],
+            ['Empresas simuladas',    $conservarEmpresas ? '0 (se conservan ' . $empresaIds->count() . ')' : $empresaIds->count()],
             ['Microretos simulados',  $microretoIds->count()],
             ['Microproyectos',        $microproyectoIds->count()],
             ['Encuentros',            $encuentroIds->count()],
@@ -101,7 +104,7 @@ class DemoBorrarFicticios extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($equipoIds, $encuentroIds, $microproyectoIds, $microretoIds, $empresaIds) {
+        DB::transaction(function () use ($equipoIds, $encuentroIds, $microproyectoIds, $microretoIds, $empresaIds, $conservarEmpresas) {
             // Equipo no usa SoftDeletes — delete() ya es un borrado real, y arrastra en
             // cascada (FK a nivel de BD) a equipo_miembros/fases/tareas/reflexiones/prototipos.
             Equipo::whereIn('id', $equipoIds)->delete();
@@ -114,13 +117,15 @@ class DemoBorrarFicticios extends Command
             // es RESTRICT, no nullOnDelete — una empresa con algún reto vivo no se puede borrar.
             Microreto::withTrashed()->whereIn('id', $microretoIds)->forceDelete();
 
+            if ($conservarEmpresas) return;
+
             DB::table('empresa_familia')->whereIn('empresa_id', $empresaIds)->delete();
 
             Empresa::withTrashed()->whereIn('id', $empresaIds)->forceDelete();
         });
 
         $this->newLine();
-        $this->info('Borrado completado: ' . $empresaIds->count() . ' empresas, ' . $microretoIds->count() . ' retos, '
+        $this->info('Borrado completado: ' . ($conservarEmpresas ? 0 : $empresaIds->count()) . ' empresas, ' . $microretoIds->count() . ' retos, '
             . $microproyectoIds->count() . ' proyectos, ' . $encuentroIds->count() . ' encuentros, ' . $equipoIds->count() . ' equipos.');
 
         return self::SUCCESS;

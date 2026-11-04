@@ -30,7 +30,8 @@ class EmpresaCatalogoService
 
         $copia = DB::transaction(function () use ($plantilla, $centro) {
             // replicate() copia todos los atributos salvo id/timestamps; se rehacen los de centro.
-            $copia = $plantilla->replicate(['es_catalogo', 'copiada_de_id', 'estado_contacto', 'fecha_cita']);
+            // id_externo es único: identifica solo a la plantilla importada, no a sus copias.
+            $copia = $plantilla->replicate(['es_catalogo', 'copiada_de_id', 'id_externo', 'estado_contacto', 'fecha_cita']);
             $copia->forceFill([
                 'nombre_comercial' => Empresa::nombreLibreEnCentro($centro->id, (string) $plantilla->nombre_comercial),
                 'centro_id'        => $centro->id,

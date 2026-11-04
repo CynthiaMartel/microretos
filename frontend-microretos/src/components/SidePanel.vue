@@ -105,7 +105,7 @@ watch(() => route.fullPath, () => {
                 @mouseenter="showTooltip"
                 @mouseleave="hideTooltip"
                 :class="[item.proximamente ? 'nav-item--soon'
-                           : item.activa?.(route.path) ? `nav-item--active-${item.color}` : 'nav-item--idle',
+                           : item.activa?.(route.path, route.query) ? `nav-item--active-${item.color}` : 'nav-item--idle',
                          { 'nav-item--highlighted': item.key === 'retos-proyectos' && uiHighlight.highlightedNavItem === 'generar-proyecto' }]"
               >
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"

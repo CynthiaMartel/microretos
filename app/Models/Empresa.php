@@ -38,6 +38,7 @@ class Empresa extends Model
         'centro_educativo',  // legacy — se mantiene hasta completar backfill
         'centro_id',         // FK (nueva)
         'tamano',
+        'nivel_digitalizacion',
         'dia_a_normal',
         'friccion_area',
         'friccion_problema',
@@ -48,9 +49,17 @@ class Empresa extends Model
         'expectativas_alumno',
     ];
 
+    // Valores de nivel_digitalizacion (orden de menor a mayor)
+    public const NIVELES_DIGITALIZACION = ['Bajo', 'Medio', 'Alto'];
+
+    // id_externo (clave del paquete de importación) no es fillable: solo lo fija el comando
+    // catalogo:importar-paquete, y las copias (replicate) no lo heredan.
+
     protected $casts = [
         'es_simulada' => 'boolean',
         'es_catalogo' => 'boolean', // catálogo DuaLab (T2): no fillable, solo lo fija el backend
+        // Área y 4 puntuaciones 0-4 (ver BibliotecaRetos). No fillable: solo lo fija empresas:diagnosticar-madurez
+        'diagnostico_madurez' => 'array',
     ];
 
     /** @return BelongsTo<CentroEducativo, $this> */

@@ -30,7 +30,10 @@ watch(() => theme.value.key, (key) => {
 const isPublicRetoRoute = computed(() =>
   route.path.startsWith('/reto/') ||
   route.path.startsWith('/startup/landing/') ||
-  route.path.startsWith('/proyecto/equipo/')
+  route.path.startsWith('/proyecto/equipo/') ||
+  // Workspace de un grupo visto por el docente (solo lectura): a pantalla completa como el del
+  // alumnado; se abre en otra pestaña y su aviso lleva al Detalle del grupo
+  route.name === 'equipo-workspace-docente'
 )
 
 // El panel lateral es navegación de docente/admin/empresa: sin sesión no aporta nada

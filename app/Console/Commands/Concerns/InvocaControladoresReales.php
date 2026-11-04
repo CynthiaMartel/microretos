@@ -46,18 +46,32 @@ trait InvocaControladoresReales
      * solo se prepara el Request con el usuario — la validación ocurre dentro del
      * controller cuando se invoque.
      *
+     * $ruta: parámetros de ruta que la FormRequest lee con $this->route() (p. ej. 'fase' y
+     * 'token' en GuardarFaseEquipoRequest/StoreEquipoReflexionRequest): sin ellos, route()
+     * devuelve null y la validación se comporta distinto que en una petición real.
+     *
      * @template T of Request
      * @param class-string<T> $clase
      * @param array<string, mixed> $datos
+     * @param array<string, mixed> $ruta
      * @return T
      */
-    protected function peticion(string $clase, array $datos, ?User $usuario = null): Request
+    protected function peticion(string $clase, array $datos, ?User $usuario = null, array $ruta = []): Request
     {
         /** @var T $request */
         $request = $clase::create('/', 'POST', $datos);
 
         if ($usuario) {
             $request->setUserResolver(fn () => $usuario);
+        }
+
+        if ($ruta) {
+            $route = new \Illuminate\Routing\Route('POST', '/', []);
+            $route->bind($request);
+            foreach ($ruta as $nombre => $valor) {
+                $route->setParameter($nombre, $valor);
+            }
+            $request->setRouteResolver(fn () => $route);
         }
 
         if ($request instanceof FormRequest) {

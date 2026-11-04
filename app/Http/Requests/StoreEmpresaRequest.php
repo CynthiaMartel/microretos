@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Empresa;
 use App\Support\SectoresEmpresa;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,6 +51,7 @@ class StoreEmpresaRequest extends FormRequest
             // Rule::in porque hay sectores con coma ("Marketing, publicidad y diseño").
             'sector'           => ['nullable', 'string', Rule::in(SectoresEmpresa::LISTA)],
             'tamano'           => 'nullable|string|max:50',
+            'nivelDigitalizacion' => ['nullable', 'string', Rule::in(Empresa::NIVELES_DIGITALIZACION)],
             'web'              => 'nullable|string|max:255',
             'actividad'        => 'nullable|string|max:500',
             'personaContacto'  => 'nullable|string|max:255',

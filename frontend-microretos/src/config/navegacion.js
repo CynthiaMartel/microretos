@@ -55,12 +55,12 @@ export const GRUPOS_NAV = [
         tip: 'Genera retos y proyectos, y consulta sus bibliotecas',
         activa: (p) => p === '/seccion/retos-proyectos' || p.startsWith('/retos')
           || (p.startsWith('/proyectos') && !esPantallaAcceso(p)) },
-      { key: 'encuentros', label: 'Encuentros', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'docente',
-        tip: 'Crea encuentros con el alumnado y consulta los registrados',
-        activa: (p) => p === '/seccion/encuentros' || p.startsWith('/encuentros') },
-      { key: 'mis-grupos', label: 'Mis grupos', icon: 'grafica', ruta: '/mis-grupos', routeName: 'mis-grupos', color: 'docente',
-        tip: 'Seguimiento del avance de todos tus grupos de alumnado',
-        activa: (p) => p.startsWith('/mis-grupos') },
+      // Antes había dos entradas, «Encuentros» y «Mis grupos»: el seguimiento de los grupos es
+      // ahora una pestaña de la biblioteca de encuentros (/encuentros?ver=seguimiento).
+      // /mis-grupos/:id es el Detalle de grupos de un encuentro: también es de esta sección.
+      { key: 'encuentros', label: 'Encuentros y grupos', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'docente',
+        tip: 'Crea encuentros con el alumnado, gestiónalos y sigue el avance de sus grupos',
+        activa: (p) => p === '/seccion/encuentros' || p.startsWith('/encuentros') || p.startsWith('/mis-grupos') },
       { key: 'alumnado', label: 'Alumnado', icon: 'alumnado', ruta: '/seccion/alumnado', routeName: 'seccion', color: 'alumnos',
         tip: 'Listado del alumnado, diagnósticos y acceso al encuentro',
         activa: (p) => p === '/seccion/alumnado' || p.startsWith('/alumnado') || p.startsWith('/evaluacion') || esPantallaAcceso(p) || p.startsWith('/unirse') || p.startsWith('/workspace-proyecto') },
@@ -183,8 +183,8 @@ export const SECCIONES = {
   encuentros: {
     // Azul como su entrada del menú lateral (decisión 2026-10-21); el naranja queda para
     // lo que es del alumnado (fase «En el aula» del diagrama).
-    titulo: 'Encuentros con el', destacado: 'alumnado', color: 'text-centros',
-    subtitulo: 'Organiza las sesiones de trabajo con tus grupos y revisa las que ya has creado.',
+    titulo: 'Encuentros y', destacado: 'grupos', color: 'text-centros',
+    subtitulo: 'Organiza las sesiones de trabajo con tu alumnado, gestiona las que ya has creado y sigue el avance de sus grupos.',
     // Qué es un encuentro — "el cuándo" (mismo texto que ComoFuncionaModal.vue)
     conceptos: [
       { color: 'centros', segmentos: [
@@ -202,8 +202,10 @@ export const SECCIONES = {
     cards: [
       { titulo: 'Crear encuentro', desc: 'Organiza un encuentro de trabajo con retos o proyectos.',
         ruta: '/encuentros/crear', routeName: 'dashboard-docente', icon: 'portapapeles', tile: 'bg-centros' },
-      { titulo: 'Biblioteca de encuentros', desc: 'Consulta todos los encuentros registrados.',
+      { titulo: 'Biblioteca de encuentros', desc: 'Consulta y gestiona tus encuentros: fechas, códigos del alumnado y grupos.',
         ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-centros' },
+      { titulo: 'Seguimiento de grupos', desc: 'El avance de cada grupo de tus encuentros, fase a fase, y sus diagnósticos.',
+        ruta: '/encuentros?ver=seguimiento', routeName: 'encuentros-registrados', icon: 'grafica', tile: 'bg-centros' },
     ],
     flujo: {
       titulo: 'Mira cómo funciona',
@@ -220,7 +222,7 @@ export const SECCIONES = {
             { titulo: 'Da acceso al alumnado', conector: 'Trabajan por fases',
               desc: 'Proyecta la pantalla de acceso: cada grupo entra en su workspace con su QR.' },
             { titulo: 'Sigue a tus grupos',
-              desc: 'En Mis grupos ves el avance de cada grupo, fase a fase.' },
+              desc: 'En Seguimiento de grupos ves el avance de cada grupo, fase a fase.' },
           ] },
       ],
     },
@@ -354,7 +356,7 @@ export const SECCIONES = {
         { nombre: 'Evaluación', texto: 'text-azul-noche', borde: 'border-administraciones', halo: 'ring-administraciones/15',
           pasos: [
             { titulo: 'Sigue a tus grupos', conector: 'Al terminar',
-              desc: 'En Mis grupos ves el avance por fases de cada grupo, sus tareas y entregas, y quién necesita ayuda.' },
+              desc: 'En Seguimiento de grupos ves el avance por fases de cada grupo, sus tareas y entregas, y quién necesita ayuda.' },
             { titulo: 'Evalúa', desc: 'Evaluación RA/CE y diagnóstico final con IA.' },
           ] },
       ],

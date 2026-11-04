@@ -371,6 +371,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Nota: la creación de equipos y el listado con progreso viven en
         // EncuentroController (crearCodigo/workspace) — no duplicar aquí.
         Route::get('/startup/proyectos/{uuid}/equipos',         [EncuentroController::class, 'equiposDeProyecto']);
+        // Workspace de un grupo en solo lectura para el docente (por id y con su sesión, sin token)
+        Route::get('/startup/equipos/{id}/workspace',          [EquipoPublicoController::class, 'showDocente'])
+            ->whereNumber('id');
         Route::get('/startup/proyectos/{uuid}/pantalla-acceso',[EquipoGestionController::class, 'pantallaAcceso']);
         Route::delete('/startup/equipos/{id}',                 [EquipoGestionController::class, 'destroy'])
             ->whereNumber('id');

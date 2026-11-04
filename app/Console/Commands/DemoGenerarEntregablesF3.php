@@ -57,6 +57,7 @@ class DemoGenerarEntregablesF3 extends Command
                             {--force : Regenera equipos que ya tienen url_entregable.}
                             {--limit=0 : Tope de equipos a procesar en esta ejecución (0 = los 15 seleccionados).}
                             {--equipos= : Lista de equipo_id separados por coma para procesar solo esos (subconjunto de SELECCION). Vacío = los 15.}
+                            {--publicos : Además de la selección, todos los equipos completos de proyectos demo publicados en la web (sin imagen; no cambia el orden del escaparate).}
                             {--commit : Llama a la IA real (texto + imágenes) y persiste en BD/Cloudinary. Sin esta opción es un dry-run sin coste.}';
 
     protected $description = 'Genera el entregable final (PDF + imagen mockup opcional) de F3 para los 15 equipos curados del escaparate público.';
@@ -73,25 +74,28 @@ class DemoGenerarEntregablesF3 extends Command
     // PDFs no muestren siempre el mismo bloque de código Mermaid.
     // nivel: 'alto'|'medio'|'bajo' — nivel de logro del equipo, solo afecta al tono/
     // profundidad del prompt; no existe columna en BD para esto, es puramente narrativo.
+    // Selección validada con Cynthia el 2026-11-04: equipos de los retos TRANSVERSALES publicados
+    // en dualab.es (un transversal por empresa), para que cada resolución del escaparate enlace con
+    // un reto visible del catálogo. Comercio solo tiene 3 empresas con transversal completado.
     private const SELECCION = [
         // Informática y Comunicaciones
-        98  => ['categoria' => 1, 'interfaz' => 'un repositorio de documentos en el navegador: lista de carpetas y archivos con etiquetas de estado', 'esquema' => 'mermaid', 'nivel' => 'alto'],   // #116 Unificación de Documentación de Proyectos
-        122 => ['categoria' => 1, 'interfaz' => 'un tablero Kanban de tareas con columnas Por hacer / En curso / Hecho',                            'esquema' => 'pasos',   'nivel' => 'medio'],  // #165 Optimización de Gestión de Proyectos en TecnoSoluciones
-        139 => ['categoria' => 1, 'interfaz' => 'una bandeja de mensajes de un chat de equipo tipo intranet',                                       'esquema' => 'tabla',   'nivel' => 'bajo'],   // #250 Desarrollo de Herramientas de Comunicación Interna
-        134 => ['categoria' => null, 'esquema' => 'mermaid', 'nivel' => 'medio'],  // #242 Automatización de Documentación de Proyectos
-        152 => ['categoria' => null, 'esquema' => 'pasos',   'nivel' => 'alto'],   // #270 Implementación de Seguridad en la Gestión de Proyectos
+        618 => ['categoria' => 1, 'interfaz' => 'un panel de integraciones con el estado de sincronización entre las aplicaciones de la empresa', 'esquema' => 'mermaid', 'nivel' => 'alto'],   // Gestión Global · Diseño de integración entre plataformas
+        628 => ['categoria' => 1, 'interfaz' => 'un registro de cambios de un proyecto de software, con versiones, autor y estado de cada cambio', 'esquema' => 'pasos',   'nivel' => 'medio'],  // TecnoCom · Eficiencia en Documentación de Cambios
+        647 => ['categoria' => 1, 'interfaz' => 'un panel de seguimiento de inventario con existencias y alertas de stock bajo',                   'esquema' => 'tabla',   'nivel' => 'bajo'],   // MercadoTop · Panel de Seguimiento de Inventario
+        662 => ['categoria' => null, 'esquema' => 'mermaid', 'nivel' => 'medio'],  // TecnoSilicio · Solución Integral para Coordinar Proyectos
+        735 => ['categoria' => null, 'esquema' => 'pasos',   'nivel' => 'alto'],   // TecnoVision · Innovación en el Proceso de Pruebas
         // Administración y Gestión
-        159 => ['categoria' => 2, 'esquema' => 'tabla',   'nivel' => 'alto'],   // #279 Etiquetado Inteligente
-        176 => ['categoria' => 1, 'interfaz' => 'un panel de control con tarjetas de aplicaciones/herramientas ya conectadas entre sí',             'esquema' => 'mermaid', 'nivel' => 'medio'],  // #300 Integración de Herramientas de Gestión de Proyectos
-        175 => ['categoria' => 4, 'esquema' => 'pasos',   'nivel' => 'bajo'],   // #299 Optimización del Proceso de Gestión Documental
-        124 => ['categoria' => null, 'esquema' => 'tabla',   'nivel' => 'medio'],  // #182 Estrategia de comunicación interna en la gestión documental
-        167 => ['categoria' => null, 'esquema' => 'mermaid', 'nivel' => 'alto'],   // #289 Automatización de Documentación Jurídica
+        635 => ['categoria' => 1, 'interfaz' => 'una bandeja de mensajes de un canal interno de equipo, con hilos por proyecto',                   'esquema' => 'mermaid', 'nivel' => 'alto'],   // Gestión Avanza · Prototipo de Comunicación Interna
+        737 => ['categoria' => 2, 'esquema' => 'tabla',   'nivel' => 'medio'],  // MercadoPro · Sistema de Registro de Inventario
+        454 => ['categoria' => 4, 'esquema' => 'pasos',   'nivel' => 'bajo'],   // Gestión Avanza Consulting · Seguimiento y Auditoría de Proyectos
+        695 => ['categoria' => null, 'esquema' => 'tabla',   'nivel' => 'medio'],  // Gestión Integral Soluciones · Seguimiento Eficiente de Proyectos
+        702 => ['categoria' => null, 'esquema' => 'mermaid', 'nivel' => 'alto'],   // TechVision · Seguimiento de Tareas Efectivo
         // Comercio y Marketing
-        168 => ['categoria' => 1, 'interfaz' => 'un calendario de publicaciones programadas en redes sociales',                                    'esquema' => 'pasos',   'nivel' => 'alto'],   // #290 Automatización de Campañas en MarketExito
-        118 => ['categoria' => 3, 'esquema' => 'tabla',   'nivel' => 'medio'],  // #162 Diseño de Espacios Comerciales Eficientes
-        192 => ['categoria' => 1, 'interfaz' => 'un panel de indicadores (KPIs) con gráficas de rendimiento de campañas',                          'esquema' => 'mermaid', 'nivel' => 'bajo'],   // #322 Integración de Herramientas Analíticas
-        188 => ['categoria' => null, 'esquema' => 'pasos',   'nivel' => 'medio'],  // #320 Informe de Rendimiento de Campañas
-        174 => ['categoria' => null, 'esquema' => 'tabla',   'nivel' => 'alto'],   // #293 Mejora de la Comunicación Interna en MarketExito
+        623 => ['categoria' => 1, 'interfaz' => 'un calendario de campañas con publicaciones programadas por canal',                                'esquema' => 'pasos',   'nivel' => 'alto'],   // MarketExito · Automatización de Campañas Publicitarias
+        660 => ['categoria' => 1, 'interfaz' => 'un informe de rendimiento de campañas con gráficas e indicadores (KPIs)',                          'esquema' => 'mermaid', 'nivel' => 'bajo'],   // MarketPro · Estandarización de Informes de Rendimiento
+        671 => ['categoria' => 4, 'esquema' => 'tabla',   'nivel' => 'medio'],  // Mercadeo Global · Guía de Buenas Prácticas en Marketing Digital
+        624 => ['categoria' => null, 'esquema' => 'pasos',   'nivel' => 'medio'],  // MarketExito · Automatización de Campañas (2º equipo)
+        661 => ['categoria' => null, 'esquema' => 'tabla',   'nivel' => 'alto'],   // MarketPro · Informes de Rendimiento (2º equipo)
     ];
 
     // Instrucción común a las 4 categorías: nunca fotorrealista, nunca personas/oficinas
@@ -125,6 +129,13 @@ class DemoGenerarEntregablesF3 extends Command
         }
 
         $equipoIds = array_keys(self::SELECCION);
+        if ($this->option('publicos')) {
+            // Cada resolución publicada en dualab.es con su PDF, no solo las 15 del escaparate
+            $publicos = Equipo::whereNotNull('diagnostico_final')
+                ->whereHas('microproyecto', fn ($q) => $q->where('es_demo', true)->where('visible_publico', true)->where('estado', 'completado'))
+                ->orderBy('id')->pluck('id')->all();
+            $equipoIds = array_values(array_unique([...$equipoIds, ...$publicos]));
+        }
 
         $filtroEquipos = $this->option('equipos');
         if ($filtroEquipos) {
@@ -147,7 +158,7 @@ class DemoGenerarEntregablesF3 extends Command
 
         foreach ($equipoIds as $equipoId) {
             $equipo = $equipos->get($equipoId);
-            $config = self::SELECCION[$equipoId];
+            $config = self::SELECCION[$equipoId] ?? self::configPorDefecto($equipoId);
 
             if (!$equipo) {
                 $this->error("  ✗ Equipo #{$equipoId} no encontrado — omitido (¿ha cambiado la BD desde la selección?).");
@@ -164,7 +175,7 @@ class DemoGenerarEntregablesF3 extends Command
 
             if ($yaTiene && !$forzar) {
                 $this->comment('  … ya tiene entregable, se omite (usa --force para regenerar).');
-                $pineables[] = $equipoId;
+                if (isset(self::SELECCION[$equipoId])) $pineables[] = $equipoId;
                 continue;
             }
 
@@ -184,7 +195,7 @@ class DemoGenerarEntregablesF3 extends Command
             try {
                 $this->generarEntregable($equipo, $proyecto, $microreto, $empresa, $f3, $config);
                 $procesados++;
-                $pineables[] = $equipoId;
+                if (isset(self::SELECCION[$equipoId])) $pineables[] = $equipoId; // solo el escaparate va primero
                 if ($config['categoria']) {
                     $conImagen++;
                 }
@@ -223,6 +234,21 @@ class DemoGenerarEntregablesF3 extends Command
      * tarde que esto, o se relanza este comando, el orden se puede recalcular sin más
      * (solo toca `updated_at`, no hay flag de "destacado" en BD).
      */
+    /**
+     * Configuración de los equipos publicados fuera de la selección (--publicos): sin imagen,
+     * y esquema y nivel alternados para que los PDF no salgan todos iguales.
+     *
+     * @return array{categoria: null, esquema: string, nivel: string}
+     */
+    private static function configPorDefecto(int $equipoId): array
+    {
+        return [
+            'categoria' => null,
+            'esquema'   => ['mermaid', 'pasos', 'tabla'][$equipoId % 3],
+            'nivel'     => ['alto', 'medio', 'bajo'][intdiv($equipoId, 3) % 3],
+        ];
+    }
+
     private function pinearOrden($equipos, array $equipoIds): void
     {
         $vistos = [];
@@ -320,7 +346,8 @@ class DemoGenerarEntregablesF3 extends Command
             'url_entregable'         => $data['url'],
         ]);
 
-        $reqFase = $this->peticion(GuardarFaseEquipoRequest::class, ['datos' => $datosF3]);
+        // La request filtra los campos por la fase de la ruta: sin ella se quedaría solo con los de F0
+        $reqFase = $this->peticion(GuardarFaseEquipoRequest::class, ['datos' => $datosF3], null, ['token' => $equipo->token, 'fase' => 3]);
         app(EquipoPublicoController::class)->guardarFase($reqFase, $equipo->token, 3);
     }
 

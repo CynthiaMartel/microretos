@@ -12,8 +12,8 @@
      de grupo), así que un alumno se identifica por alias + centro + ciclo + curso + clase:
      si el docente reutiliza el mismo alias en otro encuentro de esa clase, se agrupan. -->
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { getParticipacionesAlumnado } from '../services/alumnadoService.js'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import SelectorCurso from '../components/SelectorCurso.vue'
@@ -30,6 +30,7 @@ import { formatCurso } from '../utils/formatCurso.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
 
 const router = useRouter()
+const route  = useRoute()
 
 const participaciones = ref([])
 const cargando = ref(true)
@@ -47,7 +48,10 @@ async function cargar() {
     cargando.value = false
   }
 }
-onMounted(cargar)
+onMounted(async () => {
+  await cargar()
+  enfocarAlumnoDeRuta()
+})
 
 
 const NIVELES_RA = [
@@ -61,6 +65,7 @@ const NIVELES_RA = [
 const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 const fecha = (iso) => iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 const iniciales = (alias) => String(alias ?? '').trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 const formatNota = (n) => (n === null || n === undefined) ? '' : Number(n).toLocaleString('es-ES', { maximumFractionDigits: 2 })
 
 // Mismo criterio que Mis grupos: completado = las 5 fases del grupo completas
@@ -268,8 +273,42 @@ function toggle(clave) {
   abiertos.value = s
 }
 
-// Enlaces a lo que ya existe (no se duplica aquí)
-const irAGrupo       = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id } })
+// ── Llegada desde un chip de alias (ficha del encuentro): ?alumno=<alias>&encuentro=<id> ──
+// Quita filtros (y ajusta el curso académico si hace falta) para que el alumno se vea, va a
+// su página, lo despliega y lleva el scroll hasta él resaltándolo un momento.
+const resaltado = ref(null)   // { clave, participacion } del alumno al que se ha llegado
+let timerResaltado = null
+const reducirMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+async function enfocarAlumnoDeRuta() {
+  const { alumno, encuentro } = route.query
+  if (!alumno || !encuentro) return
+  const p = participaciones.value.find(x => String(x.encuentro.id) === String(encuentro) && norm(x.alias) === norm(alumno))
+  limpiarFiltros()
+  // Sin participación (encuentro antiguo sin grupos reales): al menos buscar por su alias
+  if (!p) { busqueda.value = String(alumno); return }
+  const curso = cursoDeEncuentro(p.encuentro)
+  if (!cursoStore.coincide(curso)) cursoStore.curso = curso
+  await nextTick()   // los watches de filtros reinician la página: esperar antes de fijarla
+  const clave = claveAlumno(p)
+  const i = alumnos.value.findIndex(a => a.clave === clave)
+  if (i < 0) return
+  pagina.value = Math.floor(i / POR_PAGINA)
+  abiertos.value = new Set([...abiertos.value, clave])
+  await nextTick()
+  const el = [...document.querySelectorAll('[data-alumno]')].find(e => e.dataset.alumno === clave)
+  if (!el) return
+  el.scrollIntoView({ behavior: reducirMovimiento() ? 'auto' : 'smooth', block: 'start' })
+  el.querySelector('button')?.focus({ preventScroll: true })
+  resaltado.value = { clave, participacion: p.id }
+  clearTimeout(timerResaltado)
+  timerResaltado = setTimeout(() => { resaltado.value = null }, 3000)
+  // La query ya se ha usado: quitarla para que recargar no vuelva a resetear los filtros
+  router.replace({ query: {} })
+}
+
+// Enlaces a lo que ya existe (no se duplica aquí). «Ver detalle del grupo» abre el grupo del alumno.
+const irAGrupo       = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id }, query: { equipo: p.equipo.id } })
 const irADiagnostico = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id }, query: { equipo: p.equipo.id, ver: 'diagnostico' } })
 const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params: { uuid: p.proyecto.uuid } })
 </script>
@@ -452,10 +491,14 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
           </div>
 
           <ul v-else-if="!error" class="space-y-2">
-            <li v-for="a in visibles" :key="a.clave" class="overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
-              <!-- Fila del alumno -->
+            <li v-for="a in visibles" :key="a.clave" :data-alumno="a.clave"
+                :class="['@container scroll-mt-24 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow duration-500',
+                         resaltado?.clave === a.clave ? 'border-rol-fuerte/50 ring-4 ring-rol/30' : 'border-borde']">
+              <!-- Fila del alumno: desplegable + «Ver detalle del grupo» del grupo de su participación más
+                   reciente (fuera del botón desplegable: no se pueden anidar botones) -->
+              <div class="flex items-center transition-colors hover:bg-gray-50">
               <button type="button" @click="toggle(a.clave)" :aria-expanded="abiertos.has(a.clave)"
-                      class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50">
+                      class="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 text-left">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-alumnos/15 text-sm font-bold text-alumnos-dark" aria-hidden="true">
                   {{ iniciales(a.alias) }}
                 </span>
@@ -487,10 +530,21 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
+              <!-- Solo icono en filas estrechas; con texto cuando la fila tiene sitio (@container del li) -->
+              <button type="button" @click="irAGrupo(a.reciente)"
+                      :aria-label="`Ver el detalle del ${nombreGrupo(a.reciente.equipo)} de ${a.alias}`"
+                      :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin proyecto'}`"
+                      class="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @4xl:w-auto @4xl:px-4">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span class="hidden @4xl:inline">Ver detalle del grupo</span>
+              </button>
+              </div>
 
               <!-- Participaciones: una por encuentro/proyecto -->
               <div v-if="abiertos.has(a.clave)" class="space-y-3 border-t border-borde bg-gray-50 p-3 sm:p-4">
-                <section v-for="p in a.participaciones" :key="p.id" class="rounded-xl border border-borde bg-white p-4">
+                <section v-for="p in a.participaciones" :key="p.id"
+                         :class="['rounded-xl border bg-white p-4 transition-shadow duration-500',
+                                  resaltado?.participacion === p.id ? 'border-rol-fuerte/50 ring-2 ring-rol/30' : 'border-borde']">
                   <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="font-heading font-bold leading-snug text-azul-noche">{{ p.proyecto?.titulo || 'Sin proyecto asociado' }}</p>
@@ -524,12 +578,14 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                     <div class="mb-1 flex items-center justify-between text-xs font-semibold text-texto-secundario">
                       <span>Fases del espacio de trabajo</span><span>{{ progreso(p) }}%</span>
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <!-- En móvil, una fase por línea con su nombre y fecha (el title no existe en táctil) -->
+                    <div class="grid grid-cols-1 gap-1.5 sm:flex sm:flex-wrap">
                       <span v-for="f in FASES_PROYECTO" :key="f.num"
                             :title="`${f.label}${p.equipo.fases[f.num]?.fecha_completada ? ' · completada el ' + new Date(p.equipo.fases[f.num].fecha_completada).toLocaleDateString('es-ES') : ''}`"
-                            :class="['inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold', estadoFase(p, f.num)]">
+                            :class="['inline-flex min-w-0 items-center gap-1 justify-self-start rounded-full px-2 py-1 text-xs font-semibold', estadoFase(p, f.num)]">
                         <span aria-hidden="true">{{ f.icono }}</span>F{{ f.num }}
-                        <span class="hidden font-medium lg:inline">{{ f.label }}</span>
+                        <span class="min-w-0 truncate font-medium">{{ f.label }}</span>
+                        <span v-if="p.equipo.fases[f.num]?.fecha_completada" class="shrink-0 font-normal opacity-80">· {{ fechaCorta(p.equipo.fases[f.num].fecha_completada) }}</span>
                         <span v-if="p.equipo.fases[f.num]?.nota_docente !== null && p.equipo.fases[f.num]?.nota_docente !== undefined && f.num !== 4"
                               class="rounded-full bg-white/70 px-1">{{ formatNota(p.equipo.fases[f.num].nota_docente) }}</span>
                       </span>
@@ -575,8 +631,17 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                   <!-- Acciones: la principal (trabajo del grupo) en el color del rol; el resto, secundarias -->
                   <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-borde pt-3">
                     <button type="button" class="inline-flex h-9 items-center gap-1.5 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90" @click="irAGrupo(p)">
-                      Ver trabajo del grupo
+                      Ver detalle del grupo
                     </button>
+                    <!-- Workspace del grupo en solo lectura (vista del docente, en otra pestaña): mismo
+                         enlace que en Detalle de grupos y en Seguimiento de grupos -->
+                    <router-link :to="{ name: 'equipo-workspace-docente', params: { equipoId: p.equipo.id } }"
+                                 target="_blank" rel="noopener"
+                                 :aria-label="`Ver en workspace el trabajo del ${nombreGrupo(p.equipo)}, en solo lectura`"
+                                 class="inline-flex h-9 items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 transition-colors hover:bg-violet-100">
+                      <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      Ver en workspace
+                    </router-link>
                     <button v-if="p.equipo.tiene_diagnostico" type="button" class="accion" @click="irADiagnostico(p)">Ver diagnóstico</button>
                     <button v-if="p.proyecto" type="button" class="accion" @click="irAProyecto(p)">Ficha del proyecto</button>
                   </div>

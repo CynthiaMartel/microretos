@@ -29,10 +29,10 @@ class EquipoProgresoResource extends JsonResource
                 'familia'            => $proyecto->familia?->nombre,
                 'microreto_id'       => $proyecto->microreto_id,
             ] : null,
-            // Con el código o el token se entra en el workspace del grupo y se puede escribir:
-            // solo para quien puede editar su encuentro (nunca a colaboradores de solo lectura)
+            // Con el código se entra en el workspace del grupo y se puede escribir: solo para quien
+            // puede editar su encuentro (nunca a colaboradores de solo lectura). El token ya no se
+            // envía: el docente ve el workspace en solo lectura por id (GET /startup/equipos/{id}/workspace).
             'codigo_acceso'   => $this->resource->encuentro?->esEditablePor($request->user()) ? $this->codigo_acceso : null,
-            'token'           => $this->resource->encuentro?->esEditablePor($request->user()) ? $this->token : null,
             'fase_actual'     => $this->fase_actual,
             'fases_completas' => $this->fases->filter(fn ($f) => $f->completada)->count(),
             'diagnostico_final'       => $this->diagnostico_final,

@@ -24,7 +24,6 @@ import MiUsuario from '../views/MiUsuario.vue'
 import MisGruposDetalle from '../views/MisGruposDetalle.vue'
 import PantallaAcceso from '../views/PantallaAcceso.vue'
 import PantallaAccesoLista from '../views/PantallaAccesoLista.vue'
-import MisGrupos from '../views/MisGrupos.vue'
 import EntrarWorkspace from '../views/EntrarWorkspace.vue'
 import SeccionHub from '../views/SeccionHub.vue'
 import CalendarioDocente from '../views/CalendarioDocente.vue'
@@ -147,13 +146,12 @@ const router = createRouter({
     // Compatibilidad: enlaces antiguos con el nombre "sesiones"
     { path: '/sesiones', redirect: to => ({ path: '/encuentros', query: to.query }) },
     {
-      // Antes /mis-equipos (y antes de eso /mis-grupos y /dashboard/mis-grupos). Vuelve a
-      // "grupos" porque en las vistas del docente los equipos de alumnado se llaman "grupos"
-      // y la letra del encuentro (Encuentro.grupo, ej. "B") se muestra como "Clase".
+      // Mis grupos ya no es una vista propia: es la pestaña «Seguimiento de grupos» de la
+      // biblioteca de encuentros. Se conserva la ruta (con su nombre) para los enlaces y las
+      // notificaciones guardadas; ?encuentro=&equipo= siguen abriendo ese encuentro y grupo.
       path: '/mis-grupos',
       name: 'mis-grupos',
-      component: MisGrupos,
-      meta: { requiresAuth: true, roles: [SA, AD, DO] }
+      redirect: to => ({ path: '/encuentros', query: { ...to.query, ver: 'seguimiento' } })
     },
     {
       // Antes /mis-equipos/:id y /workspace/:id — mismo motivo que la ruta de arriba.
@@ -246,6 +244,14 @@ const router = createRouter({
       path: '/proyecto/equipo/:token',
       name: 'equipo-workspace',
       component: EquipoWorkspace
+    },
+    {
+      // El mismo workspace visto por el docente, en solo lectura: por id del grupo y con su
+      // sesión, sin token (sin él no se puede escribir nada en el trabajo del alumnado)
+      path: '/grupos/:equipoId/workspace',
+      name: 'equipo-workspace-docente',
+      component: EquipoWorkspace,
+      meta: { requiresAuth: true, roles: [SA, AD, DO] }
     },
     {
       path: '/usuarios',

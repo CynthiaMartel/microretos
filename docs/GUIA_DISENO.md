@@ -193,7 +193,7 @@ Todo gráfico lleva al lado una frase con la conclusión («12 proyectos validad
   título no «salta» al cambiar de vista. Contenido de lectura estrecho (formularios como Mi usuario)
   va dentro, con su `max-w-*`, alineado a la izquierda bajo la cabecera.
 - **Flecha volver:** solo en vistas de segundo nivel (cuelgan de una sección o de otra vista). Las
-  de primer nivel del menú lateral (Mis grupos, Calendario, Notificaciones, páginas de sección)
+  de primer nivel del menú lateral (Calendario, Notificaciones, páginas de sección)
   no la llevan: no hay nivel de arriba y el antetítulo ya dice dónde estás.
 - `CabeceraSeccion`: flecha volver encima del título (una por vista), y a la derecha Ayuda →
   papelera de superadmin → acción principal (la última).
@@ -211,9 +211,29 @@ Todo gráfico lleva al lado una frase con la conclusión («12 proyectos validad
 - **Pestañas de ámbito** (2026-10-22, Biblioteca de proyectos): cuando una lista tiene dos mundos
   que casi nunca se miran juntos (p. ej. «En proceso | Completados»), van como pestañas en píldora
   entre la cabecera y `FiltrosPanel`, con su contador y en la URL (`?ver=`). La barra de filtros es
-  la misma en las dos; lo propio de cada pestaña va como **un solo grupo** en «Filtros rápidos».
+  la misma en las dos; lo propio de cada pestaña va como **un solo grupo** en «Filtros rápidos»,
+  **el primero del panel** (antes de Familia). Al cambiar de pestaña se quita el filtro propio de
+  la otra. Etiqueta igual en móvil y escritorio salvo que no quepa (entonces versión corta).
+  Segundo caso (2026-11-04, Encuentros y grupos, §8.2c): «Gestión | Seguimiento de grupos», con una
+  **línea a la derecha de las pestañas (debajo en móvil) que explica qué se hace en la activa**
+  y el nombre de la pestaña al principio del título de resultados («Gestión · 12 encuentros»),
+  para que se distinga a simple vista dónde se está, no solo por la píldora resaltada.
+- **Llegar a un elemento concreto** (2026-11-04): los enlaces que llevan a un encuentro, grupo o
+  alumno de otra vista lo indican en la query (`?encuentro=`, `?equipo=`, `?alumno=&encuentro=`).
+  La vista de destino quita los filtros que lo ocultarían (y ajusta el curso académico), va a su
+  página, lo despliega, hace scroll (`scroll-mt-24`, sin animación con `prefers-reduced-motion`) y
+  lo **resalta unos 3 s** con `border-rol-fuerte/50 ring-4 ring-rol/30` (`ring-2` en elementos
+  internos). Después quita esos parámetros de la URL para que recargar no vuelva a moverla.
+- **Enlaces de un grupo, mismos nombres en todas las vistas** (2026-11-04):
+  - «Ver seguimiento» → pestaña Seguimiento de grupos con el encuentro (o el grupo) desplegado.
+  - «Detalle de grupos» / «Ver detalle del grupo» → `MisGruposDetalle.vue` (todo el trabajo del
+    grupo, fase a fase, evaluación y diagnóstico); con grupo, se abre y resalta ese grupo.
+  - «Ver en workspace» → el espacio de trabajo del grupo **en solo lectura** (§8.2j), en otra
+    pestaña, en violeta (`bg-violet-50 border-violet-200 text-violet-700`). «Workspace» es el
+    espacio del alumnado: solo se enlaza desde un grupo concreto, nunca desde un encuentro.
+  - Un alias de alumno → su ficha en el Listado de alumnado, desplegada y resaltada.
 - **Título de resultados con niveles** (2026-10-22, componente `TituloResultados`, en Retos,
-  Encuentros, Proyectos y Mis grupos): con una sola familia, ciclo o módulo elegidos, encima de la
+  Encuentros y grupos, Proyectos, Alumnado y Diagnósticos): con una sola familia, ciclo o módulo elegidos, encima de la
   lista van los niveles en píldoras iguales (icono, «Etiqueta: valor» y ✕; el último resaltado en
   el color del rol), debajo el nivel más concreto como título y el número de resultados. Pulsar un
   nivel vuelve a él; la ✕ lo quita con los que dependen de él. Una familia que ya está en el título
@@ -278,34 +298,51 @@ requisitos y lo que falta.
   (`MicroproyectoPolicy::publicarEscaparate` en el backend), en turquesa de administraciones con la
   marca «Superadmin» y explicación al pasar el ratón. El resto ve el aviso «Publicado en la web pública».
 
-### 8.2c Seguimiento de grupos — `MisGrupos.vue`
-- Explorador único sin capas de cards de familia y módulo (los enlaces antiguos `?familia=&modulo=`
-  pasan a ser filtros). Barra común: buscador, curso académico, ciclo, módulo, nivel y «Más filtros».
-- Filtros rápidos: estado de los grupos (todos · en curso · sin iniciar · completados, cuenta
-  grupos), seguimiento (con diagnóstico listo · con grupos sin empezar), familia y de quién es.
-- Lista de encuentros desplegables (bloques «En progreso» / «Completados»), orden por fecha o
-  avance y paginación de 10. Pie de la tarjeta (como en las otras bibliotecas): «Ver los grupos (N)»
-  a la izquierda y, a la derecha, «Detalle de grupos» (color del rol) y el menú «⋯» (mostrar los
-  grupos, desplegar el resumen de todos, ver diagnósticos y copiar los códigos).
-- En la tarjeta, familia y módulos con su icono y etiqueta (los mismos que en los filtros): la
-  familia en texto; de los módulos se ve uno (el del filtro, si lo trabaja, resaltado) y un botón
-  «+N» que despliega los demás dentro de la tarjeta (como en Proyectos).
-- **Título de resultados con contexto** (piloto, para extender a las demás bibliotecas si gusta):
-  con módulo, ciclo o una sola familia elegidos, el más concreto es el título encima de la lista
-  y el número de resultados va debajo. Encima, todos los niveles elegidos con el mismo formato:
-  píldora con icono, «Etiqueta: valor» y ✕ («Familia profesional: …» › «Ciclo formativo: …» ›
-  «Módulo: …»); el último, resaltado en el color del rol. Pulsar el nombre vuelve a ese nivel y la
-  ✕ lo quita (con los que dependen de él).
+### 8.2c Encuentros y grupos — `EncuentrosRegistrados.vue` (antes también `MisGrupos.vue`)
+- **Una sola entrada en el menú lateral, «Encuentros y grupos»** (2026-11-04). Antes había dos,
+  «Encuentros» y «Mis grupos», que listaban los mismos encuentros con filtros repetidos. La sección
+  (`/seccion/encuentros`) tiene tres tarjetas: Crear encuentro, Biblioteca de encuentros y
+  Seguimiento de grupos (las dos últimas abren esta vista en cada pestaña). El menú se marca activo
+  en las dos pestañas y en el Detalle de grupos (`/mis-grupos/:id`).
+- Cabecera «Encuentros y **grupos**». Pestañas de ámbito (§7) **«Gestión | Seguimiento de grupos»**
+  (`?ver=seguimiento`), con la línea que explica la activa. Misma lista de encuentros
+  (`GET /encuentros`) y misma barra de filtros: buscador, curso académico, ciclo, módulo, nivel y
+  clase. `/mis-grupos` redirige a la pestaña Seguimiento conservando la query (enlaces y
+  notificaciones guardadas).
+- Filtros rápidos: lo propio de la pestaña primero —Gestión: «Acceso del alumnado»; Seguimiento:
+  «Estado de los grupos» (cuenta grupos) con la casilla «Solo con diagnóstico listo»—, después
+  familia, de quién es y fechas. «Más avance» en Ordenar solo en Seguimiento.
+- **Gestión:** cuadrícula o lista de tarjetas de encuentro. Pie: «Ver seguimiento» (color del rol;
+  solo icono en tarjetas estrechas, con `@container`), «Más información» (abre la ficha del
+  encuentro), la llave de los códigos y «⋯». Las etiquetas de grupo («Grupo 1 · Análisis del reto»)
+  llevan a ese grupo en Seguimiento.
+- **Seguimiento:** el avance (`GET /encuentros/mis-grupos`) se carga al entrar en la pestaña. Una
+  tarjeta por encuentro a todo el ancho (`TarjetaSeguimientoEncuentro`), bloques «En progreso» /
+  «Completados», resumen de estados de sus grupos y, desplegados, cada grupo con su avance, fases,
+  aviso de diagnóstico, «Ver en workspace (solo lectura)» y «Ver detalle del grupo». Pie: «Ver los
+  grupos (N)», «Detalle de grupos» y «⋯» (más información del encuentro, desplegar todos, ver
+  diagnósticos, copiar códigos). No se fusiona con la tarjeta de Gestión: en cuadrícula no cabe.
+- **Ficha del encuentro (modal):** cada alias lleva a su ficha en el Listado de alumnado; cada
+  grupo, «Ver detalle»; pie «Ver detalle de grupos».
+- **Detalle de grupos** (`MisGruposDetalle.vue`, `/mis-grupos/:id`): `?equipo=` abre y resalta ese
+  grupo (`?ver=diagnostico`, su diagnóstico). «Volver al seguimiento de grupos» vuelve a la pestaña
+  con el encuentro resaltado.
 
 ### 8.2d Listado de alumnado — `AlumnadoListado.vue`
 - Mismo esquema de explorador (§7). Barra: alias, curso académico, ciclo, módulo, nivel y clase.
   Lateral: estado del proyecto, seguimiento (nota final, diagnóstico, sin reflexión), familia,
   proyecto y fechas. Contadores en alumnos (no en participaciones). Paginación de 20.
+- Fila del alumno: desplegable y, aparte (no se anidan botones), «Ver detalle del grupo» de su
+  participación más reciente (solo icono en filas estrechas, con `@container`). Cada participación:
+  «Ver detalle del grupo» (color del rol), «Ver en workspace» (solo lectura, §8.2j), «Ver
+  diagnóstico» y «Ficha del proyecto». Las fases muestran su nombre y fecha también en táctil (una
+  por línea en móvil). Llegada desde un alias (§7): `?alumno=&encuentro=`.
 - Rol del alumno en su grupo con el componente `RolGrupo` (definiciones en
-  `config/rolesGrupo.js`, las mismas en Mis grupos, detalle de grupos y Listado de alumnado):
+  `config/rolesGrupo.js`, las mismas en Seguimiento de grupos, detalle de grupos y Listado de alumnado):
   «Portavoz / Gestor/a de tiempos / Documentador/a / Responsable de foco», como en el espacio de
   trabajo, con una «i» que lo explica al pasar el ratón, con el teclado o al pulsarla. Dentro de un
-  botón (fila desplegable de Mis grupos) va sin «i» y la explicación en el `title`.
+  botón (fila desplegable de un grupo en Seguimiento) va sin «i» y la explicación en el `title`.
+  El tooltip de la «i» se abre hacia el lado con sitio (a la derecha si el chip está en la mitad derecha).
 
 ### 8.2e Biblioteca de diagnósticos — `BibliotecaDiagnosticos.vue`
 - Mismo esquema de explorador (§7). Barra: búsqueda, curso académico, ciclo, módulo, nivel y
@@ -315,14 +352,14 @@ requisitos y lo que falta.
   diagnosticados dentro, uno por fila (grupo, «Nota final X/10», miembros, resumen y «Ver
   diagnóstico»); se ve el primero y «Ver N grupos más» despliega el resto. Todas las tarjetas
   plegadas miden lo mismo: huecos fijos para el chip del docente, familia/módulos, resumen (2
-  líneas) y el botón de más grupos, y pie en una línea. Pie: «N de M grupos con diagnóstico», «Ver encuentro» (detalle de grupos) y «⋯»
+  líneas) y el botón de más grupos, y pie en una línea. Pie: «N de M grupos con diagnóstico», «Detalle de grupos» y «⋯»
   (descargar los PDF, ficha del proyecto). Resultados: «N encuentros · M diagnósticos». Paginación de 12.
 - `DiagnosticoModal`: accesible (diálogo, foco atrapado, Escape, retorno del foco) y con tokens.
 - `ChipDocente` («Docente: Nombre», «· solo lectura»): propietario de un encuentro compartido,
-  igual en Encuentros, Mis grupos y Diagnósticos.
+  igual en las dos pestañas de Encuentros y grupos y en Diagnósticos.
 
 ### 8.2f Dar acceso al alumnado — `PantallaAccesoLista.vue` y `AccesoRapidoEncuentros`
-- No es una biblioteca más (explorar encuentros es cosa de /encuentros y Mis grupos): es un
+- No es una biblioteca más (explorar encuentros es cosa de Encuentros y grupos): es un
   lanzador para proyectar en clase. Arriba «En curso hoy» (`AccesoRapidoEncuentros`: encuentros
   con código cuya fecha incluye hoy; proyecto, clase · curso · fechas, código grande con copiar y
   «Proyectar» relleno); debajo «Otros encuentros» en lista compacta (proyecto, clase, fecha,
@@ -369,6 +406,18 @@ requisitos y lo que falta.
   (`@xl/lista:w-44 @4xl/lista:w-56`, para que se alineen) | acciones; en móvil se apilan con el pie separado.
   Acciones: acción principal en contorno —«Activar» si falta activarla (con el puntero tras crearla),
   si no «Editar»; en la papelera «Restaurar»— y «⋯» con el resto; lo destructivo, al final y en rojo.
+
+### 8.2j Workspace del grupo en solo lectura — `EquipoWorkspace.vue` (vista del docente)
+- Ruta `/grupos/:equipoId/workspace` (`equipo-workspace-docente`), a pantalla completa y en otra
+  pestaña. Carga con la sesión del docente y por id (`GET /startup/equipos/{id}/workspace`, basta
+  con poder ver el encuentro: también los colaboradores de solo lectura), **nunca con el token del
+  grupo**: sin token ninguna escritura es posible. El token ya no viaja en las respuestas del
+  docente, y el código de acceso solo a quien puede editar el encuentro.
+- Aviso fijo arriba en ámbar: «Vista del docente · solo lectura…», con «Ficha del reto» y «Detalle
+  del grupo». Campos y botones de edición desactivados de una vez (`<fieldset disabled>`); la barra
+  de fases funciona y los hallazgos salen desplegados. No guarda nada en el navegador (la reentrada
+  del alumnado no se pisa).
+- El enlace del alumnado (`/proyecto/equipo/:token`) no cambia.
 
 ### 8.3 Taller de Ideas: currículo y criterios — `StartupDayWizard.vue`
 - Indicador «Paso X de 7» ✅. La barra de progreso calcula pasos *completados*

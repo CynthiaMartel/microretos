@@ -32,9 +32,12 @@ class DemoGenerarRetos extends Command
                             {--max=7 : Máximo de retos a generar por empresa.}
                             {--limit=0 : Tope de EMPRESAS a procesar en esta ejecución (0 = todas las pendientes).}
                             {--force : Vuelve a procesar empresas que ya tienen retos simulados (añade más, no borra los existentes).}
-                            {--completar-transversales : Modo de relleno: solo genera el grupo \'ambos_cursos\' para empresas que ya tienen retos pero les falta el transversal (tras un lote normal con fallos). Ignora --min/--max/--force.}
-                            {--transversales=2 : Nº de retos transversales a generar por empresa en modo --completar-transversales.}
+                            {--completar-transversales : Modo de relleno: completa hasta --transversales retos \'ambos_cursos\' por familia de cada empresa con retos. Ignora --min/--max/--force.}
+                            {--transversales=2 : Nº de retos transversales por cada familia de cada empresa en modo --completar-transversales (cuenta los que ya tenga).}
                             {--todo-transversal : Genera TODOS los retos de cada empresa como transversales (ambos_cursos) en vez del reparto habitual 1º/2º/transversal. Usa el mismo fallback a ciclos hermanos que --completar-transversales.}
+                            {--empresa= : Ids de empresa separados por coma (solo esas).}
+                            {--ciclos= : Ids de ciclo separados por coma que sustituyen al ciclo por defecto de su familia (p. ej. 130 = Marketing y Publicidad para una empresa que pide marketing).}
+                            {--preview : Llama a la IA y muestra los retos sin guardarlos (no aplica a los modos transversales).}
                             {--commit : Llama a la IA real y persiste en BD. Sin esta opción es un dry-run sin coste.}';
 
     protected $description = 'Genera microretos (biblioteca) para las empresas ficticias simuladas, con currículo RA/CE real.';
@@ -75,13 +78,16 @@ class DemoGenerarRetos extends Command
 
     public function handle(): int
     {
-        $commit = (bool) $this->option('commit');
+        $commit  = (bool) $this->option('commit');
+        $preview = !$commit && (bool) $this->option('preview');
         $min    = max(1, (int) $this->option('min'));
         $max    = max($min, (int) $this->option('max'));
         $limite = (int) $this->option('limit');
         $forzar = (bool) $this->option('force');
 
-        if (!$commit) {
+        if ($preview) {
+            $this->warn('Modo PREVIEW — se llama a la IA pero no se escribe nada en BD.');
+        } elseif (!$commit) {
             $this->warn('Modo DRY-RUN — no se llama a la IA ni se escribe nada. Relanza con --commit para generar de verdad.');
         }
 
@@ -105,8 +111,11 @@ class DemoGenerarRetos extends Command
         $empresasQuery = Empresa::where('es_simulada', true)
             ->where('centro_id', self::CENTRO_ID)
             ->with('familias')->orderBy('id');
-        if (!$forzar) {
+        if (!$forzar && !$preview) {
             $empresasQuery->whereDoesntHave('microretos', fn ($q) => $q->where('es_simulado', true));
+        }
+        if ($this->option('empresa')) {
+            $empresasQuery->whereIn('id', array_map('intval', explode(',', (string) $this->option('empresa'))));
         }
         if ($limite > 0) {
             $empresasQuery->limit($limite);
@@ -153,31 +162,46 @@ class DemoGenerarRetos extends Command
                 continue;
             }
 
-            $cursosDisponibles = Modulo::where('idcicloformativo', $ciclo->id)
-                ->distinct()->pluck('curso')->filter()->values()->all();
-            $distribucion = $this->distribuirCursos($cursosDisponibles, $cantidadTotal);
-
-            $resumenDistribucion = collect($distribucion)
-                ->map(fn ($cantidad, $curso) => ($curso === 'ambos_cursos' ? 'Transversal' : "{$curso}º") . "={$cantidad}")
-                ->implode(', ');
-
-            $this->line("Empresa #{$empresa->id} {$empresa->nombre_comercial} | familia {$familia->nombre} | ciclo {$ciclo->id} {$ciclo->nombre} | nivel {$nivelGrupo} | {$cantidadTotal} retos a generar ({$resumenDistribucion})");
-
-            if (!$commit) {
-                continue;
-            }
-
+            // Con varias familias (cada una con su interés), los retos se reparten entre ellas:
+            // la primera se lleva el resto de la división.
+            $grupos = $this->familiasYCiclos($empresa);
+            $porFamilia = intdiv($cantidadTotal, count($grupos));
             $generadosEmpresa = 0;
-            foreach ($distribucion as $cursoSeleccionado => $cantidadCurso) {
-                if ($cantidadCurso <= 0) {
+            foreach ($grupos as $i => [$familiaGrupo, $cicloGrupo]) {
+                $cantidadFamilia = $porFamilia + ($i === 0 ? $cantidadTotal % count($grupos) : 0);
+                if ($cantidadFamilia <= 0) {
                     continue;
                 }
-                $generados = $this->generarLoteParaCurso(
-                    $empresa, $familia, $ciclo, $cursoSeleccionado, $cantidadCurso,
-                    $nivelGrupo, $duracion, $usuario, $consecuenciasArray
-                );
-                $generadosEmpresa += $generados;
-                $totalGenerados   += $generados;
+                $cursosDisponibles = Modulo::where('idcicloformativo', $cicloGrupo->id)
+                    ->distinct()->pluck('curso')->filter()->values()->all();
+                $distribucion = $this->distribuirCursos($cursosDisponibles, $cantidadFamilia);
+
+                $resumenDistribucion = collect($distribucion)
+                    ->map(fn ($cantidad, $curso) => ($curso === 'ambos_cursos' ? 'Transversal' : "{$curso}º") . "={$cantidad}")
+                    ->implode(', ');
+
+                $nivelFamilia = $this->nivelPorCiclo($cicloGrupo) ?? $nivelGrupo;
+                $this->line("Empresa #{$empresa->id} {$empresa->nombre_comercial} | familia {$familiaGrupo->nombre} | ciclo {$cicloGrupo->id} {$cicloGrupo->nombre} | nivel {$nivelFamilia} | {$cantidadFamilia} retos a generar ({$resumenDistribucion})");
+
+                if (!$commit && !$preview) {
+                    continue;
+                }
+
+                foreach ($distribucion as $cursoSeleccionado => $cantidadCurso) {
+                    if ($cantidadCurso <= 0) {
+                        continue;
+                    }
+                    $generados = $this->generarLoteParaCurso(
+                        $empresa, $familiaGrupo, $cicloGrupo, $cursoSeleccionado, $cantidadCurso,
+                        $nivelGrupo, $duracion, $usuario, $consecuenciasArray
+                    );
+                    $generadosEmpresa += $generados;
+                    $totalGenerados   += $generados;
+                }
+            }
+
+            if (!$commit && !$preview) {
+                continue;
             }
 
             $this->line("  → {$generadosEmpresa}/{$cantidadTotal} retos generados para {$empresa->nombre_comercial}.");
@@ -186,6 +210,8 @@ class DemoGenerarRetos extends Command
         $this->newLine();
         if ($commit) {
             $this->info("Total de retos generados en esta ejecución: {$totalGenerados}.");
+        } elseif ($preview) {
+            $this->info("Preview: {$totalGenerados} retos generados y mostrados, nada guardado en BD.");
         } else {
             $this->comment('Dry-run: ninguna llamada a IA, ninguna escritura. Relanza con --commit para generar de verdad.');
         }
@@ -268,11 +294,15 @@ class DemoGenerarRetos extends Command
     {
         $cantidadTransversales = max(1, (int) $this->option('transversales'));
 
+        // Por familia de la empresa (no solo la primera): cada familia completa hasta
+        // --transversales retos 'ambos_cursos' de sus ciclos, sin duplicar los que ya tenga.
         $empresasQuery = Empresa::where('es_simulada', true)
             ->where('centro_id', self::CENTRO_ID)
             ->whereHas('microretos', fn ($q) => $q->where('es_simulado', true))
-            ->whereDoesntHave('microretos', fn ($q) => $q->where('es_simulado', true)->where('curso', 'ambos_cursos'))
             ->with('familias')->orderBy('id');
+        if ($this->option('empresa')) {
+            $empresasQuery->whereIn('id', array_map('intval', explode(',', (string) $this->option('empresa'))));
+        }
         if ($limite > 0) {
             $empresasQuery->limit($limite);
         }
@@ -283,43 +313,39 @@ class DemoGenerarRetos extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Empresas sin transversal: {$empresas->count()}. Generando {$cantidadTransversales} retos transversales para cada una.");
+        $this->info("Empresas con retos: {$empresas->count()}. Hasta {$cantidadTransversales} retos transversales por cada familia de cada empresa.");
         $this->newLine();
 
         $totalGenerados = 0;
 
         foreach ($empresas as $empresa) {
-            $familia = $empresa->familias->first();
-            if (!$familia) {
-                $this->warn("Empresa #{$empresa->id} ({$empresa->nombre_comercial}) sin familia asociada — omitida.");
-                continue;
-            }
-
-            $ciclosCandidatos = self::CICLOS_POR_FAMILIA[$familia->id] ?? [];
-            if (empty($ciclosCandidatos)) {
-                $this->warn("Familia '{$familia->nombre}' sin ciclo curado — empresa #{$empresa->id} omitida.");
-                continue;
-            }
-
             $nivelGrupo = self::NIVELES[$empresa->id % count(self::NIVELES)];
             $duracion   = self::DURACIONES[$empresa->id % count(self::DURACIONES)];
             $consecuenciasArray = array_values(array_filter([$empresa->consecuencias]));
 
-            $cicloOriginalId = $ciclosCandidatos[$empresa->id % count($ciclosCandidatos)];
+            foreach ($this->familiasYCiclos($empresa) as [$familia, $cicloPreferente]) {
+                $ciclosCandidatos = self::CICLOS_POR_FAMILIA[$familia->id] ?? [$cicloPreferente->id];
+                $yaTiene = Microreto::where('empresa_id', $empresa->id)->where('es_simulado', true)->where('curso', 'ambos_cursos')
+                    ->whereIn('ciclo_id', CicloFormativo::where('familia_id', $familia->id)->pluck('id'))->count();
+                $faltan = $cantidadTransversales - $yaTiene;
+                if ($faltan <= 0) {
+                    continue;
+                }
 
-            $this->line("Empresa #{$empresa->id} {$empresa->nombre_comercial} | familia {$familia->nombre} | {$cantidadTransversales} retos transversales a generar (ciclo preferente: {$cicloOriginalId})");
+                $this->line("Empresa #{$empresa->id} {$empresa->nombre_comercial} | familia {$familia->nombre} | {$faltan} retos transversales a generar (ciclo preferente: {$cicloPreferente->id})");
 
-            if (!$commit) {
-                continue;
+                if (!$commit) {
+                    continue;
+                }
+
+                $generados = $this->generarTransversalesConFallback(
+                    $empresa, $familia, $ciclosCandidatos, $cicloPreferente->id, $faltan,
+                    $nivelGrupo, $duracion, $usuario, $consecuenciasArray
+                );
+
+                $totalGenerados += $generados;
+                $this->line("  → {$generados}/{$faltan} retos transversales generados para {$empresa->nombre_comercial} ({$familia->nombre}).");
             }
-
-            $generados = $this->generarTransversalesConFallback(
-                $empresa, $familia, $ciclosCandidatos, $cicloOriginalId, $cantidadTransversales,
-                $nivelGrupo, $duracion, $usuario, $consecuenciasArray
-            );
-
-            $totalGenerados += $generados;
-            $this->line("  → {$generados}/{$cantidadTransversales} retos transversales generados para {$empresa->nombre_comercial}.");
         }
 
         $this->newLine();
@@ -359,6 +385,28 @@ class DemoGenerarRetos extends Command
         }
 
         return [$familia, $ciclo];
+    }
+
+    /**
+     * Todas las familias de la empresa con ciclo curado, cada una con su ciclo (mismo criterio
+     * que resolverFamiliaYCiclo), salvo que --ciclos fije otro de los curados para esa familia.
+     * Si ninguna tiene, cae a la primera como antes.
+     *
+     * @return non-empty-list<array{0: \App\Models\Familia, 1: CicloFormativo}>|list<never>
+     */
+    private function familiasYCiclos(Empresa $empresa): array
+    {
+        $grupos = [];
+        foreach ($empresa->familias->unique('id') as $familia) {
+            $candidatos = self::CICLOS_POR_FAMILIA[$familia->id] ?? [];
+            $fijados = array_values(array_intersect(array_map('intval', explode(',', (string) $this->option('ciclos'))), $candidatos));
+            $ciclo = $candidatos ? CicloFormativo::find($fijados[0] ?? $candidatos[$empresa->id % count($candidatos)]) : null;
+            if ($ciclo) $grupos[] = [$familia, $ciclo];
+        }
+        if ($grupos) return $grupos;
+
+        [$familia, $ciclo] = $this->resolverFamiliaYCiclo($empresa);
+        return $familia && $ciclo ? [[$familia, $ciclo]] : [];
     }
 
     /**
@@ -447,6 +495,10 @@ class DemoGenerarRetos extends Command
         array $consecuenciasArray,
         int $maxIntentos = self::MAX_INTENTOS_IA
     ): int {
+        // El nivel sale del grado del ciclo: en el Generador "Bajo" es FP Básica (reto manual
+        // y muy guiado), así que no puede tocarle por turno a un ciclo de grado superior.
+        $nivelGrupo = $this->nivelPorCiclo($ciclo) ?? $nivelGrupo;
+
         $moduloTxt = $cursoSeleccionado === 'ambos_cursos'
             ? 'Transversal (1º y 2º)'
             : "A determinar por IA ({$cursoSeleccionado}º Curso)";
@@ -490,6 +542,12 @@ class DemoGenerarRetos extends Command
                 foreach ($data['microretos'] as $reto) {
                     $modulosUnicos = collect($reto['evaluacion_oficial'] ?? [])->pluck('modulo')->filter()->unique();
 
+                    if ($this->option('preview') && !$this->option('commit')) {
+                        $this->mostrarReto($reto, $familia->nombre, $cursoSeleccionado);
+                        $generados++;
+                        continue;
+                    }
+
                     // Persistencia directa vía Eloquent en vez de reutilizar
                     // MicroretoIAController::guardarEnBD()/StoreMicroretoRequest: sus reglas
                     // de validación fijan 'curso' => 'nullable|integer', pero el caso
@@ -525,8 +583,9 @@ class DemoGenerarRetos extends Command
                         'duracion'           => $duracion,
                         'es_simulado'        => true,
                     ]);
-                    // Copia del diagnóstico de la empresa en el reto (no fillable: se fuerza aquí).
-                    $microreto->forceFill(['diagnostico_empresa' => \App\Services\MicroretoFichaService::copiaDiagnostico($empresa)])->save();
+                    // Copia del diagnóstico de la empresa en el reto (no fillable: se fuerza aquí), con
+                    // la familia del ciclo y su interés, como al guardar desde la app.
+                    $microreto->forceFill(['diagnostico_empresa' => \App\Services\MicroretoFichaService::copiaDiagnosticoParaGuardar($empresa, ['ciclo_id' => $ciclo->id], (int) $usuario->id)])->save();
 
                     $generados++;
                     $aviso = !empty($reto['aviso_cobertura_incompleta']) ? ' [aviso: cobertura de currículo incompleta]' : '';
@@ -544,6 +603,37 @@ class DemoGenerarRetos extends Command
         }
 
         return $generados;
+    }
+
+    /** Nivel de grupo según el grado del ciclo; null si el grado no es reconocible */
+    private function nivelPorCiclo(CicloFormativo $ciclo): ?string
+    {
+        $grado = mb_strtolower((string) $ciclo->grado);
+        return match (true) {
+            str_contains($grado, 'básica'), str_contains($grado, 'adaptada') => 'Bajo',
+            str_contains($grado, 'grado medio')                               => 'Medio',
+            str_contains($grado, 'superior')                                  => 'Alto',
+            default                                                           => null,
+        };
+    }
+
+    /** @param array<string, mixed> $reto */
+    private function mostrarReto(array $reto, string $familia, int|string $curso): void
+    {
+        $lista = function (string $campo) use ($reto): string {
+            $valores = is_array($reto[$campo] ?? null) ? $reto[$campo] : [];
+            return implode("\n", array_map(fn ($v) => '    · ' . (is_string($v) ? $v : json_encode($v, JSON_UNESCAPED_UNICODE)), $valores));
+        };
+        $evaluacion = is_array($reto['evaluacion_oficial'] ?? null) ? $reto['evaluacion_oficial'] : [];
+        $this->newLine();
+        $this->info("── {$familia} · curso {$curso} · " . ($reto['titulo'] ?? ''));
+        $this->line('Subtítulo: ' . ($reto['subtitulo'] ?? ''));
+        $this->line('Pregunta: ' . ($reto['pregunta_reto'] ?? ''));
+        $this->line("Qué necesitan:\n" . $lista('que_necesitan'));
+        $this->line("Prototipos:\n" . $lista('prototipos'));
+        $this->line("Limitaciones:\n" . $lista('limitaciones'));
+        $this->line("Tips profesorado:\n" . $lista('tips_profesorado'));
+        $this->line('RA/CE: ' . implode('; ', array_map(fn ($e) => ($e['modulo'] ?? '?') . ' (RA ' . ($e['ra_id'] ?? '?') . ', ' . count($e['ce_ids'] ?? []) . ' CE)', $evaluacion)));
     }
 
     private function limpiarTexto(?string $valor): ?string

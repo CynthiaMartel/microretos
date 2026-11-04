@@ -1,6 +1,8 @@
 <!-- Tarjeta «Reto y proyecto asociado» (diseño crear_encuentro.png): cabecera con icono,
      título y «Cambiar reto»; dentro, panel con miniatura, título, pregunta reto,
-     etiquetas (estado / empresa / empresa ficticia) y datos (familia, curso, ciclo). -->
+     etiquetas (estado / empresa / empresa ficticia) y datos (familia, curso, ciclo). Con
+     sector e interés: qué busca la empresa con la familia del reto, que puede no ser la de
+     su sector (una energética que pide Marketing). -->
 <script setup>
 import MiniaturaReto from './MiniaturaReto.vue'
 
@@ -14,6 +16,8 @@ defineProps({
   familia:     { type: String, default: '' },
   curso:       { type: String, default: '' },
   ciclo:       { type: String, default: '' },
+  sector:      { type: String, default: '' },
+  interes:     { type: String, default: '' },
   subtitulo:   { type: String, default: 'Reto de la biblioteca al que responde esta propuesta.' },
   puedeCambiar: { type: Boolean, default: false },
 })
@@ -71,6 +75,13 @@ const emit = defineEmits(['cambiar'])
             <svg class="h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0-6l6.16-3.422A12.083 12.083 0 0118.82 17.5L12 21l-6.82-3.5a12.08 12.08 0 01.66-6.922L12 14z"/></svg>
             <span class="break-words">{{ ciclo }}</span>
           </span>
+        </div>
+
+        <div v-if="interes" class="mt-3 rounded-xl border border-orange-100 bg-white px-3 py-2.5">
+          <p class="text-xs font-bold uppercase tracking-wide text-orange-600">
+            Qué busca la empresa{{ sector ? ` (${sector})` : '' }} con {{ familia ? `«${familia}»` : 'esta familia' }}
+          </p>
+          <p class="mt-1 text-sm leading-relaxed text-azul-noche break-words">{{ interes }}</p>
         </div>
       </div>
     </div>
