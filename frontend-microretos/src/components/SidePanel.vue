@@ -8,6 +8,8 @@ import { useSidePanel } from '../composables/useSidePanel.js'
 import ModalTaller from './ModalTaller.vue'
 import { GRUPOS_NAV, ICONOS_NAV } from '../config/navegacion.js'
 import { useNotificaciones } from '../composables/useNotificaciones.js'
+import { useInstalarApp } from '../composables/useInstalarApp.js'
+import InstalarAppModal from './InstalarAppModal.vue'
 
 const authStore = useAuthStore()
 const uiHighlight = useUiHighlightStore()
@@ -64,6 +66,14 @@ const { noLeidas, refrescarNoLeidas } = useNotificaciones()
 watch(() => route.fullPath, () => {
   if (authStore.canAccess('notificaciones')) refrescarNoLeidas()
 }, { immediate: true })
+
+// Instalar como app: si el navegador ofrece su diálogo se usa; si no, instrucciones
+const { puedeInstalar, instalar, plataforma } = useInstalarApp()
+const mostrarInstrucciones = ref(false)
+const abrirInstalacion = async () => {
+  hideTooltip()
+  if (!(await instalar())) mostrarInstrucciones.value = true
+}
 </script>
 
 <template>
@@ -233,9 +243,30 @@ watch(() => route.fullPath, () => {
           </div>
         </template>
 
+        <!-- Instalar DuaLab como app: diálogo nativo en Chrome/Edge, instrucciones en Safari y
+             Firefox (ver useInstalarApp). Lleva el mt-auto para que el banner siga abajo
+             también cuando ya está instalada y el botón no se pinta. -->
+        <div class="mt-auto pt-3 shrink-0">
+          <button
+            v-if="puedeInstalar"
+            type="button"
+            @click="abrirInstalacion"
+            data-tip="Abre DuaLab desde su icono, a pantalla completa"
+            class="nav-item nav-item--idle w-full text-left"
+            @mouseenter="showTooltip"
+            @mouseleave="hideTooltip"
+          >
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" />
+            </svg>
+            <span>Instalar app</span>
+          </button>
+        </div>
+
         <!-- Banner de marca (como en el moodboard): al fondo del nav, sobre el pie.
              Se oculta en pantallas muy bajas para no robar alto a la navegación -->
-        <div class="mt-auto pt-4 shrink-0 [@media(max-height:600px)]:hidden" aria-hidden="true">
+        <div class="pt-4 shrink-0 [@media(max-height:600px)]:hidden" aria-hidden="true">
           <div class="relative h-24 sm:h-28 overflow-hidden rounded-2xl border border-white/15 px-4 py-3
                       bg-gradient-to-br from-[#2E5F8F] via-[#24486E] to-[#1B3553]
                       shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
@@ -269,6 +300,8 @@ watch(() => route.fullPath, () => {
       {{ tooltip.text }}
     </div>
   </Teleport>
+
+  <InstalarAppModal :abierto="mostrarInstrucciones" :plataforma="plataforma" @cerrar="mostrarInstrucciones = false" />
 
   <!-- ── Modal de bienvenida por rol ── -->
   <!-- Misma estructura que el modal «Proyecto en propuesta» (ModalPropuestaValidacion):

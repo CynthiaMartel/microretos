@@ -79,10 +79,12 @@ const abrir = (card) => {
 
       <!-- Herramientas de la sección. Las marcadas `principal` llevan el botón relleno -->
       <!-- auto-rows-fr: todas las cards miden lo mismo aunque cambie el largo de su descripción -->
-      <div class="grid auto-rows-fr gap-4 sm:grid-cols-2" :class="cards.length === 3 && 'lg:grid-cols-3'">
+      <!-- Con 3 herramientas: 3 columnas solo desde xl (en lg, con el menú lateral, cada una quedaba
+           en ~210px) y, hasta entonces, la 3ª ocupa la fila entera en vez de dejar media vacía -->
+      <div class="grid auto-rows-fr gap-4 sm:grid-cols-2" :class="cards.length === 3 && 'xl:grid-cols-3'">
         <!-- `integrada`: la card entera es la acción (tintada, flecha a la derecha, sin CTA aparte);
              `ancho`: igual, pero ocupando la fila completa -->
-        <article v-for="card in cards" :key="card.titulo"
+        <article v-for="(card, i) in cards" :key="card.titulo"
                  class="card group flex min-w-0 flex-col transition"
                  :class="[
                    card.proximamente ? 'opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md cursor-pointer',
@@ -90,6 +92,7 @@ const abrir = (card) => {
                      ? ['flex-row items-center gap-3 p-4 md:gap-4 md:p-5', TINTE_TILE[card.tile] ?? TINTE_TILE['bg-centros']]
                      : 'p-5',
                    card.ancho && 'sm:col-span-2',
+                   cards.length === 3 && i === 2 && 'sm:col-span-2 xl:col-span-1',
                    claseResalte(card),
                  ]"
                  :role="esAccion(card) ? 'button' : undefined" :tabindex="esAccion(card) ? 0 : undefined"

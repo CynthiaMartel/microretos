@@ -301,7 +301,7 @@ requisitos y lo que falta.
 ### 8.2c Encuentros y grupos — `EncuentrosRegistrados.vue` (antes también `MisGrupos.vue`)
 - **Una sola entrada en el menú lateral, «Encuentros y grupos»** (2026-11-04). Antes había dos,
   «Encuentros» y «Mis grupos», que listaban los mismos encuentros con filtros repetidos. La sección
-  (`/seccion/encuentros`) tiene tres tarjetas: Crear encuentro, Biblioteca de encuentros y
+  (`/seccion/encuentros-grupos`; `/seccion/encuentros` redirige) tiene tres tarjetas: Crear encuentro, Biblioteca de encuentros y
   Seguimiento de grupos (las dos últimas abren esta vista en cada pestaña). El menú se marca activo
   en las dos pestañas y en el Detalle de grupos (`/mis-grupos/:id`).
 - Cabecera «Encuentros y **grupos**». Pestañas de ámbito (§7) **«Gestión | Seguimiento de grupos»**

@@ -597,6 +597,8 @@ class MicroretoIAController extends Controller
             }
 
             $microreto = new Microreto($datos);
+            // Empresa captada (sin centro propio, ver Microreto::booted): el reto es del centro de quien lo guarda
+            if (!empty($datos['empresa_id'])) $microreto->centro_id = $user->centro_educativo_id;
             $microreto->diagnostico_empresa = MicroretoFichaService::copiaDiagnosticoParaGuardar(
                 !empty($datos['empresa_id']) ? Empresa::find((int) $datos['empresa_id']) : null,
                 $datos,
@@ -665,6 +667,7 @@ class MicroretoIAController extends Controller
 
                 $retoData = $this->aplicarOrigenVerificado($retoData, $user->id);
                 $microreto = new Microreto($retoData);
+                if (!empty($retoData['empresa_id'])) $microreto->centro_id = $user->centro_educativo_id; // ver guardarEnBD()
                 $microreto->diagnostico_empresa = MicroretoFichaService::copiaDiagnosticoParaGuardar(
                     $empresasLote->get($retoData['empresa_id'] ?? null),
                     $retoData,

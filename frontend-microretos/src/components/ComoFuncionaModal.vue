@@ -42,7 +42,7 @@ const roles = [
 const fasesRetosProyectos = SECCIONES['retos-proyectos'].flujo.fases
 const conceptos = [
   ...fasesRetosProyectos.map(f => f.concepto).filter(Boolean),
-  ...(SECCIONES.encuentros.conceptos ?? []),
+  ...(SECCIONES['encuentros-grupos'].conceptos ?? []),
 ]
 // En escritorio, cada columna es más ancha cuanto más texto tiene su concepto, para que las
 // tres cajas queden con una altura parecida y las cortas no se llenen de hueco en blanco.

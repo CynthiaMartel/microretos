@@ -664,7 +664,7 @@ function formatFecha(isoDate) {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8" @keydown.esc="menuEncuentro = null; menuLlave = null">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) + acciones de la vista -->
-      <CabeceraSeccion titulo="Encuentros y" destacado="grupos" color="text-centros" volver="/seccion/encuentros"
+      <CabeceraSeccion titulo="Encuentros y" destacado="grupos" color="text-centros" volver="/seccion/encuentros-grupos"
                        subtitulo="Gestiona tus encuentros con el alumnado y sigue el avance de sus grupos, fase a fase."
                        class="mb-6">
         <div class="flex flex-wrap items-center gap-2">

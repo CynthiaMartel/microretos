@@ -6,6 +6,7 @@ import AvisoEmpresaBorrada from '../components/AvisoEmpresaBorrada.vue';
 import MiniaturaReto from '../components/MiniaturaReto.vue'
 import { iconoFiltro } from '../config/iconosFiltro.js';
 import { usePaginacion } from '../composables/usePaginacion.js'
+import { esRetoCruzado } from '../config/sectoresEmpresa.js'
 import { modulosDeReto, modulosDisponibles as listarModulos } from '../utils/modulos.js'
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -13,7 +14,7 @@ import { useAuthStore } from '../stores/auth'
 import api from '../api.js';
 import LoginModal from '../components/LoginModal.vue';
 import EliminarMicrorretoModal from '../components/EliminarMicrorretoModal.vue';
-import { useCursoAcademicoStore, cursoDeReto } from '../stores/cursoAcademico.js';
+import { useCursoAcademicoStore, cursoDeReto, etiquetaCurso } from '../stores/cursoAcademico.js';
 import SelectorCurso from '../components/SelectorCurso.vue';
 import FiltrosPanel from '../components/FiltrosPanel.vue';
 import FiltroSegmentado from '../components/FiltroSegmentado.vue';
@@ -55,7 +56,7 @@ const filtroCurso       = ref('');        // '' | '1' | '2'
 // 'simulada' (información simulada con IA). Se cumplen si el reto encaja en alguno.
 const filtroTipos       = ref([]);
 const filtroEmpresa     = ref('');
-const orden             = ref('recientes');  // 'recientes' | 'antiguos' | 'titulo'
+const orden             = ref('cruzados');   // 'cruzados' | 'recientes' | 'antiguos' | 'titulo'
 // «Filtros rápidos»: visible de entrada en escritorio y plegado en móvil; «Más filtros» lo alterna.
 const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024);
 // Columnas de tarjetas según el ancho que deja el panel lateral (abierto en lg+ le quita ~18rem).
@@ -140,32 +141,44 @@ const conteoNiveles = computed(() => {
   return r;
 });
 
-const microretosFiltrados = computed(() => {
+// Todos los filtros salvo el curso académico (que filtra microretosCurso)
+function cumpleFiltros(reto) {
   const q = busqueda.value.toLowerCase().trim();
-  return microretosCurso.value.filter(reto => {
-    const centro = reto.centro_educativo || reto.centro;
-    const t = filtroTipos.value;
-    const tipoOk = !t.length
-      || (t.includes('real') && reto.empresa_es_simulada !== true)
-      || (t.includes('ficticia') && reto.empresa_es_simulada === true)
-      || (t.includes('simulada') && reto.es_simulado === true);
-    return (
-      (!filtroFamilias.value.length || filtroFamilias.value.includes(reto.familia)) &&
-      (!filtroEmpresa.value || reto.empresa_nombre === filtroEmpresa.value) &&
-      (filtroCentro.value === '' || centro === filtroCentro.value) &&
-      (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
-      (filtroModulo.value === '' || modulosDeReto(reto).includes(filtroModulo.value)) &&
-      (filtroNivel.value  === '' || reto.nivel_grupo === filtroNivel.value) &&
-      (filtroCurso.value  === ''
-        || String(reto.curso) === filtroCurso.value
-        // 2º puede con todo: su propio curso, el de 1º (ya cursado) y los transversales.
-        || (filtroCurso.value === '2' && (reto.curso === 'ambos_cursos' || String(reto.curso) === '1'))
-      ) &&
-      tipoOk &&
-      (!q || [reto.titulo, reto.pregunta_reto, reto.empresa_nombre, reto.ciclo]
-        .some(f => f && f.toLowerCase().includes(q)))
-    );
+  const centro = reto.centro_educativo || reto.centro;
+  const t = filtroTipos.value;
+  const tipoOk = !t.length
+    || (t.includes('real') && reto.empresa_es_simulada !== true)
+    || (t.includes('ficticia') && reto.empresa_es_simulada === true)
+    || (t.includes('simulada') && reto.es_simulado === true);
+  return (
+    (!filtroFamilias.value.length || filtroFamilias.value.includes(reto.familia)) &&
+    (!filtroEmpresa.value || reto.empresa_nombre === filtroEmpresa.value) &&
+    (filtroCentro.value === '' || centro === filtroCentro.value) &&
+    (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
+    (filtroModulo.value === '' || modulosDeReto(reto).includes(filtroModulo.value)) &&
+    (filtroNivel.value  === '' || reto.nivel_grupo === filtroNivel.value) &&
+    (filtroCurso.value  === ''
+      || String(reto.curso) === filtroCurso.value
+      // 2º puede con todo: su propio curso, el de 1º (ya cursado) y los transversales.
+      || (filtroCurso.value === '2' && (reto.curso === 'ambos_cursos' || String(reto.curso) === '1'))
+    ) &&
+    tipoOk &&
+    (!q || [reto.titulo, reto.pregunta_reto, reto.empresa_nombre, reto.ciclo]
+      .some(f => f && f.toLowerCase().includes(q)))
+  );
+}
+const microretosFiltrados = computed(() => microretosCurso.value.filter(cumpleFiltros));
+
+// Retos que cumplen los filtros en otros cursos académicos: el curso se elige aparte y, si
+// no, un filtro (p. ej. una familia) parece no tener más empresas de las que hay en el curso visto.
+const enOtrosCursos = computed(() => {
+  if (cursoStore.curso === null || !hayFiltrosActivos.value) return [];
+  const conteo = {};
+  microretos.value.forEach(r => {
+    const y = cursoDeReto(r);
+    if (y != null && !cursoStore.coincide(y) && cumpleFiltros(r)) conteo[y] = (conteo[y] || 0) + 1;
   });
+  return Object.entries(conteo).map(([y, n]) => ({ curso: Number(y), n })).sort((a, b) => b.curso - a.curso);
 });
 
 const hayFiltrosActivos = computed(() =>
@@ -208,8 +221,13 @@ const conteoTipos = computed(() => ({
   ficticia: baseFamilias.value.filter(m => m.empresa_es_simulada === true).length,
   simulada: baseFamilias.value.filter(m => m.es_simulado === true).length,
 }));
-const empresasDisponibles = computed(() =>
-  [...new Set(baseFamilias.value.map(m => m.empresa_nombre).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
+// Con su sector: la familia del reto no tiene por qué ser la del sector (una empresa de
+// turismo puede pedir retos de Comercio y Marketing), y así se ve en el propio desplegable.
+const empresasDisponibles = computed(() => {
+  const mapa = new Map();
+  baseFamilias.value.forEach(m => { if (m.empresa_nombre && !mapa.has(m.empresa_nombre)) mapa.set(m.empresa_nombre, m.empresa?.sector || ''); });
+  return [...mapa].map(([nombre, sector]) => ({ nombre, sector })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
 // (En la plantilla los refs llegan desenvueltos: por eso una función por filtro.)
 const alternar = (lista, valor) => lista.includes(valor) ? lista.filter(v => v !== valor) : [...lista, valor];
 function alternarFamilia(nombre) { filtroFamilias.value = alternar(filtroFamilias.value, nombre); }
@@ -220,6 +238,12 @@ const fechaReto = r => new Date(r.creado_en || r.created_at || 0).getTime();
 const retosOrdenados = computed(() => {
   const lista = [...microretosFiltrados.value];
   if (orden.value === 'titulo') return lista.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+  // Primero las empresas de otro sector que piden esa familia (lo menos obvio, lo que más
+  // enseña); luego las del propio sector y al final las de sector desconocido. Dentro, recientes.
+  if (orden.value === 'cruzados') {
+    const rango = r => ({ true: 0, false: 1, null: 2 })[String(esRetoCruzado(r.empresa_sector_actual ?? r.empresa?.sector, r.familia))];
+    return lista.sort((a, b) => rango(a) - rango(b) || fechaReto(b) - fechaReto(a));
+  }
   return lista.sort((a, b) => orden.value === 'antiguos' ? fechaReto(a) - fechaReto(b) : fechaReto(b) - fechaReto(a));
 });
 // 12 por página: se reparte entero en 1, 2, 3 o 4 columnas (con 9, a 2 columnas quedaba
@@ -614,7 +638,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <label for="filtro-empresa" class="sr-only">Empresa colaboradora</label>
             <select id="filtro-empresa" v-model="filtroEmpresa" class="mt-2 h-10 w-full rounded-xl px-3 text-sm">
               <option value="">Todas las empresas</option>
-              <option v-for="e in empresasDisponibles" :key="e" :value="e">{{ e }}</option>
+              <option v-for="e in empresasDisponibles" :key="e.nombre" :value="e.nombre">{{ e.sector ? `${e.nombre} · ${e.sector}` : e.nombre }}</option>
             </select>
           </details>
         </aside>
@@ -649,6 +673,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             <label class="flex items-center gap-2 text-sm text-texto-secundario">
               <span class="hidden sm:inline">Ordenar por</span>
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar retos">
+                <option value="cruzados">Otros sectores primero</option>
                 <option value="recientes">Más recientes</option>
                 <option value="antiguos">Más antiguos</option>
                 <option value="titulo">Título (A-Z)</option>
@@ -664,6 +689,26 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors"
                       :class="vista === 'lista' ? 'bg-rol-fuerte text-white shadow-sm' : 'text-texto-secundario hover:text-azul-noche'">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Con estos filtros también hay retos en otros cursos: el curso se elige arriba y no se ve aquí -->
+          <div v-if="!cargando && enOtrosCursos.length" role="status"
+               class="mb-3 flex flex-col gap-2 rounded-2xl border border-borde bg-gray-50 px-4 py-3 text-sm text-azul-noche sm:flex-row sm:flex-wrap sm:items-center">
+            <span class="min-w-0 flex-1">
+              También hay
+              <template v-for="(c, i) in enOtrosCursos" :key="c.curso">{{ i ? ' y ' : '' }}<strong>{{ c.n }} {{ c.n === 1 ? 'reto' : 'retos' }} en {{ etiquetaCurso(c.curso) }}</strong></template>
+              con estos filtros.
+            </span>
+            <div class="flex flex-wrap gap-2">
+              <button v-for="c in enOtrosCursos" :key="c.curso" type="button" @click="cursoStore.curso = c.curso"
+                      class="inline-flex h-9 items-center rounded-full bg-white px-3 text-sm font-semibold text-rol-fuerte ring-1 ring-rol-fuerte/30 hover:bg-rol/10">
+                Ver {{ etiquetaCurso(c.curso) }}
+              </button>
+              <button type="button" @click="cursoStore.curso = null"
+                      class="inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">
+                Todos los cursos
               </button>
             </div>
           </div>
@@ -860,8 +905,6 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 </template>
 
 <style scoped>
-@import "tailwindcss";
-
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #F8FAFC; }
 ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }

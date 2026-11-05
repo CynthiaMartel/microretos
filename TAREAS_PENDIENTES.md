@@ -252,3 +252,114 @@ Revisar en cada una qué filtros tienen sentido: en alumnado, encuentro, grupo y
 sector, provincia, real/ficticia e interés por familia. Comprobar también si alguna tiene todavía
 capas de tarjetas por familia que haya que quitar. Al terminar cada vista, medirla a 360, 768 y
 1280 px (`/general:responsive-audit`).
+
+---
+
+## T12 · Borrar el IES Ana Luisa de Benítez y sus datos — pendiente
+
+**Por qué.** El centro no se va a usar: la beta se lanza con el centro DuaLab. Sus datos son de
+la primera época y están sucios. Por ejemplo, 65 de sus empresas tienen el sector en texto libre
+(«Servicios Informáticos», «Talleres», «Const. y Act. Inmob.», vacío…), anterior a la lista
+cerrada de `SectoresEmpresa`. Por eso caen en «sector desconocido» en el orden por defecto de la
+Biblioteca de retos. No merece la pena reclasificarlas con `empresas:reasignar-sectores`.
+
+**Qué hay (recuento local del 2026-11-05, centro id 1):** 5 usuarios, 65 empresas, 593 retos,
+12 encuentros y 26 proyectos. En producción el id y los recuentos pueden ser otros: contar antes.
+
+**Cuidado al borrar.** Mandar el centro a la papelera no arrastra nada. Y al destruirlo desde la
+papelera, `PapeleraController::limpiarCentro` deja sus empresas huérfanas (`centro_id = null`)
+en vez de borrarlas. El orden es: proyectos → encuentros (y sus equipos) → retos → empresas →
+usuarios → centro. Pasan todos por la papelera y, después de revisarlo, se vacía.
+
+**Pasos.**
+1. Copia de seguridad de la BD (local y, después, Hostinger).
+2. Comando artisan reproducible con dry-run por defecto y `--commit` para escribir. Debe listar
+   lo que borraría y comprobar que ningún usuario, encuentro ni proyecto de otro centro depende
+   de esos registros (p. ej. docentes invitados de otro centro, ver colaboración entre docentes).
+3. Aplicar en local, revisar la papelera y vaciarla.
+4. Producción: desplegar el comando, copia, dry-run, `--commit` y `cache:clear`.
+
+**Hecho cuando** no queda ningún registro con ese centro en `empresas`, `microretos`,
+`encuentros`, `microproyectos` ni `users`, y la Biblioteca no muestra retos con sector desconocido.
+
+**Ya hecho (2026-11-05):** los centros de prueba IES PRUEBA_88 (id 4) y prueba_24 (id 8) están en
+la papelera en local, con sus 4 empresas y 2 retos. No tenían usuarios, encuentros ni proyectos.
+Falta vaciar la papelera y repetirlo en producción si existen allí.
+
+---
+
+## T13 · App comercial (comercial.dualab.es) y futuras subapps: escalabilidad — pendiente
+
+Contexto (2026-11-05): la app comercial vive en el mismo repo y backend que microretos
+(`frontend-microretos/comercial/`, rutas `/comercial/*` y `/captacion/*`, ver CLAUDE.md). Decisión:
+**monolito modular** (un backend, una BD, varios frontends por subdominio). Estas tareas lo preparan
+para crecer (generador con FP, certificados de profesionalidad y cursos oficiales) sin código espagueti.
+
+### T13.1 · Generación con IA en cola — prioridad alta
+`MicroretoIAController::generar` llama a OpenAI de forma síncrona (hasta 120 s con un worker PHP
+ocupado); la usan el Generador y la app comercial. En Hostinger compartido, varias generaciones a la
+vez bloquean el resto de la app. Pasar a Job (`QUEUE_CONNECTION=database` + scheduler) que devuelve
+`job_id`, y el frontend consulta el resultado. **Hecho cuando** ninguna petición HTTP espera a OpenAI.
+
+### T13.2 · Extraer `GeneradorRetosService` — prioridad alta
+`BorradorRetoService` invoca `MicroretoIAController::generar()` con una petición sintética para no
+duplicar el prompt: es un atajo. Mover las ~400 líneas de `generar()` a un servicio que usen el
+Generador, la app comercial y la futura app del generador. Requisito de T13.4.
+
+### T13.3 · Ordenar el monorepo del frontend
+Cuando la sesión de la versión multiplataforma haga commit (toca `index.html`, `main.js`, `App.vue`,
+`router/index.js`, `vite.config.js`): `apps/docentes`, `apps/comercial` (y `apps/generador`) +
+`packages/shared` (api, auth, servicios, `CabeceraSeccion`, `AccesoLayout`, estilos) con npm
+workspaces. CI que compile **todas** las apps en cada PR (un cambio en lo compartido puede romper
+otra app). `deploy.sh`: añadir `build:comercial` y subir `dist-comercial/` al subdominio.
+
+### T13.4 · Modelo de programa formativo (FP, certificados, cursos oficiales)
+- Programa formativo con `tipo` y jerarquía unidad → objetivo → criterio. FP: ciclo → módulo → RA → CE;
+  certificado: certificado → MF → UF → capacidades → CE (importación desde el BOE/SEPE).
+- Una «fuente de currículo» por tipo con la misma interfaz (`RaCeCatalogoService` = la de FP).
+- `microretos`: `tipo_formacion` + referencia al programa; generalizar las claves de `evaluacion_oficial`.
+- «Entidad formadora»: academias y centros de certificados, no solo IES (generalizar `CentroEducativo`).
+- **No** separar la BD de FP y certificados: comparten empresas, diagnósticos, usuarios y retos.
+
+### T13.5 · Throttle global del grupo `api`
+No existe (regla del proyecto). Añadirlo en `bootstrap/app.php` sin pisar los cupos propios.
+
+### T13.6 · Firma y consentimientos (antes de usarlo con empresas reales)
+- Textos de `config/captacion.php` redactados por el DPO; después `CAPTACION_TEXTOS_REVISADOS=true`.
+  Cesionarias ya fijadas: Vía Óptima SL e Inicia Lab SL (falta la finalidad de cada cesión).
+- PDF del documento firmado generado en el servidor (nueva dependencia, p. ej. dompdf → `/deps-audit`).
+- Código de un solo uso por email al firmante y copia del documento (email por cola, nunca síncrono).
+- Revocación de consentimientos (registro nuevo, nunca editar la firma).
+- Ojo: rotar `APP_KEY` impide descifrar los DNI de `empresa_firmas`.
+
+### T13.7 · Tablet sin conexión y app nativa
+PWA con borradores en IndexedDB y sincronización; la firma se sella en el servidor al sincronizar.
+Si se publica en tiendas (Capacitor): la cookie de sesión no sirve en iOS → tokens en Keychain/Keystore.
+
+### T13.8 · Encaje en «Base de datos»
+Mostrar los centros asignados (`centro_empresa`) de las empresas captadas. «Asociar empresas a un
+centro» (`DatosFPController::asociarEmpresas`) no debe poner `centro_id` a una captada: saltaría el
+flujo de pendientes.
+
+### T13.9 · Aislamiento de datos si un cliente lo exige
+El RGPD no obliga a una BD separada: obliga a medidas técnicas y organizativas y a un contrato de
+encargado del tratamiento. Si un cliente (p. ej. una academia o una administración) exige aislamiento,
+hay tres niveles, de menos a más coste:
+1. **Lógico (tenant):** columna `tenant_id` en todo dato de cliente + *global scope* y Policies que
+   filtren siempre por él; currículo BOE, catálogo y prompts siguen siendo compartidos. Mismo
+   esquema y despliegue. Cubre la mayoría de contratos. Hoy la frontera es `centro_id`: al hacer la
+   «entidad formadora» (T13.4) conviene diseñarla ya como tenant.
+2. **BD por cliente:** conexión elegida por subdominio (paquete tipo `stancl/tenancy`), migraciones
+   por tenant, BD central con lo compartido (usuarios DuaLab, currículo). Exige VPS: en Hostinger
+   compartido no es viable crear y migrar BDs por cliente.
+3. **Despliegue dedicado:** instancia propia del cliente (su servidor o región). Solo con contrato que
+   lo pague: multiplica mantenimiento y despliegues.
+
+Requisitos en cualquier nivel: copias y borrado por cliente, cifrado de datos sensibles, logs sin
+PII y exportación de los datos del cliente. **Recomendación:** nivel 1 desde el diseño; 2 o 3 solo
+si un contrato lo exige.
+
+### T13.10 · Datos de prueba antes de producción
+Borrar (con permiso de BD) la cuenta `comercial.prueba@dualab.es` (id 57), las empresas de prueba
+476 y 478 (y «asd», si es de prueba) con sus borradores, firmas, PNG en `storage/app/private/captacion`
+y la notificación del superadmin.

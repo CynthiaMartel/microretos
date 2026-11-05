@@ -15,7 +15,7 @@ import RecordatorioPropuestaFlotante from '../components/RecordatorioPropuestaFl
 import { useUIState } from '../composables/useUIState.js';
 import { usePaginacion } from '../composables/usePaginacion.js';
 import { useAuthStore } from '../stores/auth.js';
-import { useCursoAcademicoStore, cursoDeProyecto } from '../stores/cursoAcademico.js';
+import { useCursoAcademicoStore, cursoDeProyecto, etiquetaCurso } from '../stores/cursoAcademico.js';
 import SelectorCurso from '../components/SelectorCurso.vue';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
 import FiltrosPanel from '../components/FiltrosPanel.vue';
@@ -345,6 +345,20 @@ function alternarValidador(key) { filtroValidador.value = alternar(filtroValidad
 const filtroPropioActivo = computed(() => ambito.value === 'completados' ? filtroValidador.value.length > 0 : filtroEstados.value.length > 0);
 const hayFiltrosActivos = computed(() => !!(busqueda.value.trim() || filtroFamilias.value.length || filtroCiclo.value
   || filtroModulo.value || filtroCurso.value || filtroPropioActivo.value));
+
+// Proyectos de la pestaña que cumplen los filtros en otros cursos académicos (como en la
+// Biblioteca de retos): el curso se elige aparte y, si no, el filtro parece quedarse corto.
+const enOtrosCursos = computed(() => {
+  if (cursoStore.curso === null || !hayFiltrosActivos.value) return [];
+  const completados = ambito.value === 'completados';
+  const fuera = proyectos.value.filter(p => !cursoStore.coincide(cursoDeProyecto(p)) && completados === esCompletado(p));
+  const conteo = {};
+  aplicarComunes(fuera).filter(completados ? pasaValidador : pasaEstado).forEach(p => {
+    const y = cursoDeProyecto(p);
+    if (y != null) conteo[y] = (conteo[y] || 0) + 1;
+  });
+  return Object.entries(conteo).map(([y, n]) => ({ curso: Number(y), n })).sort((a, b) => b.curso - a.curso);
+});
 function limpiarFiltros() {
   busqueda.value = '';
   filtroFamilias.value = [];
@@ -691,6 +705,26 @@ function mostrarSnack(mensaje, accion = null) {
                 <option value="nivel">Nivel</option>
               </select>
             </label>
+          </div>
+
+          <!-- Con estos filtros también hay proyectos en otros cursos: el curso se elige arriba y no se ve aquí -->
+          <div v-if="!cargando && enOtrosCursos.length" role="status"
+               class="mb-3 flex flex-col gap-2 rounded-2xl border border-borde bg-gray-50 px-4 py-3 text-sm text-azul-noche sm:flex-row sm:flex-wrap sm:items-center">
+            <span class="min-w-0 flex-1">
+              También hay
+              <template v-for="(c, i) in enOtrosCursos" :key="c.curso">{{ i ? ' y ' : '' }}<strong>{{ c.n }} {{ c.n === 1 ? 'proyecto' : 'proyectos' }} en {{ etiquetaCurso(c.curso) }}</strong></template>
+              con estos filtros.
+            </span>
+            <div class="flex flex-wrap gap-2">
+              <button v-for="c in enOtrosCursos" :key="c.curso" type="button" @click="cursoStore.curso = c.curso"
+                      class="inline-flex h-9 items-center rounded-full bg-white px-3 text-sm font-semibold text-rol-fuerte ring-1 ring-rol-fuerte/30 hover:bg-rol/10">
+                Ver {{ etiquetaCurso(c.curso) }}
+              </button>
+              <button type="button" @click="cursoStore.curso = null"
+                      class="inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-rol-fuerte hover:bg-rol/10">
+                Todos los cursos
+              </button>
+            </div>
           </div>
 
           <!-- Carga: skeleton con la forma de las tarjetas -->

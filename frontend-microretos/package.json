@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --open",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:comercial": "vite --config vite.comercial.config.js --open",
+    "build:comercial": "vite build --config vite.comercial.config.js",
+    "iconos": "pwa-assets-generator && cp pwa/pwa-192x192.png pwa/pwa-512x512.png pwa/maskable-icon-512x512.png pwa/favicon.ico public/ && cp pwa/pwa-64x64.png public/favicon.png && cp pwa/apple-touch-icon-180x180.png public/apple-touch-icon.png"
   },
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
@@ -19,10 +22,12 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "@vite-pwa/assets-generator": "^2.0.0",
     "@vitejs/plugin-vue": "^6.0.2",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^2.0.0"
   }
 }

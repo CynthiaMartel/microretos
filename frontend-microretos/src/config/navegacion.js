@@ -58,9 +58,9 @@ export const GRUPOS_NAV = [
       // Antes había dos entradas, «Encuentros» y «Mis grupos»: el seguimiento de los grupos es
       // ahora una pestaña de la biblioteca de encuentros (/encuentros?ver=seguimiento).
       // /mis-grupos/:id es el Detalle de grupos de un encuentro: también es de esta sección.
-      { key: 'encuentros', label: 'Encuentros y grupos', icon: 'portapapeles', ruta: '/seccion/encuentros', routeName: 'seccion', color: 'docente',
+      { key: 'encuentros-grupos', label: 'Encuentros y grupos', icon: 'portapapeles', ruta: '/seccion/encuentros-grupos', routeName: 'seccion', color: 'docente',
         tip: 'Crea encuentros con el alumnado, gestiónalos y sigue el avance de sus grupos',
-        activa: (p) => p === '/seccion/encuentros' || p.startsWith('/encuentros') || p.startsWith('/mis-grupos') },
+        activa: (p) => p === '/seccion/encuentros-grupos' || p.startsWith('/encuentros') || p.startsWith('/mis-grupos') },
       { key: 'alumnado', label: 'Alumnado', icon: 'alumnado', ruta: '/seccion/alumnado', routeName: 'seccion', color: 'alumnos',
         tip: 'Listado del alumnado, diagnósticos y acceso al encuentro',
         activa: (p) => p === '/seccion/alumnado' || p.startsWith('/alumnado') || p.startsWith('/evaluacion') || esPantallaAcceso(p) || p.startsWith('/unirse') || p.startsWith('/workspace-proyecto') },
@@ -180,7 +180,8 @@ export const SECCIONES = {
       ],
     },
   },
-  encuentros: {
+  // Antes /seccion/encuentros (redirige aquí, ver router/index.js)
+  'encuentros-grupos': {
     // Azul como su entrada del menú lateral (decisión 2026-10-21); el naranja queda para
     // lo que es del alumnado (fase «En el aula» del diagrama).
     titulo: 'Encuentros y', destacado: 'grupos', color: 'text-centros',
@@ -192,20 +193,22 @@ export const SECCIONES = {
         { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
         { t: 'workspace', b: true }, { t: '.' },
         { br: true },
-        { t: 'Puedes ver los encuentros creados en la ' },
+        { t: 'Gestiona los encuentros que ya has creado en la ' },
         { t: 'biblioteca de encuentros', ruta: '/encuentros', routeName: 'encuentros-registrados', tip: 'Ir a la biblioteca de encuentros' },
+        { t: ', sigue cómo avanza cada grupo en el ' },
+        { t: 'seguimiento de grupos', ruta: '/encuentros?ver=seguimiento', routeName: 'encuentros-registrados', tip: 'Ir al seguimiento de grupos' },
         { t: ' o ' },
-        { t: 'crear un nuevo encuentro', ruta: '/encuentros/crear', routeName: 'dashboard-docente', tip: 'Ir a crear encuentro' },
+        { t: 'crea un nuevo encuentro', ruta: '/encuentros/crear', routeName: 'dashboard-docente', tip: 'Ir a crear encuentro' },
         { t: '.' },
       ] },
     ],
     cards: [
       { titulo: 'Crear encuentro', desc: 'Organiza un encuentro de trabajo con retos o proyectos.',
-        ruta: '/encuentros/crear', routeName: 'dashboard-docente', icon: 'portapapeles', tile: 'bg-centros' },
+        ruta: '/encuentros/crear', routeName: 'dashboard-docente', icon: 'portapapeles', tile: 'bg-centros', integrada: true },
       { titulo: 'Biblioteca de encuentros', desc: 'Consulta y gestiona tus encuentros: fechas, códigos del alumnado y grupos.',
-        ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-centros' },
+        ruta: '/encuentros', routeName: 'encuentros-registrados', icon: 'libro', tile: 'bg-centros', integrada: true },
       { titulo: 'Seguimiento de grupos', desc: 'El avance de cada grupo de tus encuentros, fase a fase, y sus diagnósticos.',
-        ruta: '/encuentros?ver=seguimiento', routeName: 'encuentros-registrados', icon: 'grafica', tile: 'bg-centros' },
+        ruta: '/encuentros?ver=seguimiento', routeName: 'encuentros-registrados', icon: 'grafica', tile: 'bg-centros', integrada: true },
     ],
     flujo: {
       titulo: 'Mira cómo funciona',

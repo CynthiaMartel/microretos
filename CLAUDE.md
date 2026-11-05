@@ -28,8 +28,11 @@ Complementa las instrucciones globales de `~/.claude/CLAUDE.md`. Las reglas de L
 | `admin` | Gestión de usuarios, centros, familias, ciclos |
 | `docente` | Crea sesiones, gestiona microretos y microproyectos |
 | `empresa` | Valida microproyectos — solo lectura en general |
+| `comercial` (5) | Solo la app comercial (`frontend-microretos/comercial/`, subdominio comercial.dualab.es): capta empresas reales, hace la entrevista diagnóstica, genera retos en borrador y recoge la firma. Sin centro ni acceso a la app de docentes |
 
-Middleware disponibles: `auth:sanctum`, `EnsureIsAdmin`, `EnsureIsSuperAdmin`.
+Middleware disponibles: `auth:sanctum`, `EnsureIsAdmin`, `EnsureIsSuperAdmin`, `EnsureIsDocente` (lista blanca: docente, admin, superadmin), `EnsureIsComercial` (comercial y superadmin).
+
+**Captación comercial:** la empresa captada no tiene `centro_id`; tras la firma queda `pendiente_centro` y el superadmin la coloca en uno o varios centros (tabla `centro_empresa`) desde Notificaciones → «Captación comercial». Sus retos viven en `microreto_borradores` hasta que el superadmin los publica (un `Microreto` por centro). Textos legales en `config/captacion.php` (de ejemplo hasta `CAPTACION_TEXTOS_REVISADOS=true`).
 Los roles `docente` y `empresa` no tienen middleware propio todavía — pendiente en SECURITY_FIXES.md.
 
 ## Base de datos — nunca modificar sin permiso explícito

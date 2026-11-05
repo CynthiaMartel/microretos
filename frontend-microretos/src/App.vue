@@ -7,11 +7,15 @@ import SidePanel from './components/SidePanel.vue'
 import AppCredit from './components/AppCredit.vue'
 import ComoFuncionaModal from './components/ComoFuncionaModal.vue'
 import LoginModal from './components/LoginModal.vue'
-import { useAuthStore, ROLE_EMPRESA } from './stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL } from './stores/auth'
+import { URL_APP_COMERCIAL } from './utils/urlComercial.js'
+import AvisoCaptacionPendiente from './components/AvisoCaptacionPendiente.vue'
+import AvisoSinConexion from './components/AvisoSinConexion.vue'
 import { useIdleTimer } from './composables/useIdleTimer'
 import { useLoginModal } from './composables/useLoginModal.js'
 import { useUIState } from './composables/useUIState.js'
 import { useRoleTheme } from './composables/useRoleTheme.js'
+import { useNuevaVersion } from './composables/useNuevaVersion.js'
 import api from './api.js'
 import { queryRedirect, redirectVigente } from './utils/redirectLogin.js'
 
@@ -19,6 +23,12 @@ const router    = useRouter()
 const route     = useRoute()
 const authStore = useAuthStore()
 const { theme } = useRoleTheme()
+const { hayNuevaVersion, iniciarComprobacion, recargarLimpio, posponer } = useNuevaVersion()
+const recargando = ref(false)
+const recargarNuevaVersion = () => {
+  recargando.value = true
+  recargarLimpio()
+}
 
 // Color de acción = color del rol (docs/GUIA_DISENO.md §2.1): style.css redefine
 // --color-rol y --color-rol-fuerte según este atributo, y de ahí lo leen
@@ -63,6 +73,8 @@ watch(
 
 const onLoginSuccess = (data) => {
   const role    = data?.role ?? authStore.userRole
+  // El comercial no tiene nada en esta app: su sitio es la app comercial (misma sesión)
+  if (role === ROLE_COMERCIAL) { window.location.assign(URL_APP_COMERCIAL); return }
   const destino = destinoTrasLogin.value || rolHome(role)
   destinoTrasLogin.value = null
   router.push(destino).finally(() => triggerWelcome(role, authStore.userName))
@@ -85,10 +97,12 @@ const handleTokenExpired = async () => {
 
 onMounted(async () => {
   window.addEventListener('auth:token-expired', handleTokenExpired)
+  iniciarComprobacion(router)
   // Hidrata la sesión desde la cookie también en rutas públicas — el guard del router
   // solo llama a auth.init() para rutas con requiresAuth, si no la TopBar no reflejaría
   // una sesión válida hasta la primera navegación a una ruta protegida.
   if (!authStore.isInitialized) await authStore.init()
+  if (authStore.isComercial) { window.location.assign(URL_APP_COMERCIAL); return }
   if (!authStore.userCentroImg && authStore.userCentroId) cargarCentroImg()
 })
 onUnmounted(() => window.removeEventListener('auth:token-expired', handleTokenExpired))
@@ -219,6 +233,8 @@ const extenderDesdeToast = async () => {
   </div>
   <AppCredit />
   <ComoFuncionaModal v-if="authStore.isAuthenticated" />
+  <!-- Superadmin: empresas captadas por comerciales sin centro y retos sin validar -->
+  <AvisoCaptacionPendiente v-if="authStore.isSuperAdmin" />
   <LoginModal v-model="showLogin" @login-success="onLoginSuccess" />
 
   <!-- Modal idle: ¿Sigues ahí? -->
@@ -265,12 +281,65 @@ const extenderDesdeToast = async () => {
     </div>
   </Transition>
 
+  <!-- Bocadillos de la esquina inferior derecha, apilados para no taparse entre sí -->
+  <div class="fixed bottom-14 right-5 z-[9990] w-[300px] max-w-[calc(100vw-2.5rem)]
+              flex flex-col gap-3 pointer-events-none">
+
+  <AvisoSinConexion />
+
+  <!-- Bocadillo: hay un deploy nuevo y esta pestaña sigue con el código anterior -->
+  <Transition name="toast-slide">
+    <div
+      v-if="hayNuevaVersion"
+      class="relative pointer-events-auto rounded-2xl shadow-2xl border p-4 backdrop-blur-sm
+             bg-[#1a2332]/95 border-white/15"
+      role="status"
+    >
+      <button
+        @click="posponer"
+        title="Más tarde"
+        class="absolute top-1 right-1 w-9 h-9 rounded-full flex items-center justify-center
+               text-white/30 hover:text-white/70 hover:bg-white/10 transition-all"
+      >
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <div class="flex items-start gap-3 pr-6">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border
+                    bg-sky-500/15 border-sky-500/30">
+          <svg class="w-4.5 h-4.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-black text-white leading-tight">Hay una versión nueva</p>
+          <p class="text-xs text-white/50 mt-1 leading-relaxed">
+            Recarga para ver las novedades. Guarda antes lo que tengas a medias.
+          </p>
+        </div>
+      </div>
+
+      <button
+        @click="recargarNuevaVersion"
+        :disabled="recargando"
+        class="w-full min-h-9 mt-3 py-2 rounded-full text-xs font-black uppercase tracking-widest
+               text-white transition-all shadow-md
+               disabled:opacity-50 disabled:cursor-not-allowed"
+        :class="[theme.bg, theme.bgHover]"
+      >
+        {{ recargando ? 'Recargando…' : 'Recargar' }}
+      </button>
+    </div>
+  </Transition>
+
   <!-- Bocadillo: sesión a punto de expirar en el servidor -->
   <Transition name="toast-slide">
     <div
       v-if="showTokenToast"
-      class="fixed bottom-14 right-5 z-[9990] w-[300px] max-w-[calc(100vw-2.5rem)]
-             rounded-2xl shadow-2xl border p-4 backdrop-blur-sm"
+      class="relative pointer-events-auto rounded-2xl shadow-2xl border p-4 backdrop-blur-sm"
       :class="authStore.minutosRestantes <= 5
         ? 'bg-red-950/95 border-red-500/40'
         : 'bg-[#1a2332]/95 border-amber-500/30'"
@@ -331,6 +400,8 @@ const extenderDesdeToast = async () => {
       </div>
     </div>
   </Transition>
+
+  </div>
 </template>
 
 <style>

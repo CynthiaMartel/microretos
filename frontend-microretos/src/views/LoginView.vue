@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore, ROLE_EMPRESA } from '../stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL } from '../stores/auth'
+import { URL_APP_COMERCIAL } from '../utils/urlComercial.js'
 import { useLoginForm } from '../composables/useLoginForm.js'
 import { useUIState } from '../composables/useUIState.js'
 import { solicitarEnlaceContrasena } from '../services/authService.js'
@@ -24,6 +25,8 @@ function destinoTrasLogin(role) {
 
 const { form, errors, loginError, isLoading, handleLogin } = useLoginForm((data) => {
   const role = data?.role ?? authStore.userRole
+  // El comercial no tiene nada en esta app: su sitio es la app comercial (misma sesión)
+  if (role === ROLE_COMERCIAL) { window.location.assign(URL_APP_COMERCIAL); return }
   router.push(destinoTrasLogin(role)).finally(() => triggerWelcome(role, authStore.userName))
 })
 

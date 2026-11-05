@@ -26,6 +26,8 @@ use App\Http\Controllers\ModulosDocenteController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
 use App\Http\Controllers\PublicMicroproyectoCatalogoController;
 use App\Http\Controllers\CurriculoController;
+use App\Http\Controllers\ComercialEmpresaController;
+use App\Http\Controllers\CaptacionAdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -391,6 +393,40 @@ Route::middleware('auth:sanctum')->group(function () {
         // Edición manual del diagnóstico — sin llamada externa, basta el throttle global
         Route::patch('/startup/equipos/{id}/diagnostico-final', [EquipoGestionController::class, 'actualizarDiagnosticoFinal'])
             ->whereNumber('id');
+    });
+
+    // ── app comercial (comercial.dualab.es): comercial (+ superadmin) ──────────
+    // El comercial no pasa por el grupo 'docente': solo ve las empresas que capta él
+    // (EmpresaPolicy::verCaptacion). Rutas fijas antes que las paramétricas.
+    Route::middleware('comercial')->prefix('comercial')->group(function () {
+        Route::middleware('throttle:60,1,comercial-lectura')->group(function () {
+            Route::get('/textos-legales',          [ComercialEmpresaController::class, 'textosLegales']);
+            Route::get('/empresas',                [ComercialEmpresaController::class, 'index']);
+            Route::get('/empresas/{id}',           [ComercialEmpresaController::class, 'show'])->whereNumber('id');
+            Route::get('/empresas/{id}/borradores', [ComercialEmpresaController::class, 'borradores'])->whereNumber('id');
+        });
+        Route::middleware('throttle:30,1,comercial-escritura')->group(function () {
+            Route::post('/empresas',                  [ComercialEmpresaController::class, 'store']);
+            Route::put('/empresas/{id}',              [ComercialEmpresaController::class, 'update'])->whereNumber('id');
+            Route::patch('/empresas/{id}/diagnostico', [ComercialEmpresaController::class, 'diagnostico'])->whereNumber('id');
+        });
+        // Llamada a OpenAI: mismo cupo que la generación del Generador de Retos
+        Route::middleware('throttle:5,1,comercial-ia')
+            ->post('/empresas/{id}/generar-retos', [ComercialEmpresaController::class, 'generarRetos'])->whereNumber('id');
+        Route::middleware('throttle:10,1,comercial-firma')
+            ->post('/empresas/{id}/firma', [ComercialEmpresaController::class, 'firmar'])->whereNumber('id');
+    });
+
+    // ── Revisión de lo captado por comerciales (solo superadmin) ─────────────────────
+    Route::middleware(['superadmin', 'throttle:60,1,captacion-admin'])->prefix('captacion')->group(function () {
+        Route::get('/resumen',                          [CaptacionAdminController::class, 'resumen']);
+        Route::get('/empresas',                         [CaptacionAdminController::class, 'empresas']);
+        Route::put('/empresas/{id}/centros',            [CaptacionAdminController::class, 'asignarCentros'])->whereNumber('id');
+        Route::get('/borradores',                       [CaptacionAdminController::class, 'borradores']);
+        Route::get('/borradores/{uuid}',                [CaptacionAdminController::class, 'borrador'])->whereUuid('uuid');
+        Route::post('/borradores/{uuid}/publicar',      [CaptacionAdminController::class, 'publicar'])->whereUuid('uuid');
+        Route::delete('/borradores/{uuid}',             [CaptacionAdminController::class, 'descartar'])->whereUuid('uuid');
+        Route::get('/firmas/{uuid}/imagen',             [CaptacionAdminController::class, 'imagenFirma'])->whereUuid('uuid');
     });
 
     // ── Gestión de usuarios (solo admin) ─────────────────────────────

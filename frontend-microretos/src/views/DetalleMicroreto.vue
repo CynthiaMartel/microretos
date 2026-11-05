@@ -486,10 +486,11 @@ async function copiarUrl() {
 
             <!-- Datos recogidos de la empresa: diagnóstico crudo, tal cual lo aportó el
                  docente/empresa — es la materia prima que la IA resume debajo. -->
-            <div v-if="tieneDatosRecogidos"
-                 class="bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200
+            <!-- Plegado por defecto: el texto crudo es largo y la atención debe ir al resumen. -->
+            <details v-if="tieneDatosRecogidos"
+                 class="group bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200
                         rounded-2xl p-5 md:p-7 shadow-sm">
-              <div class="flex items-center gap-3 mb-5">
+              <summary class="flex flex-wrap sm:flex-nowrap items-center gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                 <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shrink-0 shadow-sm">
                   <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -497,7 +498,7 @@ async function copiarUrl() {
                              a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                   </svg>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <h3 class="text-orange-700 font-black uppercase text-xs md:text-sm tracking-[0.15em]">
                     Datos recogidos de la empresa
                   </h3>
@@ -506,7 +507,15 @@ async function copiarUrl() {
                     <template v-else>Diagnóstico original, sin resumir por IA</template><template v-if="reto.diagnostico_recogido_en"> · recogido el {{ formatearFecha(reto.diagnostico_recogido_en) }}</template>
                   </p>
                 </div>
-              </div>
+                <!-- Pastilla "Ver más info"/"Ocultar info": el texto cambia según esté abierto -->
+                <span class="ml-auto inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-full bg-white border border-orange-300
+                             text-orange-600 text-xs font-bold whitespace-nowrap shrink-0 shadow-sm group-hover:bg-orange-50 transition-colors">
+                  <span class="group-open:hidden">Ver más info</span>
+                  <span class="hidden group-open:inline">Ocultar info</span>
+                  <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-180" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </span>
+              </summary>
+              <div class="mt-5">
                 <!-- La empresa cambió su diagnóstico después de crear el reto (solo lo recibe el personal) -->
                 <div v-if="reto.diagnostico_desactualizado || reto.interes_desactualizado" role="note"
                      class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -551,7 +560,8 @@ async function copiarUrl() {
                   <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.expectativas_alumno }}</p>
                 </div>
               </div>
-            </div>
+              </div>
+            </details>
 
             <!-- Resumen de diagnóstico: la lectura de la IA a partir de los datos de arriba. -->
             <div class="space-y-10 md:space-y-14">

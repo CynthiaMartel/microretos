@@ -23,6 +23,8 @@ class MicroretoListadoResource extends MicroretoFichaResource
             'ciclo_id'        => $this->ciclo_id,
             'created_at'      => $this->created_at,
             'visible_publico' => (bool) $this->visible_publico,
+            // Sector de la ficha actual (la de 'empresa' puede ser la copia del reto): orden en Biblioteca
+            'empresa_sector_actual' => $this->resource->getAttribute('empresa_sector_actual'),
             // Diagnóstico de la ficha + identificación (Taller de Ideas precarga centro y familia)
             'empresa' => $this->whenLoaded('empresa', fn () => $this->empresa ? array_merge(
                 is_array($ficha['empresa'] ?? null) ? $ficha['empresa'] : [],

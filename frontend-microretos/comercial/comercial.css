@@ -1,0 +1,18 @@
+/* Estilos de la app principal + los de esta app. @source: con la raíz de Vite en comercial/,
+   Tailwind solo buscaría clases aquí y faltarían las de los componentes compartidos de src/. */
+@import "../src/style.css";
+@source "../src";
+
+/* Piezas comunes de la app comercial (docs/GUIA_DISENO.md §4–5). Los campos usan
+   .input-style / .label-style de style.css, los mismos del Generador de Retos. */
+@layer components {
+  /* Tarjeta: p-4 sm:p-6, blanco, borde sutil y sombra pequeña */
+  .tarjeta { @apply rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6; }
+  .titulo-bloque { @apply font-heading text-lg font-bold text-azul-noche; }
+  .error-campo { @apply mt-1.5 ml-4 text-xs font-semibold text-red-600; }
+  /* Opción seleccionable en píldora; marcada = color del rol + ✓ (no solo color, §6.2) */
+  .chip { @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition hover:border-rol-fuerte/40 hover:text-azul-noche; }
+  .chip-activo { @apply border-rol-fuerte bg-rol-fuerte text-white hover:text-white; }
+  /* Aviso de error con icono (§6.1) */
+  .aviso-error { @apply flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700; }
+}

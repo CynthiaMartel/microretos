@@ -1,15 +1,25 @@
 <!-- Ruta: /notificaciones (name: notificaciones). Avisos in-app del docente que genera
      el backend (app/Notifications): empresa responde a una propuesta, proyecto pendiente
-     de validar, equipo completa una fase e invitación a un encuentro de otro docente. -->
+     de validar, equipo completa una fase e invitación a un encuentro de otro docente.
+     Superadmin: además, el apartado «Captación comercial» (?apartado=captacion) con las empresas
+     que han entrevistado los comerciales y sus retos en borrador (PanelCaptacionComercial). -->
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
+import PanelCaptacionComercial from '../components/PanelCaptacionComercial.vue'
+import { useAuthStore } from '../stores/auth'
 import { getNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../services/notificacionService.js'
 import { useNotificaciones } from '../composables/useNotificaciones.js'
 
 const router = useRouter()
+const route  = useRoute()
+const authStore = useAuthStore()
 const { noLeidas, refrescarNoLeidas } = useNotificaciones()
+
+// Apartado en la URL para poder enlazarlo desde la notificación y el aviso de inicio de sesión
+const verCaptacion = computed(() => authStore.isSuperAdmin && route.query.apartado === 'captacion')
+const irApartado = (captacion) => router.replace({ query: captacion ? { apartado: 'captacion' } : {} })
 
 // Presentación por tipo: icono (trazo SVG), color de marca y filtro al que pertenece
 const TIPOS = {
@@ -18,6 +28,7 @@ const TIPOS = {
   pendiente_validar:         { filtro: 'validacion', tile: 'bg-centros',          icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
   equipo_fase:               { filtro: 'equipos',    tile: 'bg-administraciones', icon: 'M3 3v18h18M7 15l4-6 4 4 5-8' },
   invitacion_encuentro:      { filtro: 'encuentros', tile: 'bg-azul-noche',       icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM19 8v6M22 11h-6' },
+  empresa_captada:           { filtro: 'empresas',   tile: 'bg-empresas',         icon: 'M3 21h18M5 21V7l7-4 7 4v14M12 10v6M9 13h6' },
 }
 const tipoDe = (n) => TIPOS[n.tipo] ?? { filtro: 'otros', tile: 'bg-gray-400', icon: 'M12 8v4M12 16h.01M12 22a10 10 0 100-20 10 10 0 000 20z' }
 
@@ -107,7 +118,19 @@ const haceCuanto = (isoStr) => {
         </button>
       </CabeceraSeccion>
 
-      <article class="card p-4">
+      <!-- Superadmin: avisos / captación comercial (carril y pestañas en píldora) -->
+      <div v-if="authStore.isSuperAdmin" class="inline-flex w-fit gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-gray-200/70" role="group" aria-label="Apartado">
+        <button type="button" :aria-pressed="!verCaptacion" @click="irApartado(false)"
+                class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
+                :class="!verCaptacion ? 'bg-centros text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'">Avisos</button>
+        <button type="button" :aria-pressed="verCaptacion" @click="irApartado(true)"
+                class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
+                :class="verCaptacion ? 'bg-centros text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'">Captación comercial</button>
+      </div>
+
+      <PanelCaptacionComercial v-if="verCaptacion" />
+
+      <article v-else class="card p-4">
         <!-- Filtros en píldora (botones con estado pulsado: no son pestañas con panel) -->
         <div class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar notificaciones">
           <button v-for="f in FILTROS" :key="f.key" type="button" :aria-pressed="filtro === f.key" @click="filtro = f.key"

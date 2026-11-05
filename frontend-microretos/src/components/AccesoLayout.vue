@@ -4,7 +4,7 @@
 <script setup>
 import { WEB_PUBLICA } from '../config/frontoffice.js'
 import EnlaceProximamente from './EnlaceProximamente.vue'
-import fotoAcceso from '../assets/dua_10.jpeg'
+import fotoAcceso from '../assets/dua_10.webp'
 
 const miradas = [
   { label: 'Centros',          dot: 'bg-centros' },

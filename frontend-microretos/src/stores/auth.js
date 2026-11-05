@@ -8,6 +8,8 @@ export const ROLE_SUPERADMIN = 1
 export const ROLE_DOCENTE    = 2
 export const ROLE_EMPRESA    = 3
 export const ROLE_ADMIN      = 4
+// Comercial: solo usa la app comercial (comercial.dualab.es), ninguna ruta de esta app
+export const ROLE_COMERCIAL  = 5
 
 // Rutas permitidas por rol (nombre de ruta de Vue Router).
 // 'mis-grupos'/'mis-grupos-detalle': se llamaron 'mis-grupos'/'mis-grupos-detalle' una temporada;
@@ -36,6 +38,7 @@ export const ROLE_ROUTES = {
                       'alumnado-listado'],
   [ROLE_EMPRESA]:    ['biblioteca', 'detalle-microreto',
                       'startup-day', 'startup-day-detalle', 'mi-usuario'],
+  [ROLE_COMERCIAL]:  [],
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -113,12 +116,14 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin      = computed(() => userRole.value === ROLE_ADMIN)
   const isDocente    = computed(() => userRole.value === ROLE_DOCENTE)
   const isEmpresa    = computed(() => userRole.value === ROLE_EMPRESA)
+  const isComercial  = computed(() => userRole.value === ROLE_COMERCIAL)
 
   const roleLabel = computed(() => {
     if (userRole.value === ROLE_DOCENTE)    return 'Docente'
     if (userRole.value === ROLE_EMPRESA)    return 'Empresa'
     if (userRole.value === ROLE_ADMIN)      return 'Administrador'
     if (userRole.value === ROLE_SUPERADMIN) return 'Superadministrador'
+    if (userRole.value === ROLE_COMERCIAL)  return 'Comercial'
     return ''
   })
 
@@ -194,7 +199,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     isInitialized, isAuthenticated, userId, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
     tieneModulos, imparte, minutosRestantes, recordado,
-    isSuperAdmin, isAdmin, isDocente, isEmpresa, roleLabel,
+    isSuperAdmin, isAdmin, isDocente, isEmpresa, isComercial, roleLabel,
     init, login, logout, ping, updateName, updateCentroImg, canAccess,
   }
 })

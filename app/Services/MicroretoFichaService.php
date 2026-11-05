@@ -327,6 +327,9 @@ class MicroretoFichaService
         $reto->es_simulado = (bool) $reto->es_simulado;
         // activa | papelera | eliminada (null en demos): antes de sustituir la empresa por su copia
         $reto->setAttribute('empresa_estado', $reto->estadoEmpresa());
+        // Sector de la ficha actual (no el de la copia): la Biblioteca ordena por él, y si la
+        // empresa se reclasifica a la lista cerrada, la copia conserva el valor antiguo.
+        $reto->setAttribute('empresa_sector_actual', $reto->empresa?->sector);
 
         // Con copia guardada, el reto muestra el diagnóstico tal como era al crearlo. Se
         // sustituye por un clon: la misma instancia de Empresa la comparten todos los retos

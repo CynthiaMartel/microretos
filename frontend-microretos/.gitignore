@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-comercial
 *.local
 
 # Editor directories and files
@@ -22,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Iconos generados por npm run iconos (se copian a public/); solo se versiona la imagen fuente
+pwa/*
+!pwa/icono-dualab.png

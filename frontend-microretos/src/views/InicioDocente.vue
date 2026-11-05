@@ -16,8 +16,8 @@ import { useTareasPersonales } from '../composables/useTareasPersonales.js'
 import { ICONOS_NAV, SECCIONES, GRUPOS_NAV } from '../config/navegacion.js'
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
 import AvisoModulosDocente from '../components/AvisoModulosDocente.vue'
-import bannerCasoReal from '../assets/banner_caso_real.jpg'
-import bienvenidaCasoReal from '../assets/bienvenida_caso_real.jpg'
+import bannerCasoReal from '../assets/banner_caso_real.webp'
+import bienvenidaCasoReal from '../assets/bienvenida_caso_real.webp'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -500,8 +500,8 @@ const pendientes = computed(() => tareasAuto.value.filter(t => !autoHecha(t)).le
 const tarjetaNav = (seccion, ruta) => SECCIONES[seccion]?.cards?.find(c => c.ruta === ruta)
 const herramientas = [
   { grupo: 'Proyectos',  items: [tarjetaNav('retos-proyectos', '/proyectos/crear'), tarjetaNav('retos-proyectos', '/proyectos')] },
-  { grupo: 'Encuentros', items: [tarjetaNav('encuentros', '/encuentros/crear'), tarjetaNav('encuentros', '/encuentros')] },
-  { grupo: 'Grupos',     items: [tarjetaNav('encuentros', '/encuentros?ver=seguimiento') && { ...tarjetaNav('encuentros', '/encuentros?ver=seguimiento'), tile: 'bg-alumnos' }] },
+  { grupo: 'Encuentros', items: [tarjetaNav('encuentros-grupos', '/encuentros/crear'), tarjetaNav('encuentros-grupos', '/encuentros')] },
+  { grupo: 'Grupos',     items: [tarjetaNav('encuentros-grupos', '/encuentros?ver=seguimiento') && { ...tarjetaNav('encuentros-grupos', '/encuentros?ver=seguimiento'), tile: 'bg-alumnos' }] },
 ].map(g => ({ ...g, items: g.items.filter(Boolean) })).filter(g => g.items.length)
 
 const ICONOS = {

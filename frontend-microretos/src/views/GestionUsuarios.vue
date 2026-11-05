@@ -249,6 +249,7 @@ const TIPOS = [
   { val: 2, label: 'Docentes',         punto: 'bg-centros' },
   { val: 4, label: 'Admins de centro', punto: 'bg-administraciones' },
   { val: 3, label: 'Empresas',         punto: 'bg-empresas' },
+  { val: 5, label: 'Comerciales',      punto: 'bg-empresas-dark' },
   { val: 1, label: 'Superadmin',       punto: 'bg-azul-noche' },
 ]
 const conteoTipos = computed(() => {
@@ -692,6 +693,7 @@ const ROLE_COLORS = {
   2: { bg: 'bg-centros/10 text-centros',                         punto: 'bg-centros',         avatar: 'bg-centros/10 text-centros',                   label: 'Docente' },
   3: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas',        avatar: 'bg-empresas/10 text-empresas-dark',            label: 'Empresa' },
   4: { bg: 'bg-administraciones/10 text-administraciones-dark',  punto: 'bg-administraciones', avatar: 'bg-administraciones/10 text-administraciones-dark', label: 'Admin de centro' },
+  5: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas-dark',   avatar: 'bg-empresas/10 text-empresas-dark',              label: 'Comercial' },
 }
 function roleChip(role) {
   return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-azul-noche', punto: 'bg-azul-noche', avatar: 'bg-gray-100 text-azul-noche', label: 'Superadmin' }
@@ -1123,7 +1125,7 @@ onMounted(async () => {
               <!-- Tipo de cuenta (solo visible para superadmin; admin de centro siempre crea docentes) -->
               <div v-if="authStore.isSuperAdmin">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
                   <button type="button"
                     @click="form.role = ['2','4'].includes(form.role) ? form.role : '2'"
@@ -1143,6 +1145,16 @@ onMounted(async () => {
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                     </svg>
                     Empresa
+                  </button>
+                  <!-- Comercial: capta empresas en la app comercial; sin centro ni empresa -->
+                  <button type="button" @click="form.role = '5'; form.centro_educativo_id = null; form.empresa_id = null"
+                    :class="form.role === '5' ? 'bg-empresas/10 border-empresas/40 text-empresas-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 3h6v4H9V3zM9 13h6M9 17h4"/>
+                    </svg>
+                    Comercial
                   </button>
                 </div>
 
@@ -1509,7 +1521,7 @@ onMounted(async () => {
               <!-- Tipo de cuenta (solo visible para superadmin) -->
               <div v-if="authStore.isSuperAdmin">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
                   <button type="button"
                     @click="formEditar.role = ['2','4'].includes(formEditar.role) ? formEditar.role : '2'"
@@ -1529,6 +1541,16 @@ onMounted(async () => {
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                     </svg>
                     Empresa
+                  </button>
+                  <!-- Comercial: capta empresas en la app comercial; sin centro ni empresa -->
+                  <button type="button" @click="formEditar.role = '5'; formEditar.centro_educativo_id = null; formEditar.empresa_id = null"
+                    :class="formEditar.role === '5' ? 'bg-empresas/10 border-empresas/40 text-empresas-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 3h6v4H9V3zM9 13h6M9 17h4"/>
+                    </svg>
+                    Comercial
                   </button>
                 </div>
 

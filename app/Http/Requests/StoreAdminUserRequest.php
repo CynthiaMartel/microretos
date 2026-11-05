@@ -26,9 +26,9 @@ class StoreAdminUserRequest extends FormRequest
             return $rules;
         }
 
-        // Superadmin: puede crear docente (2), empresa (3) o admin de centro (4)
+        // Superadmin: puede crear docente (2), empresa (3), admin de centro (4) o comercial (5)
         return $rules + [
-            'role'                => 'required|in:2,3,4',
+            'role'                => 'required|in:2,3,4,5',
             'centro_educativo_id' => 'nullable|exists:centro_educativo,id',
             'empresa_id'          => 'nullable|exists:empresas,id',
         ];

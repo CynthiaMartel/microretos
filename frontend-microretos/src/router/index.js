@@ -1,39 +1,42 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import GeneradorMicroretos from '../views/GeneradorMicroretos.vue'
-import BibliotecaMicroretos from '../views/BibliotecaMicroretos.vue'
 import LoginView from '../views/LoginView.vue'
-import RestablecerContrasena from '../views/RestablecerContrasena.vue'
-import DetalleMicroreto from '../views/DetalleMicroreto.vue'
-import MasFamilias from '../views/MasFamilias.vue'
-import BaseDatosDashboard from '../views/BaseDatosDashboard.vue'
-import PublicMicroreto from '../views/PublicMicroreto.vue'
-import DashboardDocente from '../views/DashboardDocente.vue'
-import EncuentrosRegistrados from '../views/EncuentrosRegistrados.vue'
-import StartupDayProyectos from '../views/StartupDayProyectos.vue'
-import StartupDayWizard from '../views/StartupDayWizard.vue'
-import StartupDayDetalle from '../views/StartupDayDetalle.vue'
-import StartupDayLanding from '../views/StartupDayLanding.vue'
-import UnirseEquipo from '../views/UnirseEquipo.vue'
-import EquipoWorkspace from '../views/EquipoWorkspace.vue'
-import EmpresasView from '../views/EmpresasView.vue'
-import PapeleraBaseDatos from '../views/PapeleraBaseDatos.vue'
-import GestionUsuarios from '../views/GestionUsuarios.vue'
-import InicioDocente from '../views/InicioDocente.vue'
-import NoticiasListado from '../views/NoticiasListado.vue'
-import MiUsuario from '../views/MiUsuario.vue'
-import MisGruposDetalle from '../views/MisGruposDetalle.vue'
-import PantallaAcceso from '../views/PantallaAcceso.vue'
-import PantallaAccesoLista from '../views/PantallaAccesoLista.vue'
-import EntrarWorkspace from '../views/EntrarWorkspace.vue'
-import SeccionHub from '../views/SeccionHub.vue'
-import CalendarioDocente from '../views/CalendarioDocente.vue'
-import NotificacionesDocente from '../views/NotificacionesDocente.vue'
-import PropuestasEmpresas from '../views/PropuestasEmpresas.vue'
-import BibliotecaDiagnosticos from '../views/BibliotecaDiagnosticos.vue'
-import AlumnadoListado from '../views/AlumnadoListado.vue'
 import { SECCIONES } from '../config/navegacion.js'
 import { queryRedirect, redirectVigente } from '../utils/redirectLogin.js'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, useAuthStore } from '../stores/auth.js'
+
+// Cada vista se descarga al entrar en ella (un chunk por vista), no todas en el bundle
+// inicial. LoginView va dentro porque es la primera pantalla que se ve.
+const GeneradorMicroretos = () => import('../views/GeneradorMicroretos.vue')
+const BibliotecaMicroretos = () => import('../views/BibliotecaMicroretos.vue')
+const RestablecerContrasena = () => import('../views/RestablecerContrasena.vue')
+const DetalleMicroreto = () => import('../views/DetalleMicroreto.vue')
+const MasFamilias = () => import('../views/MasFamilias.vue')
+const BaseDatosDashboard = () => import('../views/BaseDatosDashboard.vue')
+const PublicMicroreto = () => import('../views/PublicMicroreto.vue')
+const DashboardDocente = () => import('../views/DashboardDocente.vue')
+const EncuentrosRegistrados = () => import('../views/EncuentrosRegistrados.vue')
+const StartupDayProyectos = () => import('../views/StartupDayProyectos.vue')
+const StartupDayWizard = () => import('../views/StartupDayWizard.vue')
+const StartupDayDetalle = () => import('../views/StartupDayDetalle.vue')
+const StartupDayLanding = () => import('../views/StartupDayLanding.vue')
+const UnirseEquipo = () => import('../views/UnirseEquipo.vue')
+const EquipoWorkspace = () => import('../views/EquipoWorkspace.vue')
+const EmpresasView = () => import('../views/EmpresasView.vue')
+const PapeleraBaseDatos = () => import('../views/PapeleraBaseDatos.vue')
+const GestionUsuarios = () => import('../views/GestionUsuarios.vue')
+const InicioDocente = () => import('../views/InicioDocente.vue')
+const NoticiasListado = () => import('../views/NoticiasListado.vue')
+const MiUsuario = () => import('../views/MiUsuario.vue')
+const MisGruposDetalle = () => import('../views/MisGruposDetalle.vue')
+const PantallaAcceso = () => import('../views/PantallaAcceso.vue')
+const PantallaAccesoLista = () => import('../views/PantallaAccesoLista.vue')
+const EntrarWorkspace = () => import('../views/EntrarWorkspace.vue')
+const SeccionHub = () => import('../views/SeccionHub.vue')
+const CalendarioDocente = () => import('../views/CalendarioDocente.vue')
+const NotificacionesDocente = () => import('../views/NotificacionesDocente.vue')
+const PropuestasEmpresas = () => import('../views/PropuestasEmpresas.vue')
+const BibliotecaDiagnosticos = () => import('../views/BibliotecaDiagnosticos.vue')
+const AlumnadoListado = () => import('../views/AlumnadoListado.vue')
 
 const SA = ROLE_SUPERADMIN  // 1
 const AD = ROLE_ADMIN       // 4
@@ -269,8 +272,11 @@ const router = createRouter({
     },
     // Compatibilidad: enlaces antiguos con el nombre "inicio-docente"
     { path: '/inicio-docente', redirect: to => ({ path: '/panel-docente', query: to.query }) },
+    // Compatibilidad: la sección «Encuentros» pasó a «Encuentros y grupos» (2026-11-05). Antes que
+    // /seccion/:seccion: si no, «encuentros» se capturaría como sección inexistente → panel de inicio
+    { path: '/seccion/encuentros', redirect: '/seccion/encuentros-grupos' },
     {
-      // Secciones del panel lateral (Retos y proyectos, Encuentros, Alumnado…): cards de
+      // Secciones del panel lateral (Retos y proyectos, Encuentros y grupos, Alumnado…): cards de
       // entrada a las herramientas de cada área — ver config/navegacion.js
       path: '/seccion/:seccion',
       name: 'seccion',

@@ -38,11 +38,16 @@ class Microreto extends Model
             }
         });
 
-        // centro_id (no fillable) sale siempre de la empresa: así el reto sigue siendo del
-        // centro aunque la empresa se purgue después (empresa_id → NULL)
+        // centro_id (no fillable) sale de la empresa: así el reto sigue siendo del centro aunque
+        // la empresa se purgue después (empresa_id → NULL). Una empresa captada no tiene centro
+        // propio (la ven los centros de centro_empresa): entonces se respeta el centro que ya
+        // traiga el reto (el del docente que lo guarda o el elegido al publicar un borrador).
         static::saving(function (Microreto $microreto) {
             if ($microreto->empresa_id && ($microreto->isDirty('empresa_id') || !$microreto->centro_id)) {
-                $microreto->centro_id = Empresa::withTrashed()->whereKey($microreto->empresa_id)->value('centro_id');
+                $centroEmpresa = Empresa::withTrashed()->whereKey($microreto->empresa_id)->value('centro_id');
+                if ($centroEmpresa) {
+                    $microreto->centro_id = $centroEmpresa;
+                }
             }
         });
     }

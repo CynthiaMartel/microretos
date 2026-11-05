@@ -52,6 +52,12 @@ class Empresa extends Model
     // Valores de nivel_digitalizacion (orden de menor a mayor)
     public const NIVELES_DIGITALIZACION = ['Bajo', 'Medio', 'Alto'];
 
+    // Captación por comercial (estado_captacion, null en el resto). No fillable: solo lo
+    // cambian CaptacionEmpresaService (borrador → pendiente_centro) y la asignación de centros.
+    public const CAPTACION_BORRADOR         = 'borrador';
+    public const CAPTACION_PENDIENTE_CENTRO = 'pendiente_centro';
+    public const CAPTACION_ASIGNADA         = 'asignada';
+
     // id_externo (clave del paquete de importación) no es fillable: solo lo fija el comando
     // catalogo:importar-paquete, y las copias (replicate) no lo heredan.
 
@@ -60,12 +66,42 @@ class Empresa extends Model
         'es_catalogo' => 'boolean', // catálogo DuaLab (T2): no fillable, solo lo fija el backend
         // Área y 4 puntuaciones 0-4 (ver BibliotecaRetos). No fillable: solo lo fija empresas:diagnosticar-madurez
         'diagnostico_madurez' => 'array',
+        'firmada_at'          => 'datetime',
     ];
 
     /** @return BelongsTo<CentroEducativo, $this> */
     public function centroEducativo(): BelongsTo
     {
         return $this->belongsTo(CentroEducativo::class, 'centro_id');
+    }
+
+    /**
+     * Centros en los que el superadmin ha colocado una empresa captada (centro_id = NULL).
+     *
+     * @return BelongsToMany<CentroEducativo, $this>
+     */
+    public function centrosAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(CentroEducativo::class, 'centro_empresa', 'empresa_id', 'centro_id')
+            ->withTimestamps();
+    }
+
+    /** @return BelongsTo<User, $this> Comercial que la captó */
+    public function creadaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creada_por_user_id');
+    }
+
+    /** @return HasMany<EmpresaFirma, $this> */
+    public function firmas(): HasMany
+    {
+        return $this->hasMany(EmpresaFirma::class, 'empresa_id');
+    }
+
+    /** @return HasMany<MicroretoBorrador, $this> */
+    public function borradores(): HasMany
+    {
+        return $this->hasMany(MicroretoBorrador::class, 'empresa_id');
     }
 
     /** @return BelongsToMany<Familia, $this> */
@@ -83,7 +119,8 @@ class Empresa extends Model
     }
 
     // Empresas del centro del usuario: docente y admin ven solo las de su centro
-    // (por centro_id normalizado, o por el nombre legacy si el backfill no llegó);
+    // (por centro_id normalizado, por el nombre legacy si el backfill no llegó, o porque el
+    // superadmin colocó ahí una empresa captada — centro_empresa);
     // superadmin no debería llamar a este scope (ve todas sin filtro).
     public function scopeDelCentroDe($query, \App\Models\User $user)
     {
@@ -98,6 +135,7 @@ class Empresa extends Model
             if ($centroNombre) {
                 $q->orWhere('centro_educativo', $centroNombre);
             }
+            $q->orWhereHas('centrosAsignados', fn ($c) => $c->where('centro_educativo.id', $user->centro_educativo_id));
         });
     }
 
@@ -157,6 +195,16 @@ class Empresa extends Model
         }
 
         $centroNombre = $user->centroEducativo?->nombre;
-        return $centroNombre !== null && $this->centro_educativo === $centroNombre;
+        if ($centroNombre !== null && $this->centro_educativo === $centroNombre) {
+            return true;
+        }
+
+        return $this->centrosAsignados()->where('centro_educativo.id', $user->centro_educativo_id)->exists();
+    }
+
+    /** Captada por un comercial y aún sin firmar: la puede editar quien la creó. */
+    public function esBorradorCaptacion(): bool
+    {
+        return $this->estado_captacion === self::CAPTACION_BORRADOR;
     }
 }

@@ -12,7 +12,8 @@ class EnsureIsDocente
     {
         $user = $request->user();
 
-        if (!$user || $user->isEmpresa()) {
+        // Lista blanca: un rol nuevo (p. ej. comercial) no entra por defecto en las rutas de docente
+        if (!$user || !($user->isDocente() || $user->isAdmin() || $user->isSuperAdmin())) {
             return response()->json([
                 'success' => false,
                 'message' => 'Acceso restringido a docentes y administradores.',
