@@ -14,6 +14,15 @@ AddType application/manifest+json .webmanifest
 # HTTP, la tablet no vería el service worker ni el index.html del último deploy.
 # (/assets lleva su propio .htaccess con caché de un año: esos nombres sí llevan hash.)
 <IfModule mod_headers.c>
+    # App interna del equipo comercial: fuera de buscadores y sin marcos (como Nexo y Central).
+    # Sin cámara, micrófono ni ubicación: la firma se dibuja en un canvas.
+    Header set X-Robots-Tag "noindex, nofollow"
+    Header set X-Frame-Options "DENY"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Strict-Transport-Security "max-age=31536000"
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
     <FilesMatch "^(index\.html|sw\.js|registerSW\.js|version\.json|manifest\.webmanifest)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
