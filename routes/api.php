@@ -26,6 +26,8 @@ use App\Http\Controllers\ModulosDocenteController;
 use App\Http\Controllers\PublicMicroretoCatalogoController;
 use App\Http\Controllers\PublicMicroproyectoCatalogoController;
 use App\Http\Controllers\CurriculoController;
+use App\Http\Controllers\ComercialCentroController;
+use App\Http\Controllers\IntegracionFrontofficeController;
 use App\Http\Controllers\ComercialEmpresaController;
 use App\Http\Controllers\CaptacionAdminController;
 
@@ -116,11 +118,14 @@ Route::middleware('throttle:datos-academicos')->group(function () {
     Route::get('/centros',                    [DatosFPController::class, 'getCentros']);
 });
 
-Route::get('/demos', [DemoController::class, 'index']);
-Route::get('/demos/{familia}/microretos', [DemoController::class, 'microretos'])
-    ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
-Route::get('/demos/{familia}', [DemoController::class, 'show'])
-    ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
+// Demos públicas: mismo límite que el resto de lecturas públicas
+Route::middleware('throttle:publico-lectura')->group(function () {
+    Route::get('/demos', [DemoController::class, 'index']);
+    Route::get('/demos/{familia}/microretos', [DemoController::class, 'microretos'])
+        ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
+    Route::get('/demos/{familia}', [DemoController::class, 'show'])
+        ->where('familia', '[a-zA-ZÀ-ÿ0-9 ,.\-]{1,100}');
+});
 
 // Escaparate público de microretos (frontoffice dualab.es / info.dualab.es) — solo
 // lectura, solo retos marcados visible_publico=true. Rutas específicas antes de la
@@ -150,6 +155,12 @@ Route::middleware('throttle:5,1,reset-password')
 // "Contacta con soporte" (pública: quien no consigue entrar también tiene que poder escribir)
 Route::middleware('throttle:soporte')
     ->post('/soporte', [SoporteController::class, 'store']);
+
+// Webhook del frontoffice (dualab.es/contacto → captaciones). Sin sesión: lo protege la firma
+// HMAC del cuerpo (VerificarFirmaFrontoffice). La comprobación de firma va antes del throttle
+// para que nadie sin el secreto gaste el cupo de los envíos legítimos.
+Route::middleware(['firma.frontoffice', 'throttle:60,1,frontoffice-webhook'])
+    ->post('/integraciones/frontoffice/formularios', [IntegracionFrontofficeController::class, 'recibir']);
 
 
 // --- RUTAS PROTEGIDAS (requieren token Sanctum) ---
@@ -397,7 +408,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── app comercial (comercial.dualab.es): comercial (+ superadmin) ──────────
     // El comercial no pasa por el grupo 'docente': solo ve las empresas que capta él
-    // (EmpresaPolicy::verCaptacion). Rutas fijas antes que las paramétricas.
+    // (EmpresaCaptacionPolicy::ver). Rutas fijas antes que las paramétricas.
     Route::middleware('comercial')->prefix('comercial')->group(function () {
         Route::middleware('throttle:60,1,comercial-lectura')->group(function () {
             Route::get('/textos-legales',          [ComercialEmpresaController::class, 'textosLegales']);
@@ -415,13 +426,28 @@ Route::middleware('auth:sanctum')->group(function () {
             ->post('/empresas/{id}/generar-retos', [ComercialEmpresaController::class, 'generarRetos'])->whereNumber('id');
         Route::middleware('throttle:10,1,comercial-firma')
             ->post('/empresas/{id}/firma', [ComercialEmpresaController::class, 'firmar'])->whereNumber('id');
+
+        // Entrevista a centros educativos (ruta fija antes que la paramétrica)
+        Route::middleware('throttle:60,1,comercial-lectura')->group(function () {
+            Route::get('/centros/textos-legales', [ComercialCentroController::class, 'textosLegales']);
+            Route::get('/centros',                [ComercialCentroController::class, 'index']);
+            Route::get('/centros/{id}',           [ComercialCentroController::class, 'show'])->whereNumber('id');
+        });
+        Route::middleware('throttle:30,1,comercial-escritura')
+            ->post('/centros', [ComercialCentroController::class, 'store']);
     });
 
     // ── Revisión de lo captado por comerciales (solo superadmin) ─────────────────────
     Route::middleware(['superadmin', 'throttle:60,1,captacion-admin'])->prefix('captacion')->group(function () {
         Route::get('/resumen',                          [CaptacionAdminController::class, 'resumen']);
         Route::get('/empresas',                         [CaptacionAdminController::class, 'empresas']);
-        Route::put('/empresas/{id}/centros',            [CaptacionAdminController::class, 'asignarCentros'])->whereNumber('id');
+        Route::put('/empresas/{id}/validar',            [CaptacionAdminController::class, 'validar'])->whereNumber('id');
+        Route::post('/empresas/{id}/descartar',         [CaptacionAdminController::class, 'descartarEmpresa'])->whereNumber('id');
+        Route::get('/empresas/{id}/coincidencias',      [CaptacionAdminController::class, 'coincidenciasEmpresa'])->whereNumber('id');
+        Route::get('/centros',                          [CaptacionAdminController::class, 'centros']);
+        Route::put('/centros/{id}/validar',             [CaptacionAdminController::class, 'validarCentro'])->whereNumber('id');
+        Route::post('/centros/{id}/descartar',          [CaptacionAdminController::class, 'descartarCentro'])->whereNumber('id');
+        Route::get('/centros/{id}/coincidencias',       [CaptacionAdminController::class, 'coincidenciasCentro'])->whereNumber('id');
         Route::get('/borradores',                       [CaptacionAdminController::class, 'borradores']);
         Route::get('/borradores/{uuid}',                [CaptacionAdminController::class, 'borrador'])->whereUuid('uuid');
         Route::post('/borradores/{uuid}/publicar',      [CaptacionAdminController::class, 'publicar'])->whereUuid('uuid');

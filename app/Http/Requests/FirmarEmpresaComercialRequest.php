@@ -43,6 +43,10 @@ class FirmarEmpresaComercialRequest extends FormRequest
             'versiones'        => 'required|array',
             // Sin la coma final: starts_with separa sus valores por comas
             'firma'            => ['required', 'string', 'max:' . self::MAX_FIRMA_BASE64, 'starts_with:data:image/png;base64'],
+            // Firma recogida sin conexión: hora de la tablet al firmar. Se guarda aparte en el
+            // snapshot; firmado_at sigue siendo la hora del servidor. Margen de 10 min por si el
+            // reloj de la tablet va adelantado.
+            'capturadaAt'      => 'nullable|date|after:-30 days|before:+10 minutes',
         ];
         // Una casilla por cesionaria: se registra el sí y el no, nunca se presupone
         foreach (array_keys(config('captacion.cesiones')) as $clave) {

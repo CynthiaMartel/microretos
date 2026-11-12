@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UpdatePerfilRequest;
+use App\Http\Requests\VerifyPasswordRequest;
 use App\Services\ModulosDocenteService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -54,6 +55,8 @@ class AdminAuthController extends Controller
         RateLimiter::clear($throttleKey);
 
         $user = Auth::user();
+        // Auth::attempt() acaba de autenticarlo: siempre hay usuario
+        abort_unless($user instanceof User, 401);
 
         if ($user->is_blocked) {
             Auth::logout();
@@ -73,7 +76,7 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        $remember = (bool) ($data['remember'] ?? false) && $user?->puedeRecordarSesion();
+        $remember = (bool) ($data['remember'] ?? false) && $user->puedeRecordarSesion();
         if ($remember) {
             Auth::guard('web')->login($user, true);
         }
@@ -126,11 +129,12 @@ class AdminAuthController extends Controller
         ]);
     }
 
-    public function verifyPassword(Request $request): JsonResponse
+    public function verifyPassword(VerifyPasswordRequest $request): JsonResponse
     {
-        $request->validate(['password' => 'required|string']);
+        $user = $request->user();
+        abort_unless($user instanceof User, 401); // ruta bajo auth:sanctum
 
-        if (!Hash::check($request->password, $request->user()->password)) {
+        if (!Hash::check($request->validated('password'), $user->password)) {
             return response()->json(['success' => false, 'message' => 'Contraseña incorrecta.'], 401);
         }
 
@@ -140,6 +144,7 @@ class AdminAuthController extends Controller
     public function getPerfil(Request $request): JsonResponse
     {
         $user = $request->user();
+        abort_unless($user instanceof User, 401); // ruta bajo auth:sanctum
 
         return response()->json([
             'success' => true,
@@ -155,7 +160,6 @@ class AdminAuthController extends Controller
                 'recordado'           => $this->sesionRecordada($request),
                 'tiene_modulos'       => $user->modulos()->exists(),
                 'imparte'             => app(ModulosDocenteService::class)->imparte($user),
-            'imparte'             => app(ModulosDocenteService::class)->imparte($user),
             ],
         ]);
     }
@@ -191,6 +195,7 @@ class AdminAuthController extends Controller
     public function updatePerfil(UpdatePerfilRequest $request): JsonResponse
     {
         $user = $request->user();
+        abort_unless($user instanceof User, 401); // ruta bajo auth:sanctum
         $data = $request->validated();
 
         $user->name = $data['name'];

@@ -271,8 +271,11 @@ class AdminUserController extends Controller
         return null;
     }
 
-    /** @return array{data: array<int, mixed>, truncado: bool} */
-    private function listado($query): array
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder<User> $query
+     * @return array{data: array<int, mixed>, truncado: bool}
+     */
+    private function listado(\Illuminate\Database\Eloquent\Builder $query): array
     {
         $usuarios = $query->take(self::LIMITE_LISTADO + 1)->get();
 

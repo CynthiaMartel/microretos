@@ -1,0 +1,23 @@
+# central.dualab.es solo sirve archivos estáticos (dist-central/); la API está en api.dualab.es.
+
+# Rutas de la SPA (/usuarios, /base-datos…) → index.html; el router de Vue hace el resto
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Herramienta interna del superadmin: fuera de buscadores y sin marcos
+    Header set X-Robots-Tag "noindex, nofollow"
+    Header set X-Frame-Options "DENY"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Strict-Transport-Security "max-age=31536000"
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    # index.html sin caché: tras un deploy se carga la versión nueva
+    <FilesMatch "^index\.html$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

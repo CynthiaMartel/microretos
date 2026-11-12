@@ -34,6 +34,9 @@ class StoreEmpresaComercialRequest extends StoreEmpresaRequest
         $reglas['familias'] = 'required|array|min:1|max:30';
         // Lo que se dice delante de la empresa es real: el sector sirve a la IA para el reto
         $reglas['sector'] = ['required', 'string', Rule::in(SectoresEmpresa::LISTA)];
+        // Alta hecha sin conexión en la tablet: al sincronizar se reenvía con este identificador
+        // y, si ya había llegado, se devuelve la misma empresa (CaptacionEmpresaService::crear)
+        $reglas['clienteUuid'] = 'nullable|uuid';
         return $reglas;
     }
 }

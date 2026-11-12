@@ -1,12 +1,28 @@
 import api from '../api.js'
 
-// Revisión de lo captado por los comerciales (solo superadmin): apartado «Captación» de Notificaciones.
+// Revisión de las captaciones (solo superadmin): apartado «Captación» de Notificaciones.
+// Una captación (entrevista del comercial o formulario web) no es una empresa de Base de datos
+// hasta que se valida.
 
 export const getResumenCaptacion = () => api.get('/captacion/resumen')
 
-// estado: 'pendiente_centro' (por defecto) | 'asignada' | 'borrador'
-export const getEmpresasCaptadas = (estado = 'pendiente_centro') => api.get('/captacion/empresas', { params: { estado } })
-export const asignarCentrosEmpresa = (id, centroIds) => api.put(`/captacion/empresas/${id}/centros`, { centro_ids: centroIds })
+// estado: 'pendiente_validacion' (por defecto) | 'validada' | 'descartada' | 'borrador'
+export const getEmpresasCaptadas = (estado = 'pendiente_validacion') => api.get('/captacion/empresas', { params: { estado } })
+// Crea la empresa en Base de datos y la coloca en esos centros (si ya estaba validada, solo cambia los centros).
+// empresaExistenteId: es la misma que una empresa real de Base de datos (se fusiona, no se duplica)
+export const validarEmpresaCaptada = (id, centroIds, empresaExistenteId = null) =>
+  api.put(`/captacion/empresas/${id}/validar`, { centro_ids: centroIds, empresa_existente_id: empresaExistenteId })
+export const descartarEmpresaCaptada = (id, motivo) => api.post(`/captacion/empresas/${id}/descartar`, { motivo: motivo || null })
+// Posibles duplicados en Base de datos (mismo CIF o nombre parecido), o búsqueda libre con q
+export const getCoincidenciasEmpresa = (id, q = '') => api.get(`/captacion/empresas/${id}/coincidencias`, { params: q ? { q } : {} })
+
+// Centros educativos captados (entrevista del comercial o formulario web)
+// estado: 'pendiente_validacion' (por defecto) | 'validada' | 'descartada'
+export const getCentrosCaptados = (estado = 'pendiente_validacion') => api.get('/captacion/centros', { params: { estado } })
+// centroExistenteId: el centro ya está en DuaLab (se enlaza); null → se da de alta
+export const validarCentroCaptado = (id, centroExistenteId = null) => api.put(`/captacion/centros/${id}/validar`, { centro_existente_id: centroExistenteId })
+export const descartarCentroCaptado = (id, motivo) => api.post(`/captacion/centros/${id}/descartar`, { motivo: motivo || null })
+export const getCoincidenciasCentro = (id, q = '') => api.get(`/captacion/centros/${id}/coincidencias`, { params: q ? { q } : {} })
 
 export const getBorradoresPendientes = () => api.get('/captacion/borradores')
 export const getBorradorCaptacion = (uuid) => api.get(`/captacion/borradores/${uuid}`)

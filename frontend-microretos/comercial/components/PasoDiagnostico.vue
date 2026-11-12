@@ -2,7 +2,7 @@
      móvil delante del empresario). Se guarda todo junto al terminar la última pregunta. -->
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { guardarDiagnosticoCaptada } from '../../src/services/comercialService.js'
+import { guardarDiagnostico } from '../offline/entrevistasLocales.js'
 import { PREGUNTAS_DIAGNOSTICO, COLUMNA_DE } from '../../src/config/preguntasDiagnostico.js'
 
 const props = defineProps({
@@ -69,11 +69,11 @@ async function siguiente() {
   guardando.value = true
   try {
     const payload = Object.fromEntries(PREGUNTAS_DIAGNOSTICO.map(p => [p.campo, textoDe(p) || null]))
-    const { data } = await guardarDiagnosticoCaptada(props.empresa.id, payload)
-    emit('guardada', data.data)
+    // Sin conexión se guarda en la tablet y se envía después
+    emit('guardada', await guardarDiagnostico(props.empresa, payload))
   } catch (err) {
     const errores = err.response?.data?.errors
-    error.value = (errores && Object.values(errores)[0]?.[0]) || err.response?.data?.error || 'No se ha podido guardar la entrevista.'
+    error.value = (errores && Object.values(errores)[0]?.[0]) || err.response?.data?.error || err.message || 'No se ha podido guardar la entrevista.'
   } finally {
     guardando.value = false
   }

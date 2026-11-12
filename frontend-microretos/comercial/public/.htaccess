@@ -1,0 +1,20 @@
+# comercial.dualab.es solo sirve archivos estáticos (dist-comercial/); la API está en api.dualab.es.
+
+# Rutas de la SPA (/entrevista/12, /mi-usuario…) → index.html; el router de Vue hace el resto
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+AddType application/manifest+json .webmanifest
+
+# Lo que no lleva hash en el nombre se pide siempre al servidor: si se quedara en la caché
+# HTTP, la tablet no vería el service worker ni el index.html del último deploy.
+# (/assets lleva su propio .htaccess con caché de un año: esos nombres sí llevan hash.)
+<IfModule mod_headers.c>
+    <FilesMatch "^(index\.html|sw\.js|registerSW\.js|version\.json|manifest\.webmanifest)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

@@ -16,3 +16,8 @@ export const generarRetosCaptada = (id, payload) => api.post(`/comercial/empresa
 export const getBorradoresCaptada = (id) => api.get(`/comercial/empresas/${id}/borradores`)
 
 export const firmarEmpresaCaptada = (id, payload) => api.post(`/comercial/empresas/${id}/firma`, payload)
+
+// Entrevista a centros educativos (sin firma: aceptación de protección de datos y cesiones)
+export const getTextosLegalesCentros = () => api.get('/comercial/centros/textos-legales')
+export const getMisCentros = () => api.get('/comercial/centros')
+export const crearCentroCaptado = (payload) => api.post('/comercial/centros', payload)

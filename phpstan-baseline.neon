@@ -91,12 +91,6 @@ parameters:
 			path: app/Console/Commands/DemoGenerarEncuentrosEquipos.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>prototipos" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 2
-			path: app/Console/Commands/DemoGenerarEncuentrosEquipos.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>que_necesitan" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
@@ -335,78 +329,6 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: app/Console/Commands/RepararRaCeMicroretos.php
-
-		-
-			message: '#^Cannot access property \$centroEducativo on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$centro_educativo_id on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$email_verified_at on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 8
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$is_blocked on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$password on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$password_changed_at on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot access property \$role on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot call method isSuperAdmin\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/AdminAuthController.php
-
-		-
-			message: '#^Cannot call method save\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/AdminAuthController.php
 
 		-
 			message: '#^Cannot access property \$centro_educativo_id on App\\Models\\User\|null\.$#'
@@ -2612,12 +2534,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$reflexiones\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/EquipoProgresoResource.php
-
-		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\EquipoProgresoResource\:\:\$token\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/EquipoProgresoResource.php

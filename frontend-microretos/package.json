@@ -9,7 +9,12 @@
     "preview": "vite preview",
     "dev:comercial": "vite --config vite.comercial.config.js --open",
     "build:comercial": "vite build --config vite.comercial.config.js",
-    "iconos": "pwa-assets-generator && cp pwa/pwa-192x192.png pwa/pwa-512x512.png pwa/maskable-icon-512x512.png pwa/favicon.ico public/ && cp pwa/pwa-64x64.png public/favicon.png && cp pwa/apple-touch-icon-180x180.png public/apple-touch-icon.png"
+    "dev:nexo": "vite --config vite.nexo.config.js --open",
+    "build:nexo": "vite build --config vite.nexo.config.js",
+    "dev:central": "vite --config vite.central.config.js --open",
+    "build:central": "vite build --config vite.central.config.js",
+    "iconos": "pwa-assets-generator && cp pwa/pwa-192x192.png pwa/pwa-512x512.png pwa/maskable-icon-512x512.png pwa/favicon.ico public/ && cp pwa/pwa-64x64.png public/favicon.png && cp pwa/apple-touch-icon-180x180.png public/apple-touch-icon.png",
+    "iconos:comercial": "rm -rf .pwa-comercial && mkdir .pwa-comercial && node pwa/icono-comercial.mjs .pwa-comercial/icono-comercial.png && pwa-assets-generator -c pwa-assets.comercial.config.js && mkdir -p comercial/public && cp .pwa-comercial/pwa-192x192.png .pwa-comercial/pwa-512x512.png .pwa-comercial/maskable-icon-512x512.png .pwa-comercial/favicon.ico comercial/public/ && cp .pwa-comercial/pwa-64x64.png comercial/public/favicon.png && cp .pwa-comercial/apple-touch-icon-180x180.png comercial/public/apple-touch-icon.png && rm -rf .pwa-comercial"
   },
   "dependencies": {
     "@heroicons/vue": "^2.2.0",

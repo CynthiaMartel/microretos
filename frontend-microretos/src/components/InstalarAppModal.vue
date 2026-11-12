@@ -10,74 +10,78 @@ import InstalarAppIlustracion from './InstalarAppIlustracion.vue'
 const props = defineProps({
   abierto:    { type: Boolean, required: true },
   plataforma: { type: String, required: true },
+  // La app comercial (comercial.dualab.es) usa el mismo modal con su nombre y su pantalla de acceso
+  nombre:     { type: String, default: 'DuaLab' },
+  rutaInicio: { type: String, default: '/login' },
 })
 defineEmits(['cerrar'])
 
 const NOTA_SESION = 'La app guarda su propia sesión: la primera vez que la abras tendrás que iniciar sesión.'
 
-const GUIAS = {
+// nombre: el de la app que se instala («DuaLab», «DuaLab Comercial»)
+const guias = (nombre) => ({
   ios: {
     navegador: 'iPhone o iPad',
-    intro: 'En iPhone y iPad las apps web se añaden desde Safari en tres toques. No se descarga ningún archivo: el icono de DuaLab aparece en tu pantalla de inicio.',
+    intro: `En iPhone y iPad las apps web se añaden desde Safari en tres toques. No se descarga ningún archivo: el icono de ${nombre} aparece en tu pantalla de inicio.`,
     ilustrada: true,
     pasos: [
       'Pulsa Compartir en la barra de Safari (si no lo ves, pulsa antes ···).',
       'Elige «Añadir a pantalla de inicio».',
-      'Pulsa «Añadir». Ya tienes DuaLab en tu pantalla de inicio.',
+      `Pulsa «Añadir». Ya tienes ${nombre} en tu pantalla de inicio.`,
     ],
     nota: NOTA_SESION,
   },
   'safari-mac': {
     navegador: 'Safari en Mac',
-    intro: 'Safari añade las apps web desde su propio menú, en dos clics. No se descarga ningún archivo: DuaLab aparece en el Dock y se abre en su propia ventana.',
+    intro: `Safari añade las apps web desde su propio menú, en dos clics. No se descarga ningún archivo: ${nombre} aparece en el Dock y se abre en su propia ventana.`,
     ilustrada: true,
     pasos: [
       'En la barra de menús de arriba, abre «Archivo».',
       'Elige «Añadir al Dock…».',
-      'Pulsa «Añadir». Ya tienes DuaLab en el Dock.',
+      `Pulsa «Añadir». Ya tienes ${nombre} en el Dock.`,
     ],
     nota: `${NOTA_SESION} Necesitas macOS Sonoma (14) o posterior.`,
   },
   'firefox-android': {
     navegador: 'Firefox en Android',
-    intro: 'Firefox instala DuaLab desde su menú en tres toques. No se descarga ningún archivo: queda como una app más, con su icono.',
+    intro: `Firefox instala ${nombre} desde su menú en tres toques. No se descarga ningún archivo: queda como una app más, con su icono.`,
     ilustrada: true,
     pasos: [
       'Pulsa el menú ⋮ de Firefox.',
       'Elige «Instalar» (en algunas versiones, «Añadir a pantalla de inicio»).',
-      'Pulsa «Instalar». Ya tienes DuaLab con tus apps.',
+      `Pulsa «Instalar». Ya tienes ${nombre} con tus apps.`,
     ],
   },
   // Chrome, Edge y demás navegadores Chromium cuando aún no ofrecen su diálogo
   // (recién entrado en la página, o se rechazó antes)
   chrome: {
     navegador: 'Chrome o Edge',
-    intro: 'Tu navegador instala DuaLab en dos clics. No se descarga ningún archivo: queda en tus aplicaciones y se abre en su propia ventana.',
+    intro: `Tu navegador instala ${nombre} en dos clics. No se descarga ningún archivo: queda en tus aplicaciones y se abre en su propia ventana.`,
     ilustrada: true,
     pasos: [
-      'Pulsa el icono de instalar, a la derecha de la barra de direcciones (si no está, búscalo en el menú ⋮ como «Instalar DuaLab»).',
+      `Pulsa el icono de instalar, a la derecha de la barra de direcciones (si no está, búscalo en el menú ⋮ como «Instalar ${nombre}»).`,
       'Confirma con «Instalar».',
-      'Listo: DuaLab se abre en su propia ventana y queda en tus aplicaciones.',
+      `Listo: ${nombre} se abre en su propia ventana y queda en tus aplicaciones.`,
     ],
-    nota: 'Si no ves la opción, navega un poco por DuaLab y vuelve a intentarlo: el navegador tarda unos segundos en ofrecerla.',
+    nota: `Si no ves la opción, navega un poco por ${nombre} y vuelve a intentarlo: el navegador tarda unos segundos en ofrecerla.`,
   },
   'chrome-android': {
     navegador: 'Android',
-    intro: 'Tu navegador instala DuaLab desde su menú en tres toques. No se descarga ningún archivo: queda como una app más, con su icono.',
+    intro: `Tu navegador instala ${nombre} desde su menú en tres toques. No se descarga ningún archivo: queda como una app más, con su icono.`,
     ilustrada: true,
     pasos: [
       'Pulsa el menú ⋮ del navegador, arriba a la derecha.',
       'Elige «Añadir a pantalla de inicio» (en algunas versiones, «Instalar app»).',
-      'Pulsa «Instalar». Ya tienes DuaLab con tus apps.',
+      `Pulsa «Instalar». Ya tienes ${nombre} con tus apps.`,
     ],
-    nota: 'Si no ves la opción, navega un poco por DuaLab y vuelve a intentarlo: el navegador tarda unos segundos en ofrecerla.',
+    nota: `Si no ves la opción, navega un poco por ${nombre} y vuelve a intentarlo: el navegador tarda unos segundos en ofrecerla.`,
   },
   // Sin pasos: Firefox de escritorio no instala apps web. Se dice claro y se dan alternativas.
   firefox: {
     navegador: 'Firefox en ordenador',
     subtitulo: 'Firefox para ordenador no permite instalar apps',
     noDisponible: true,
-    intro: 'Lo sentimos: Firefox en ordenador no deja instalar apps web, así que desde aquí no se puede instalar DuaLab. Pero tienes alternativas:',
+    intro: `Lo sentimos: Firefox en ordenador no deja instalar apps web, así que desde aquí no se puede instalar ${nombre}. Pero tienes alternativas:`,
     alternativas: [
       {
         icono: 'M15 3l6 6-3 1-4 4 1 4-2 2-4-4-5 5M9 15l-4-4 2-2 4 1 4-4 1-3',
@@ -87,7 +91,7 @@ const GUIAS = {
       {
         icono: 'M3 5h18v11H3zM8 20h8M12 16v4',
         titulo: 'Instálala con otro navegador del ordenador',
-        texto: 'Abre DuaLab en Chrome o Edge (o Safari en Mac) y pulsa «Instalar app» en el panel lateral.',
+        texto: `Abre ${nombre} en Chrome o Edge (o Safari en Mac) y pulsa «Instalar app» en el panel lateral.`,
         copiarEnlace: true,
       },
       {
@@ -97,9 +101,12 @@ const GUIAS = {
       },
     ],
   },
-}
+})
 
-const guia = computed(() => GUIAS[props.plataforma] ?? GUIAS.chrome)
+const guia = computed(() => {
+  const todas = guias(props.nombre)
+  return todas[props.plataforma] ?? todas.chrome
+})
 
 // ── Paso resaltado en la ilustración ─────────────────────────────────────────
 const paso = ref(0)
@@ -121,7 +128,7 @@ onUnmounted(parar)
 const elegirPaso = (i) => { parar(); paso.value = i }
 
 // ── Copiar el enlace para abrirla en otro navegador (alternativa de Firefox) ──
-const URL_APP = `${window.location.origin}/login`
+const URL_APP = `${window.location.origin}${props.rutaInicio}`
 const enlaceCopiado = ref(false)
 async function copiarEnlace() {
   try {
@@ -133,7 +140,7 @@ async function copiarEnlace() {
 </script>
 
 <template>
-  <ModalTaller :abierto="abierto" titulo="Instalar DuaLab como app"
+  <ModalTaller :abierto="abierto" :titulo="`Instalar ${nombre} como app`"
                :subtitulo="guia.subtitulo ?? `Cómo hacerlo en ${guia.navegador}`"
                ancho="w-[min(30rem,calc(100vw-2rem))]" marca @cerrar="$emit('cerrar')">
     <div class="flex items-center gap-3 sm:gap-4">
@@ -148,7 +155,7 @@ async function copiarEnlace() {
         </span>
       </span>
       <p class="min-w-0 text-sm" :class="guia.noDisponible ? 'font-semibold text-azul-noche' : 'text-texto-secundario'">
-        {{ guia.intro ?? 'Con DuaLab instalada la abres desde su icono, a pantalla completa y sin las barras del navegador.' }}
+        {{ guia.intro ?? `Con ${nombre} instalada la abres desde su icono, a pantalla completa y sin las barras del navegador.` }}
       </p>
     </div>
 

@@ -1,0 +1,4 @@
+/* Estilos de la app principal. @source: con la raíz de Vite en central/, Tailwind solo buscaría
+   clases aquí y faltarían las de las vistas y componentes compartidos de src/. */
+@import "../src/style.css";
+@source "../src";

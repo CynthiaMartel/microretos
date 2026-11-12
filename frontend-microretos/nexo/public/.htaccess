@@ -1,0 +1,24 @@
+# nexo.dualab.es solo sirve archivos estáticos (dist-nexo/): no hay API ni sesión.
+
+# Una sola pantalla: cualquier ruta → index.html
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Página interna: fuera de buscadores, sin marcos ni scripts de terceros
+    Header set X-Robots-Tag "noindex, nofollow"
+    Header set X-Frame-Options "DENY"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Strict-Transport-Security "max-age=31536000"
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+    # index.html sin caché: tras un deploy se ven los enlaces nuevos
+    <FilesMatch "^index\.html$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

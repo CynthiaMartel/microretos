@@ -2,24 +2,100 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // App comercial (comercial.dualab.es): un build aparte que comparte
 // src/ (api.js, servicios, store de auth, estilos, componentes) con la app principal.
 //   npm run dev:comercial    → http://localhost:5177
 //   npm run build:comercial  → dist-comercial/ (se sube al subdominio)
 // Mismo backend y misma sesión Sanctum que la app principal (ver api.js).
+//
+// Instalable como app (PWA) igual que la principal (vite.config.js): manifest, service worker
+// con la carcasa de la app, aviso sin conexión y aviso de versión nueva (version.json).
+
+// Identificador de este build: __APP_VERSION__ en el bundle y dist-comercial/version.json
+// (composables/useNuevaVersion.js los compara para avisar de un deploy nuevo)
+const APP_VERSION = Date.now().toString(36)
+
+const versionJson = () => ({
+  name: 'version-json',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: APP_VERSION }) })
+  },
+})
+
+const pwa = () => VitePWA({
+  // 'prompt': nunca se recarga sola a mitad de una entrevista; el aviso "Hay una versión
+  // nueva" de App.vue recarga cuando el comercial lo pulsa
+  registerType: 'prompt',
+  injectRegister: 'script',
+  includeAssets: ['favicon.ico', 'favicon.png', 'apple-touch-icon.png'],
+  manifest: {
+    id: '/',
+    name: 'DuaLab Comercial',
+    short_name: 'DuaLab Com.',
+    description: 'Entrevista a empresas y retos en directo para el equipo comercial de DuaLab',
+    lang: 'es',
+    // El subdominio es solo de esta app: la raíz es «Empresas» (o el acceso, sin sesión)
+    start_url: '/',
+    scope: '/',
+    // Sin orientation: en la tablet se usa tanto en horizontal como en vertical
+    display: 'standalone',
+    theme_color: '#17283E',
+    background_color: '#17283E',
+    icons: [
+      { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+      { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  },
+  workbox: {
+    // Solo la carcasa. Nunca respuestas de la API: datos de empresas, DNI y firma del
+    // empresario no se quedan guardados en la tablet. version.json tampoco (.json fuera).
+    // Incluye las imágenes de /assets (logo, fotos del acceso y del banner): son pocas y así
+    // la app abre completa aunque en la empresa no haya cobertura
+    globPatterns: ['**/*.{js,css,html,ico,svg,woff2,webp,png}'],
+    navigateFallback: 'index.html',
+    navigateFallbackDenylist: [/^\/api\//, /^\/sanctum\//],
+    cleanupOutdatedCaches: true,
+    runtimeCaching: [
+      {
+        urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+        handler: 'StaleWhileRevalidate',
+        options: { cacheName: 'google-fonts-css' },
+      },
+      {
+        urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-fonts',
+          expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+    ],
+  },
+})
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '../', '') // lee el .env de la raíz del repo, como vite.config.js
 
   return {
     root: fileURLToPath(new URL('./comercial', import.meta.url)),
-    // Favicon e iconos de la app principal; VITE_* desde la misma carpeta que la app principal
-    publicDir: fileURLToPath(new URL('./public', import.meta.url)),
+    // Iconos propios (npm run iconos:comercial) y .htaccess del subdominio; VITE_* desde la
+    // misma carpeta que la app principal
+    publicDir: fileURLToPath(new URL('./comercial/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
     plugins: [
       vue(),
       tailwindcss(),
+      versionJson(),
+      pwa(),
     ],
+    define: {
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
+    },
     build: {
       outDir: fileURLToPath(new URL('./dist-comercial', import.meta.url)),
       emptyOutDir: true,

@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\CaptacionOrigen;
 use App\Models\Empresa;
+use App\Models\EmpresaCaptacion;
 use App\Models\EmpresaConsentimiento;
 use App\Models\EmpresaFirma;
+use App\Models\MicroretoBorrador;
 use App\Models\User;
-use App\Notifications\EmpresaCaptadaPendienteCentro;
+use App\Notifications\EmpresaCaptadaPendienteValidacion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -14,16 +17,18 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Empresas captadas por un comercial en la entrevista (app comercial.dualab.es):
- * alta → diagnóstico → firma de consentimientos → colocación en centros por el superadmin.
+ * Empresas captadas (empresa_captaciones). Por ahora llegan por la entrevista del comercial
+ * (app comercial.dualab.es): alta → diagnóstico → firma de consentimientos; después DuaLab
+ * la valida y entonces se crea la empresa de verdad en `empresas`, colocada en sus centros.
  *
- * Ciclo de estado_captacion (no fillable, solo lo cambia este servicio):
- *   borrador ──firmar()──▶ pendiente_centro ──asignarCentros()──▶ asignada
- * Mientras no tiene centros, centro_id = NULL y ningún centro la ve (Empresa::scopeDelCentroDe).
+ * Estado (no fillable, solo lo cambia este servicio):
+ *   borrador ──firmar()──▶ pendiente_validacion ──validar()──▶ validada
+ *                                              └─descartar()─▶ descartada
+ * Hasta validarla no existe en `empresas`: ningún centro la ve ni la usa.
  */
 class CaptacionEmpresaService
 {
-    // Campos camelCase de StoreEmpresaComercialRequest → columnas de empresas
+    // Campos camelCase de StoreEmpresaComercialRequest → columnas (las mismas en empresa_captaciones y empresas)
     private const CAMPOS_EMPRESA = [
         'nombreComercial'     => 'nombre_comercial',
         'razonSocial'         => 'razon_social',
@@ -56,7 +61,7 @@ class CaptacionEmpresaService
     private const DIAGNOSTICO_MINIMO = ['dia_a_normal', 'friccion_area', 'friccion_problema'];
 
     // Datos opcionales en la entrevista que DuaLab necesitará después (contactar, facturar, ubicar):
-    // si faltan, se avisa al superadmin para completarlos al colocar la empresa.
+    // si faltan, se avisa al superadmin para completarlos al validarla.
     public const DATOS_RECOMENDADOS = [
         'cif'              => 'CIF',
         'razon_social'     => 'razón social',
@@ -71,60 +76,63 @@ class CaptacionEmpresaService
     public function __construct(private EmpresaFamiliaService $familias) {}
 
     /** @param array<string, mixed> $validated  StoreEmpresaComercialRequest */
-    public function crear(User $comercial, array $validated): Empresa
+    public function crear(User $comercial, array $validated): EmpresaCaptacion
     {
-        return DB::transaction(function () use ($comercial, $validated) {
-            $empresa = Empresa::create($this->columnas($validated, self::CAMPOS_EMPRESA) + [
-                'es_simulada' => false,
-                'centro_id'   => null,
-            ]);
-            $empresa->forceFill([
-                'creada_por_user_id' => $comercial->id,
-                'estado_captacion'   => Empresa::CAPTACION_BORRADOR,
-            ])->save();
+        // Alta sin conexión que se reenvía al sincronizar: si la primera petición llegó pero la
+        // respuesta se perdió, se devuelve la captación ya creada en vez de duplicarla
+        if (!empty($validated['clienteUuid'])) {
+            $existente = EmpresaCaptacion::where('cliente_uuid', $validated['clienteUuid'])
+                ->where('creada_por_user_id', $comercial->id)->first();
+            if ($existente) return $existente;
+        }
 
-            $this->familias->anadirPorNombre($empresa->id, $validated['familias']);
-            $this->familias->guardarIntereses($empresa->id, $validated['interesesFamilia'] ?? []);
+        $captacion = new EmpresaCaptacion($this->columnas($validated, self::CAMPOS_EMPRESA));
+        $captacion->familias = $this->familiasConInteres($validated['familias'], $validated['interesesFamilia'] ?? [], []);
+        $captacion->forceFill([
+            'origen_id'          => CaptacionOrigen::ENTREVISTA,
+            'cliente_uuid'       => $validated['clienteUuid'] ?? null,
+            'creada_por_user_id' => $comercial->id,
+            'estado'             => EmpresaCaptacion::ESTADO_BORRADOR,
+        ])->save();
 
-            return $empresa;
-        });
+        return $captacion;
     }
 
     /** @param array<string, mixed> $validated  UpdateEmpresaComercialRequest */
-    public function actualizar(Empresa $empresa, array $validated): Empresa
+    public function actualizar(EmpresaCaptacion $captacion, array $validated): EmpresaCaptacion
     {
-        DB::transaction(function () use ($empresa, $validated) {
-            $empresa->update($this->columnas($validated, self::CAMPOS_EMPRESA));
-            if (array_key_exists('familias', $validated)) {
-                $this->familias->sincronizarPorNombre($empresa->id, $validated['familias']);
-            }
-            $this->familias->guardarIntereses($empresa->id, $validated['interesesFamilia'] ?? []);
-        });
+        $captacion->fill($this->columnas($validated, self::CAMPOS_EMPRESA));
+        $captacion->familias = $this->familiasConInteres(
+            $validated['familias'] ?? $captacion->nombresFamilias(),
+            $validated['interesesFamilia'] ?? [],
+            $captacion->familias ?? [],
+        );
+        $captacion->save();
 
-        return $empresa;
+        return $captacion;
     }
 
     /** @param array<string, mixed> $validated  UpdateDiagnosticoEmpresaRequest */
-    public function actualizarDiagnostico(Empresa $empresa, array $validated): Empresa
+    public function actualizarDiagnostico(EmpresaCaptacion $captacion, array $validated): EmpresaCaptacion
     {
-        $empresa->update($this->columnas($validated, self::CAMPOS_DIAGNOSTICO));
-        return $empresa;
+        $captacion->update($this->columnas($validated, self::CAMPOS_DIAGNOSTICO));
+        return $captacion;
     }
 
     /** @return list<string>  nombres legibles de los datos recomendados que faltan */
-    public static function datosIncompletos(Empresa $empresa): array
+    public static function datosIncompletos(EmpresaCaptacion $captacion): array
     {
         $faltan = [];
         foreach (self::DATOS_RECOMENDADOS as $columna => $nombre) {
-            if (trim((string) $empresa->{$columna}) === '') $faltan[] = $nombre;
+            if (trim((string) $captacion->{$columna}) === '') $faltan[] = $nombre;
         }
         return $faltan;
     }
 
-    public function tieneDiagnosticoMinimo(Empresa $empresa): bool
+    public function tieneDiagnosticoMinimo(EmpresaCaptacion $captacion): bool
     {
         foreach (self::DIAGNOSTICO_MINIMO as $columna) {
-            if (trim((string) $empresa->{$columna}) === '') return false;
+            if (trim((string) $captacion->{$columna}) === '') return false;
         }
         return true;
     }
@@ -150,11 +158,11 @@ class CaptacionEmpresaService
     }
 
     /**
-     * Registra la firma y los consentimientos y deja la empresa pendiente de centro.
+     * Registra la firma y los consentimientos y deja la captación pendiente de validar.
      *
      * @param array<string, mixed> $validated  FirmarEmpresaComercialRequest
      */
-    public function firmar(Empresa $empresa, User $comercial, array $validated, ?string $ip, ?string $userAgent): EmpresaFirma
+    public function firmar(EmpresaCaptacion $captacion, User $comercial, array $validated, ?string $ip, ?string $userAgent): EmpresaFirma
     {
         // Con los textos de ejemplo no se recogen firmas reales (ver config/captacion.php)
         if (app()->isProduction() && !config('captacion.textos_revisados')) {
@@ -162,7 +170,7 @@ class CaptacionEmpresaService
                 'versiones' => 'Los textos legales aún no están revisados: no se puede firmar todavía.',
             ]);
         }
-        if (!$this->tieneDiagnosticoMinimo($empresa)) {
+        if (!$this->tieneDiagnosticoMinimo($captacion)) {
             throw ValidationException::withMessages([
                 'empresa' => 'Completa la entrevista (actividad, tarea que da trabajo y el porqué) antes de firmar.',
             ]);
@@ -175,7 +183,7 @@ class CaptacionEmpresaService
         $consentimientos = $this->consentimientos($validated);
         $ahora = now();
         $snapshot = [
-            'empresa'      => $this->datosFirmados($empresa),
+            'empresa'      => $this->datosFirmados($captacion),
             'firmante'     => [
                 'nombre'     => $validated['firmanteNombre'],
                 'cargo'      => $validated['firmanteCargo'] ?? null,
@@ -186,21 +194,24 @@ class CaptacionEmpresaService
             'firma_sha256'    => hash('sha256', $png),
             'comercial_id'    => $comercial->id,
             'firmado_at'      => $ahora->toIso8601String(),
+            // Firmada sin conexión: firmado_at es cuando el servidor la recibe y la sella; la
+            // hora en que se firmó en la tablet queda aquí, tal como la dio el dispositivo
+            'capturada_en_dispositivo_at' => $validated['capturadaAt'] ?? null,
         ];
 
         // Si algo falla tras escribir el PNG, se borra: nunca queda una firma huérfana en disco
         Storage::disk('local')->put($ruta, $png);
         try {
-            $firma = DB::transaction(function () use ($empresa, $comercial, $validated, $uuid, $ruta, $snapshot, $consentimientos, $ahora, $ip, $userAgent) {
+            $firma = DB::transaction(function () use ($captacion, $comercial, $validated, $uuid, $ruta, $snapshot, $consentimientos, $ahora, $ip, $userAgent) {
                 // Doble toque en «Firmar»: la segunda petición espera aquí y ya no la encuentra en borrador
-                if (!Empresa::whereKey($empresa->id)->lockForUpdate()->first()?->esBorradorCaptacion()) {
+                if (!EmpresaCaptacion::whereKey($captacion->id)->lockForUpdate()->first()?->esBorrador()) {
                     throw ValidationException::withMessages(['firma' => 'Esta entrevista ya está firmada.']);
                 }
 
                 $firma = new EmpresaFirma();
                 $firma->forceFill([
                     'uuid'              => $uuid,
-                    'empresa_id'        => $empresa->id,
+                    'empresa_captacion_id' => $captacion->id,
                     'comercial_user_id' => $comercial->id,
                     'firmante_nombre'   => $validated['firmanteNombre'],
                     'firmante_dni'      => $validated['firmanteDni'],
@@ -224,9 +235,9 @@ class CaptacionEmpresaService
                     ])->save();
                 }
 
-                $empresa->forceFill([
-                    'estado_captacion' => Empresa::CAPTACION_PENDIENTE_CENTRO,
-                    'firmada_at'       => $ahora,
+                $captacion->forceFill([
+                    'estado'     => EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION,
+                    'firmada_at' => $ahora,
                 ])->save();
 
                 return $firma;
@@ -236,47 +247,155 @@ class CaptacionEmpresaService
             throw $e;
         }
 
-        // Aviso in-app a DuaLab: hay una empresa nueva que colocar en centros
+        // Aviso in-app a DuaLab: hay una empresa nueva que validar
         Notification::send(
             User::where('role', User::ROLE_SUPERADMIN)->where('is_blocked', false)->get(),
-            new EmpresaCaptadaPendienteCentro($empresa, $comercial)
+            new EmpresaCaptadaPendienteValidacion($captacion, $comercial)
         );
 
         return $firma;
     }
 
     /**
-     * Coloca la empresa en estos centros (reemplaza la lista). A partir de aquí la ven los
-     * docentes de esos centros como una empresa real más (solo lectura del diagnóstico).
+     * Valida la captación y la coloca en estos centros (tabla centro_empresa). A partir de aquí
+     * la ven los docentes de esos centros como una empresa real más.
+     *  - Sin $empresaExistenteId: crea la empresa en `empresas` (real, sin centro propio) con sus
+     *    datos, familias y diagnóstico.
+     *  - Con $empresaExistenteId (la misma empresa ya estaba en Base de datos): no se duplica; se
+     *    completa lo que le falte sin pisar lo que ya tiene y se añaden familias y centros.
+     * Si la captación ya estaba validada, solo cambia los centros en los que está colocada.
      *
      * @param int[] $centroIds
      */
-    public function asignarCentros(Empresa $empresa, array $centroIds, User $superadmin): Empresa
+    public function validar(EmpresaCaptacion $captacion, array $centroIds, User $superadmin, ?int $empresaExistenteId = null): Empresa
     {
-        if (!in_array($empresa->estado_captacion, [Empresa::CAPTACION_PENDIENTE_CENTRO, Empresa::CAPTACION_ASIGNADA], true)) {
+        if (!in_array($captacion->estado, [EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION, EmpresaCaptacion::ESTADO_VALIDADA], true)) {
             throw ValidationException::withMessages([
-                'centro_ids' => 'Esta empresa todavía no tiene la entrevista firmada.',
+                'centro_ids' => $captacion->esBorrador()
+                    ? 'Esta entrevista todavía no está firmada.'
+                    : 'Esta captación está descartada.',
             ]);
         }
 
-        DB::transaction(function () use ($empresa, $centroIds, $superadmin) {
-            $empresa->centrosAsignados()->sync(
-                collect($centroIds)->mapWithKeys(fn ($id) => [(int) $id => ['asignada_por_user_id' => $superadmin->id]])->all()
-            );
-            $empresa->forceFill(['estado_captacion' => Empresa::CAPTACION_ASIGNADA])->save();
-        });
+        return DB::transaction(function () use ($captacion, $centroIds, $superadmin, $empresaExistenteId) {
+            $captacion = EmpresaCaptacion::whereKey($captacion->id)->lockForUpdate()->firstOrFail();
+            $columnas  = $captacion->only(array_merge(array_values(self::CAMPOS_EMPRESA), array_values(self::CAMPOS_DIAGNOSTICO)));
+            $intereses = collect($captacion->familias ?? [])->mapWithKeys(fn ($f) => [$f['nombre'] => (string) ($f['interes'] ?? '')]);
+            $centros   = collect($centroIds)->mapWithKeys(fn ($id) => [(int) $id => ['asignada_por_user_id' => $superadmin->id]])->all();
 
-        return $empresa;
+            $empresa = $captacion->empresa;
+            if ($empresa) {
+                // Ya validada: «Cambiar centros» reemplaza la lista
+                $empresa->centrosAsignados()->sync($centros);
+            } elseif ($empresaExistenteId) {
+                $empresa = Empresa::whereKey($empresaExistenteId)->where('es_simulada', false)->where('es_catalogo', false)->first();
+                if (!$empresa) {
+                    throw ValidationException::withMessages(['empresa_existente_id' => 'Solo se puede fusionar con una empresa real de Base de datos.']);
+                }
+                // Completar sin pisar: solo lo que la empresa tiene vacío
+                $empresa->update(array_filter($columnas, fn ($v, $col) => filled($v) && blank($empresa->{$col}), ARRAY_FILTER_USE_BOTH));
+                $this->familias->anadirPorNombre($empresa->id, $captacion->nombresFamilias());
+                $this->familias->guardarIntereses($empresa->id, $intereses
+                    ->filter(fn ($interes, $familia) => $interes !== '' && blank($this->familias->interes($empresa->id, $familia)))->all());
+                $empresa->centrosAsignados()->syncWithoutDetaching($centros);
+            } else {
+                $empresa = Empresa::create($columnas + ['es_simulada' => false, 'centro_id' => null]);
+                $this->familias->anadirPorNombre($empresa->id, $captacion->nombresFamilias());
+                $this->familias->guardarIntereses($empresa->id, $intereses->all());
+                $empresa->centrosAsignados()->sync($centros);
+            }
+
+            $captacion->forceFill([
+                'estado'               => EmpresaCaptacion::ESTADO_VALIDADA,
+                'empresa_id'           => $empresa->id,
+                'revisada_por_user_id' => $superadmin->id,
+                'revisada_at'          => $captacion->revisada_at ?? now(),
+            ])->save();
+
+            return $empresa;
+        });
+    }
+
+    /**
+     * Empresas reales de Base de datos que podrían ser esta misma (mismo CIF o nombre parecido),
+     * o las que coincidan con la búsqueda del superadmin.
+     *
+     * @return \Illuminate\Support\Collection<int, Empresa>
+     */
+    public function coincidencias(EmpresaCaptacion $captacion, ?string $busqueda): \Illuminate\Support\Collection
+    {
+        $termino  = trim((string) ($busqueda ?: $captacion->nombre_comercial));
+        $cif      = strtoupper((string) preg_replace('/[\s.-]/', '', (string) $captacion->cif));
+        $palabras = collect(preg_split('/\s+/u', mb_strtolower($termino)) ?: [])
+            ->filter(fn ($p) => mb_strlen($p) > 3 && !in_array($p, ['empresa', 'grupo', 'servicios'], true))
+            ->take(4);
+        $like = fn (string $t) => '%' . addcslashes($t, '%_\\') . '%';
+
+        return Empresa::query()
+            ->where('es_simulada', false)->where('es_catalogo', false)
+            ->where(function ($q) use ($termino, $palabras, $cif, $busqueda, $like) {
+                $q->where('nombre_comercial', 'like', $like($termino))->orWhere('razon_social', 'like', $like($termino));
+                foreach ($palabras as $p) $q->orWhere('nombre_comercial', 'like', $like($p));
+                if ($cif !== '' && !$busqueda) $q->orWhere('cif', $cif);
+            })
+            ->with('centroEducativo:id,nombre')
+            ->orderBy('nombre_comercial')
+            ->take(8)
+            ->get(['id', 'nombre_comercial', 'razon_social', 'cif', 'municipio', 'centro_id']);
+    }
+
+    /** No se usa (spam, duplicada, la empresa no sigue adelante). Queda registrada, no se borra. */
+    public function descartar(EmpresaCaptacion $captacion, User $superadmin, ?string $motivo): void
+    {
+        if ($captacion->estado !== EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION) {
+            throw ValidationException::withMessages(['captacion' => 'Solo se pueden descartar captaciones pendientes de validar.']);
+        }
+
+        DB::transaction(function () use ($captacion, $superadmin, $motivo) {
+            $captacion->forceFill([
+                'estado'               => EmpresaCaptacion::ESTADO_DESCARTADA,
+                'revisada_por_user_id' => $superadmin->id,
+                'revisada_at'          => now(),
+                'motivo_descarte'      => $motivo,
+            ])->save();
+            // Sus retos de demostración ya no se publicarán
+            $captacion->borradores()->where('estado', MicroretoBorrador::ESTADO_PENDIENTE)->update([
+                'estado'               => MicroretoBorrador::ESTADO_DESCARTADO,
+                'revisado_por_user_id' => $superadmin->id,
+                'revisado_at'          => now(),
+            ]);
+        });
     }
 
     /** @return array{empresas_pendientes: int, retos_pendientes: int} */
     public function resumenPendientes(): array
     {
         return [
-            'empresas_pendientes' => Empresa::where('estado_captacion', Empresa::CAPTACION_PENDIENTE_CENTRO)->count(),
-            'retos_pendientes'    => \App\Models\MicroretoBorrador::where('estado', \App\Models\MicroretoBorrador::ESTADO_PENDIENTE)
-                ->whereHas('empresa', fn ($q) => $q->whereNull('deleted_at'))->count(),
+            'empresas_pendientes' => EmpresaCaptacion::where('estado', EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION)->count(),
+            'retos_pendientes'    => MicroretoBorrador::where('estado', MicroretoBorrador::ESTADO_PENDIENTE)
+                ->whereHas('captacion', fn ($q) => $q->whereIn('estado', [EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION, EmpresaCaptacion::ESTADO_VALIDADA]))
+                ->count(),
         ];
+    }
+
+    /**
+     * [{ nombre, interes }] en el orden de $nombres; el interés llega en $intereses o se
+     * conserva el que ya tenía esa familia.
+     *
+     * @param array<int, string> $nombres
+     * @param array<string, mixed> $intereses
+     * @param array<int, array<string, mixed>> $actuales
+     * @return list<array{nombre: string, interes: string|null}>
+     */
+    private function familiasConInteres(array $nombres, array $intereses, array $actuales): array
+    {
+        $previos = collect($actuales)->mapWithKeys(fn ($f) => [$f['nombre'] ?? '' => $f['interes'] ?? null]);
+        return array_values(array_map(fn ($nombre) => [
+            'nombre'  => (string) $nombre,
+            'interes' => array_key_exists($nombre, $intereses)
+                ? (trim((string) $intereses[$nombre]) ?: null)
+                : $previos->get($nombre),
+        ], array_unique($nombres)));
     }
 
     /**
@@ -300,13 +419,11 @@ class CaptacionEmpresaService
      *
      * @return array<string, mixed>
      */
-    private function datosFirmados(Empresa $empresa): array
+    private function datosFirmados(EmpresaCaptacion $captacion): array
     {
-        $datos = $empresa->only(array_merge(array_values(self::CAMPOS_EMPRESA), array_values(self::CAMPOS_DIAGNOSTICO)));
-        $datos['id'] = $empresa->id;
-        $datos['familias'] = $empresa->familias()->get()
-            ->map(fn ($f) => ['nombre' => $f->nombre, 'interes' => $f->pivot?->getAttribute('interes')])
-            ->values()->all();
+        $datos = $captacion->only(array_merge(array_values(self::CAMPOS_EMPRESA), array_values(self::CAMPOS_DIAGNOSTICO)));
+        $datos['captacion_id'] = $captacion->id;
+        $datos['familias'] = $captacion->familias ?? [];
         return $datos;
     }
 

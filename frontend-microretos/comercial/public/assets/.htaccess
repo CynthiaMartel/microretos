@@ -1,0 +1,6 @@
+# Todo lo que Vite deja en /assets lleva un hash en el nombre (index-Bs1xmL_r.css): si el
+# contenido cambia, cambia el nombre. Por eso el navegador puede guardarlo un año sin
+# volver a preguntar. Solo afecta a esta carpeta; el frontoffice vive en /home/assets.
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

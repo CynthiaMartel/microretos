@@ -1,21 +1,29 @@
 <!-- Familias profesionales con las que quiere trabajar la empresa: buscador con desplegable
      (las 30 familias no caben como chips en una tablet) y filtro «Con retos disponibles», como
      en los filtros del resto de vistas. Las elegidas quedan como píldoras quitables, cada una con
-     su «para qué querría a este alumnado».
-     v-model: nombres de familia · v-model:intereses: { [familia]: texto } -->
+     su «para qué querría a este alumnado» (con-interes, en empresas).
+     v-model: nombres de familia · v-model:intereses: { [familia]: texto }
+     maximo: tope de familias (centros: 4, como el formulario web); 0 = sin tope
+     Las familias prioritarias de DuaLab salen primero («Nuestro fuerte») y, antes del buscador,
+     un aviso fijo le recuerda al comercial que se lo cuente a la empresa o al centro antes de
+     preguntar qué familias le interesan (config/familiasPrioritarias.js). -->
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import FiltroSegmentado from '../../src/components/FiltroSegmentado.vue'
 import { iconoFiltro } from '../../src/config/iconosFiltro.js'
 import { ejemploInteres } from '../../src/config/ejemplosInteresFamilia.js'
+import { FAMILIAS_PRIORITARIAS, esPrioritaria, AVISO_OTRAS_FAMILIAS } from '../../src/config/familiasPrioritarias.js'
 
 const seleccion = defineModel({ type: Array, default: () => [] })
 const intereses = defineModel('intereses', { type: Object, default: () => ({}) })
 
 const props = defineProps({
-  opciones: { type: Array, default: () => [] }, // [{ id, nombre, con_datos_retos }]
-  error:    { type: String, default: '' },
+  opciones:   { type: Array, default: () => [] }, // [{ id, nombre, con_datos_retos }]
+  error:      { type: String, default: '' },
+  conInteres: { type: Boolean, default: true },
+  maximo:     { type: Number, default: 0 },
 })
+const lleno = computed(() => props.maximo > 0 && seleccion.value.length >= props.maximo)
 
 const busqueda = ref('')
 const soloConRetos = ref('')
@@ -25,8 +33,11 @@ const raiz = ref(null)
 const normalizar = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const filtradas = computed(() => {
   const q = normalizar(busqueda.value.trim())
-  return props.opciones.filter(f =>
+  const lista = props.opciones.filter(f =>
     (!soloConRetos.value || f.con_datos_retos) && (!q || normalizar(f.nombre).includes(q)))
+  // Prioritarias primero, en su orden; el resto como llega
+  const orden = (f) => esPrioritaria(f.nombre) ? FAMILIAS_PRIORITARIAS.indexOf(f.nombre) : FAMILIAS_PRIORITARIAS.length
+  return [...lista].sort((a, b) => orden(a) - orden(b))
 })
 const conRetos = computed(() => props.opciones.filter(f => f.con_datos_retos).length)
 
@@ -34,6 +45,7 @@ function alternar(nombre) {
   if (seleccion.value.includes(nombre)) {
     quitar(nombre)
   } else {
+    if (lleno.value) return
     seleccion.value = [...seleccion.value, nombre]
     intereses.value = { ...intereses.value, [nombre]: intereses.value[nombre] ?? '' }
   }
@@ -54,6 +66,19 @@ onUnmounted(() => { document.removeEventListener('pointerdown', fuera); document
 
 <template>
   <div class="space-y-4">
+    <!-- Antes de preguntar: lo que el comercial cuenta primero -->
+    <div role="note" class="flex items-start gap-3 rounded-2xl border border-rol/30 bg-rol/10 p-4">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rol-fuerte text-lg font-black leading-none text-white" aria-hidden="true">!</span>
+      <div class="min-w-0 text-sm text-azul-noche">
+        <p class="font-bold">Antes de preguntar qué familias le interesan, cuéntale:</p>
+        <p class="mt-1">
+          Nuestro fuerte son
+          <template v-for="(f, i) in FAMILIAS_PRIORITARIAS" :key="f"><strong class="parpadeo">{{ f }}</strong>{{ i < FAMILIAS_PRIORITARIAS.length - 2 ? ', ' : (i === FAMILIAS_PRIORITARIAS.length - 2 ? ' y ' : '.') }}</template>
+          {{ AVISO_OTRAS_FAMILIAS }}
+        </p>
+      </div>
+    </div>
+
     <div class="flex flex-col gap-3 md:flex-row md:items-end">
       <!-- Buscador con desplegable -->
       <div ref="raiz" class="relative min-w-0 flex-1">
@@ -73,25 +98,28 @@ onUnmounted(() => { document.removeEventListener('pointerdown', fuera); document
         <ul v-if="abierto" id="sf-lista" role="listbox" aria-multiselectable="true"
             class="absolute inset-x-0 top-full z-30 mt-1 max-h-[min(20rem,50dvh)] overflow-y-auto rounded-xl border border-borde bg-white p-1 shadow-xl">
           <li v-for="f in filtradas" :key="f.id" role="option" :aria-selected="seleccion.includes(f.nombre)">
-            <button type="button" class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
-                    @click="alternar(f.nombre)">
+            <button type="button" class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    :disabled="lleno && !seleccion.includes(f.nombre)" @click="alternar(f.nombre)">
               <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2"
                     :class="seleccion.includes(f.nombre) ? 'border-rol-fuerte bg-rol-fuerte text-white' : 'border-borde-campo'" aria-hidden="true">
                 <svg v-if="seleccion.includes(f.nombre)" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
               </span>
               <span class="min-w-0 flex-1 break-words font-semibold text-azul-noche">{{ f.nombre }}</span>
-              <span v-if="f.con_datos_retos" class="shrink-0 rounded-full bg-empresas/10 px-2 py-0.5 text-xs font-semibold text-empresas-dark">Con retos</span>
+              <span v-if="esPrioritaria(f.nombre)" class="parpadeo shrink-0 rounded-full bg-rol-fuerte px-2 py-0.5 text-xs font-semibold text-white">Nuestro fuerte</span>
+              <span v-else-if="f.con_datos_retos" class="shrink-0 rounded-full bg-empresas/10 px-2 py-0.5 text-xs font-semibold text-empresas-dark">Con retos</span>
             </button>
           </li>
           <li v-if="!filtradas.length" class="px-3 py-4 text-sm text-gray-500">Ninguna familia coincide con «{{ busqueda }}».</li>
+          <li v-if="lleno" class="px-3 py-2 text-xs font-semibold text-amber-800">Máximo {{ maximo }} familias: quita una para elegir otra.</li>
         </ul>
       </div>
 
-      <FiltroSegmentado v-model="soloConRetos" label="Mostrar"
+      <FiltroSegmentado v-if="conInteres" v-model="soloConRetos" label="Mostrar"
                         :opciones="[{ value: '', label: 'Todas', count: opciones.length }, { value: 'retos', label: 'Con retos disponibles', count: conRetos }]" />
     </div>
 
     <p v-if="error" class="error-campo ml-0">{{ error }}</p>
+
 
     <!-- Elegidas -->
     <p v-if="!seleccion.length" class="rounded-xl border border-dashed border-borde-campo px-4 py-3 text-sm text-texto-secundario">
@@ -109,10 +137,26 @@ onUnmounted(() => { document.removeEventListener('pointerdown', fuera); document
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <label :for="`sf-interes-${nombre}`" class="label-style mt-3">Para qué querría a este alumnado <span class="normal-case tracking-normal">(opcional)</span></label>
-        <textarea :id="`sf-interes-${nombre}`" :value="intereses[nombre] ?? ''" rows="2" maxlength="500" class="input-style"
-                  :placeholder="ejemploInteres(nombre)" @input="cambiarInteres(nombre, $event.target.value)" />
+        <template v-if="conInteres">
+          <label :for="`sf-interes-${nombre}`" class="label-style mt-3">Para qué querría a este alumnado <span class="normal-case tracking-normal">(opcional)</span></label>
+          <textarea :id="`sf-interes-${nombre}`" :value="intereses[nombre] ?? ''" rows="2" maxlength="500" class="input-style"
+                    :placeholder="ejemploInteres(nombre)" @input="cambiarInteres(nombre, $event.target.value)" />
+        </template>
       </li>
     </ul>
   </div>
 </template>
+
+<style scoped>
+/* Parpadeo suave para que el comercial no pase por alto las familias prioritarias: un ciclo
+   cada 1,6 s (muy por debajo del límite de 3 destellos por segundo de WCAG 2.3.1) y quieto
+   si el sistema pide reducir el movimiento */
+.parpadeo { animation: parpadeo 1.6s ease-in-out infinite; }
+@keyframes parpadeo {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .parpadeo { animation: none; }
+}
+</style>

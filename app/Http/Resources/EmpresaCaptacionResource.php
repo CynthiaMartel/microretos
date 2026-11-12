@@ -6,10 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Empresa captada por un comercial: lo que rellena en la entrevista y su estado. La firma
- * solo se resume (quién firmó, cuándo, qué aceptó): el DNI, el email y la imagen no salen.
+ * Empresa captada (empresa_captaciones): lo que se rellenó en la entrevista y su estado. La
+ * firma solo se resume (quién firmó, cuándo, qué aceptó): el DNI, el email y la imagen no salen.
  */
-/** @mixin \App\Models\Empresa */
+/** @mixin \App\Models\EmpresaCaptacion */
 class EmpresaCaptacionResource extends JsonResource
 {
     /** @return array<string, mixed> */
@@ -42,18 +42,26 @@ class EmpresaCaptacionResource extends JsonResource
             'restricciones'        => $this->restricciones,
             'lo_que_no_quieren'    => $this->lo_que_no_quieren,
             'expectativas_alumno'  => $this->expectativas_alumno,
+            'notas'                => $this->notas, // formulario web: lo que no tiene columna propia
 
-            'familias'             => $this->whenLoaded('familias', fn () => $this->familias
-                ->map(fn ($f) => ['nombre' => $f->nombre, 'interes' => $f->pivot?->getAttribute('interes')])->values()),
+            'familias'             => array_values(array_map(fn ($f) => [
+                'nombre' => $f['nombre'] ?? '', 'interes' => $f['interes'] ?? null,
+            ], $this->familias ?? [])),
 
-            'estado_captacion'     => $this->estado_captacion,
+            'estado'               => $this->estado,
+            'origen'               => $this->whenLoaded('origen', fn () => ['clave' => $this->origen?->clave, 'nombre' => $this->origen?->nombre]),
             // Datos recomendados que no se recogieron en la entrevista (aviso al superadmin)
             'datos_incompletos'    => \App\Services\CaptacionEmpresaService::datosIncompletos($this->resource),
             'firmada_at'           => $this->firmada_at?->toIso8601String(),
             'created_at'           => $this->created_at?->toIso8601String(),
             'comercial'            => $this->whenLoaded('creadaPor', fn () => $this->creadaPor?->name),
-            'centros'              => $this->whenLoaded('centrosAsignados', fn () => $this->centrosAsignados
-                ->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->values()),
+            'revisada_at'          => $this->revisada_at?->toIso8601String(),
+            'motivo_descarte'      => $this->motivo_descarte,
+            // Validada: la empresa de DuaLab que se creó y los centros en los que está colocada
+            'empresa_id'           => $this->empresa_id,
+            'centros'              => $this->whenLoaded('empresa', fn () => $this->empresa
+                ? $this->empresa->centrosAsignados->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->values()
+                : []),
             'borradores_pendientes' => $this->whenCounted('borradores'),
             'firma'                => $firma ? [
                 'uuid'             => $firma->uuid,
@@ -62,7 +70,12 @@ class EmpresaCaptacionResource extends JsonResource
                 'firmado_at'       => $firma->firmado_at->toIso8601String(),
                 'documento_sha256' => $firma->documento_sha256,
                 'consentimientos'  => $firma->relationLoaded('consentimientos')
-                    ? $firma->consentimientos->map(fn ($c) => ['clave' => $c->clave, 'version' => $c->version, 'aceptado' => $c->aceptado])->values()
+                    ? $firma->consentimientos->map(fn ($c) => [
+                        'clave' => $c->clave, 'version' => $c->version, 'aceptado' => $c->aceptado,
+                        // Nombre legible del texto (las claves de config/captacion.php pueden cambiar)
+                        'nombre' => config("captacion.textos.{$c->clave}.titulo")
+                            ?? (($cesionaria = config("captacion.cesiones.{$c->clave}.cesionaria")) ? "Cesión a {$cesionaria}" : $c->clave),
+                    ])->values()
                     : null,
             ] : null,
         ];

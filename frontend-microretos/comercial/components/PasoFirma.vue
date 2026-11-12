@@ -3,7 +3,8 @@
      y firma. Tras firmar, la entrevista ya no se puede cambiar y DuaLab la coloca en centros. -->
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { getTextosLegales, firmarEmpresaCaptada } from '../../src/services/comercialService.js'
+import { getTextosLegales } from '../../src/services/comercialService.js'
+import { firmar as firmarEntrevista, conCache } from '../offline/entrevistasLocales.js'
 import LienzoFirma from './LienzoFirma.vue'
 
 const props = defineProps({
@@ -34,10 +35,12 @@ const CASILLA_OBLIGATORIA = { aviso_legal: 'aceptaAvisoLegal', info_rgpd: 'acept
 
 onMounted(async () => {
   try {
-    textos.value = (await getTextosLegales()).data
+    // Sin conexión, los últimos textos guardados en la tablet. Si DuaLab los cambia antes de
+    // enviar la firma, el servidor la rechaza (versiones) y habrá que volver a firmar.
+    textos.value = await conCache('textos-legales', getTextosLegales)
     for (const c of textos.value.cesiones) cesiones[c.clave] = false
   } catch {
-    error.value = 'No se han podido cargar los textos legales. Comprueba la conexión.'
+    error.value = 'No se han podido cargar los textos legales. Conéctate una vez para guardarlos en la tablet.'
   } finally {
     cargando.value = false
   }
@@ -53,7 +56,8 @@ async function firmar() {
   firmando.value = true
   try {
     const versiones = Object.fromEntries([...textos.value.textos, ...textos.value.cesiones].map(t => [t.clave, t.version]))
-    const { data } = await firmarEmpresaCaptada(props.empresa.id, {
+    // Sin conexión se guarda cifrada en la tablet; el servidor la sella al recibirla
+    const datos = await firmarEntrevista(props.empresa, {
       firmanteNombre: form.firmanteNombre.trim(),
       firmanteDni: form.firmanteDni.trim(),
       firmanteCargo: form.firmanteCargo.trim() || null,
@@ -64,11 +68,11 @@ async function firmar() {
       versiones,
       firma: lienzo.value.png(),
     })
-    emit('firmada', data.data)
+    emit('firmada', datos)
   } catch (err) {
     errores.value = err.response?.data?.errors ?? {}
     const primero = Object.values(errores.value)[0]?.[0]
-    error.value = primero || err.response?.data?.error || 'No se ha podido registrar la firma.'
+    error.value = primero || err.response?.data?.error || err.message || 'No se ha podido registrar la firma.'
   } finally {
     firmando.value = false
   }

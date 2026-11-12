@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Http\Controllers\MicroretoIAController;
-use App\Http\Requests\GenerarMicroretoRequest;
+use App\Http\Requests\GenerarRetoCaptacionRequest;
 use App\Models\CicloFormativo;
-use App\Models\Empresa;
+use App\Models\EmpresaCaptacion;
 use App\Models\Familia;
 use App\Models\Microreto;
 use App\Models\MicroretoBorrador;
@@ -16,8 +16,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Retos que el comercial genera delante de la empresa (demostración). Se guardan como
- * borradores (microreto_borradores) y solo llegan a la biblioteca cuando el superadmin los
- * publica en uno o varios centros de la empresa: un Microreto por centro.
+ * borradores (microreto_borradores) de la captación y solo llegan a la biblioteca cuando el
+ * superadmin, con la captación ya validada, los publica en uno o varios centros de su empresa:
+ * un Microreto por centro.
  */
 class BorradorRetoService
 {
@@ -41,21 +42,21 @@ class BorradorRetoService
 
     /**
      * Genera los retos con la misma lógica y el mismo prompt que el Generador de Retos
-     * (MicroretoIAController::generar), con los datos de la empresa guardados en la BD.
+     * (MicroretoIAController::generar), con los datos guardados en la captación.
      *
      * @param array<string, mixed> $validated  GenerarRetosComercialRequest
      * @return Collection<int, MicroretoBorrador>
      */
-    public function generar(Empresa $empresa, User $comercial, array $validated): Collection
+    public function generar(EmpresaCaptacion $captacion, User $comercial, array $validated): Collection
     {
-        if (!$this->captacion->tieneDiagnosticoMinimo($empresa)) {
+        if (!$this->captacion->tieneDiagnosticoMinimo($captacion)) {
             throw ValidationException::withMessages([
                 'empresa' => 'Completa primero la entrevista (actividad, tarea que da trabajo y el porqué).',
             ]);
         }
 
         $familia = Familia::where('nombre', $validated['familia'])->first();
-        if (!$familia || !$empresa->familias()->whereKey($familia->id)->exists()) {
+        if (!$familia || !in_array($familia->nombre, $captacion->nombresFamilias(), true)) {
             throw ValidationException::withMessages(['familia' => 'Esa familia no está vinculada a la empresa.']);
         }
         $ciclo = CicloFormativo::whereKey($validated['ciclo_id'])->where('familia_id', $familia->id)->first();
@@ -64,20 +65,21 @@ class BorradorRetoService
         }
 
         $esAmbos = $validated['cursoSeleccionado'] === 'ambos_cursos';
-        $peticion = $this->peticionGenerar($comercial, [
-            'empresa_id'         => $empresa->id,
-            'empresaNombre'      => $empresa->nombre_comercial,
-            'empresaSector'      => $empresa->sector ?: 'Sin especificar',
-            'empresaTamano'      => $empresa->tamano,
-            'empresaUbicacion'   => collect([$empresa->municipio, $empresa->provincia])->filter()->implode(', ') ?: null,
-            'diaANormal'         => $empresa->dia_a_normal,
-            'friccionArea'       => $empresa->friccion_area,
-            'friccionProblema'   => $empresa->friccion_problema,
-            'restricciones'      => $empresa->restricciones,
-            'loQueNoQuieren'     => $empresa->lo_que_no_quieren,
-            'expectativasAlumno' => $empresa->expectativas_alumno,
+        $interes = collect($captacion->familias ?? [])->firstWhere('nombre', $familia->nombre)['interes'] ?? null;
+        $peticion = $this->peticionGenerar($comercial, (string) $captacion->actividad, [
+            'interesReto'        => $interes ? mb_substr((string) $interes, 0, 500) : null,
+            'empresaNombre'      => $captacion->nombre_comercial,
+            'empresaSector'      => $captacion->sector ?: 'Sin especificar',
+            'empresaTamano'      => $captacion->tamano,
+            'empresaUbicacion'   => collect([$captacion->municipio, $captacion->provincia])->filter()->implode(', ') ?: null,
+            'diaANormal'         => $captacion->dia_a_normal,
+            'friccionArea'       => $captacion->friccion_area,
+            'friccionProblema'   => $captacion->friccion_problema,
+            'restricciones'      => $captacion->restricciones,
+            'loQueNoQuieren'     => $captacion->lo_que_no_quieren,
+            'expectativasAlumno' => $captacion->expectativas_alumno,
             // La columna guarda las opciones unidas con ", "; generar() las vuelve a unir igual
-            'consecuencias'      => $this->consecuenciasComoLista($empresa->consecuencias),
+            'consecuencias'      => $this->consecuenciasComoLista($captacion->consecuencias),
             'ciclo_nombre'       => $ciclo->nombre,
             'ciclo_id'           => $ciclo->id,
             'nivelGrupo'         => $validated['nivelGrupo'],
@@ -99,7 +101,7 @@ class BorradorRetoService
 
         $modulo = $esAmbos ? 'Transversal (1º y 2º)' : "A determinar por IA ({$validated['cursoSeleccionado']}º Curso)";
 
-        return DB::transaction(fn () => collect($retos)->map(function (array $reto) use ($empresa, $comercial, $ciclo, $familia, $validated, $esAmbos, $modulo) {
+        return DB::transaction(fn () => collect($retos)->map(function (array $reto) use ($captacion, $comercial, $ciclo, $familia, $validated, $esAmbos, $modulo) {
             $datos = array_intersect_key($reto, array_flip(array_merge(self::CAMPOS_RETO, self::CAMPOS_FIRMA)));
             $datos = $this->limpiar($datos);
             $datos += [
@@ -113,7 +115,7 @@ class BorradorRetoService
 
             $borrador = new MicroretoBorrador();
             $borrador->forceFill([
-                'empresa_id'         => $empresa->id,
+                'empresa_captacion_id' => $captacion->id,
                 'creado_por_user_id' => $comercial->id,
                 'ciclo_id'           => $ciclo->id,
                 'familia'            => $familia->nombre,
@@ -126,19 +128,23 @@ class BorradorRetoService
     }
 
     /**
-     * Publica el borrador en estos centros (tienen que ser centros de la empresa): crea un
-     * Microreto en cada uno, igual que si lo hubiera guardado un docente de ese centro.
+     * Publica el borrador en estos centros (tienen que ser centros de la empresa en la que se
+     * validó la captación): crea un Microreto en cada uno, igual que si lo hubiera guardado un
+     * docente de ese centro.
      *
      * @param int[] $centroIds
      * @return Collection<int, Microreto>
      */
     public function publicar(MicroretoBorrador $borrador, array $centroIds, User $superadmin): Collection
     {
-        $empresa = $borrador->empresa;
         if ($borrador->estado !== MicroretoBorrador::ESTADO_PENDIENTE) {
             throw ValidationException::withMessages(['borrador' => 'Este reto ya se ha revisado.']);
         }
-        if (!$empresa || $empresa->trashed()) {
+        $empresa = $borrador->captacion?->empresa;
+        if (!$empresa) {
+            throw ValidationException::withMessages(['borrador' => 'Valida antes la empresa: el reto se publica en los centros donde la coloques.']);
+        }
+        if ($empresa->trashed()) {
             throw ValidationException::withMessages(['borrador' => 'La empresa de este reto ya no existe.']);
         }
 
@@ -146,7 +152,7 @@ class BorradorRetoService
         $ajenos = collect($centroIds)->map(fn ($id) => (int) $id)->diff($centrosEmpresa);
         if ($centrosEmpresa->isEmpty() || $ajenos->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'centro_ids' => 'Solo se puede publicar en centros en los que esté colocada la empresa. Colócala antes en Base de datos.',
+                'centro_ids' => 'Solo se puede publicar en centros en los que esté colocada la empresa.',
             ]);
         }
 
@@ -208,9 +214,10 @@ class BorradorRetoService
      */
     public function centrosSinElCiclo(MicroretoBorrador $borrador): Collection
     {
-        if (!$borrador->ciclo_id || !$borrador->empresa) return collect();
+        $empresa = $borrador->captacion?->empresa;
+        if (!$borrador->ciclo_id || !$empresa) return collect();
 
-        return $borrador->empresa->centrosAsignados()
+        return $empresa->centrosAsignados()
             ->whereNotExists(fn ($q) => $q->from('centro_ciclo')
                 ->whereColumn('centro_ciclo.centro_id', 'centro_educativo.id')
                 ->where('centro_ciclo.ciclo_id', $borrador->ciclo_id))
@@ -229,14 +236,16 @@ class BorradorRetoService
     }
 
     /**
-     * GenerarMicroretoRequest sintética con el comercial como usuario: se valida igual que una
-     * petición real (mismo patrón que los comandos demo:*, ver InvocaControladoresReales).
+     * Petición sintética con el comercial como usuario: se valida igual que una petición real
+     * del Generador (mismo patrón que los comandos demo:*, ver InvocaControladoresReales), pero
+     * sin empresa_id: la captación aún no es una empresa (GenerarRetoCaptacionRequest).
      *
      * @param array<string, mixed> $datos
      */
-    private function peticionGenerar(User $usuario, array $datos): GenerarMicroretoRequest
+    private function peticionGenerar(User $usuario, string $actividad, array $datos): GenerarRetoCaptacionRequest
     {
-        $request = GenerarMicroretoRequest::create('/', 'POST', array_filter($datos, fn ($v) => $v !== null));
+        $request = GenerarRetoCaptacionRequest::create('/', 'POST', array_filter($datos, fn ($v) => $v !== null));
+        $request->actividadCaptacion = $actividad;
         $request->setUserResolver(fn () => $usuario);
         $request->setContainer(app());
         $request->setRedirector(app('redirect'));

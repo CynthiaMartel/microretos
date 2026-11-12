@@ -677,6 +677,8 @@ class DatosFPController extends Controller
             ->withExists(['familias as disponible_para_retos' => fn ($q) => $q->conDatosParaRetos()])
             // Aviso del modal de eliminar: cuántos retos quedarán marcados con la empresa en la papelera
             ->withCount('microretos')
+            // Por dónde llegó si vino de una captación (1 = entrevista, 2 = formulario web): una subconsulta, sin N+1
+            ->withMin('captaciones', 'origen_id')
             ->orderBy('nombre_comercial')
             ->take(self::MAX_EMPRESAS_LISTADO)
             ->get();

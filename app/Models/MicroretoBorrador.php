@@ -35,10 +35,10 @@ class MicroretoBorrador extends Model
         });
     }
 
-    /** @return BelongsTo<Empresa, $this> */
-    public function empresa(): BelongsTo
+    /** @return BelongsTo<EmpresaCaptacion, $this> Se publica en los centros de su empresa ya validada */
+    public function captacion(): BelongsTo
     {
-        return $this->belongsTo(Empresa::class, 'empresa_id')->withTrashed();
+        return $this->belongsTo(EmpresaCaptacion::class, 'empresa_captacion_id');
     }
 
     /** @return BelongsTo<User, $this> */

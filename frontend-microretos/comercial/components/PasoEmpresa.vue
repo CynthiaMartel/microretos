@@ -3,7 +3,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { getFamilias } from '../../src/services/datosFPService.js'
-import { crearEmpresaCaptada, actualizarEmpresaCaptada } from '../../src/services/comercialService.js'
+import { guardarEmpresa, conCache } from '../offline/entrevistasLocales.js'
 import { SECTORES_EMPRESA } from '../../src/config/sectoresEmpresa.js'
 import { TAMANOS_EMPRESA } from '../../src/config/tamanosEmpresa.js'
 import SelectorFamilias from './SelectorFamilias.vue'
@@ -33,9 +33,10 @@ const guardando = ref(false)
 
 onMounted(async () => {
   try {
-    familias.value = (await getFamilias()).data
+    // Sin conexión, la última lista guardada en la tablet
+    familias.value = await conCache('familias', getFamilias)
   } catch {
-    error.value = 'No se han podido cargar las familias profesionales. Comprueba la conexión.'
+    error.value = 'No se han podido cargar las familias profesionales. Conéctate una vez para guardarlas en la tablet.'
   }
 })
 
@@ -59,13 +60,11 @@ async function guardar() {
     interesesFamilia: Object.fromEntries(familiasSel.value.map(n => [n, (intereses.value[n] ?? '').trim()])),
   }
   try {
-    const { data } = props.empresa
-      ? await actualizarEmpresaCaptada(props.empresa.id, payload)
-      : await crearEmpresaCaptada(payload)
-    emit('guardada', data.data)
+    // Sin conexión se guarda en la tablet y se envía después
+    emit('guardada', await guardarEmpresa(props.empresa, payload))
   } catch (err) {
     errores.value = err.response?.data?.errors ?? {}
-    error.value = err.response?.data?.error || err.response?.data?.message || 'No se ha podido guardar la empresa.'
+    error.value = err.response?.data?.error || err.response?.data?.message || err.message || 'No se ha podido guardar la empresa.'
   } finally {
     guardando.value = false
   }

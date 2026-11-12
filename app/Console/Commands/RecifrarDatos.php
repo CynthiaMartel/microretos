@@ -36,11 +36,14 @@ class RecifrarDatos extends Command
         'equipo_tareas'      => ['responsable'],                      // EquipoTarea
         'equipo_reflexiones' => ['autor_nombre'],                     // EquipoReflexion
         'empresa_firmas'     => ['firmante_dni', 'firmante_email'],   // EmpresaFirma
+        'centro_captaciones' => ['contacto_email', 'contacto_telefono'], // CentroCaptacion
     ];
 
     public function handle(): int
     {
-        $clave = (string) env('CLAVE_ANTERIOR', '');
+        // Variable del proceso (CLAVE_ANTERIOR=… php artisan datos:recifrar), no del .env: con
+        // la configuración cacheada en producción env() devolvería null
+        $clave = (string) getenv('CLAVE_ANTERIOR');
         if ($clave === '') {
             $this->error("Falta la variable de entorno CLAVE_ANTERIOR (la APP_KEY con la que se cifraron los datos).");
             return self::FAILURE;

@@ -1,6 +1,6 @@
 <script setup>
 /**
- * Aviso al superadmin al entrar: empresas captadas por comerciales que esperan centro y retos
+ * Aviso al superadmin al entrar: empresas captadas pendientes de validar y retos
  * de comerciales sin validar. Los contadores se piden en vivo (si otro superadmin ya las colocó,
  * no avisa) y el aviso sale una vez por sesión del navegador; el detalle está en Notificaciones.
  */
@@ -13,7 +13,7 @@ const CLAVE_VISTO = 'aviso-captacion-visto'
 
 const router  = useRouter()
 const visible = ref(false)
-const resumen = ref({ empresas_pendientes: 0, retos_pendientes: 0 })
+const resumen = ref({ empresas_pendientes: 0, centros_pendientes: 0, retos_pendientes: 0 })
 
 onMounted(async () => {
   try {
@@ -23,7 +23,7 @@ onMounted(async () => {
   try {
     const { data } = await getResumenCaptacion()
     resumen.value = data
-    visible.value = data.empresas_pendientes > 0 || data.retos_pendientes > 0
+    visible.value = data.empresas_pendientes > 0 || data.centros_pendientes > 0 || data.retos_pendientes > 0
   } catch { /* el aviso es opcional: si falla, ya está en Notificaciones */ }
 })
 
@@ -51,7 +51,12 @@ const revisar = () => {
         <li v-if="resumen.empresas_pendientes > 0">
           <strong class="text-azul-noche">{{ resumen.empresas_pendientes }}</strong>
           {{ resumen.empresas_pendientes === 1 ? 'empresa nueva espera' : 'empresas nuevas esperan' }}
-          que la coloques en uno o varios centros.
+          que la valides y la coloques en uno o varios centros.
+        </li>
+        <li v-if="resumen.centros_pendientes > 0">
+          <strong class="text-azul-noche">{{ resumen.centros_pendientes }}</strong>
+          {{ resumen.centros_pendientes === 1 ? 'centro educativo nuevo espera' : 'centros educativos nuevos esperan' }}
+          que lo valides para darlo de alta en DuaLab.
         </li>
         <li v-if="resumen.retos_pendientes > 0">
           <strong class="text-azul-noche">{{ resumen.retos_pendientes }}</strong>

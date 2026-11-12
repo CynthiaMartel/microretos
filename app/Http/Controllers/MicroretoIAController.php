@@ -44,12 +44,7 @@ class MicroretoIAController extends Controller
         ])
         ->orderByDesc('created_at')
         ->limit($limit);
-
-        // Docentes y admins docentes solo ven microretos de su centro educativo
-        if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
-            // Por el centro del reto: sigue siendo suyo aunque la empresa esté borrada
-            $query->delCentroDe($user);
-        }
+        $this->limitarAlcance($query, $user);
 
         $microretos = MicroretoFichaService::enriquecerLote($query->get());
 
@@ -69,16 +64,36 @@ class MicroretoIAController extends Controller
         // Docentes y admins docentes solo pueden ver microretos de su centro
         /** @var \App\Models\User $user  ruta bajo auth:sanctum */
         $user = $request->user();
-        if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
-            // Por el centro del reto: sigue siendo suyo aunque la empresa esté borrada
-            $query->delCentroDe($user);
-        }
+        $this->limitarAlcance($query, $user);
 
         $reto = is_numeric($id)
             ? $query->findOrFail((int) $id)
             : $query->where('uuid', $id)->firstOrFail();
 
         return response()->json(new MicroretoFichaResource(MicroretoFichaService::enriquecer($reto)));
+    }
+
+    /**
+     * Qué retos de la biblioteca puede leer cada rol (GET /microretos y /microretos/{id}, que
+     * no llevan middleware de rol porque los usa también la empresa). Lista blanca:
+     *  - superadmin: todos;
+     *  - docente / admin con centro: los de su centro (por el centro del reto, aunque la empresa esté borrada);
+     *  - empresa: solo los de su empresa (los diagnósticos de otras empresas son datos sensibles);
+     *  - cualquier otro (comercial, docente sin centro): ninguno.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder<Microreto> $query
+     */
+    private function limitarAlcance(\Illuminate\Database\Eloquent\Builder $query, \App\Models\User $user): void
+    {
+        if ($user->isSuperAdmin()) return;
+
+        if (($user->isDocente() || $user->isAdmin()) && $user->centro_educativo_id) {
+            $query->delCentroDe($user);
+        } elseif ($user->isEmpresa() && $user->empresa_id) {
+            $query->where('empresa_id', $user->empresa_id);
+        } else {
+            $query->whereRaw('0 = 1');
+        }
     }
 
     public function simularInfoEmpresa(SimularInfoEmpresaRequest $request)
@@ -261,12 +276,15 @@ class MicroretoIAController extends Controller
         // Actividad e interés salen de la empresa guardada, no del cliente. El interés dice para
         // qué quiere la empresa al alumnado de esta familia: una empresa de informática puede
         // pedir a Comercio y Marketing una campaña de su departamento de marketing.
-        $actividadEmpresa = trim(strip_tags((string) $empresaReto?->actividad));
+        // Captación del comercial (GenerarRetoCaptacionRequest, solo interna): aún no hay empresa
+        // guardada y ambos los fija BorradorRetoService desde la captación.
+        $captacion = $request instanceof \App\Http\Requests\GenerarRetoCaptacionRequest ? $request : null;
+        $actividadEmpresa = trim(strip_tags((string) ($captacion ? $captacion->actividadCaptacion : $empresaReto?->actividad)));
         if ($actividadEmpresa !== '') $contextoEmpresa .= "Actividad: \"{$actividadEmpresa}\". ";
         // El docente puede ajustar el interés solo para estos retos (interesReto); si no, el guardado.
         $interesAjustado = $request->filled('interesReto') ? trim(strip_tags((string) $request->validated('interesReto'))) : '';
-        $interesFamilia = ($empresaReto && $familia)
-            ? ($interesAjustado !== '' ? $interesAjustado : trim((string) app(EmpresaFamiliaService::class)->interes($empresaReto->id, $familia)))
+        $interesFamilia = (($empresaReto || $captacion) && $familia)
+            ? ($interesAjustado !== '' || !$empresaReto ? $interesAjustado : trim((string) app(EmpresaFamiliaService::class)->interes($empresaReto->id, $familia)))
             : '';
         if ($interesFamilia !== '') {
             $contextoEmpresa .= "INTERÉS DE LA EMPRESA EN LA FAMILIA «{$familia}»: \"{$interesFamilia}\". ";

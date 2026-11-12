@@ -39,10 +39,10 @@ class EmpresaFirma extends Model
         });
     }
 
-    /** @return BelongsTo<Empresa, $this> */
-    public function empresa(): BelongsTo
+    /** @return BelongsTo<EmpresaCaptacion, $this> */
+    public function captacion(): BelongsTo
     {
-        return $this->belongsTo(Empresa::class, 'empresa_id')->withTrashed();
+        return $this->belongsTo(EmpresaCaptacion::class, 'empresa_captacion_id');
     }
 
     /** @return BelongsTo<User, $this> */

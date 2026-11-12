@@ -2,10 +2,13 @@
      Plantilla de vista común (GUIA_DISENO §7): CabeceraSeccion, contenedor estándar y los
      cuatro estados de datos (§6.1). -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BannerComercial from '../components/BannerComercial.vue'
 import { getMisEmpresas } from '../../src/services/comercialService.js'
+import {
+  pendientes, sincronizando, sincronizar, ultimaSincronizacion, pendienteDeEmpresa,
+} from '../offline/entrevistasLocales.js'
 
 const router   = useRouter()
 const empresas = ref([])
@@ -15,9 +18,20 @@ const error    = ref('')
 // Estado = color + icono + texto (§6.2)
 const ESTADO = {
   borrador:         { texto: 'En curso',                      clase: 'bg-amber-50 text-amber-800',             icono: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-  pendiente_centro: { texto: 'Firmada · pendiente de centro', clase: 'bg-centros/10 text-centros',             icono: 'M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z' },
-  asignada:         { texto: 'Firmada · disponible en centros', clase: 'bg-empresas/10 text-empresas-dark',    icono: 'M5 13l4 4L19 7' },
+  pendiente_validacion: { texto: 'Firmada · pendiente de validar', clase: 'bg-centros/10 text-centros',      icono: 'M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z' },
+  validada:         { texto: 'Validada · disponible en centros', clase: 'bg-empresas/10 text-empresas-dark',   icono: 'M5 13l4 4L19 7' },
+  descartada:       { texto: 'Descartada por DuaLab',            clase: 'bg-gray-100 text-gray-600',            icono: 'M6 18L18 6M6 6l12 12' },
+  // Guardadas en la tablet sin conexión (offline/entrevistasLocales.js)
+  local_borrador:   { texto: 'En la tablet · sin enviar',        clase: 'bg-amber-50 text-amber-800',             icono: 'M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM12 18h.01' },
+  local_firmada:    { texto: 'Firmada en la tablet · sin enviar', clase: 'bg-amber-50 text-amber-800',            icono: 'M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM12 18h.01' },
+  local_error:      { texto: 'DuaLab no la ha aceptado · revisar', clase: 'bg-red-50 text-red-700',               icono: 'M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
 }
+const estadoDe = (e) => !e._local ? e.estado
+  : e._error ? 'local_error'
+  : e.estado === 'pendiente_envio' ? 'local_firmada' : 'local_borrador'
+const rutaDe = (e) => e._local
+  ? { name: 'entrevista-local', params: { clave: e._local } }
+  : { name: 'entrevista', params: { id: e.id } }
 
 async function cargar() {
   cargando.value = true
@@ -31,13 +45,24 @@ async function cargar() {
   }
 }
 onMounted(cargar)
+// Tras enviar las de la tablet, la lista del servidor ya las incluye
+watch(ultimaSincronizacion, () => { if (!cargando.value) cargar() })
 
-const enCurso  = computed(() => empresas.value.filter(e => e.estado_captacion === 'borrador'))
-const firmadas = computed(() => empresas.value.filter(e => e.estado_captacion !== 'borrador'))
+// Las del servidor con cambios guardados en la tablet salen solo en «Guardadas en esta tablet»
+const delServidor = computed(() => empresas.value.filter(e => !pendienteDeEmpresa(e.id)))
+const enCurso  = computed(() => delServidor.value.filter(e => e.estado === 'borrador'))
+const firmadas = computed(() => delServidor.value.filter(e => e.estado !== 'borrador'))
 const grupos   = computed(() => [
+  { key: 'tablet',   titulo: 'Guardadas en esta tablet', lista: pendientes.value },
   { key: 'curso',    titulo: 'En curso', lista: enCurso.value },
   { key: 'firmadas', titulo: 'Firmadas', lista: firmadas.value },
 ].filter(g => g.lista.length))
+
+const hayAlgo = computed(() => empresas.value.length > 0 || pendientes.value.length > 0)
+const enLinea = ref(navigator.onLine)
+const alCambiarRed = () => { enLinea.value = navigator.onLine }
+onMounted(() => { window.addEventListener('online', alCambiarRed); window.addEventListener('offline', alCambiarRed) })
+onUnmounted(() => { window.removeEventListener('online', alCambiarRed); window.removeEventListener('offline', alCambiarRed) })
 
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 const nueva = () => router.push({ name: 'entrevista-nueva' })
@@ -46,7 +71,13 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
 <template>
   <!-- Centrado: es una app de una sola tarea en tablet, sin menú lateral que la desplace -->
   <div class="relative mx-auto max-w-6xl space-y-6 px-4 pb-10 pt-[5.25rem] sm:px-6 lg:px-8">
-    <BannerComercial :en-curso="enCurso.length" :firmadas="firmadas.length" @nueva="nueva" />
+    <BannerComercial :en-curso="enCurso.length + pendientes.length" :firmadas="firmadas.length" @nueva="nueva" />
+
+    <!-- Quién valida lo captado (lo mismo se explica en Formularios de la gestión web) -->
+    <p class="rounded-2xl border border-empresas/20 bg-empresas/5 px-4 py-3 text-sm text-azul-noche">
+      Las empresas que envías las valida el <strong>superadmin de DuaLab</strong> antes de darlas de alta, junto con las que llegan por el formulario de la web.
+      Hasta entonces verás «pendiente de validar».
+    </p>
 
     <!-- Carga -->
     <div v-if="cargando" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
@@ -57,14 +88,14 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
       </div>
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="tarjeta flex flex-col items-center gap-3 py-12 text-center">
+    <!-- Error sin nada en la tablet -->
+    <div v-else-if="error && !pendientes.length" class="tarjeta flex flex-col items-center gap-3 py-12 text-center">
       <p class="text-sm text-texto-secundario">{{ error }}</p>
       <button type="button" class="accion-secundaria" @click="cargar">Reintentar</button>
     </div>
 
     <!-- Vacío -->
-    <div v-else-if="!empresas.length" class="tarjeta flex flex-col items-center gap-3 py-14 text-center">
+    <div v-else-if="!hayAlgo" class="tarjeta flex flex-col items-center gap-3 py-14 text-center">
       <span class="flex h-14 w-14 items-center justify-center rounded-full bg-empresas/10 text-empresas-dark" aria-hidden="true">
         <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1" /></svg>
       </span>
@@ -75,11 +106,24 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
 
     <!-- Con datos -->
     <template v-else>
+    <!-- Sin conexión con DuaLab, pero con entrevistas en la tablet -->
+    <p v-if="error" role="status" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      Sin conexión con DuaLab: ahora solo ves las entrevistas guardadas en esta tablet. Puedes empezar una nueva igualmente.
+    </p>
+
     <section v-for="g in grupos" :key="g.key" class="space-y-3">
-      <h2 class="font-heading text-lg font-bold">{{ g.titulo }} <span class="text-sm font-semibold text-texto-secundario">· {{ g.lista.length }}</span></h2>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="font-heading text-lg font-bold">{{ g.titulo }} <span class="text-sm font-semibold text-texto-secundario">· {{ g.lista.length }}</span></h2>
+        <button v-if="g.key === 'tablet' && enLinea" type="button" class="accion-secundaria w-fit" :disabled="sincronizando" @click="sincronizar">
+          {{ sincronizando ? 'Enviando…' : 'Enviar ahora' }}
+        </button>
+      </div>
+      <p v-if="g.key === 'tablet'" class="text-sm text-texto-secundario">
+        Están cifradas en esta tablet y se envían solas a DuaLab cuando hay conexión. No borres los datos del navegador ni desinstales la app hasta que se envíen.
+      </p>
       <ul class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <li v-for="e in g.lista" :key="e.id">
-          <RouterLink :to="{ name: 'entrevista', params: { id: e.id } }"
+        <li v-for="e in g.lista" :key="e._local ?? e.id">
+          <RouterLink :to="rutaDe(e)"
                       class="tarjeta flex h-full flex-col gap-3 transition hover:border-rol-fuerte/40 hover:shadow-md">
             <div class="flex items-start gap-3">
               <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-empresas/10 font-heading text-lg font-bold text-empresas-dark" aria-hidden="true">
@@ -90,16 +134,17 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
                 <p class="truncate text-sm text-texto-secundario">{{ [e.sector, e.municipio].filter(Boolean).join(' · ') || 'Sin sector' }}</p>
               </div>
             </div>
-            <span class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="ESTADO[e.estado_captacion]?.clase">
-              <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path :d="ESTADO[e.estado_captacion]?.icono" /></svg>
-              {{ ESTADO[e.estado_captacion]?.texto ?? e.estado_captacion }}
+            <span class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="ESTADO[estadoDe(e)]?.clase">
+              <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path :d="ESTADO[estadoDe(e)]?.icono" /></svg>
+              {{ ESTADO[estadoDe(e)]?.texto ?? e.estado }}
             </span>
+            <p v-if="e._error" class="break-words text-xs text-red-700">{{ e._error }}</p>
             <div v-if="e.familias?.length" class="flex flex-wrap gap-1.5">
               <span v-for="f in e.familias" :key="f.nombre" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">{{ f.nombre }}</span>
             </div>
             <div class="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-3 text-xs text-texto-secundario">
               <span>{{ e.firmada_at ? `Firmada el ${fecha(e.firmada_at)}` : `Empezada el ${fecha(e.created_at)}` }}</span>
-              <span class="shrink-0 font-semibold text-rol-fuerte">{{ e.estado_captacion === 'borrador' ? 'Continuar' : 'Ver' }} →</span>
+              <span class="shrink-0 font-semibold text-rol-fuerte">{{ e.estado === 'borrador' || e._error ? 'Continuar' : 'Ver' }} →</span>
             </div>
           </RouterLink>
         </li>

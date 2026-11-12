@@ -1,25 +1,32 @@
 <script setup>
 /**
  * Apartado «Captación comercial» de Notificaciones (solo superadmin). Dos tareas:
- *  1. Empresas entrevistadas y firmadas por un comercial que esperan centro: se colocan en
- *     uno o varios y desde ese momento las ven los docentes de esos centros.
- *  2. Retos que el comercial generó delante de la empresa (borradores): se publican en los
- *     centros de la empresa o se descartan. Hasta entonces no aparecen en ninguna biblioteca.
+ *  1. Empresas captadas (entrevista del comercial o formulario web) pendientes de validar: al
+ *     validarlas se crean en Base de datos y se colocan en uno o varios centros, y desde ese
+ *     momento las ven los docentes de esos centros. O se descartan (duplicada, spam…).
+ *  2. Retos que el comercial generó delante de la empresa (borradores): con la empresa ya
+ *     validada, se publican en sus centros o se descartan. Hasta entonces no salen en ninguna biblioteca.
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Modal from './Modal.vue'
 import {
-  getEmpresasCaptadas, asignarCentrosEmpresa, getBorradoresPendientes, getBorradorCaptacion,
+  getEmpresasCaptadas, validarEmpresaCaptada, descartarEmpresaCaptada, getCoincidenciasEmpresa, getBorradoresPendientes, getBorradorCaptacion,
   publicarBorrador, descartarBorrador, getImagenFirma, getCentrosCaptacion,
 } from '../services/captacionService.js'
 
 const emit = defineEmits(['cambio'])
 
 const ESTADOS = [
-  { key: 'pendiente_centro', label: 'Pendientes de centro' },
-  { key: 'asignada',         label: 'Ya colocadas' },
+  { key: 'pendiente_validacion', label: 'Pendientes' },
+  { key: 'validada',             label: 'Validadas' },
+  { key: 'descartada',           label: 'Descartadas' },
 ]
-const estado = ref('pendiente_centro')
+const VACIO = {
+  pendiente_validacion: 'No hay empresas pendientes de validar.',
+  validada:             'Todavía no se ha validado ninguna empresa captada.',
+  descartada:           'No hay empresas descartadas.',
+}
+const estado = ref('pendiente_validacion')
 
 const empresas  = ref([])
 const borradores = ref([])
@@ -64,7 +71,7 @@ async function cambiarEstado(key) {
 
 const fecha = (iso) => iso ? new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
-// ── Colocar en centros ────────────────────────────────────────────────────────
+// ── Validar y colocar en centros ──────────────────────────────────────────────
 const empresaColocando = ref(null)
 const seleccionCentros = ref([])
 const buscaCentro      = ref('')
@@ -75,24 +82,74 @@ const centrosFiltrados = computed(() => {
   return q ? centros.value.filter(c => c.nombre.toLowerCase().includes(q)) : centros.value
 })
 
+// Fusionar: si la misma empresa ya está en Base de datos (llegó por otra vía, o la creó un
+// centro), se elige aquí y no se duplica; solo se le completa lo que le falte.
+const fusionarCon      = ref(null)   // id de la empresa existente, o null = crear nueva
+const coincidencias    = ref([])
+const buscaEmpresa     = ref('')
+const buscandoEmpresa  = ref(false)
+async function buscarCoincidencias() {
+  buscandoEmpresa.value = true
+  try {
+    coincidencias.value = (await getCoincidenciasEmpresa(empresaColocando.value.id, buscaEmpresa.value.trim())).data.data
+  } catch {
+    coincidencias.value = []
+  } finally {
+    buscandoEmpresa.value = false
+  }
+}
+
 function abrirColocar(empresa) {
   empresaColocando.value = empresa
   seleccionCentros.value = (empresa.centros || []).map(c => c.id)
   buscaCentro.value = ''
+  fusionarCon.value = null
+  buscaEmpresa.value = ''
+  coincidencias.value = []
+  if (empresa.estado !== 'validada') buscarCoincidencias()
 }
 async function guardarCentros() {
   if (!seleccionCentros.value.length) return
   guardandoCentros.value = true
   try {
-    await asignarCentrosEmpresa(empresaColocando.value.id, seleccionCentros.value)
-    aviso.value = `«${empresaColocando.value.nombre_comercial}» ya está disponible en ${seleccionCentros.value.length === 1 ? '1 centro' : seleccionCentros.value.length + ' centros'}.`
+    const nueva = empresaColocando.value.estado !== 'validada'
+    await validarEmpresaCaptada(empresaColocando.value.id, seleccionCentros.value, nueva ? fusionarCon.value : null)
+    const enCentros = seleccionCentros.value.length === 1 ? '1 centro' : `${seleccionCentros.value.length} centros`
+    aviso.value = nueva && fusionarCon.value
+      ? `Fusionada con la empresa que ya estaba en Base de datos; disponible en ${enCentros}.`
+      : nueva
+      ? `«${empresaColocando.value.nombre_comercial}» ya está en Base de datos y disponible en ${enCentros}.`
+      : `«${empresaColocando.value.nombre_comercial}» ahora está disponible en ${enCentros}.`
     empresaColocando.value = null
     await cargarTodo()
     emit('cambio')
   } catch (e) {
-    error.value = mensajeError(e, 'No se ha podido colocar la empresa.')
+    error.value = mensajeError(e, 'No se ha podido validar la empresa.')
   } finally {
     guardandoCentros.value = false
+  }
+}
+
+// ── Descartar (queda registrada con su motivo, no se borra) ───────────────────
+const empresaDescartando = ref(null)
+const motivoDescarte     = ref('')
+const descartando        = ref(false)
+function abrirDescartar(empresa) {
+  empresaDescartando.value = empresa
+  motivoDescarte.value = ''
+}
+async function confirmarDescarte() {
+  descartando.value = true
+  try {
+    await descartarEmpresaCaptada(empresaDescartando.value.id, motivoDescarte.value.trim())
+    aviso.value = `«${empresaDescartando.value.nombre_comercial}» descartada.`
+    empresaDescartando.value = null
+    await cargarTodo()
+    emit('cambio')
+  } catch (e) {
+    error.value = mensajeError(e, 'No se ha podido descartar la empresa.')
+  } finally {
+    descartando.value = false
   }
 }
 
@@ -116,8 +173,6 @@ function cerrarFirma() {
 }
 onUnmounted(cerrarFirma)
 
-const NOMBRE_CONSENTIMIENTO = { aviso_legal: 'Aviso legal', info_rgpd: 'Protección de datos' }
-const nombreConsentimiento = (clave) => NOMBRE_CONSENTIMIENTO[clave] ?? clave.replace('cesion_', 'Cesión ')
 
 // ── Validar retos de comercial ────────────────────────────────────────────────
 const detalle          = ref(null)   // { borrador, centros_empresa, centros_sin_ciclo }
@@ -172,7 +227,7 @@ async function descartar() {
     <!-- 1. Empresas captadas -->
     <article class="card p-4 sm:p-5">
       <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="font-heading text-lg font-bold">Empresas captadas por comerciales</h2>
+        <h2 class="font-heading text-lg font-bold">Empresas captadas</h2>
         <div class="inline-flex w-fit gap-1 rounded-full bg-gray-100 p-1" role="group" aria-label="Qué empresas ver">
           <button v-for="e in ESTADOS" :key="e.key" type="button" :aria-pressed="estado === e.key" @click="cambiarEstado(e.key)"
                   class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
@@ -184,20 +239,26 @@ async function descartar() {
 
       <div v-if="cargando && !empresas.length" class="space-y-2"><div v-for="n in 2" :key="n" class="h-24 animate-pulse rounded-xl bg-gray-100" /></div>
       <p v-else-if="!empresas.length" class="py-8 text-center text-sm text-gray-500">
-        {{ estado === 'pendiente_centro' ? 'No hay empresas esperando centro.' : 'Todavía no se ha colocado ninguna empresa captada.' }}
+        {{ VACIO[estado] }}
       </p>
       <ul v-else class="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <li v-for="e in empresas" :key="e.id" class="flex flex-col gap-3 rounded-xl border border-borde p-4">
           <div class="min-w-0">
+            <span v-if="e.origen" class="mb-1 inline-flex w-fit rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">{{ e.origen.nombre }}</span>
             <p class="break-words font-bold text-azul-noche">{{ e.nombre_comercial }}</p>
             <p class="text-sm text-texto-secundario">
               {{ [e.sector, e.municipio].filter(Boolean).join(' · ') || 'Sin sector' }}
             </p>
             <p class="mt-1 text-xs text-gray-500">
-              Entrevista de {{ e.comercial || 'comercial' }} · firmada el {{ fecha(e.firmada_at) }}
+              <template v-if="e.comercial">Entrevista de {{ e.comercial }} · </template>{{ e.firmada_at ? `firmada el ${fecha(e.firmada_at)}` : `recibida el ${fecha(e.created_at)}` }}
               <template v-if="e.firma"> por {{ e.firma.firmante_nombre }}<template v-if="e.firma.firmante_cargo"> ({{ e.firma.firmante_cargo }})</template></template>
             </p>
           </div>
+
+          <p v-if="e.notas" class="whitespace-pre-line break-words rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">{{ e.notas }}</p>
+          <p v-if="e.origen?.clave === 'formulario'" class="text-xs text-texto-secundario">
+            Contacto: {{ [e.persona_contacto, e.email_general, e.telefono].filter(Boolean).join(' · ') }}
+          </p>
 
           <div v-if="e.familias?.length" class="flex flex-wrap gap-1.5">
             <span v-for="f in e.familias" :key="f.nombre" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">{{ f.nombre }}</span>
@@ -213,21 +274,25 @@ async function descartar() {
             <span v-for="c in e.firma.consentimientos" :key="c.clave"
                   class="rounded-full px-2.5 py-0.5 font-semibold"
                   :class="c.aceptado ? 'bg-empresas/10 text-empresas-dark' : 'bg-red-50 text-red-700'">
-              {{ nombreConsentimiento(c.clave) }}: {{ c.aceptado ? 'sí' : 'no' }}
+              {{ c.nombre }}: {{ c.aceptado ? 'sí' : 'no' }}
             </span>
           </div>
 
           <p v-if="e.centros?.length" class="text-sm text-texto-secundario">
             <span class="font-semibold text-azul-noche">Centros:</span> {{ e.centros.map(c => c.nombre).join(', ') }}
           </p>
+          <p v-if="e.estado === 'descartada' && e.motivo_descarte" class="break-words text-sm text-texto-secundario">
+            <span class="font-semibold text-azul-noche">Motivo:</span> {{ e.motivo_descarte }}
+          </p>
           <p v-if="e.borradores_pendientes" class="text-sm font-semibold text-amber-800">
             {{ e.borradores_pendientes }} {{ e.borradores_pendientes === 1 ? 'reto pendiente' : 'retos pendientes' }} de validar
           </p>
 
           <div class="mt-auto flex flex-wrap gap-2">
-            <button type="button" class="accion-principal" @click="abrirColocar(e)">
-              {{ e.centros?.length ? 'Cambiar centros' : 'Colocar en centros' }}
+            <button v-if="e.estado === 'pendiente_validacion' || e.estado === 'validada'" type="button" class="accion-principal" @click="abrirColocar(e)">
+              {{ e.estado === 'validada' ? 'Cambiar centros' : 'Validar y colocar en centros' }}
             </button>
+            <button v-if="e.estado === 'pendiente_validacion'" type="button" class="accion-secundaria" @click="abrirDescartar(e)">Descartar</button>
             <button v-if="e.firma" type="button" class="accion-secundaria" @click="verFirma(e)">Ver firma</button>
           </div>
         </li>
@@ -244,7 +309,7 @@ async function descartar() {
           <button type="button" class="flex w-full flex-col gap-1 rounded-xl px-2 py-3 text-left transition hover:bg-gray-50 sm:flex-row sm:items-center sm:gap-3" @click="abrirBorrador(b)">
             <span class="min-w-0 flex-1">
               <span class="block break-words text-sm font-bold">{{ b.reto.titulo }}</span>
-              <span class="block text-sm text-gray-500">{{ b.empresa?.nombre_comercial }} · {{ b.familia }}</span>
+              <span class="block text-sm text-gray-500">{{ b.captacion?.nombre_comercial }} · {{ b.familia }}</span>
             </span>
             <span class="w-fit shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
               Creado por comercial · pendiente de validar para publicar
@@ -256,14 +321,47 @@ async function descartar() {
 
     <!-- Modal: colocar en centros -->
     <Modal :visible="!!empresaColocando" max-width="max-w-lg" @cerrar="empresaColocando = null">
-      <div v-if="empresaColocando" class="flex min-h-0 flex-col gap-4 p-6 sm:p-8">
+      <div v-if="empresaColocando" class="flex max-h-[90dvh] min-h-0 flex-col gap-4 overflow-y-auto p-6 sm:p-8">
         <div class="pr-10">
-          <h2 class="font-heading text-xl font-bold text-azul-noche">Colocar en centros</h2>
-          <p class="mt-1 break-words text-sm text-texto-secundario">«{{ empresaColocando.nombre_comercial }}» quedará disponible para los docentes de los centros que marques.</p>
+          <h2 class="font-heading text-xl font-bold text-azul-noche">{{ empresaColocando.estado === 'validada' ? 'Cambiar centros' : 'Validar empresa' }}</h2>
+          <p class="mt-1 break-words text-sm text-texto-secundario">
+            <template v-if="empresaColocando.estado !== 'validada'">«{{ empresaColocando.nombre_comercial }}» se dará de alta en Base de datos como empresa real y </template>
+            <template v-else>«{{ empresaColocando.nombre_comercial }}» </template>quedará disponible para los docentes de los centros que marques.
+          </p>
         </div>
+        <!-- ¿Ya está en Base de datos? (solo al validar) -->
+        <fieldset v-if="empresaColocando.estado !== 'validada'" class="space-y-2">
+          <legend class="mb-1 text-sm font-bold text-azul-noche">¿Ya está en Base de datos?</legend>
+          <p class="text-xs text-texto-secundario">Si es la misma empresa, elígela: no se duplica, solo se le completa lo que le falte.</p>
+          <form class="flex gap-2" @submit.prevent="buscarCoincidencias">
+            <input v-model="buscaEmpresa" type="search" placeholder="Buscar otra empresa…" aria-label="Buscar empresa en Base de datos"
+                   class="h-11 min-w-0 flex-1 rounded-xl border border-borde-campo px-4 text-sm outline-none focus:border-rol-fuerte" />
+            <button type="submit" class="accion-secundaria shrink-0" :disabled="buscandoEmpresa">Buscar</button>
+          </form>
+          <ul class="max-h-[28dvh] space-y-1 overflow-y-auto">
+            <li>
+              <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-gray-50">
+                <input v-model="fusionarCon" type="radio" :value="null" class="h-5 w-5 shrink-0 accent-rol-fuerte" />
+                <span class="min-w-0 break-words text-sm font-semibold">Es nueva: crear «{{ empresaColocando.nombre_comercial }}»</span>
+              </label>
+            </li>
+            <li v-for="c in coincidencias" :key="c.id">
+              <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-gray-50">
+                <input v-model="fusionarCon" type="radio" :value="c.id" class="h-5 w-5 shrink-0 accent-rol-fuerte" />
+                <span class="min-w-0">
+                  <span class="block break-words text-sm font-semibold">Es «{{ c.nombre_comercial }}»</span>
+                  <span class="block break-words text-xs text-texto-secundario">{{ [c.cif, c.municipio, c.centro].filter(Boolean).join(' · ') || 'Sin más datos' }}</span>
+                </span>
+              </label>
+            </li>
+            <li v-if="!buscandoEmpresa && !coincidencias.length" class="px-3 py-2 text-xs text-gray-500">No hay empresas parecidas en Base de datos.</li>
+          </ul>
+        </fieldset>
+
+        <p class="text-sm font-bold text-azul-noche">Centros en los que queda disponible</p>
         <input v-model="buscaCentro" type="search" placeholder="Buscar centro…" aria-label="Buscar centro"
                class="h-11 w-full rounded-xl border border-borde-campo px-4 text-sm outline-none focus:border-rol-fuerte" />
-        <ul class="min-h-0 max-h-[45dvh] space-y-1 overflow-y-auto">
+        <ul class="min-h-0 max-h-[30dvh] space-y-1 overflow-y-auto">
           <li v-for="c in centrosFiltrados" :key="c.id">
             <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-gray-50">
               <input v-model="seleccionCentros" type="checkbox" :value="c.id" class="h-5 w-5 shrink-0 accent-rol-fuerte" />
@@ -275,8 +373,26 @@ async function descartar() {
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="empresaColocando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="!seleccionCentros.length || guardandoCentros" @click="guardarCentros">
-            {{ guardandoCentros ? 'Guardando…' : `Colocar (${seleccionCentros.length})` }}
+            {{ guardandoCentros ? 'Guardando…' : `${empresaColocando.estado === 'validada' ? 'Guardar' : 'Validar'} (${seleccionCentros.length})` }}
           </button>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Modal: descartar -->
+    <Modal :visible="!!empresaDescartando" max-width="max-w-lg" @cerrar="empresaDescartando = null">
+      <div v-if="empresaDescartando" class="flex flex-col gap-4 p-6 sm:p-8">
+        <div class="pr-10">
+          <h2 class="font-heading text-xl font-bold text-azul-noche">Descartar empresa</h2>
+          <p class="mt-1 break-words text-sm text-texto-secundario">«{{ empresaDescartando.nombre_comercial }}» no pasará a Base de datos y sus retos en borrador no se publicarán. Queda registrada en «Descartadas».</p>
+        </div>
+        <div>
+          <label for="pcc-motivo" class="label-style">Motivo <span class="normal-case tracking-normal">(opcional)</span></label>
+          <textarea id="pcc-motivo" v-model="motivoDescarte" rows="3" maxlength="500" class="input-style" placeholder="Ej.: duplicada de una empresa que ya está en Base de datos" />
+        </div>
+        <div class="fila-pasos">
+          <button type="button" class="btn-paso-atras" @click="empresaDescartando = null">Cancelar</button>
+          <button type="button" class="btn-paso" :disabled="descartando" @click="confirmarDescarte">{{ descartando ? 'Descartando…' : 'Descartar' }}</button>
         </div>
       </div>
     </Modal>
@@ -299,7 +415,7 @@ async function descartar() {
           <p class="mt-1 break-words text-sm text-texto-secundario">{{ detalle.borrador.reto.subtitulo }}</p>
         </div>
         <div class="min-h-0 space-y-4 overflow-y-auto p-6 text-sm sm:p-8">
-          <p class="text-gray-500">{{ detalle.borrador.empresa?.nombre_comercial }} · {{ detalle.borrador.familia }} · {{ detalle.borrador.reto.ciclo }}</p>
+          <p class="text-gray-500">{{ detalle.borrador.captacion?.nombre_comercial }} · {{ detalle.borrador.familia }} · {{ detalle.borrador.reto.ciclo }}</p>
           <p v-if="detalle.borrador.reto.pregunta_reto" class="rounded-xl bg-gray-50 p-3 font-semibold text-azul-noche">{{ detalle.borrador.reto.pregunta_reto }}</p>
           <div v-if="detalle.borrador.reto.prototipos?.length">
             <p class="mb-1 font-bold">Prototipos</p>
@@ -317,7 +433,9 @@ async function descartar() {
           <div class="border-t border-gray-100 pt-4">
             <p class="mb-2 font-bold">Publicar en</p>
             <p v-if="!detalle.centros_empresa.length" class="rounded-xl bg-amber-50 px-3 py-2 text-amber-800">
-              La empresa aún no está en ningún centro. Colócala primero (arriba) y vuelve a abrir el reto.
+              {{ detalle.borrador.captacion?.empresa_id
+                ? 'La empresa aún no está en ningún centro. Cambia sus centros (arriba) y vuelve a abrir el reto.'
+                : 'La empresa aún no está validada. Valídala y colócala en centros (arriba) y vuelve a abrir el reto.' }}
             </p>
             <ul v-else class="space-y-1">
               <li v-for="c in detalle.centros_empresa" :key="c.id">

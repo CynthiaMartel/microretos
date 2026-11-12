@@ -26,7 +26,15 @@ const api = axios.create({
 // debe cerrar la sesión del usuario ni disparar una redirección a login.
 api.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
+    // 419 = la cookie XSRF-TOKEN ya no corresponde a la sesión. Pasa cuando otra app de
+    // *.dualab.es con Sanctum (la gestión web de dualab.es) planta su propia XSRF-TOKEN en el
+    // mismo dominio. Se pide una nueva y se repite la petición una sola vez.
+    if (error.response?.status === 419 && error.config && !error.config._reintentoCsrf) {
+      error.config._reintentoCsrf = true;
+      await primeCsrfCookie();
+      return api(error.config);
+    }
     if (error.response?.status === 401 && !error.config?.skipAuthRedirect) {
       // Notificar a los componentes que escuchen este evento
       window.dispatchEvent(new CustomEvent('auth:token-expired'));

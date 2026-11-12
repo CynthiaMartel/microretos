@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 dist-comercial
+dist-nexo
+dist-central
 *.local
 
 # Editor directories and files
@@ -27,3 +29,7 @@ dist-comercial
 # Iconos generados por npm run iconos (se copian a public/); solo se versiona la imagen fuente
 pwa/*
 !pwa/icono-dualab.png
+!pwa/icono-comercial.mjs
+
+# Carpeta temporal de npm run iconos:comercial
+.pwa-comercial/

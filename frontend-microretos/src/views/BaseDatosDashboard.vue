@@ -1347,6 +1347,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
                                 :title="empresa.tamano">
                             {{ empresa.tamano }}
                           </span>
+                          <!-- Llegó por una captación validada (entrevista del comercial o formulario web) -->
+                          <span v-if="empresa.origen_captacion"
+                                class="text-[10px] font-bold uppercase tracking-wider bg-empresas/10 text-empresas-dark px-2 py-0.5 rounded-full max-w-full truncate"
+                                :title="empresa.origen_captacion === 'entrevista' ? 'Captada en una entrevista del equipo comercial' : 'Llegó por el formulario de empresas de la web'">
+                            {{ empresa.origen_captacion === 'entrevista' ? 'Entrevista comercial' : 'Formulario web' }}
+                          </span>
                           <!-- Varias familias: la empresa se lista una sola vez; aquí se ven las demás -->
                           <span v-if="otrasFamilias(empresa, familia).length"
                                 :title="'También vinculada a: ' + otrasFamilias(empresa, familia).join(' · ')"

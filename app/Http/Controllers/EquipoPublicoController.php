@@ -156,17 +156,19 @@ class EquipoPublicoController extends Controller
      * alumnado desde esta vista. Basta con poder VER el encuentro (visiblesPara): los
      * colaboradores de solo lectura también pueden consultarlo.
      */
-    public function showDocente(Request $request, int $equipoId)
+    public function showDocente(Request $request, int $equipoId): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user instanceof \App\Models\User, 401); // ruta bajo auth:sanctum
         $equipo = Equipo::with(self::RELACIONES_WORKSPACE)
             ->where('id', $equipoId)
-            ->whereHas('encuentro', fn ($q) => $q->visiblesPara($request->user()))
+            ->whereHas('encuentro', fn ($q) => $q->visiblesPara($user))
             ->firstOrFail();
 
         $workspace = $this->formatWorkspace($equipo);
         // Con el código de acceso se entra en el workspace y se puede escribir: solo para quien
         // puede editar el encuentro (misma regla que EquipoProgresoResource)
-        if (!$equipo->encuentro?->esEditablePor($request->user())) {
+        if (!$equipo->encuentro?->esEditablePor($user)) {
             $workspace['equipo']['codigo_acceso'] = null;
         }
 

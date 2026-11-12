@@ -26,10 +26,11 @@ class MicroretoBorradorResource extends JsonResource
             'estado'      => $this->estado,
             'familia'     => $this->familia,
             'reto'        => array_intersect_key($this->datos ?? [], array_flip(self::CAMPOS_VISIBLES)),
-            'empresa'     => $this->whenLoaded('empresa', fn () => $this->empresa ? [
-                'id'               => $this->empresa->id,
-                'nombre_comercial' => $this->empresa->nombre_comercial,
-                'estado_captacion' => $this->empresa->estado_captacion,
+            'captacion'   => $this->whenLoaded('captacion', fn () => $this->captacion ? [
+                'id'               => $this->captacion->id,
+                'nombre_comercial' => $this->captacion->nombre_comercial,
+                'estado'           => $this->captacion->estado,
+                'empresa_id'       => $this->captacion->empresa_id,
             ] : null),
             'creado_por'  => $this->whenLoaded('creadoPor', fn () => $this->creadoPor?->name),
             'created_at'  => $this->created_at?->toIso8601String(),
