@@ -13,6 +13,8 @@ Complementa las instrucciones globales de `~/.claude/CLAUDE.md`. Las reglas de L
   - `CACHE_STORE=file` (no database, no redis)
   - `QUEUE_CONNECTION=database` + scheduler de Laravel para colas
   - Ruta producción: ver `.env` de producción (no versionada) — no incluir la ruta real ni el ID de cuenta de hosting aquí, este archivo es público en GitHub
+- **Dominios, APIs y bases de datos:** [docs/MAPA_DOMINIOS.md](docs/MAPA_DOMINIOS.md) — qué sirve `dualab.es`, `api.dualab.es`, `info.dualab.es` (API de la web, sitio propio en hPanel con su propia BD: no borrarlo), `comercial.`, `central.` y `nexo.dualab.es`, y sus puertos en local. Leerlo antes de tocar nada en hPanel; comprobar con `./scripts/comprobar-dominios.sh`.
+- **Apps del repo:** app DuaLab (`frontend-microretos/src`), app comercial (`comercial/`), DuaLab Central (`central/`, solo superadmin) y Nexo (`nexo/`, página de acceso). La web pública y Gestión web están en el repo aparte `FRONTOFFICE/dualab_proyecto`.
 
 ## Ramas Git
 
