@@ -35,7 +35,7 @@ echo "— App DuaLab (repo microretos)"
 comprobar https://dualab.es/                       "App DuaLab"                 "200" "App DuaLab"
 comprobar https://api.dualab.es/api/microretos     "API de la app (sin sesión)" "401"
 comprobar https://comercial.dualab.es/             "App comercial"              "200" "App comercial"
-comprobar https://central.dualab.es/               "DuaLab Central"             "200" "DuaLab Central"
+comprobar https://central.dualab.es/               "DuaLab Central"             "200" "Central DuaLab"
 comprobar https://nexo.dualab.es/                  "Nexo"                       "200" "Nexo"
 
 echo "— Web pública (repo frontoffice)"

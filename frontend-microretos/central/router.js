@@ -33,7 +33,7 @@ router.beforeEach(async (to) => {
   }
   if (to.meta.requiresAuth && !esSuperadmin) return { name: 'acceso' }
   if (to.meta.soloInvitado && esSuperadmin) return { name: 'inicio' }
-  document.title = 'DuaLab Central'
+  document.title = 'Central DuaLab'
   return true
 })
 
