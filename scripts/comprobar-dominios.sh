@@ -32,13 +32,14 @@ comprobar() {
 }
 
 echo "— App DuaLab (repo microretos)"
-comprobar https://dualab.es/                       "App DuaLab"                 "200" "App DuaLab"
+comprobar https://dualab.es/login                  "App DuaLab (login)"         "200" "App DuaLab"
 comprobar https://api.dualab.es/api/microretos     "API de la app (sin sesión)" "401"
 comprobar https://comercial.dualab.es/             "App comercial"              "200" "App comercial"
 comprobar https://central.dualab.es/               "DuaLab Central"             "200" "Central DuaLab"
 comprobar https://nexo.dualab.es/                  "Nexo"                       "200" "Nexo"
 
 echo "— Web pública (repo frontoffice)"
+comprobar https://dualab.es/                       "Web pública (portada)"      "200" "DuaLab"
 comprobar https://dualab.es/centros                "Web pública"                "200" "DuaLab"
 comprobar https://dualab.es/gestion-web            "Gestión web"                "200" "DuaLab"
 comprobar https://info.dualab.es/api-backend/public/api/retos           "API de la web"         "200"

@@ -30,8 +30,8 @@ captaciones que valida el superadmin en DuaLab Central.
 
 | Dirección | Qué es | Repo | Carpeta en el servidor | API que usa |
 |---|---|---|---|---|
-| `dualab.es` (raíz, `/login`, `/retos`…) | **App DuaLab** (docentes, alumnado, empresas, admin de centro) | microretos | `public_html/` | api.dualab.es |
-| `dualab.es/centros`, `/empresas-asociadas`, `/para-alumnado`, `/entidades`, `/familias`, `/contacto`, `/noticias`… | **Web pública** | frontoffice | `public_html/home/` (el `.htaccess` de la raíz manda allí estas rutas) | info.dualab.es (+ api.dualab.es para el escaparate de retos) |
+| `dualab.es/login`, `/retos`, `/panel-docente`… (todo lo que no sea de la web) | **App DuaLab** (docentes, alumnado, empresas, admin de centro) | microretos | `public_html/` | api.dualab.es |
+| `dualab.es/` (portada), `/centros`, `/empresas-asociadas`, `/para-alumnado`, `/entidades`, `/familias`, `/contacto`, `/noticias`, `/proyectos-destacados`, `/retos-destacados` | **Web pública** (lista explícita en el `.htaccess` de la raíz; `/noticias/dualab` y `/noticias/plataforma` son de la app) | frontoffice | `public_html/home/` (el `.htaccess` de la raíz manda allí estas rutas) | info.dualab.es (+ api.dualab.es para el escaparate de retos) |
 | `dualab.es/gestion-web` | **Gestión web** (panel de la web: admin, edición, atención de contactos) | frontoffice | `public_html/home/` (misma build que la web) | info.dualab.es |
 | `api.dualab.es` | **API de la app** (Laravel) | microretos | `public_html/api-backend/` | — |
 | `info.dualab.es` | **API de la web** (Laravel). Es un **sitio propio en hPanel**: borrarlo borra también su base de datos | frontoffice | `public_html/info/` (Laravel en `info/api-backend/`) | — |
