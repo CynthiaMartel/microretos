@@ -7,6 +7,8 @@ restaurarlas desde las copias de Hostinger.
 
 Comprobación rápida de que todo responde: `./scripts/comprobar-dominios.sh`
 
+Roles, cuentas y qué base de datos usa cada herramienta: [ROLES_Y_BASES_DE_DATOS.md](ROLES_Y_BASES_DE_DATOS.md)
+
 > Este archivo es público (como `CLAUDE.md`): sin ID de cuenta, IP ni rutas absolutas del
 > servidor. Las carpetas se indican desde `public_html` del sitio dualab.es en Hostinger.
 
@@ -62,8 +64,12 @@ Todo vive bajo `.dualab.es`, así que las cookies se comparten entre subdominios
 - `SANCTUM_STATEFUL_DOMAINS` y `CORS_ALLOWED_ORIGINS` de cada API deben listar los sitios que la usan:
   - app: `dualab.es`, `www.dualab.es`, `comercial.dualab.es`, `central.dualab.es`
   - web: `dualab.es`, `www.dualab.es`, `info.dualab.es`
-- La app comercial y Central comparten sesión con la app DuaLab (mismo backend): una cuenta
-  comercial que abra `dualab.es` acaba en la app comercial, y es lo esperado.
+- La app DuaLab, la app comercial y Central usan el mismo backend, pero **cada una tiene su
+  sesión**: el backend elige la cookie según el origen de la petición (`SesionPorHerramienta`,
+  `config/session.php` → `herramientas`). La app sigue con `SESSION_COOKIE` y `XSRF-TOKEN`; la
+  comercial usa `<SESSION_COOKIE>-comercial` y `XSRF-TOKEN-comercial`, y Central lo mismo con
+  `-central`. Entrar con otra cuenta en una herramienta no cambia las demás. Una cuenta
+  comercial que entra por `dualab.es/login` se cierra ahí y se le manda a la app comercial.
 
 ## Antes de tocar nada en hPanel
 

@@ -9,13 +9,14 @@ import { HERRAMIENTAS } from './herramientas.js'
 
 const ICONOS = { app: AcademicCapIcon, web: GlobeAltIcon, comercial: BriefcaseIcon, central: ShieldCheckIcon }
 
-// Clases literales (Tailwind no ve clases montadas con variables). Botón en el tono oscuro
-// del color: texto blanco con contraste AA
+// Clases literales (Tailwind no ve clases montadas con variables). Mismo color que el icono
+// de cada herramienta (pwa/iconos-herramientas.mjs); el botón va en el tono oscuro del color
+// para que el texto blanco tenga contraste AA
 const COLORES = {
   centros: { icono: 'bg-centros/10 text-centros', boton: 'bg-centros hover:bg-centros/90 shadow-centros/25', franja: 'bg-centros' },
   administraciones: { icono: 'bg-administraciones/10 text-administraciones-dark', boton: 'bg-administraciones-dark hover:bg-administraciones-dark/90 shadow-administraciones-dark/25', franja: 'bg-administraciones' },
   empresas: { icono: 'bg-empresas/10 text-empresas-dark', boton: 'bg-empresas-dark hover:bg-empresas-dark/90 shadow-empresas-dark/25', franja: 'bg-empresas' },
-  alumnos: { icono: 'bg-alumnos/10 text-alumnos-dark', boton: 'bg-alumnos-dark hover:bg-alumnos-dark/90 shadow-alumnos-dark/25', franja: 'bg-alumnos' },
+  'azul-noche': { icono: 'bg-azul-noche/10 text-azul-noche', boton: 'bg-azul-noche hover:bg-azul-noche/90 shadow-azul-noche/25', franja: 'bg-azul-noche' },
 }
 
 const enLocal = import.meta.env.DEV

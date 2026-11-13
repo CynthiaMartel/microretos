@@ -26,7 +26,7 @@ router.beforeEach(async (to) => {
   await auth.init()
 
   const esSuperadmin = auth.isAuthenticated && auth.userRole === ROLE_SUPERADMIN
-  // Sesión de otro rol (misma cookie que la app: un docente, un comercial…): Central no es para él
+  // Sesión de otro rol (un docente, un comercial… que entra aquí con su cuenta): Central no es para él
   if (auth.isAuthenticated && !esSuperadmin) {
     await auth.logout()
     return to.name === 'acceso' ? true : { name: 'acceso', query: { motivo: 'rol' } }

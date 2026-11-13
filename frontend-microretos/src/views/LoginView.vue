@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL } from '../stores/auth'
 import { URL_APP_COMERCIAL } from '../utils/urlComercial.js'
@@ -25,10 +25,23 @@ function destinoTrasLogin(role) {
 
 const { form, errors, loginError, isLoading, handleLogin } = useLoginForm((data) => {
   const role = data?.role ?? authStore.userRole
-  // El comercial no tiene nada en esta app: su sitio es la app comercial (misma sesión)
-  if (role === ROLE_COMERCIAL) { window.location.assign(URL_APP_COMERCIAL); return }
+  // El comercial no tiene nada en esta app: su sitio es la app comercial. Cada herramienta
+  // tiene su propia sesión (SesionPorHerramienta.php), así que esta se cierra y allí entra
+  // con su cuenta
+  if (role === ROLE_COMERCIAL) {
+    authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
+    return
+  }
   router.push(destinoTrasLogin(role)).finally(() => triggerWelcome(role, authStore.userName))
 })
+
+// Comercial que llega aquí con su sesión abierta (p. ej. desde el botón del Nexo)
+const comercialConSesion = computed(() => authStore.isAuthenticated && authStore.isComercial)
+const cerrandoSesion = ref(false)
+async function cerrarSesionComercial() {
+  cerrandoSesion.value = true
+  try { await authStore.logout() } finally { cerrandoSesion.value = false }
+}
 
 const soporteAbierto = ref(false)
 
@@ -77,7 +90,29 @@ async function enviarRecuperar() {
       </h1>
       <p class="mt-2 text-base sm:text-lg lg:text-base xl:text-lg text-acceso-texto">Accede a tu espacio y conecta con tu Formación Dual.</p>
 
-      <form class="mt-6 sm:mt-8 [@media(min-width:1024px)_and_(max-height:820px)]:mt-5 flex flex-col gap-4 sm:gap-5 [@media(min-width:1024px)_and_(max-height:820px)]:gap-3" novalidate @submit.prevent="handleLogin">
+      <!-- Sesión comercial abierta en esta app (de antes de separar las sesiones por
+           herramienta): en vez de saltar a la app comercial, se elige ir allí o cerrarla
+           para entrar con otra cuenta -->
+      <div v-if="comercialConSesion" role="status"
+           class="mt-6 sm:mt-8 rounded-2xl border border-acceso-azul/20 bg-primary-50 p-4 sm:p-5">
+        <p class="text-base font-bold text-acceso-tinta">Has entrado como comercial</p>
+        <p class="mt-1 text-sm text-acceso-texto break-words">
+          Con la cuenta de <strong>{{ authStore.userName }}</strong> se usa la app comercial. Para entrar aquí con otra cuenta, cierra antes esa sesión.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <a :href="URL_APP_COMERCIAL"
+             class="inline-flex h-11 items-center justify-center rounded-full bg-acceso-azul px-5 text-sm font-bold text-white transition hover:bg-acceso-azul-hover">
+            Ir a la app comercial
+          </a>
+          <button type="button" :disabled="cerrandoSesion"
+                  class="inline-flex h-11 items-center justify-center rounded-full border-2 border-acceso-azul px-5 text-sm font-bold text-acceso-azul transition hover:bg-white disabled:opacity-60"
+                  @click="cerrarSesionComercial">
+            {{ cerrandoSesion ? 'Cerrando sesión…' : 'Cerrar sesión y entrar con otra cuenta' }}
+          </button>
+        </div>
+      </div>
+
+      <form v-else class="mt-6 sm:mt-8 [@media(min-width:1024px)_and_(max-height:820px)]:mt-5 flex flex-col gap-4 sm:gap-5 [@media(min-width:1024px)_and_(max-height:820px)]:gap-3" novalidate @submit.prevent="handleLogin">
         <div>
           <label for="login-email" class="block text-sm font-semibold text-acceso-tinta mb-2">Correo electrónico</label>
           <div class="relative">

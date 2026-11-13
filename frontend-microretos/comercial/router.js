@@ -33,7 +33,7 @@ router.beforeEach(async (to) => {
   await iniciarSesion(auth)
 
   const puedeUsarla = auth.isAuthenticated && ROLES_APP.includes(auth.userRole)
-  // Sesión de otro rol (p. ej. docente con la misma cookie): esta app no es para él
+  // Sesión de otro rol (p. ej. un docente que entra aquí con su cuenta): esta app no es para él
   if (auth.isAuthenticated && !puedeUsarla) {
     await auth.logout()
     return to.name === 'acceso' ? true : { name: 'acceso', query: { motivo: 'rol' } }

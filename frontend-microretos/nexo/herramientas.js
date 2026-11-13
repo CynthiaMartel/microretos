@@ -34,7 +34,7 @@ export const HERRAMIENTAS = [
     nombre: 'DuaLab Central',
     para: 'Superadmin',
     texto: 'Usuarios, base de datos, validación de captaciones y soporte.',
-    color: 'alumnos',
+    color: 'azul-noche',
     url: url('VITE_NEXO_URL_CENTRAL', 'http://localhost:5179', 'https://central.dualab.es'),
   },
 ]

@@ -1,5 +1,6 @@
 <!-- Acceso a DuaLab Central: misma plantilla que el login de DuaLab y la app comercial
-     (AccesoLayout). Solo superadmin. Mismo login y misma sesión que la app principal. -->
+     (AccesoLayout). Solo superadmin. Mismo login que la app principal, pero sesión propia
+     (SesionPorHerramienta.php): entrar en otra herramienta con otra cuenta no cambia esta. -->
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'

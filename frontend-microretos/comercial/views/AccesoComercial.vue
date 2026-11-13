@@ -1,6 +1,7 @@
 <!-- Acceso a la app comercial: misma plantilla que el login de DuaLab (AccesoLayout,
      «Página de acceso a DuaLab.png»). Solo cuentas de comercial, que crea el superadmin en
-     Gestión de usuarios. Mismo login y misma sesión que la app principal. -->
+     Gestión de usuarios. Mismo login que la app principal, pero sesión propia
+     (SesionPorHerramienta.php): entrar aquí no cambia la cuenta abierta en la app ni en Central. -->
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'

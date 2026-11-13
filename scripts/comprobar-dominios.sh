@@ -32,9 +32,9 @@ comprobar() {
 }
 
 echo "— App DuaLab (repo microretos)"
-comprobar https://dualab.es/login                  "App DuaLab (login)"         "200" "App DuaLab"
+comprobar https://dualab.es/login                  "App DuaLab (login)"         "200" "DuaLab App"
 comprobar https://api.dualab.es/api/microretos     "API de la app (sin sesión)" "401"
-comprobar https://comercial.dualab.es/             "App comercial"              "200" "App comercial"
+comprobar https://comercial.dualab.es/             "App comercial"              "200" "Comercial App"
 comprobar https://central.dualab.es/               "DuaLab Central"             "200" "Central DuaLab"
 comprobar https://nexo.dualab.es/                  "Nexo"                       "200" "Nexo"
 

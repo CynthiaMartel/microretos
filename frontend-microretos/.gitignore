@@ -29,7 +29,7 @@ dist-central
 # Iconos generados por npm run iconos (se copian a public/); solo se versiona la imagen fuente
 pwa/*
 !pwa/icono-dualab.png
-!pwa/icono-comercial.mjs
+!pwa/iconos-herramientas.mjs
 
 # Carpeta temporal de npm run iconos:comercial
 .pwa-comercial/

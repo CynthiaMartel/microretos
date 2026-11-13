@@ -10,10 +10,16 @@ const apiURL = isLocal ? '/api' : 'https://api.dualab.es/api';
 // grupo de rutas 'web', no en 'api'. En local, vite.config.js proxya /sanctum igual que /api.
 const rootURL = isLocal ? '' : 'https://api.dualab.es';
 
+// La app comercial y Central tienen su propia sesión en el backend (SesionPorHerramienta.php)
+// y su propia cookie del token CSRF; la app DuaLab sigue con XSRF-TOKEN. __HERRAMIENTA__ lo
+// define vite.comercial.config.js / vite.central.config.js.
+const herramienta = typeof __HERRAMIENTA__ === 'undefined' ? null : __HERRAMIENTA__;
+
 const api = axios.create({
   baseURL: apiURL,
   withCredentials: true,
   withXSRFToken: true,
+  xsrfCookieName: herramienta ? `XSRF-TOKEN-${herramienta}` : 'XSRF-TOKEN',
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'

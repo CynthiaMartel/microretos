@@ -53,7 +53,9 @@ const isPublicRetoRoute = computed(() =>
 const ACCESO_ROUTES = ['home', 'login', 'restablecer-contrasena']
 const isLoginRoute = computed(() => ACCESO_ROUTES.includes(route.name))
 
-const showSidePanel = computed(() => !isPublicRetoRoute.value && authStore.isAuthenticated)
+// Tampoco en las páginas de acceso aunque haya sesión (una cuenta comercial en /login, o el
+// instante entre iniciar sesión y llegar al panel): igual que la TopBar
+const showSidePanel = computed(() => !isPublicRetoRoute.value && !isLoginRoute.value && authStore.isAuthenticated)
 
 // ── Login modal: vivía dentro de SidePanel, pero este ya no se monta sin sesión.
 // Se sube a App.vue para que las vistas públicas (Home, etc.) puedan seguir abriéndolo.
@@ -73,8 +75,12 @@ watch(
 
 const onLoginSuccess = (data) => {
   const role    = data?.role ?? authStore.userRole
-  // El comercial no tiene nada en esta app: su sitio es la app comercial (misma sesión)
-  if (role === ROLE_COMERCIAL) { window.location.assign(URL_APP_COMERCIAL); return }
+  // El comercial no tiene nada en esta app: su sitio es la app comercial, que tiene su propia
+  // sesión (SesionPorHerramienta.php). Esta se cierra y allí entra con su cuenta
+  if (role === ROLE_COMERCIAL) {
+    authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
+    return
+  }
   const destino = destinoTrasLogin.value || rolHome(role)
   destinoTrasLogin.value = null
   router.push(destino).finally(() => triggerWelcome(role, authStore.userName))
@@ -102,7 +108,10 @@ onMounted(async () => {
   // solo llama a auth.init() para rutas con requiresAuth, si no la TopBar no reflejaría
   // una sesión válida hasta la primera navegación a una ruta protegida.
   if (!authStore.isInitialized) await authStore.init()
-  if (authStore.isComercial) { window.location.assign(URL_APP_COMERCIAL); return }
+  // El comercial va a su app, salvo en la pantalla de acceso: allí LoginView le deja elegir
+  // entre ir a la app comercial o cerrar la sesión y entrar con otra cuenta
+  await router.isReady()
+  if (authStore.isComercial && !isLoginRoute.value) { window.location.assign(URL_APP_COMERCIAL); return }
   if (!authStore.userCentroImg && authStore.userCentroId) cargarCentroImg()
 })
 onUnmounted(() => window.removeEventListener('auth:token-expired', handleTokenExpired))

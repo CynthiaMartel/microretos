@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // src/ (api.js, servicios, store de auth, estilos, componentes) con la app principal.
 //   npm run dev:comercial    → http://localhost:5177
 //   npm run build:comercial  → dist-comercial/ (se sube al subdominio)
-// Mismo backend y misma sesión Sanctum que la app principal (ver api.js).
+// Mismo backend que la app principal, con sesión Sanctum propia (__HERRAMIENTA__, ver api.js).
 //
 // Instalable como app (PWA) igual que la principal (vite.config.js): manifest, service worker
 // con la carcasa de la app, aviso sin conexión y aviso de versión nueva (version.json).
@@ -83,7 +83,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: fileURLToPath(new URL('./comercial', import.meta.url)),
-    // Iconos propios (npm run iconos:comercial) y .htaccess del subdominio; VITE_* desde la
+    // Iconos propios (npm run iconos:herramientas) y .htaccess del subdominio; VITE_* desde la
     // misma carpeta que la app principal
     publicDir: fileURLToPath(new URL('./comercial/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
@@ -95,6 +95,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __APP_VERSION__: JSON.stringify(APP_VERSION),
+      // Cookie XSRF-TOKEN-comercial: sesión propia, aparte de la app y de Central (src/api.js)
+      __HERRAMIENTA__: JSON.stringify('comercial'),
     },
     build: {
       outDir: fileURLToPath(new URL('./dist-comercial', import.meta.url)),

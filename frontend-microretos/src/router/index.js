@@ -58,11 +58,12 @@ const router = createRouter({
   },
   routes: [
     {
-      // Sin sesión, la raíz muestra la misma página de acceso que /login (en producción
-      // la raíz de dualab.es la sirve el frontoffice, ver comentario de /login)
+      // En producción la raíz de dualab.es la sirve el frontoffice (ver comentario de
+      // /login): los router.push('/') de la app (cerrar sesión, sin permiso…) acaban en
+      // /login para que la dirección no se quede en una "/" que al recargar es la web
       path: '/',
       name: 'home',
-      component: LoginView
+      redirect: (to) => ({ name: 'login', query: to.query })
     },
     {
       // Entrada directa desde fuera del dominio (p. ej. el botón "Iniciar sesión"
@@ -327,7 +328,7 @@ const router = createRouter({
 // HttpOnly (Sanctum stateful) — no hay nada que leer en localStorage; en la primera
 // navegación se pregunta al backend (GET /perfil) si la cookie es válida.
 // Si no hay sesión → redirige a / con ?redirect=<ruta>&rt=<hora>
-// Si hay sesión pero el rol no tiene acceso → redirige a /
+// Si hay sesión pero el rol no tiene acceso → redirige a /login (y de ahí a su inicio)
 router.beforeEach(async (to, _from, next) => {
   // Con sesión iniciada, la home (/) y /login no tienen sentido: se va directo al panel
   // (docente/admin/superadmin) o, en cuentas de empresa, a sus proyectos. Un ?redirect
@@ -354,14 +355,14 @@ router.beforeEach(async (to, _from, next) => {
   if (!auth.isInitialized) await auth.init()
 
   if (!auth.isAuthenticated) {
-    next({ path: '/', query: queryRedirect(to.fullPath) })
+    next({ name: 'login', query: queryRedirect(to.fullPath) })
     return
   }
 
   // Verificar permiso de rol para esta ruta — nunca asumir superadmin por defecto
   const allowedRoles = to.meta.roles ?? []
   if (allowedRoles.length > 0 && !allowedRoles.includes(auth.userRole)) {
-    next({ path: '/' })
+    next({ name: 'login' })
     return
   }
 

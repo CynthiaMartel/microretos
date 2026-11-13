@@ -29,7 +29,7 @@ const rutasApp = [...readFileSync(new URL('./src/router/index.js', import.meta.u
   .map((path) => new RegExp(`^${path.replace(/:\w+/g, '[^/]+')}/?(\\?.*)?$`))
 
 const pwa = () => VitePWA({
-  // 'prompt': la versión nueva no se activa sola ni recarga a mitad de un formulario. El aviso
+  // 'prompt': la versión nueva no recarga la página a mitad de un formulario. El aviso
   // "Hay una versión nueva" ya existe (useNuevaVersion + version.json) y su recargarLimpio()
   // da de baja el service worker antiguo; al recargar se registra el nuevo.
   registerType: 'prompt',
@@ -63,6 +63,15 @@ const pwa = () => VitePWA({
     navigateFallback: 'index.html',
     navigateFallbackAllowlist: rutasApp,
     navigateFallbackDenylist: [/^\/api\//, /^\/sanctum\//, /^\/home\//],
+    // Sin esto Workbox convierte "/" en "/index.html" (precacheado) y contesta a la portada
+    // con esta app antes de mirar la lista de arriba: dualab.es abría la app, no la web
+    directoryIndex: null,
+    // El service worker nuevo sustituye al antiguo en cuanto se descarga, sin esperar a que se
+    // cierren todas las pestañas: los navegadores que tenían el de antes (el que contestaba a
+    // "/" con esta app) pasan a ver la web en dualab.es sin borrar datos a mano. No recarga
+    // nada: las pestañas abiertas siguen con su versión hasta el aviso de useNuevaVersion
+    skipWaiting: true,
+    clientsClaim: true,
     cleanupOutdatedCaches: true,
     runtimeCaching: [
       {

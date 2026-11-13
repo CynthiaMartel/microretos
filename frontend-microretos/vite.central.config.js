@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 // paneles de captación) con la app principal, como la app comercial.
 //   npm run dev:central    → http://localhost:5179
 //   npm run build:central  → dist-central/ (se sube al subdominio)
-// Mismo backend y misma sesión Sanctum que la app principal (ver api.js). Las vistas siguen
+// Mismo backend que la app principal, con sesión Sanctum propia (__HERRAMIENTA__, ver api.js). Las vistas siguen
 // también en la app hasta comprobar Central en producción (TAREAS_PENDIENTES T16).
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '../', '') // lee el .env de la raíz del repo, como vite.config.js
@@ -18,6 +18,10 @@ export default defineConfig(({ mode }) => {
     publicDir: fileURLToPath(new URL('./central/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
     plugins: [vue(), tailwindcss()],
+    // Cookie XSRF-TOKEN-central: sesión propia, aparte de la app y de la comercial (src/api.js)
+    define: {
+      __HERRAMIENTA__: JSON.stringify('central'),
+    },
     build: {
       outDir: fileURLToPath(new URL('./dist-central', import.meta.url)),
       emptyOutDir: true,

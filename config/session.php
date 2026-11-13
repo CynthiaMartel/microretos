@@ -134,6 +134,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Una sesión por herramienta
+    |--------------------------------------------------------------------------
+    |
+    | La app DuaLab, la app comercial y DuaLab Central usan este mismo backend. Con
+    | una sola cookie, entrar con otra cuenta en una herramienta cambiaba la sesión
+    | de las demás (un superadmin en Central pasaba a ser comercial). Las peticiones
+    | que llegan desde estos orígenes (host o host:puerto) usan su propia cookie de
+    | sesión ("<cookie>-<herramienta>") y su propia XSRF-TOKEN-<herramienta>; el
+    | resto (la app DuaLab) sigue con las de siempre. Ver SesionPorHerramienta.
+    |
+    */
+
+    'herramientas' => [
+        'comercial' => array_filter(explode(',', (string) env('SESSION_ORIGENES_COMERCIAL', 'comercial.dualab.es,localhost:5177'))),
+        'central'   => array_filter(explode(',', (string) env('SESSION_ORIGENES_CENTRAL', 'central.dualab.es,localhost:5179'))),
+    ],
+
+    // Nombre de la cookie del token CSRF; SesionPorHerramienta lo cambia por petición
+    'xsrf_cookie' => 'XSRF-TOKEN',
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Cookie Path
     |--------------------------------------------------------------------------
     |

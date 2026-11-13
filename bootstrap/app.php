@@ -18,6 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // el sub-pipeline de sesión/CSRF ya declarado en config/sanctum.php.
         $middleware->statefulApi();
 
+        // Una cookie de sesión y una XSRF-TOKEN por herramienta (app, comercial, Central):
+        // entrar con otra cuenta en una no cambia la sesión de las demás. Global y al
+        // principio para que el nombre esté decidido antes de StartSession.
+        $middleware->prepend(\App\Http\Middleware\SesionPorHerramienta::class);
+        $middleware->web(replace: [
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class => \App\Http\Middleware\ValidarCsrfPorHerramienta::class,
+        ]);
+
         // Cabeceras de seguridad HTTP en todas las respuestas
         $middleware->append(SecurityHeaders::class);
 
