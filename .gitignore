@@ -70,3 +70,10 @@ desahucio_.png
 # Paquete de datos de importación (revisión interna, no versionar)
 /DUALAB_PAQUETE_REVISION_IMPORTACION/
 /LD-14-attachments.zip
+
+# Documentos internos que no deben estar en un repo público: backlog de vulnerabilidades,
+# informes internos y el volcado de datos con correos de empresas (RGPD). Siguen en local.
+/SECURITY_FIXES.md
+/INFORME_*.md
+/indice-informes-microretos-encuentros.html
+/database/seeders/data_seed.sql
