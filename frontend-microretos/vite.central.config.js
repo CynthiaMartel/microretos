@@ -10,6 +10,19 @@ import tailwindcss from '@tailwindcss/vite'
 //   npm run build:central  → dist-central/ (se sube al subdominio)
 // Mismo backend que la app principal, con sesión Sanctum propia (__HERRAMIENTA__, ver api.js). Las vistas siguen
 // también en la app hasta comprobar Central en producción (TAREAS_PENDIENTES T16).
+
+// Identificador de este build: __APP_VERSION__ en el bundle y dist-central/version.json
+// (composables/useNuevaVersion.js los compara para avisar de un deploy nuevo)
+const APP_VERSION = Date.now().toString(36)
+
+const versionJson = () => ({
+  name: 'version-json',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: APP_VERSION }) })
+  },
+})
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '../', '') // lee el .env de la raíz del repo, como vite.config.js
 
@@ -17,9 +30,10 @@ export default defineConfig(({ mode }) => {
     root: fileURLToPath(new URL('./central', import.meta.url)),
     publicDir: fileURLToPath(new URL('./central/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
-    plugins: [vue(), tailwindcss()],
+    plugins: [vue(), tailwindcss(), versionJson()],
     // Cookie XSRF-TOKEN-central: sesión propia, aparte de la app y de la comercial (src/api.js)
     define: {
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
       __HERRAMIENTA__: JSON.stringify('central'),
     },
     build: {

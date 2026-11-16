@@ -51,12 +51,13 @@ async function recargarLimpio() {
 }
 
 // Se llama una vez desde App.vue: comprueba al cambiar de ruta (incluida la entrada al
-// dashboard tras el login), al volver a la pestaña y cada INTERVALO_MS.
+// dashboard tras el login), al volver a la pestaña y cada INTERVALO_MS. Sin router (Nexo,
+// una sola pantalla) solo al volver a la pestaña y cada INTERVALO_MS.
 function iniciarComprobacion(router) {
   if (iniciado) return
   iniciado = true
   comprobarVersion()
-  router.afterEach(() => comprobarVersion())
+  router?.afterEach(() => comprobarVersion())
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') comprobarVersion()
   })

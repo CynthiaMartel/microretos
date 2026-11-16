@@ -5,6 +5,7 @@ import {
   AcademicCapIcon, ArrowRightIcon, BriefcaseIcon, GlobeAltIcon, ShieldCheckIcon,
 } from '@heroicons/vue/24/outline'
 import logo from '../src/assets/logo_colores.png'
+import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import { HERRAMIENTAS } from './herramientas.js'
 
 const ICONOS = { app: AcademicCapIcon, web: GlobeAltIcon, comercial: BriefcaseIcon, central: ShieldCheckIcon }
@@ -73,5 +74,7 @@ const enLocal = import.meta.env.DEV
         <a href="https://dualab.es" class="mt-3 inline-block font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline">Ir a dualab.es</a>
       </footer>
     </div>
+    <!-- Una pestaña del Nexo abierta tras un deploy seguiría con los enlaces de antes -->
+    <AvisoNuevaVersion texto="Recarga para ver los enlaces y las herramientas al día." />
   </div>
 </template>

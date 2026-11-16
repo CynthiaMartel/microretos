@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '../src/stores/auth.js'
 import AppCredit from '../src/components/AppCredit.vue'
+import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import PanelLateralCentral from './components/PanelLateralCentral.vue'
 import logo from '../src/assets/logo_colores.png'
 
@@ -113,6 +114,7 @@ const salir = async () => {
       <RouterView :key="route.path" />
     </main>
     <AppCredit />
+    <AvisoNuevaVersion :router="router" />
   </div>
 </template>
 
