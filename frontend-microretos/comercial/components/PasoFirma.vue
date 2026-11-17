@@ -9,6 +9,10 @@ import LienzoFirma from './LienzoFirma.vue'
 
 const props = defineProps({
   empresa: { type: Object, required: true },
+  // Formulario por correo de la empresa: textos legales ya cargados y su propia forma de firmar
+  // ((empresa, payload) => datos). Por defecto, los de la tablet.
+  textosLegales: { type: Object, default: null },
+  firmar: { type: Function, default: null },
 })
 const emit = defineEmits(['atras', 'firmada'])
 
@@ -37,7 +41,7 @@ onMounted(async () => {
   try {
     // Sin conexión, los últimos textos guardados en la tablet. Si DuaLab los cambia antes de
     // enviar la firma, el servidor la rechaza (versiones) y habrá que volver a firmar.
-    textos.value = await conCache('textos-legales', getTextosLegales)
+    textos.value = props.textosLegales ?? await conCache('textos-legales', getTextosLegales)
     for (const c of textos.value.cesiones) cesiones[c.clave] = false
   } catch {
     error.value = 'No se han podido cargar los textos legales. Conéctate una vez para guardarlos en la tablet.'
@@ -57,7 +61,7 @@ async function firmar() {
   try {
     const versiones = Object.fromEntries([...textos.value.textos, ...textos.value.cesiones].map(t => [t.clave, t.version]))
     // Sin conexión se guarda cifrada en la tablet; el servidor la sella al recibirla
-    const datos = await firmarEntrevista(props.empresa, {
+    const datos = await (props.firmar ?? firmarEntrevista)(props.empresa, {
       firmanteNombre: form.firmanteNombre.trim(),
       firmanteDni: form.firmanteDni.trim(),
       firmanteCargo: form.firmanteCargo.trim() || null,

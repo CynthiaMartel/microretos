@@ -10,6 +10,9 @@ import SelectorFamilias from './SelectorFamilias.vue'
 
 const props = defineProps({
   empresa: { type: Object, default: null },
+  // Otra forma de guardar (formulario por correo de la empresa): (empresa, payload) => datos.
+  // Por defecto, la de la tablet (con conexión al servidor y, sin ella, en la tablet).
+  guardar: { type: Function, default: null },
 })
 const emit = defineEmits(['guardada', 'atras'])
 
@@ -61,7 +64,7 @@ async function guardar() {
   }
   try {
     // Sin conexión se guarda en la tablet y se envía después
-    emit('guardada', await guardarEmpresa(props.empresa, payload))
+    emit('guardada', await (props.guardar ?? guardarEmpresa)(props.empresa, payload))
   } catch (err) {
     errores.value = err.response?.data?.errors ?? {}
     error.value = err.response?.data?.error || err.response?.data?.message || err.message || 'No se ha podido guardar la empresa.'

@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\FirmarEmpresaComercialRequest;
 use App\Http\Requests\GenerarRetosComercialRequest;
 use App\Http\Requests\StoreEmpresaComercialRequest;
-use App\Http\Requests\UpdateDiagnosticoEmpresaRequest;
+use App\Http\Requests\EnviarFormularioComercialRequest;
+use App\Http\Requests\SugerirRespuestasComercialRequest;
+use App\Http\Requests\TranscribirAudioRequest;
+use App\Http\Requests\UpdateDiagnosticoComercialRequest;
 use App\Http\Requests\UpdateEmpresaComercialRequest;
 use App\Http\Resources\EmpresaCaptacionResource;
 use App\Http\Resources\MicroretoBorradorResource;
@@ -14,6 +17,8 @@ use App\Models\EmpresaCaptacion;
 use App\Models\User;
 use App\Services\BorradorRetoService;
 use App\Services\CaptacionEmpresaService;
+use App\Services\EntrevistaIAService;
+use App\Services\FormularioEmpresaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,6 +38,8 @@ class ComercialEmpresaController extends Controller
     public function __construct(
         private CaptacionEmpresaService $captacion,
         private BorradorRetoService $borradores,
+        private FormularioEmpresaService $formulario,
+        private EntrevistaIAService $ia,
     ) {}
 
     /** GET /comercial/empresas — las suyas, las más recientes primero */
@@ -81,7 +88,7 @@ class ComercialEmpresaController extends Controller
     }
 
     /** PATCH /comercial/empresas/{id}/diagnostico — la entrevista (P1–P5) */
-    public function diagnostico(UpdateDiagnosticoEmpresaRequest $request, int $id): EmpresaCaptacionResource|JsonResponse
+    public function diagnostico(UpdateDiagnosticoComercialRequest $request, int $id): EmpresaCaptacionResource|JsonResponse
     {
         $captacion = EmpresaCaptacion::findOrFail($id);
         if ($denegado = $this->denegado('editar', $captacion, $request)) return $denegado;
@@ -89,6 +96,72 @@ class ComercialEmpresaController extends Controller
         $this->captacion->actualizarDiagnostico($captacion, $request->validated());
 
         return new EmpresaCaptacionResource($captacion);
+    }
+
+    /** POST /comercial/empresas/{id}/sugerencias — ideas de la IA para las preguntas de la entrevista */
+    public function sugerencias(SugerirRespuestasComercialRequest $request, int $id): JsonResponse
+    {
+        $captacion = EmpresaCaptacion::findOrFail($id);
+        if ($denegado = $this->denegado('editar', $captacion, $request)) return $denegado;
+
+        $sugerencias = $this->ia->sugerencias($captacion, $request->validated());
+        if ($sugerencias === null) {
+            return response()->json(['error' => 'La IA no ha respondido. Inténtalo de nuevo en un momento.'], 502);
+        }
+
+        return response()->json(['data' => $sugerencias]);
+    }
+
+    /** POST /comercial/transcribir — dictado de pago: el audio se pasa a texto y se descarta */
+    public function transcribir(TranscribirAudioRequest $request): JsonResponse
+    {
+        $texto = $this->ia->transcribir($request->file('audio'));
+        if ($texto === null) {
+            return response()->json(['error' => 'No se ha podido pasar a texto. Inténtalo de nuevo o escribe la respuesta.'], 502);
+        }
+
+        return response()->json(['data' => ['texto' => $texto]]);
+    }
+
+    /** POST /comercial/empresas/{id}/formulario — envía a la empresa el enlace del formulario */
+    public function enviarFormulario(EnviarFormularioComercialRequest $request, int $id): JsonResponse
+    {
+        $captacion = EmpresaCaptacion::findOrFail($id);
+        if ($denegado = $this->denegado('editar', $captacion, $request)) return $denegado;
+
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user   = $request->user();
+        $enlace = $this->formulario->enviar($captacion, $user, $request->validated('email'));
+
+        return response()->json([
+            'data'   => new EmpresaCaptacionResource($captacion->refresh()),
+            // Solo ahora se puede ver el enlace en claro (de la BD no se puede recuperar)
+            'enlace' => $enlace,
+        ]);
+    }
+
+    /** POST /comercial/formularios — entrevista nueva por correo: solo con el email de la empresa */
+    public function crearFormulario(EnviarFormularioComercialRequest $request): JsonResponse
+    {
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user = $request->user();
+        [$captacion, $enlace] = $this->formulario->crearYEnviar($user, $request->validated('email'));
+
+        return response()->json([
+            'data'   => new EmpresaCaptacionResource($captacion->refresh()),
+            'enlace' => $enlace,
+        ], 201);
+    }
+
+    /** DELETE /comercial/empresas/{id}/formulario — anula el enlace enviado */
+    public function anularFormulario(Request $request, int $id): EmpresaCaptacionResource|JsonResponse
+    {
+        $captacion = EmpresaCaptacion::findOrFail($id);
+        if ($denegado = $this->denegado('editar', $captacion, $request)) return $denegado;
+
+        $this->formulario->anular($captacion);
+
+        return new EmpresaCaptacionResource($captacion->refresh());
     }
 
     /** POST /comercial/empresas/{id}/generar-retos — demostración: se guardan como borradores */

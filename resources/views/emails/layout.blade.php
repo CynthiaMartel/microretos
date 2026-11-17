@@ -28,7 +28,7 @@
 
       <tr><td style="padding:24px 32px 28px;font-size:12px;line-height:1.5;color:#6B7280;border-top:1px solid #EEF2F7;">
         @yield('pie')
-        <p style="margin:12px 0 0;">© {{ date('Y') }} DUALAB · Gran Canaria, España</p>
+        <p style="margin:12px 0 0;">© {{ date('Y') }} DuaLab · Gran Canaria, España</p>
       </td></tr>
     </table>
   </td></tr>

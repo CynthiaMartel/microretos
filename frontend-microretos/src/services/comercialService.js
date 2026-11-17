@@ -11,6 +11,20 @@ export const crearEmpresaCaptada = (payload) => api.post('/comercial/empresas', 
 export const actualizarEmpresaCaptada = (id, payload) => api.put(`/comercial/empresas/${id}`, payload)
 export const guardarDiagnosticoCaptada = (id, payload) => api.patch(`/comercial/empresas/${id}/diagnostico`, payload)
 
+// Ideas de la IA para las preguntas de la entrevista: lo ya contado (aún sin guardar) →
+// { diaANormal: { preguntas, ejemplos }, consecuencias: { preguntas, ejemplos, opciones }, … }
+export const sugerirRespuestasCaptada = (id, respuestas) => api.post(`/comercial/empresas/${id}/sugerencias`, respuestas)
+// Dictado de pago: FormData con 'audio' → { texto }
+export const transcribirAudio = (formData) => api.post('/comercial/transcribir', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+})
+
+// Formulario por correo: { email } → { data: empresa, enlace } (el enlace solo llega aquí)
+export const enviarFormularioCaptada = (id, email) => api.post(`/comercial/empresas/${id}/formulario`, { email })
+// Entrevista nueva por correo, solo con el email de la empresa → { data: empresa, enlace }
+export const crearFormularioCaptada = (email) => api.post('/comercial/formularios', { email })
+export const anularFormularioCaptada = (id) => api.delete(`/comercial/empresas/${id}/formulario`)
+
 // { familia, ciclo_id, cursoSeleccionado, nivelGrupo, cantidad, enfoqueReto? } → borradores
 export const generarRetosCaptada = (id, payload) => api.post(`/comercial/empresas/${id}/generar-retos`, payload)
 export const getBorradoresCaptada = (id) => api.get(`/comercial/empresas/${id}/borradores`)

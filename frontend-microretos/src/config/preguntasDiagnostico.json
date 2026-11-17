@@ -1,0 +1,42 @@
+{
+  "_leeme": "Única fuente de las preguntas de la entrevista diagnóstica de empresa (la importa preguntasDiagnostico.js). El backend tiene su copia en app/Services/EntrevistaIAService.php y los límites en StoreEmpresaRequest: tests/Feature/PreguntasDiagnosticoSincronizadasTest.php falla si no coinciden con este archivo.",
+  "opciones": {
+    "consecuencias": [
+      "Errores frecuentes", "Costes innecesarios", "Pérdida de tiempo",
+      "Insatisfacción del cliente", "Riesgos de seguridad", "Desperdicio de materiales", "Falta de comunicación interna"
+    ],
+    "restricciones": [
+      "Presupuesto Cero/Muy Bajo", "Equipos obsoletos", "Internet inestable",
+      "Software cerrado", "Resistencia al cambio", "Espacio reducido",
+      "Falta de tiempo", "Normativa RGPD"
+    ]
+  },
+  "preguntas": [
+    { "campo": "diaANormal", "columna": "dia_a_normal", "obligatorio": true, "max": 1000,
+      "pregunta": "¿Qué ofrece su empresa y qué hace en su día a día?",
+      "corta": "¿Qué ofrece y qué hace en su día a día?",
+      "ayuda": "Productos o servicios, clientes y cómo trabajan en un día normal." },
+    { "campo": "friccionArea", "columna": "friccion_area", "obligatorio": true, "max": 400,
+      "pregunta": "¿Qué tarea da más trabajo del que debería?",
+      "corta": "¿Qué tarea da más trabajo del que debería?",
+      "ayuda": "Un proceso concreto: facturación, pedidos, redes sociales, almacén…" },
+    { "campo": "friccionProblema", "columna": "friccion_problema", "obligatorio": true, "max": 1200,
+      "pregunta": "¿Por qué? Cuéntanos qué ocurre hoy",
+      "corta": "¿Por qué? Qué ocurre hoy",
+      "ayuda": "Qué falla, cada cuánto pasa y a quién afecta." },
+    { "campo": "consecuencias", "columna": "consecuencias", "obligatorio": false, "max": 2000,
+      "pregunta": "Si pudieran mejorar algo YA mismo, ¿qué sería?",
+      "corta": "¿Qué mejorarían ya mismo?",
+      "opciones": "consecuencias", "otra": "Otra mejora" },
+    { "campo": "restricciones", "columna": "restricciones", "obligatorio": false, "max": 600,
+      "pregunta": "¿Han probado a solucionarlo? ¿Qué limitaciones tienen?",
+      "corta": "¿Qué limitaciones tienen?",
+      "opciones": "restricciones", "otra": "Otra limitación" },
+    { "campo": "loQueNoQuieren", "columna": "lo_que_no_quieren", "obligatorio": false, "max": 500,
+      "pregunta": "¿Qué NO quieren bajo ningún concepto?",
+      "corta": "¿Qué NO quieren bajo ningún concepto?" },
+    { "campo": "expectativasAlumno", "columna": "expectativas_alumno", "obligatorio": false, "max": 800,
+      "pregunta": "Si tuvieras a un alumno aquí, ¿qué esperas que realice?",
+      "corta": "¿Qué esperan que realice el alumno?" }
+  ]
+}

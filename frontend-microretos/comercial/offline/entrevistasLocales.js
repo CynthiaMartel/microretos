@@ -45,7 +45,8 @@ export function vista(r) {
     }
   }
   if (r.diagnostico) {
-    for (const [campo, valor] of Object.entries(r.diagnostico)) e[COLUMNA_DE[campo]] = valor
+    // respuestasIa no es una pregunta: va a respuestas_ia, como en EmpresaCaptacionResource
+    for (const [campo, valor] of Object.entries(r.diagnostico)) e[COLUMNA_DE[campo] ?? aSnake(campo)] = valor
   }
   e.id = r.empresaId ?? null
   e.created_at = e.created_at ?? r.creadaAt

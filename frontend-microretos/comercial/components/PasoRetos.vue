@@ -8,6 +8,8 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { getCiclosDeFamilia } from '../../src/services/datosFPService.js'
 import { generarRetosCaptada, getBorradoresCaptada } from '../../src/services/comercialService.js'
+import MicroretoModal from '../../src/components/MicroretoModal.vue'
+import { fichaDeBorrador } from '../fichaBorrador.js'
 
 const props = defineProps({
   empresa:  { type: Object, required: true },
@@ -35,7 +37,9 @@ const ciclos        = ref([])
 const retos         = ref([])
 const generando     = ref(false)
 const error         = ref('')
-const abierto       = ref(null)
+// Reto abierto en la ficha (la misma que en la app DuaLab)
+const fichaAbierta  = ref(null)
+const abrirFicha = (b) => { fichaAbierta.value = fichaDeBorrador(b, props.empresa) }
 // null = aún no se ha elegido (crear demostración o ir a la firma); 'demo' = formulario visible
 const modo          = ref(null)
 
@@ -70,7 +74,8 @@ async function generar() {
   try {
     const { data } = await generarRetosCaptada(props.empresa.id, { ...form, cantidad: Number(form.cantidad) })
     retos.value = [...data.data, ...retos.value]
-    abierto.value = data.data[0]?.uuid ?? null
+    // Se enseña directamente el primero, con su ficha completa
+    if (data.data[0]) abrirFicha(data.data[0])
   } catch (err) {
     const errores = err.response?.data?.errors
     error.value = err.response?.status === 429
@@ -179,28 +184,22 @@ async function generar() {
 
     <section v-if="retos.length" class="space-y-3">
       <h2 class="font-heading text-lg font-bold">Retos propuestos para {{ empresa.nombre_comercial }}</h2>
-      <article v-for="r in retos" :key="r.uuid" class="overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
-        <button type="button" class="flex w-full flex-col gap-1 p-4 text-left sm:p-5" :aria-expanded="abierto === r.uuid"
-                @click="abierto = abierto === r.uuid ? null : r.uuid">
+      <p class="text-sm text-texto-secundario">Pulsa un reto para ver su ficha completa, como la verán los docentes.</p>
+      <article v-for="r in retos" :key="r.uuid" class="overflow-hidden rounded-2xl border border-borde bg-white shadow-sm transition hover:border-rol-fuerte/40 hover:shadow-md">
+        <button type="button" class="flex w-full flex-col gap-1 p-4 text-left sm:p-5" @click="abrirFicha(r)">
           <span class="w-fit rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Borrador · lo revisará DuaLab</span>
           <span class="break-words font-heading text-lg font-bold">{{ r.reto.titulo }}</span>
           <span class="break-words text-sm text-texto-secundario">{{ r.reto.subtitulo }}</span>
-          <span class="text-xs text-gray-500">{{ r.familia }} · {{ r.reto.ciclo }}</span>
+          <span class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <span class="min-w-0 break-words">{{ r.familia }} · {{ r.reto.ciclo }}</span>
+            <span class="shrink-0 font-semibold text-rol-fuerte">Ver ficha →</span>
+          </span>
         </button>
-        <div v-if="abierto === r.uuid" class="space-y-4 border-t border-gray-100 p-4 text-sm sm:p-5">
-          <p v-if="r.reto.pregunta_reto" class="rounded-xl bg-rol/10 p-4 font-heading text-base font-bold text-azul-noche">{{ r.reto.pregunta_reto }}</p>
-          <div v-if="r.reto.dificultades?.length">
-            <p class="mb-1 font-bold">Qué está fallando</p>
-            <ul class="list-disc space-y-1 pl-5 text-gray-600"><li v-for="(d, i) in r.reto.dificultades" :key="i">{{ d }}</li></ul>
-          </div>
-          <div v-if="r.reto.prototipos?.length">
-            <p class="mb-1 font-bold">Qué entregaría el alumnado</p>
-            <ul class="list-disc space-y-1 pl-5 text-gray-600"><li v-for="(p, i) in r.reto.prototipos" :key="i">{{ p }}</li></ul>
-          </div>
-        </div>
       </article>
     </section>
     </template>
+
+    <MicroretoModal :datos-reto="fichaAbierta" @close="fichaAbierta = null" />
 
     <div class="fila-pasos">
       <button type="button" class="btn-paso-atras" @click="emit('atras')">Volver</button>

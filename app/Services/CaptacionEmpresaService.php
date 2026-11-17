@@ -112,10 +112,22 @@ class CaptacionEmpresaService
         return $captacion;
     }
 
-    /** @param array<string, mixed> $validated  UpdateDiagnosticoEmpresaRequest */
+    /** @param array<string, mixed> $validated  UpdateDiagnosticoComercialRequest o el formulario público (FormularioEmpresaService) */
     public function actualizarDiagnostico(EmpresaCaptacion $captacion, array $validated): EmpresaCaptacion
     {
-        $captacion->update($this->columnas($validated, self::CAMPOS_DIAGNOSTICO));
+        $captacion->fill($this->columnas($validated, self::CAMPOS_DIAGNOSTICO));
+        if (array_key_exists('respuestasIa', $validated)) {
+            // La entrevista del comercial dice qué respuestas partieron de una sugerencia de la IA
+            $captacion->respuestas_ia = array_values($validated['respuestasIa'] ?? []) ?: null;
+        } elseif ($captacion->respuestas_ia) {
+            // Quien cambia una de esas respuestas sin decirlo (la empresa en el formulario) la hace suya
+            $captacion->respuestas_ia = array_values(array_filter(
+                $captacion->respuestas_ia,
+                fn ($campo) => !$captacion->isDirty(self::CAMPOS_DIAGNOSTICO[$campo] ?? ''),
+            )) ?: null;
+        }
+        $captacion->save();
+
         return $captacion;
     }
 
@@ -127,6 +139,12 @@ class CaptacionEmpresaService
             if (trim((string) $captacion->{$columna}) === '') $faltan[] = $nombre;
         }
         return $faltan;
+    }
+
+    /** Nombre, sector y familias: lo obligatorio del paso «Empresa» (StoreEmpresaComercialRequest) */
+    public function tieneDatosMinimos(EmpresaCaptacion $captacion): bool
+    {
+        return filled($captacion->nombre_comercial) && filled($captacion->sector) && $captacion->nombresFamilias() !== [];
     }
 
     public function tieneDiagnosticoMinimo(EmpresaCaptacion $captacion): bool
@@ -159,15 +177,22 @@ class CaptacionEmpresaService
 
     /**
      * Registra la firma y los consentimientos y deja la captación pendiente de validar.
+     * $canal: 'presencial' (en la tablet del comercial) o 'formulario_correo' (la empresa desde
+     * el enlace que le envió el comercial, FormularioEmpresaService); queda en la copia firmada.
      *
      * @param array<string, mixed> $validated  FirmarEmpresaComercialRequest
      */
-    public function firmar(EmpresaCaptacion $captacion, User $comercial, array $validated, ?string $ip, ?string $userAgent): EmpresaFirma
+    public function firmar(EmpresaCaptacion $captacion, User $comercial, array $validated, ?string $ip, ?string $userAgent, string $canal = 'presencial'): EmpresaFirma
     {
         // Con los textos de ejemplo no se recogen firmas reales (ver config/captacion.php)
         if (app()->isProduction() && !config('captacion.textos_revisados')) {
             throw ValidationException::withMessages([
                 'versiones' => 'Los textos legales aún no están revisados: no se puede firmar todavía.',
+            ]);
+        }
+        if (!$this->tieneDatosMinimos($captacion)) {
+            throw ValidationException::withMessages([
+                'empresa' => 'Faltan datos de la empresa (nombre, sector o familias profesionales) antes de firmar.',
             ]);
         }
         if (!$this->tieneDiagnosticoMinimo($captacion)) {
@@ -193,6 +218,7 @@ class CaptacionEmpresaService
             'consentimientos' => $consentimientos,
             'firma_sha256'    => hash('sha256', $png),
             'comercial_id'    => $comercial->id,
+            'canal'           => $canal,
             'firmado_at'      => $ahora->toIso8601String(),
             // Firmada sin conexión: firmado_at es cuando el servidor la recibe y la sella; la
             // hora en que se firmó en la tablet queda aquí, tal como la dio el dispositivo

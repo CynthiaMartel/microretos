@@ -106,6 +106,36 @@ return [
         ],
     ],
 
+    // Formulario público de la entrevista: el comercial se lo envía por correo a la empresa cuando
+    // no da tiempo a hacerla en persona. Abre la app comercial (ruta /formulario/{token}, sin login).
+    'url_app_comercial' => env('COMERCIAL_URL', env('APP_ENV') === 'production' ? 'https://comercial.dualab.es' : 'http://localhost:5177'),
+    'formulario' => [
+        'dias_validez' => 14,
+        // Lo acepta quien responde el formulario (sin firma: la firma sigue siendo en persona)
+        'privacidad' => [
+            'version' => '0.2-borrador',
+            'titulo'  => 'Información sobre protección de datos',
+            'texto'   => "Responsable: [SOCIEDAD TITULAR DE DUALAB, CIF Y DOMICILIO], que opera bajo la marca "
+                . "Grupo Óptima.\n\n"
+                . "Finalidad: conocer la actividad y las necesidades de la empresa para valorar su "
+                . "participación en el programa DuaLab y diseñar retos formativos para el alumnado de "
+                . "Formación Profesional. No escribas datos personales de clientes ni de empleados.\n\n"
+                . "Base jurídica: el interés de la empresa en participar, que ha pedido esta información "
+                . "a nuestro equipo comercial.\n\n"
+                . "Conservación: mientras se valora la colaboración y, si continúa, mientras dure. "
+                . "Si la empresa no sigue adelante, las respuestas se descartan.\n\n"
+                . "Derechos: acceso, rectificación, supresión, oposición, limitación y portabilidad en "
+                . "[EMAIL DE CONTACTO]. Puedes reclamar ante la Agencia Española de Protección de Datos "
+                . "(www.aepd.es).",
+        ],
+    ],
+
+    // IA de la entrevista (OpenAI, services.openai.key): dictado de pago y sugerencias para el comercial
+    'ia' => [
+        'modelo_transcripcion' => env('CAPTACION_MODELO_TRANSCRIPCION', 'gpt-4o-mini-transcribe'),
+        'modelo_sugerencias'   => env('CAPTACION_MODELO_SUGERENCIAS', 'gpt-4o-mini'),
+    ],
+
     // Formularios del frontoffice (dualab.es/contacto) que llegan como captaciones: el frontoffice
     // los reenvía por su webhook (Gestión web → Integraciones) firmados con HMAC-SHA256 con este
     // secreto, el mismo que se configure allí. Sin secreto, el endpoint no acepta nada.

@@ -1,4 +1,5 @@
 <script setup>
+import BotonInstalarApp from '../src/components/BotonInstalarApp.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '../src/stores/auth.js'
@@ -11,7 +12,8 @@ import { recargarPendientes, sincronizar, conCache } from './offline/entrevistas
 import { recargarCentrosPendientes, sincronizarCentros } from './offline/centrosLocales.js'
 import { getFamilias } from '../src/services/datosFPService.js'
 import { getTextosLegales, getTextosLegalesCentros } from '../src/services/comercialService.js'
-import logo from '../src/assets/logo_colores.png'
+// Icono de la herramienta, igual que su favicon (pwa/iconos-herramientas.mjs --barra)
+import logo from './icono-barra.png'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -33,7 +35,8 @@ const recargarNuevaVersion = () => {
   recargarLimpio()
 }
 
-const conChrome = computed(() => authStore.isAuthenticated && route.name !== 'acceso')
+// Sin barra ni menú en el acceso y en las páginas públicas (formulario de la empresa)
+const conChrome = computed(() => authStore.isAuthenticated && route.name !== 'acceso' && !route.meta.publica)
 const panelAbierto = ref(false)
 
 // 401 en mitad de la entrevista (sesión caducada): a la pantalla de acceso. Lo ya guardado
@@ -114,7 +117,7 @@ const salir = async () => {
       </button>
 
       <RouterLink :to="{ name: 'mis-entrevistas' }" class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80" aria-label="DuaLab · Empresas">
-        <img :src="logo" alt="" class="h-11 w-auto object-contain" />
+        <img :src="logo" alt="" class="h-10 w-10 shrink-0 rounded-[22%] ring-1 ring-white/25" />
         <span class="select-none text-lg font-black uppercase tracking-tighter text-white">
           Dua<span :class="seccion === 'centros' ? 'text-centros-light' : 'text-empresas-light'">Lab</span>
         </span>
@@ -123,6 +126,9 @@ const salir = async () => {
       <span class="hidden min-w-0 truncate text-xs font-bold uppercase tracking-[0.15em] text-white/60 sm:inline">Comercial</span>
 
       <div class="flex-1" />
+
+      <!-- Instalar como app (en la barra superior, sin scroll en el panel lateral) -->
+      <BotonInstalarApp nombre="DuaLab Comercial" ruta-inicio="/" />
 
       <div ref="menuRef" class="relative">
         <button type="button" :aria-expanded="menuAbierto" aria-haspopup="menu" aria-label="Menú de usuario"

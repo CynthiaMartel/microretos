@@ -127,11 +127,12 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
                       class="tarjeta flex h-full flex-col gap-3 transition hover:border-rol-fuerte/40 hover:shadow-md">
             <div class="flex items-start gap-3">
               <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-empresas/10 font-heading text-lg font-bold text-empresas-dark" aria-hidden="true">
-                {{ (e.nombre_comercial || '?').charAt(0).toUpperCase() }}
+                {{ (e.nombre_comercial || e.email_general || '?').charAt(0).toUpperCase() }}
               </span>
               <div class="min-w-0 flex-1">
-                <p class="break-words font-heading text-base font-bold">{{ e.nombre_comercial }}</p>
-                <p class="truncate text-sm text-texto-secundario">{{ [e.sector, e.municipio].filter(Boolean).join(' · ') || 'Sin sector' }}</p>
+                <!-- Enviada por correo y aún sin rellenar: solo se sabe su email -->
+                <p class="break-words font-heading text-base font-bold">{{ e.nombre_comercial || e.email_general || 'Empresa sin nombre' }}</p>
+                <p class="truncate text-sm text-texto-secundario">{{ [e.sector, e.municipio].filter(Boolean).join(' · ') || (e.nombre_comercial ? 'Sin sector' : 'Pendiente de que la empresa rellene sus datos') }}</p>
               </div>
             </div>
             <span class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="ESTADO[estadoDe(e)]?.clase">
@@ -139,6 +140,12 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
               {{ ESTADO[estadoDe(e)]?.texto ?? e.estado }}
             </span>
             <p v-if="e._error" class="break-words text-xs text-red-700">{{ e._error }}</p>
+            <!-- Preguntas enviadas por correo (EnviarFormulario) -->
+            <p v-if="e.formulario?.respondido_at || (e.estado === 'borrador' && e.formulario?.abierto)"
+               class="flex items-center gap-1.5 text-xs font-semibold" :class="e.formulario.respondido_at ? 'text-empresas-dark' : 'text-texto-secundario'">
+              <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
+              {{ e.formulario.respondido_at ? 'Completada y firmada por la empresa por correo' : 'Enviada por correo · sin completar' }}
+            </p>
             <div v-if="e.familias?.length" class="flex flex-wrap gap-1.5">
               <span v-for="f in e.familias" :key="f.nombre" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">{{ f.nombre }}</span>
             </div>

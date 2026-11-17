@@ -43,6 +43,15 @@ class EmpresaCaptacionResource extends JsonResource
             'lo_que_no_quieren'    => $this->lo_que_no_quieren,
             'expectativas_alumno'  => $this->expectativas_alumno,
             'notas'                => $this->notas, // formulario web: lo que no tiene columna propia
+            // Preguntas (camelCase) cuya respuesta partió de una sugerencia de la IA confirmada por la empresa
+            'respuestas_ia'        => $this->respuestas_ia ?? [],
+            // Formulario enviado por correo a la empresa (el enlace en claro no se guarda)
+            'formulario'           => $this->formulario_enviado_at ? [
+                'enviado_at'    => $this->formulario_enviado_at->toIso8601String(),
+                'expira_at'     => $this->formulario_expira_at?->toIso8601String(),
+                'respondido_at' => $this->formulario_respondido_at?->toIso8601String(),
+                'abierto'       => $this->resource->formularioAbierto(),
+            ] : null,
 
             'familias'             => array_values(array_map(fn ($f) => [
                 'nombre' => $f['nombre'] ?? '', 'interes' => $f['interes'] ?? null,

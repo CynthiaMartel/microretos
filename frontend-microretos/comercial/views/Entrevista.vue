@@ -12,6 +12,9 @@ import PasoEmpresa from '../components/PasoEmpresa.vue'
 import PasoDiagnostico from '../components/PasoDiagnostico.vue'
 import PasoRetos from '../components/PasoRetos.vue'
 import PasoFirma from '../components/PasoFirma.vue'
+import EnviarFormulario from '../components/EnviarFormulario.vue'
+import MicroretoModal from '../../src/components/MicroretoModal.vue'
+import { fichaDeBorrador } from '../fichaBorrador.js'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import TallerPasos from '../../src/components/TallerPasos.vue'
 import {
@@ -43,10 +46,12 @@ const borradores = ref([])
 const firmada = computed(() => empresa.value && empresa.value.estado !== 'borrador')
 const enTablet = computed(() => !!empresa.value?._local)
 
-// Se retoma donde se quedó: sin diagnóstico, en la entrevista; con él, en los retos
+// Se retoma donde se quedó: sin diagnóstico, en la entrevista; con él, en los retos. Enviada
+// por correo y aún sin datos de la empresa: en el primer paso, donde se ve cómo va el envío.
 function retomar() {
   if (firmada.value) return
-  paso.value = empresa.value.friccion_problema ? 3 : 2
+  paso.value = !empresa.value.nombre_comercial ? (empresa.value.formulario ? 0 : 1)
+    : empresa.value.friccion_problema ? 3 : 2
   maximo.value = paso.value
 }
 
@@ -149,7 +154,7 @@ async function alFirmar(datos) {
 }
 
 const respuestas = computed(() => PREGUNTAS_DIAGNOSTICO
-  .map(p => ({ pregunta: p.pregunta, respuesta: empresa.value?.[COLUMNA_DE[p.campo]] }))
+  .map(p => ({ pregunta: p.pregunta, respuesta: empresa.value?.[COLUMNA_DE[p.campo]], ia: empresa.value?.respuestas_ia?.includes(p.campo) }))
   .filter(r => r.respuesta))
 // TallerPasos numera desde 1; sin empresa guardada solo se puede ir al inicio o a «Empresa»
 const pasosIndicador = PASOS.map((p, i) => ({ num: i + 1, label: p.titulo }))
@@ -163,6 +168,9 @@ onUnmounted(() => {
   window.removeEventListener('offline', alCambiarRed)
 })
 
+// Ficha completa de un reto generado (la misma que en la app DuaLab)
+const fichaAbierta = ref(null)
+
 const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' }) : ''
 </script>
 
@@ -170,7 +178,7 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
   <!-- Centrado, como Mis entrevistas: app de una sola tarea, sin menú lateral -->
   <div class="relative mx-auto max-w-4xl space-y-6 px-4 pb-10 pt-[5.25rem] sm:px-6 lg:px-8">
     <CabeceraSeccion :antetitulo="firmada ? 'Equipo comercial · Entrevista firmada' : `Equipo comercial · Paso ${paso + 1} de ${PASOS.length}`"
-                     :titulo="empresa?.nombre_comercial || 'Nueva'" :destacado="empresa ? '' : 'entrevista'" color="text-empresas-dark"
+                     :titulo="empresa?.nombre_comercial || empresa?.email_general || 'Nueva'" :destacado="empresa ? '' : 'entrevista'" color="text-empresas-dark"
                      :volver="{ name: 'mis-entrevistas' }" volver-label="Mis entrevistas" />
 
     <div>
@@ -211,7 +219,7 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
         </span>
         <p class="mt-3 font-heading text-xl font-bold">{{ enTablet ? 'Firmada en la tablet' : 'Entrevista completada' }}</p>
         <p class="mt-2 text-sm text-texto-secundario">
-          Entrevista firmada<template v-if="empresa.firma"> por {{ empresa.firma.firmante_nombre }}</template> el {{ fecha(empresa.firmada_at) }}.
+          Entrevista firmada<template v-if="empresa.firma"> por {{ empresa.firma.firmante_nombre }}</template> el {{ fecha(empresa.firmada_at) }}<template v-if="empresa.formulario?.respondido_at">, a distancia, desde el enlace que le enviaste por correo</template>.
         </p>
         <p class="mt-2 text-sm text-texto-secundario">
           {{ enTablet
@@ -229,7 +237,7 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
         <h2 class="font-heading text-lg font-bold">Lo que contó la empresa</h2>
         <dl class="mt-3 space-y-3 text-sm">
           <div v-for="r in respuestas" :key="r.pregunta">
-            <dt class="font-semibold text-azul-noche">{{ r.pregunta }}</dt>
+            <dt class="font-semibold text-azul-noche">{{ r.pregunta }}<span v-if="r.ia" class="ml-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">Idea de la IA confirmada</span></dt>
             <dd class="mt-0.5 whitespace-pre-line break-words text-gray-600">{{ r.respuesta }}</dd>
           </div>
         </dl>
@@ -238,8 +246,9 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
       <section v-if="borradores.length" class="tarjeta">
         <h2 class="font-heading text-lg font-bold">Retos generados</h2>
         <ul class="mt-3 divide-y divide-gray-100 text-sm">
-          <li v-for="b in borradores" :key="b.uuid" class="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span class="min-w-0 break-words font-semibold">{{ b.reto.titulo }}</span>
+          <li v-for="b in borradores" :key="b.uuid" class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" class="min-h-9 min-w-0 break-words text-left font-semibold text-azul-noche hover:text-rol-fuerte hover:underline"
+                    @click="fichaAbierta = fichaDeBorrador(b, empresa)">{{ b.reto.titulo }}</button>
             <span class="w-fit shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
                   :class="{ pendiente: 'bg-amber-50 text-amber-800', publicado: 'bg-empresas/10 text-empresas-dark', descartado: 'bg-gray-100 text-gray-500' }[b.estado]">
               {{ { pendiente: 'Pendiente de validar', publicado: 'Publicado', descartado: 'Descartado' }[b.estado] }}
@@ -268,6 +277,12 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
             Infórmale de que sus datos solo se usarán para diseñar retos formativos y de que, antes de firmar, podrá leer el texto completo.
           </p>
         </section>
+
+        <!-- ¿No da tiempo? Se envía la entrevista entera por correo (modal) y la completa la empresa.
+             Necesita conexión; las entrevistas guardadas en la tablet no tienen ficha en el servidor -->
+        <EnviarFormulario v-if="!enTablet && enLinea" :empresa="empresa?.id ? empresa : null"
+                          @actualizada="empresa = $event"
+                          @creada="router.replace({ name: 'entrevista', params: { id: $event.id } })" />
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="router.push({ name: 'mis-entrevistas' })">Volver</button>
           <button type="button" class="btn-paso" @click="irA(1)">Empezar</button>
@@ -281,6 +296,7 @@ const fecha = (iso) => iso ? new Date(iso).toLocaleString('es-ES', { dateStyle: 
       <PasoFirma v-else-if="paso === 4" :empresa="empresa" @atras="irA(3)" @firmada="alFirmar" />
     </div>
     </div>
+    <MicroretoModal :datos-reto="fichaAbierta" @close="fichaAbierta = null" />
   </div>
 </template>
 

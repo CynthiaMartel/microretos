@@ -87,6 +87,8 @@ export default defineConfig(({ mode }) => {
     // misma carpeta que la app principal
     publicDir: fileURLToPath(new URL('./comercial/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
+    // Caché propia: si comparten node_modules/.vite, un `vite --force` de otra app borra sus deps
+    cacheDir: fileURLToPath(new URL('./node_modules/.vite-comercial', import.meta.url)),
     plugins: [
       vue(),
       tailwindcss(),

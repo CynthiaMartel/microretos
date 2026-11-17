@@ -22,12 +22,18 @@ const router = createRouter({
     { path: '/centros/nuevo', name: 'centro-nuevo', component: () => import('./views/EntrevistaCentro.vue'), meta: { requiresAuth: true, seccion: 'centros' } },
     // Misma vista «Mi usuario» que la app principal (nombre y contraseña); el panel de módulos no sale al comercial
     { path: '/mi-usuario', name: 'mi-usuario', component: () => import('../src/views/MiUsuario.vue'), meta: { requiresAuth: true } },
+    // Formulario que la empresa responde sin cuenta desde el enlace que le envía el comercial
+    // por correo (EnviarFormulario). Pública: ni sesión ni chrome de la app.
+    { path: '/formulario/:token([A-Za-z0-9]{64})', name: 'formulario-empresa', component: () => import('./views/FormularioEmpresa.vue'), props: true, meta: { publica: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })
 
 router.beforeEach(async (to) => {
+  // La empresa que abre su enlace no tiene cuenta: no se comprueba ni se toca ninguna sesión
+  if (to.meta.publica) return true
+
   const auth = useAuthStore()
   // Como auth.init(), pero sin conexión entra con la sesión recordada en la tablet
   await iniciarSesion(auth)

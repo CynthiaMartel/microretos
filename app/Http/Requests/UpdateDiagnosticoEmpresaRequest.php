@@ -7,7 +7,7 @@ namespace App\Http\Requests;
 // campo de la empresa (CIF, contacto, es_simulada...) queda fuera de la lista blanca.
 class UpdateDiagnosticoEmpresaRequest extends StoreEmpresaRequest
 {
-    private const CAMPOS_DIAGNOSTICO = [
+    public const CAMPOS_DIAGNOSTICO = [
         'diaANormal', 'friccionArea', 'friccionProblema',
         'consecuencias', 'restricciones', 'loQueNoQuieren', 'expectativasAlumno',
     ];
