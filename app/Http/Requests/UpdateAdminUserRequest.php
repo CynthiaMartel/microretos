@@ -17,8 +17,8 @@ class UpdateAdminUserRequest extends FormRequest
     {
         $targetUser = $this->route('user');
 
-        // Admin de centro solo puede mantener el rol docente; superadmin puede asignar 2, 3, 4 o 5
-        $rolesPermitidos = $this->user()->isAdmin() ? '2' : '2,3,4,5';
+        // Admin de centro solo puede mantener el rol docente; superadmin puede asignar 2, 3, 4, 5 o 6
+        $rolesPermitidos = $this->user()->isAdmin() ? '2' : '2,3,4,5,6';
 
         $rules = [
             'name'  => 'required|string|max:255',

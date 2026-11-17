@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { pwaHerramienta } from './pwa/pwaHerramienta.mjs'
 
 // Nexo DuaLab (nexo.dualab.es): página de acceso común a las herramientas de DuaLab.
 // Solo enlaza al acceso de cada una: sin sesión, sin API y sin datos (cada herramienta
@@ -28,7 +29,11 @@ export default defineConfig(({ mode }) => {
     root: fileURLToPath(new URL('./nexo', import.meta.url)),
     publicDir: fileURLToPath(new URL('./nexo/public', import.meta.url)),
     envDir: fileURLToPath(new URL('.', import.meta.url)),
-    plugins: [vue(), tailwindcss(), versionJson()],
+    // Caché propia: si comparten node_modules/.vite, un `vite --force` de otra app borra sus deps
+    cacheDir: fileURLToPath(new URL('./node_modules/.vite-nexo', import.meta.url)),
+    plugins: [vue(), tailwindcss(), versionJson(),
+      // Instalable como app (botón «Instalar app» de la cabecera)
+      pwaHerramienta({ name: 'Nexo DuaLab', shortName: 'Nexo', description: 'Acceso a las herramientas de DuaLab' })],
     define: {
       __APP_VERSION__: JSON.stringify(APP_VERSION),
     },

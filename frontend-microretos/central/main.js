@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import './central.css' // incluye src/style.css
 import App from './App.vue'
 import router from './router.js'
+import '../src/composables/useInstalarApp.js' // escucha beforeinstallprompt desde el arranque
 
 // Tras un deploy, una pestaña con la versión anterior puede pedir el chunk de una vista que ya
 // no existe → se recarga una vez para traer el index.html nuevo (igual que src/main.js).

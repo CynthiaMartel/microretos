@@ -55,11 +55,11 @@ class AdminUserController extends Controller
             ]);
             $user->role = User::ROLE_DOCENTE;
         } else {
-            // Superadmin: puede crear docente (2), empresa (3), admin de centro (4) o comercial (5).
-            // El comercial no pertenece a ningún centro ni empresa: capta empresas para DuaLab.
-            /** @var int<0, max> $rol  StoreAdminUserRequest restringe role a 2|3|4|5 */
+            // Superadmin: puede crear docente (2), empresa (3), admin de centro (4), comercial (5) o
+            // atención al cliente (6). Los dos últimos no pertenecen a ningún centro ni empresa: trabajan para DuaLab.
+            /** @var int<0, max> $rol  StoreAdminUserRequest restringe role a 2|3|4|5|6 */
             $rol = (int) $data['role'];
-            $esComercial = $rol === User::ROLE_COMERCIAL;
+            $esComercial = in_array($rol, [User::ROLE_COMERCIAL, User::ROLE_ATENCION_CLIENTE], true);
             $user = new User([
                 'name'                => $data['name'],
                 'email'               => $data['email'],
@@ -140,8 +140,8 @@ class AdminUserController extends Controller
             $user->empresa_id = $data['empresa_id'];
         }
 
-        // Un comercial nunca queda ligado a un centro o empresa (vería sus datos en la app de docentes)
-        if ($user->isComercial()) {
+        // Comercial y atención al cliente nunca quedan ligados a un centro o empresa (verían sus datos en la app de docentes)
+        if ($user->esPersonalDualab()) {
             $user->centro_educativo_id = null;
             $user->empresa_id          = null;
         }

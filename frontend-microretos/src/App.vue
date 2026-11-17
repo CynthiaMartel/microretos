@@ -1,4 +1,5 @@
 <script setup>
+import { URL_CENTRAL } from './utils/urlCentral.js'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { RouterView } from 'vue-router'
@@ -7,7 +8,7 @@ import SidePanel from './components/SidePanel.vue'
 import AppCredit from './components/AppCredit.vue'
 import ComoFuncionaModal from './components/ComoFuncionaModal.vue'
 import LoginModal from './components/LoginModal.vue'
-import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL } from './stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE } from './stores/auth'
 import { URL_APP_COMERCIAL } from './utils/urlComercial.js'
 import AvisoCaptacionPendiente from './components/AvisoCaptacionPendiente.vue'
 import AvisoSinConexion from './components/AvisoSinConexion.vue'
@@ -40,6 +41,7 @@ watch(() => theme.value.key, (key) => {
 const isPublicRetoRoute = computed(() =>
   route.path.startsWith('/reto/') ||
   route.path.startsWith('/startup/landing/') ||
+  route.path.startsWith('/valoracion/') ||
   route.path.startsWith('/proyecto/equipo/') ||
   // Workspace de un grupo visto por el docente (solo lectura): a pantalla completa como el del
   // alumnado; se abre en otra pestaña y su aviso lleva al Detalle del grupo
@@ -81,6 +83,11 @@ const onLoginSuccess = (data) => {
     authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
     return
   }
+  // Atención al cliente: su sitio es DuaLab Central («Primer contacto»), con su propia sesión
+  if (role === ROLE_ATENCION_CLIENTE) {
+    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/primer-contacto`))
+    return
+  }
   const destino = destinoTrasLogin.value || rolHome(role)
   destinoTrasLogin.value = null
   router.push(destino).finally(() => triggerWelcome(role, authStore.userName))
@@ -95,7 +102,7 @@ function rolHome(role) {
 const handleTokenExpired = async () => {
   await authStore.logout()
   const currentPath = router.currentRoute.value.fullPath
-  const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/')
+  const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/') || currentPath.startsWith('/valoracion/')
   if (!isPublic) {
     router.push({ path: '/', query: queryRedirect(currentPath) })
   }
@@ -133,7 +140,7 @@ const handleIdle = async () => {
   showIdleWarning.value = false
   await authStore.logout()
   const currentPath = router.currentRoute.value.fullPath
-  const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/')
+  const isPublic = currentPath === '/' || currentPath.startsWith('/reto/') || currentPath.startsWith('/startup/landing/') || currentPath.startsWith('/valoracion/')
   if (!isPublic) {
     router.push({ path: '/', query: queryRedirect(currentPath) })
   }

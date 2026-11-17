@@ -63,8 +63,15 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->ip());
         });
 
+        // Validación de la empresa por enlace: por IP. Con un cupo por token, probar tokens al azar
+        // tendría uno nuevo en cada intento (sin límite real contra la fuerza bruta).
         RateLimiter::for('startup-landing', function (Request $request) {
-            return Limit::perMinute(30)->by($request->route('token') ?? $request->ip());
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
+        // Valoración final de la empresa: por IP (un cupo por token no frenaría probar tokens)
+        RateLimiter::for('valoracion-empresa', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
         });
 
         RateLimiter::for('datos-academicos', function (Request $request) {
@@ -85,6 +92,12 @@ class AppServiceProvider extends ServiceProvider
         // comparte cupo con el resto de rutas públicas.
         RateLimiter::for('catalogo-publico', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
+        });
+
+        // Formulario de la entrevista enviado a la empresa (público, por token): guarda al pasar
+        // de pregunta, así que el cupo es holgado
+        RateLimiter::for('formulario-empresa', function (Request $request) {
+            return Limit::perMinute(60)->by($request->route('token') ?? $request->ip());
         });
 
         // Formulario de soporte (público, envía 2 emails por petición): 3/min y 10/hora por IP

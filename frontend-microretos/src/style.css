@@ -253,3 +253,43 @@ input:focus, select:focus, textarea:focus {
 .label-style {
   @apply text-xs font-bold uppercase tracking-[0.15em] text-gray-500 ml-4 mb-2 block;
 }
+
+/* ── Panel lateral adaptado a la altura de la pantalla (app DuaLab, comercial y Central) ───────────
+   Cada panel lleva .panel-lateral (y .panel-banner* en el banner de marca). En pantallas bajas se
+   compactan las entradas y el banner va encogiendo, para no tener que hacer scroll en el menú.
+   Selectores con `aside` delante: ganan a los estilos scoped de cada panel. */
+@media (max-height: 900px) {
+  aside.panel-lateral .nav-item    { padding-top: 7px; padding-bottom: 7px; }
+  aside.panel-lateral .nav-grupo   { padding-top: 10px; padding-bottom: 4px; }
+  aside.panel-lateral .nav-separador { margin-top: 0.35rem; margin-bottom: 0.35rem; }
+  /* Banner: un poco más bajo, mismo texto y subtítulo (legible) */
+  aside.panel-lateral .panel-banner { height: 6rem; }
+  aside.panel-lateral .panel-banner-logo { height: 4.25rem; }
+  aside.panel-lateral .panel-banner svg { height: 2.5rem; }   /* ondas más bajas: el texto queda sobre fondo liso */
+}
+@media (max-height: 780px) {
+  aside.panel-lateral .nav-item    { padding-top: 5px; padding-bottom: 5px; }
+  aside.panel-lateral .nav-grupo   { padding-top: 8px; padding-bottom: 2px; }
+  aside.panel-lateral .panel-banner { height: 5.25rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
+  aside.panel-lateral .panel-banner-logo { height: 3.75rem; }
+  aside.panel-lateral .panel-banner svg { height: 1.75rem; }
+}
+@media (max-height: 720px) {
+  aside.panel-lateral .panel-banner { height: 4.75rem; }
+  aside.panel-lateral .nav-grupo   { padding-top: 6px; }
+}
+@media (max-height: 660px) {
+  aside.panel-lateral .panel-banner { display: none; }
+}
+
+/* ── Campos de formulario comunes (etiqueta + campo) ───────────────────────────────────────────────
+   Mismo aspecto que «Crear encuentro» (DashboardDocente.vue); las vistas que los redefinen en su
+   <style scoped> mantienen el suyo. */
+.field-label { display: block; font-size: 0.875rem; font-weight: 600; color: #17283E; margin-bottom: 0.375rem; }
+.field-input {
+  width: 100%; background: #fff; border: 1px solid var(--color-borde-campo); border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem; font-size: 0.875rem; font-weight: 500; color: #17283E;
+}
+.field-input:focus { outline: none; border-color: var(--color-rol-fuerte); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-rol-fuerte) 15%, transparent); }
+.field-input::placeholder { color: #6B7280; font-weight: 400; }
+.field-input:disabled { opacity: 0.45; cursor: not-allowed; }

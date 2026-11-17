@@ -1,13 +1,16 @@
 <!-- DuaLab Central: barra superior y panel lateral como la app comercial (misma TopBar y
      SidePanel de DuaLab), en el turquesa del superadmin. Sin sesión, solo la pantalla de acceso. -->
 <script setup>
+import BotonInstalarApp from '../src/components/BotonInstalarApp.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '../src/stores/auth.js'
 import AppCredit from '../src/components/AppCredit.vue'
 import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import PanelLateralCentral from './components/PanelLateralCentral.vue'
-import logo from '../src/assets/logo_colores.png'
+import { espacioDe } from './espacios.js'
+// Icono de la herramienta, igual que su favicon (pwa/iconos-herramientas.mjs --barra)
+import logo from './icono-barra.png'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -15,6 +18,9 @@ const authStore = useAuthStore()
 
 const conChrome = computed(() => authStore.isAuthenticated && route.name !== 'acceso')
 const panelAbierto = ref(false)
+// El selector de espacios y Mi usuario van sin panel lateral; el resto, con el de su espacio
+const conPanel = computed(() => conChrome.value && !route.meta.sinPanel)
+const espacio = computed(() => espacioDe(route.meta.espacio))
 
 // 401 (sesión caducada): a la pantalla de acceso
 const onSesionCaducada = async () => {
@@ -56,7 +62,7 @@ const salir = async () => {
 <template>
   <div class="min-h-dvh font-sans text-azul-noche">
     <header v-if="conChrome" class="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-2 bg-azul-noche px-3 shadow-md sm:gap-3 sm:px-5">
-      <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden"
+      <button v-if="conPanel" type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden"
               :aria-expanded="panelAbierto" aria-controls="panel-central" :aria-label="panelAbierto ? 'Cerrar menú' : 'Abrir menú'"
               @click="panelAbierto = !panelAbierto">
         <svg v-if="!panelAbierto" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -64,13 +70,26 @@ const salir = async () => {
       </button>
 
       <RouterLink :to="{ name: 'inicio' }" class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80" aria-label="DuaLab Central · Inicio">
-        <img :src="logo" alt="" class="h-11 w-auto object-contain" />
+        <img :src="logo" alt="" class="h-10 w-10 shrink-0 rounded-[22%] ring-1 ring-white/25" />
         <span class="select-none text-lg font-black uppercase tracking-tighter text-white">Dua<span class="text-administraciones">Lab</span></span>
       </RouterLink>
       <span class="hidden select-none text-white/15 sm:inline" aria-hidden="true">/</span>
       <span class="hidden min-w-0 truncate text-xs font-bold uppercase tracking-[0.15em] text-white/60 sm:inline">Central</span>
+      <!-- Espacio actual: lleva al selector para cambiar de espacio -->
+      <template v-if="espacio">
+        <span class="hidden select-none text-white/15 md:inline" aria-hidden="true">/</span>
+        <RouterLink :to="{ name: 'inicio' }" title="Cambiar de espacio"
+                    class="hidden min-w-0 items-center gap-1.5 truncate rounded-full px-3 py-1.5 text-xs font-bold text-white/85 ring-1 ring-white/20 transition hover:bg-white/10 md:inline-flex">
+          <span class="truncate">{{ espacio.nombre }}</span>
+          <svg class="h-3.5 w-3.5 shrink-0 text-white/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg>
+          <span class="sr-only">· cambiar de espacio</span>
+        </RouterLink>
+      </template>
 
       <div class="flex-1" />
+
+      <!-- Instalar como app (en la barra superior, sin scroll en el panel lateral) -->
+      <BotonInstalarApp nombre="DuaLab Central" ruta-inicio="/" />
 
       <div ref="menuRef" class="relative">
         <button type="button" :aria-expanded="menuAbierto" aria-haspopup="menu" aria-label="Menú de usuario"
@@ -107,10 +126,10 @@ const salir = async () => {
       </div>
     </header>
 
-    <PanelLateralCentral v-if="conChrome" v-model:abierto="panelAbierto" />
+    <PanelLateralCentral v-if="conPanel" v-model:abierto="panelAbierto" />
 
     <!-- lg:pl-72 = panel lateral; la barra superior la compensa cada vista con su pt, como en la app -->
-    <main :class="conChrome ? 'lg:pl-72' : ''" class="relative pb-12">
+    <main :class="conPanel ? 'lg:pl-72' : ''" class="relative pb-12">
       <RouterView :key="route.path" />
     </main>
     <AppCredit />

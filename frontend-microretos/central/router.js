@@ -1,39 +1,80 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore, ROLE_SUPERADMIN } from '../src/stores/auth.js'
+import { useAuthStore } from '../src/stores/auth.js'
+import { ROLES_CENTRAL, espacioDe, puedeEntrar } from './espacios.js'
 
-// Solo el superadmin usa DuaLab Central. El guard es experiencia de usuario: lo que protege los
-// datos es el middleware 'superadmin' de cada endpoint en el backend.
-// Las rutas reutilizan las vistas de la app con las MISMAS rutas y nombres ('papelera',
-// '/base-datos'…): sus enlaces internos y sus «Volver» funcionan igual aquí.
+// DuaLab Central: superadmin (los tres espacios) y atención al cliente («Primer contacto»). El guard es
+// experiencia de usuario: lo que protege los datos es el middleware de cada endpoint en el backend.
+// Tres espacios (central/espacios.js), cada uno con su inicio y su panel lateral (meta.espacio).
+// Las vistas reutilizadas de la app conservan sus nombres de ruta ('papelera', 'base-datos'…) y sus
+// rutas antiguas redirigen a las nuevas: sus enlaces internos y sus «Volver» funcionan igual aquí.
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/acceso', name: 'acceso', component: () => import('./views/AccesoCentral.vue'), meta: { soloInvitado: true } },
-    { path: '/', name: 'inicio', component: () => import('./views/InicioCentral.vue'), meta: { requiresAuth: true } },
-    { path: '/captaciones', name: 'captaciones', component: () => import('./views/CaptacionesCentral.vue'), meta: { requiresAuth: true } },
-    { path: '/base-datos', name: 'base-datos', component: () => import('../src/views/BaseDatosDashboard.vue'), meta: { requiresAuth: true } },
-    { path: '/papelera', name: 'papelera', component: () => import('../src/views/PapeleraBaseDatos.vue'), meta: { requiresAuth: true } },
-    { path: '/usuarios', name: 'usuarios', component: () => import('../src/views/GestionUsuarios.vue'), meta: { requiresAuth: true } },
-    { path: '/soporte', name: 'soporte', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true } },
-    { path: '/mi-usuario', name: 'mi-usuario', component: () => import('../src/views/MiUsuario.vue'), meta: { requiresAuth: true } },
+    // Selector de espacios, también sin sesión: el login se pide al entrar en uno (central/espacios.js)
+    { path: '/', name: 'inicio', component: () => import('./views/EspaciosCentral.vue'), meta: { sinPanel: true } },
+
+    // ── Espacio «Primer contacto»: formularios de la web (por su API firmada) ──
+    { path: '/primer-contacto', name: 'primer-contacto', component: () => import('./views/BandejaFormularios.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/formularios/:id(\\d+)', name: 'formulario-web', component: () => import('./views/FichaFormulario.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/correo', name: 'correo', component: () => import('./views/BandejaCorreo.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/correo/:id(\\d+)', name: 'correo-ficha', component: () => import('./views/FichaCorreo.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+
+    // ── Espacio «Red DuaLab» ──
+    { path: '/red', name: 'red-inicio', component: () => import('./views/InicioRed.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/captaciones', name: 'captaciones', component: () => import('./views/CaptacionesCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/soporte', name: 'soporte', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/base-datos', name: 'base-datos', component: () => import('../src/views/BaseDatosDashboard.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/usuarios', name: 'usuarios', component: () => import('../src/views/GestionUsuarios.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/papelera', name: 'papelera', component: () => import('../src/views/PapeleraBaseDatos.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+
+    // ── Espacio «Seguimiento de prácticas» ──
+    { path: '/practicas', name: 'practicas-inicio', component: () => import('./views/InicioPracticas.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
+    { path: '/practicas/agenda', name: 'agenda', component: () => import('./views/AgendaCentral.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
+    { path: '/practicas/destacados', name: 'destacados', component: () => import('./views/DestacadosCentral.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
+
+    { path: '/mi-usuario', name: 'mi-usuario', component: () => import('../src/views/MiUsuario.vue'), meta: { requiresAuth: true, sinPanel: true } },
+
+    // Rutas anteriores a los espacios (enlaces guardados y enlaces internos de las vistas compartidas)
+    { path: '/captaciones', redirect: '/red/captaciones' },
+    { path: '/soporte', redirect: '/red/soporte' },
+    { path: '/base-datos', redirect: '/red/base-datos' },
+    { path: '/usuarios', redirect: '/red/usuarios' },
+    { path: '/papelera', redirect: '/red/papelera' },
+    { path: '/agenda', redirect: '/practicas/agenda' },
+    { path: '/destacados', redirect: '/practicas/destacados' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })
 
+// Destino seguro tras el login: solo rutas internas (nada de //otro-dominio)
+const rutaInterna = (r) => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : null)
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.init()
-
-  const esSuperadmin = auth.isAuthenticated && auth.userRole === ROLE_SUPERADMIN
-  // Sesión de otro rol (un docente, un comercial… que entra aquí con su cuenta): Central no es para él
-  if (auth.isAuthenticated && !esSuperadmin) {
-    await auth.logout()
-    return to.name === 'acceso' ? true : { name: 'acceso', query: { motivo: 'rol' } }
-  }
-  if (to.meta.requiresAuth && !esSuperadmin) return { name: 'acceso' }
-  if (to.meta.soloInvitado && esSuperadmin) return { name: 'inicio' }
   document.title = 'Central DuaLab'
+
+  const rol = auth.isAuthenticated ? auth.userRole : null
+  // Sesión de otro rol (un docente, un comercial… que entra aquí con su cuenta): Central no es para él
+  if (auth.isAuthenticated && !ROLES_CENTRAL.includes(rol)) {
+    await auth.logout()
+    return to.name === 'acceso' ? true : { name: 'acceso', query: { motivo: 'rol', espacio: to.meta.espacio } }
+  }
+
+  if (to.meta.requiresAuth && !puedeEntrar(rol, to.meta.espacio)) {
+    return { name: 'acceso', query: {
+      espacio: to.meta.espacio, redirect: to.fullPath,
+      // Con sesión de atención al cliente en un espacio de superadmin: se pide la otra cuenta
+      ...(auth.isAuthenticated && { motivo: 'espacio' }),
+    } }
+  }
+
+  // En la pantalla de acceso con una sesión que ya vale para ese espacio: se entra directamente
+  if (to.name === 'acceso' && auth.isAuthenticated && to.query.motivo !== 'espacio' && puedeEntrar(rol, to.query.espacio)) {
+    return rutaInterna(to.query.redirect) ?? espacioDe(to.query.espacio)?.ruta ?? { name: 'inicio' }
+  }
   return true
 })
 

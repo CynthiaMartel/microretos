@@ -1,11 +1,10 @@
-<!-- Inicio de DuaLab Central: lo pendiente de validar y acceso a cada sección. -->
+<!-- Inicio del espacio «Red DuaLab» de Central: lo pendiente de validar y el acceso a cada sección
+     (captaciones, base de datos con empresas y centros adheridos, usuarios, papelera). -->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
-import { useAuthStore } from '../../src/stores/auth.js'
 import { getResumenCaptacion } from '../../src/services/captacionService.js'
 
-const auth = useAuthStore()
 const resumen = ref(null)
 const error = ref(false)
 
@@ -32,8 +31,8 @@ const SECCIONES = [
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-6 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Hola," :destacado="auth.userName?.split(' ')[0] || 'superadmin'" color="text-administraciones"
-                       subtitulo="Lo que necesita tu revisión y el acceso a cada parte de la plataforma." />
+      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Red" destacado="DuaLab" color="text-administraciones" :volver="{ name: 'inicio' }" volver-label="Espacios"
+                       subtitulo="Las empresas y centros que forman parte de DuaLab y los que están entrando: captaciones por validar, base de datos, usuarios y papelera." />
 
       <section aria-labelledby="pendientes-titulo">
         <h2 id="pendientes-titulo" class="mb-3 font-heading text-lg font-bold">Pendiente de tu revisión</h2>

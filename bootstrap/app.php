@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => \App\Http\Middleware\EnsureIsSuperAdmin::class,
             'docente'    => \App\Http\Middleware\EnsureIsDocente::class,
             'comercial'  => \App\Http\Middleware\EnsureIsComercial::class,
+            'primer.contacto' => \App\Http\Middleware\EnsurePuedePrimerContacto::class,
             'firma.frontoffice' => \App\Http\Middleware\VerificarFirmaFrontoffice::class,
         ]);
     })

@@ -22,6 +22,9 @@ class User extends Authenticatable
     const ROLE_ADMIN      = 4;
     // Capta empresas reales en entrevista (app comercial.dualab.es): sin centro ni acceso a la app de docentes
     const ROLE_COMERCIAL  = 5;
+    // Atiende los formularios y el correo de info@ en DuaLab Central («Primer contacto»): sin centro
+    // ni acceso a la app de docentes ni a los otros espacios de Central
+    const ROLE_ATENCION_CLIENTE = 6;
 
     // role, is_blocked y email_verified_at quedan fuera a propósito: son campos
     // sensibles y solo se asignan de forma explícita (ver AdminUserController).
@@ -80,6 +83,13 @@ class User extends Authenticatable
     public function isDocente(): bool    { return $this->role === self::ROLE_DOCENTE; }
     public function isEmpresa(): bool    { return $this->role === self::ROLE_EMPRESA; }
     public function isComercial(): bool  { return $this->role === self::ROLE_COMERCIAL; }
+    public function isAtencionCliente(): bool { return $this->role === self::ROLE_ATENCION_CLIENTE; }
+
+    /** Roles sin centro ni empresa: trabajan para DuaLab (app comercial, Central). */
+    public function esPersonalDualab(): bool
+    {
+        return in_array($this->role, [self::ROLE_COMERCIAL, self::ROLE_ATENCION_CLIENTE], true);
+    }
 
     public function roleName(): string
     {
@@ -89,6 +99,7 @@ class User extends Authenticatable
             self::ROLE_ADMIN      => 'Administrador',
             self::ROLE_SUPERADMIN => 'Superadministrador',
             self::ROLE_COMERCIAL  => 'Comercial',
+            self::ROLE_ATENCION_CLIENTE => 'Atención al cliente',
             default               => 'Desconocido',
         };
     }

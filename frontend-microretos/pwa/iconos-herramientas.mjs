@@ -3,6 +3,9 @@
 // de inicio de la tablet. La app DuaLab conserva el logo a color (npm run iconos).
 //   npm run iconos:herramientas            → todas
 //   node pwa/iconos-herramientas.mjs nexo  → solo una
+//   node pwa/iconos-herramientas.mjs --barra [nombres] → solo el icono de la barra superior
+// El icono de la barra superior de cada herramienta (`barra`) es el mismo que el favicon, a más
+// resolución: así la barra y la pestaña se reconocen igual.
 // En la pestaña (favicon, 16–48 px) la letra no se leería: allí solo va el fondo y el logo,
 // más grande. Los iconos grandes (inicio de la tablet, PWA) llevan la pastilla.
 import sharp from 'sharp'
@@ -12,13 +15,22 @@ const raiz = new URL('../', import.meta.url).pathname
 const LOGO = new URL('./icono-dualab.png', import.meta.url).pathname
 
 const HERRAMIENTAS = {
-  comercial: { color: '#509928', letra: 'C', destino: 'comercial/public', pwa: true },
-  central: { color: '#17283E', letra: 'DC', destino: 'central/public' },
-  nexo: { color: '#FF8920', letra: 'N', destino: 'nexo/public' },
+  comercial: { color: '#509928', letra: 'C', destino: 'comercial/public', pwa: true, barra: 'comercial/icono-barra.png' },
+  central: { color: '#17283E', letra: 'DC', destino: 'central/public', pwa: true, barra: 'central/icono-barra.png' },
+  nexo: { color: '#FF8920', letra: 'N', destino: 'nexo/public', pwa: true },
   // Misma build que la web pública: el router cambia el favicon al entrar en /gestion-web
   'gestion-web': {
     color: '#19A7A8', letra: 'W', destino: '../FRONTOFFICE/dualab_proyecto/frontend/public/gestion-web-icono', sinIco: true,
+    barra: '../FRONTOFFICE/dualab_proyecto/frontend/src/assets/gestion-web-barra.png',
   },
+}
+
+// Barra superior: 44 px a la vista, a 2× y un poco más para pantallas de alta densidad
+async function generarBarra(nombre) {
+  const h = HERRAMIENTAS[nombre]
+  if (!h.barra) return
+  await writeFile(raiz + h.barra, await icono(h, 128, { redondeado: true }))
+  console.log(`✓ ${nombre} (barra) → ${h.barra}`)
 }
 
 // Logo en blanco: se conserva solo la forma (canal alfa) del logo a color
@@ -84,10 +96,13 @@ async function generar(nombre) {
     await escribir('maskable-icon-512x512.png', await icono(h, 512, { conLetra: true, zona: 0.8 }))
   }
   console.log(`✓ ${nombre} → ${h.destino}`)
+  await generarBarra(nombre)
 }
 
-const pedidas = process.argv.slice(2)
+const args = process.argv.slice(2)
+const soloBarra = args.includes('--barra')
+const pedidas = args.filter(a => a !== '--barra')
 for (const nombre of pedidas.length ? pedidas : Object.keys(HERRAMIENTAS)) {
   if (!HERRAMIENTAS[nombre]) throw new Error(`Herramienta desconocida: ${nombre}`)
-  await generar(nombre)
+  await (soloBarra ? generarBarra(nombre) : generar(nombre))
 }

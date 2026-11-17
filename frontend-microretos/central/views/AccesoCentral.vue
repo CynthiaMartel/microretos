@@ -7,25 +7,35 @@ import { useRouter, useRoute } from 'vue-router'
 import AccesoLayout from '../../src/components/AccesoLayout.vue'
 import CampoContrasena from '../../src/components/CampoContrasena.vue'
 import { useLoginForm } from '../../src/composables/useLoginForm.js'
-import { useAuthStore, ROLE_SUPERADMIN } from '../../src/stores/auth.js'
+import { useAuthStore } from '../../src/stores/auth.js'
+import { espacioDe, puedeEntrar } from '../espacios.js'
 
 const router    = useRouter()
 const route     = useRoute()
 const authStore = useAuthStore()
 const errorRol  = ref('')
-const SOLO_SUPERADMIN = 'DuaLab Central es solo para el superadmin de DuaLab.'
+
+// Espacio al que se quiere entrar (?espacio=): el login se pide al pulsarlo en el selector
+const espacio = computed(() => espacioDe(route.query.espacio))
+const NO_ES_DE_CENTRAL = 'Esta cuenta no tiene acceso a DuaLab Central.'
+const noVale = computed(() => (espacio.value
+  ? `«${espacio.value.nombre}» necesita una cuenta de ${espacio.value.quien.toLowerCase()}.`
+  : NO_ES_DE_CENTRAL))
 
 const { form, errors, loginError, isLoading, handleLogin } = useLoginForm(async (data) => {
-  if (Number(data?.role) !== ROLE_SUPERADMIN) {
+  if (!puedeEntrar(data?.role, route.query.espacio)) {
     await authStore.logout()
-    errorRol.value = SOLO_SUPERADMIN
+    errorRol.value = noVale.value
     return
   }
-  router.push({ name: 'inicio' })
+  const r = route.query.redirect
+  router.push(typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : (espacio.value?.ruta ?? { name: 'inicio' }))
 })
 
-const error = computed(() => errorRol.value || loginError.value || (route.query.motivo === 'rol' ? SOLO_SUPERADMIN : ''))
+const error = computed(() => errorRol.value || loginError.value || (route.query.motivo === 'rol' ? NO_ES_DE_CENTRAL : ''))
 const sesionCaducada = computed(() => route.query.motivo === 'caducada' && !error.value)
+// Hay sesión de atención al cliente y se ha pulsado un espacio de superadmin
+const otraCuenta = computed(() => route.query.motivo === 'espacio' && !error.value)
 
 const entrar = () => {
   errorRol.value = ''
@@ -35,11 +45,20 @@ const entrar = () => {
 
 <template>
   <AccesoLayout>
-    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-administraciones-dark sm:mb-3">Superadmin</p>
+    <RouterLink :to="{ name: 'inicio' }" class="mb-4 inline-flex min-h-9 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.15em] text-acceso-texto hover:text-acceso-tinta">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0l6 6m-6-6l6-6" /></svg>
+      Espacios
+    </RouterLink>
+    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-administraciones-dark sm:mb-3">{{ espacio?.quien ?? 'DuaLab Central' }}</p>
     <h1 class="break-words text-[1.75rem] font-black leading-tight tracking-tight text-acceso-tinta sm:text-4xl xl:text-[2.6rem]">
-      DuaLab Central
+      {{ espacio?.nombre ?? 'DuaLab Central' }}
     </h1>
-    <p class="mt-2 text-base text-acceso-texto sm:text-lg lg:text-base xl:text-lg">Usuarios, base de datos y validación de lo captado.</p>
+    <p class="mt-2 text-base text-acceso-texto sm:text-lg lg:text-base xl:text-lg">{{ espacio?.texto ?? 'Primer contacto, Red DuaLab y Seguimiento de prácticas.' }}</p>
+
+    <div v-if="otraCuenta" role="status" class="mt-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+      <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+      <span>Has entrado como {{ authStore.roleLabel.toLowerCase() }}. {{ noVale }} Entra con ella; se cerrará la sesión actual.</span>
+    </div>
 
     <div v-if="sesionCaducada" role="status" class="mt-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
       <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -84,6 +103,9 @@ const entrar = () => {
       </button>
     </form>
 
-    <p class="mt-6 text-sm text-gray-500">Es la misma cuenta de superadmin que usas en la app DuaLab.</p>
+    <p class="mt-6 text-sm text-gray-500">
+      <template v-if="espacio?.clave === 'primer-contacto'">Cuenta de atención al cliente o de superadmin, la que te dio DuaLab.</template>
+      <template v-else>Es la misma cuenta de superadmin que usas en la app DuaLab.</template>
+    </p>
   </AccesoLayout>
 </template>
