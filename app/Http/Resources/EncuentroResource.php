@@ -19,6 +19,9 @@ class EncuentroResource extends JsonResource
             'id'                 => $this->id,
             'fecha'              => $this->fecha?->format('Y-m-d'),
             'fecha_fin'          => $this->fecha_fin?->format('Y-m-d'),
+            'tipo'               => $this->tipo,
+            // Sesiones del encuentro (o, en encuentros antiguos, las de su propuesta)
+            'planificacion_sesiones' => $this->resource->sesiones(),
             'centro_educativo'   => $this->centro_educativo,
             'ciclo_formativo'    => $this->ciclo_formativo,
             'curso'              => $this->curso,
@@ -45,6 +48,7 @@ class EncuentroResource extends JsonResource
                     'id'     => $m->id,
                     'alias'  => $m->alias,
                     'rol'    => $m->rol,
+                    'destacado' => $m->esDestacado(), // seleccionado por DuaLab para prácticas (P3b)
                 ]),
             ])),
             // Códigos de acceso solo para quien puede editar el encuentro (no a colaboradores de solo lectura)

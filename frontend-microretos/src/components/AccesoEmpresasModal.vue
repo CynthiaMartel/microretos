@@ -19,7 +19,7 @@ const TEXTOS = {
   },
   validacion: {
     titulo:      'Enviar validación a la empresa',
-    descripcion: 'Para enviar a la empresa el enlace de validación de un proyecto necesitas la contraseña del módulo Empresas.',
+    descripcion: 'Para enviar a la empresa el enlace de una propuesta necesitas la contraseña del módulo Empresas.',
     abriendo:    'Abriendo el formulario de validación…',
   },
 }

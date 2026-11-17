@@ -125,9 +125,10 @@ async function confirmarDescarte() {
   <article class="card p-4 sm:p-5">
     <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 class="font-heading text-lg font-bold">Centros educativos captados</h2>
-      <div class="inline-flex w-fit gap-1 rounded-full bg-gray-100 p-1" role="group" aria-label="Qué centros ver">
+      <!-- En 360px las tres pestañas casi no caben: se estrechan y, si aun así no caben, el carril se desplaza -->
+      <div class="inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-100 p-1" role="group" aria-label="Qué centros ver">
         <button v-for="e in ESTADOS" :key="e.key" type="button" :aria-pressed="estado === e.key" @click="cambiarEstado(e.key)"
-                class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
+                class="inline-flex h-9 shrink-0 items-center rounded-full px-2 text-sm font-semibold transition sm:px-4"
                 :class="estado === e.key ? 'bg-white text-azul-noche shadow-sm' : 'text-gray-600 hover:text-azul-noche'">
           {{ e.label }}
         </button>

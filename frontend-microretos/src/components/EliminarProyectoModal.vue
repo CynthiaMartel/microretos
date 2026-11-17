@@ -40,7 +40,7 @@ async function confirmarEliminacion() {
     emit('proyecto-eliminado', { uuid: props.proyecto.uuid, titulo: props.proyecto.titulo })
   } catch (e) {
     if (e.response?.status === 404) {
-      error.value = 'El proyecto no se encontró. Es posible que ya haya sido eliminado.'
+      error.value = 'La propuesta no se encontró. Es posible que ya haya sido eliminada.'
     } else if (e.response?.status === 401) {
       error.value = 'Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.'
     } else {
@@ -122,7 +122,7 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de propuestas y proyectos</p>
+                    <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de propuestas</p>
                     <p class="text-xs text-red-500 mt-0.5">El grupo no podrá acceder a ella mientras esté en la papelera.</p>
                   </div>
                 </div>

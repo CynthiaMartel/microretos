@@ -498,7 +498,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche" @keydown.esc="menuReto = null">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion plano cinta halos antetitulo="Retos y proyectos" titulo="Explorador de" destacado="Retos" color="text-centros"
+      <CabeceraSeccion plano cinta halos antetitulo="Retos y propuestas" titulo="Explorador de" destacado="Retos" color="text-centros"
                        :volver="authStore.isEmpresa ? null : '/seccion/retos-proyectos'"
                        subtitulo="Encuentra, filtra y reutiliza los desafíos generados por la Inteligencia Artificial para tus alumnos.">
         <div class="flex flex-wrap items-start gap-2">

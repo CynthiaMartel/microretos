@@ -239,10 +239,10 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Biblioteca de" destacado="diagnósticos" color="text-administraciones" volver="/seccion/alumnado"
-                       subtitulo="Los diagnósticos finales de tus grupos: fortalezas, áreas de mejora y valoración de RA y CE de cada proyecto terminado." />
+                       subtitulo="Los diagnósticos finales de tus grupos: fortalezas, áreas de mejora y valoración de RA y CE de cada propuesta terminada." />
 
       <!-- Filtros principales (FiltrosPanel común) -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por grupo, proyecto, ciclo o módulo…">
+      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por grupo, propuesta, ciclo o módulo…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
@@ -347,7 +347,7 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
                 <option value="recientes">Más recientes</option>
                 <option value="antiguos">Más antiguos</option>
                 <option value="nota">Nota media más alta</option>
-                <option value="titulo">Proyecto (A-Z)</option>
+                <option value="titulo">Propuesta (A-Z)</option>
               </select>
             </label>
           </div>
@@ -459,7 +459,7 @@ function descargarTodos(x) { diagsVisibles(x).forEach(e => descargarPDF({ equipo
                       {{ diagsVisibles(x).length > 1 ? `Descargar los PDF (${diagsVisibles(x).length})` : 'Descargar PDF' }}
                     </button>
                     <button v-if="x.diags[0]?.proyecto?.uuid" type="button" role="menuitem" @click="menuDiag = null; irAProyecto(x)"
-                            class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del proyecto</button>
+                            class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha de la propuesta</button>
                   </div>
                 </div>
               </div>

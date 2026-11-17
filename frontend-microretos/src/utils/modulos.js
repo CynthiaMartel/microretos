@@ -2,8 +2,13 @@
 // por familia. Un elemento con varios módulos (multimódulo) aparece al filtrar por cada uno.
 
 // El catálogo guarda algunos nombres con punto final ("Contabilidad y fiscalidad."):
-// se normalizan para que el mismo módulo no salga dos veces en el filtro.
-export const nombreModulo = (n) => String(n ?? '').trim().replace(/\.$/, '')
+// se normalizan para que el mismo módulo no salga dos veces en el filtro. Algunos traen además
+// el código del BOE pegado ("Técnica Contable. Código: 0441") o la nota de créditos ("Empresa en
+// el aula. Equivalencia en créditos ECTS"): no se muestran (el dato no se toca).
+export const nombreModulo = (n) => String(n ?? '')
+  .replace(/[\s.,;:-]*C[óo]digo\s*:?\s*[\w-]+\s*\.?\s*$/i, '')
+  .replace(/[\s.,;:-]*Equivalencia en cr[ée]ditos ECTS\s*\.?\s*$/i, '')
+  .trim().replace(/\.$/, '')
 
 const limpios = (nombres) => [...new Set(nombres.map(nombreModulo).filter(Boolean))]
 

@@ -10,15 +10,24 @@ const props = defineProps({
   // Acceso público alternativo (workspace de alumnado): ficha del reto de un equipo por su token,
   // sin necesitar sesión Sanctum. Tiene prioridad sobre microretoId si ambos llegan informados.
   token: { type: String, default: null },
+  // Reto ya cargado (p. ej. los borradores de la app comercial, que aún no son microretos):
+  // se muestra tal cual, sin pedirlo al servidor.
+  datosReto: { type: Object, default: null },
 })
 const emit = defineEmits(['close'])
 
-const abierto  = computed(() => Boolean(props.microretoId || props.token))
+const abierto  = computed(() => Boolean(props.datosReto || props.microretoId || props.token))
 const reto     = ref(null)
 const cargando = ref(false)
 const error    = ref(false)
 
 const { descargarPDF } = usePdfExport()
+
+watch(() => props.datosReto, (datos) => {
+  if (!datos) return
+  reto.value  = datos
+  error.value = false
+}, { immediate: true })
 
 // Carga cuando cambia el ID o el token
 watch([() => props.microretoId, () => props.token], async ([id, token]) => {
@@ -45,7 +54,7 @@ const imagenFondo = computed(() => {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
-  const base = import.meta.env.VITE_API_URL.replace(/\/api$/, '')
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/api$/, '')
   return `${base}/familias/${slug}.webp`
 })
 
@@ -222,7 +231,7 @@ function cerrar() {
                     <span v-if="reto.curso"
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200
                                  text-indigo-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      {{ reto.curso }}º Curso
+                      {{ reto.curso === 'ambos_cursos' ? '1º y 2º Curso' : `${reto.curso}º Curso` }}
                     </span>
                     <span v-if="reto.nivel_grupo"
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-gray-200

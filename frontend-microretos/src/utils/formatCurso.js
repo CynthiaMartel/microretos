@@ -8,5 +8,20 @@
 export function formatCurso(curso) {
   if (!curso) return ''
   const texto = String(curso).trim()
-  return /º$/.test(texto) ? texto : `${texto}º`
+  // Solo se añade «º» a un número suelto ("2" → "2º"); «1º y 2º» o «2º» quedan como están
+  return /^\d+$/.test(texto) ? `${texto}º` : texto
 }
+
+// Curso de una propuesta o de un reto (Microproyecto/Microreto.curso: '1', '2', 'ambos_cursos'; en
+// datos antiguos, '1º'/'2º') → nivel común: '1' | '2' | 'ambos' | ''.
+export function nivelCurso(curso) {
+  const t = String(curso ?? '').trim().toLowerCase()
+  if (!t) return ''
+  if (t === 'ambos_cursos' || t === 'ambos' || t.includes('y')) return 'ambos'
+  if (t.startsWith('1')) return '1'
+  if (t.startsWith('2')) return '2'
+  return ''
+}
+
+// Valor del curso de un encuentro (texto libre que se muestra con «curso» detrás) para cada nivel
+export const CURSO_ENCUENTRO = { 1: '1º', 2: '2º', ambos: '1º y 2º' }

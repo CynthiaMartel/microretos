@@ -125,29 +125,21 @@ onMounted(async () => {
 });
 
 // ── Badge de estado principal (cubre todos los sub-estados) ────────────────
+// Plan de proyecto (etapa 2): misma ficha que la propuesta, con su cronograma
+const esPlan = computed(() => proyecto.value?.etapa === 'plan');
+
 function getEstadoBadge(p) {
   if (!p) return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
   if (p.estado === 'en_edicion')
     return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
   if (p.estado === 'archivado')
-    return { label: 'Archivado', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
+    return { label: 'Archivada', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
   if (p.estado === 'completado')
-    return { label: 'Completado', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
-  if (p.estado === 'validado') {
-    if (p.empresa_validado && p.docente_validado)
-      return { label: 'Validado · Completo', cls: 'bg-administraciones/15 border-administraciones/30 text-administraciones', dot: 'bg-administraciones' };
-    if (p.empresa_validado)
-      return { label: 'Validado · Empresa', cls: 'bg-empresas/10 border-empresas/30 text-empresas-dark', dot: 'bg-empresas' };
-    if (p.docente_validado)
-      return { label: 'Validado · Docente', cls: 'bg-centros/10 border-centros/30 text-centros', dot: 'bg-centros' };
-    return { label: 'Validado', cls: `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`, dot: theme.value.bg };
-  }
-  // propuesta: distinguir sub-estados
-  if (p.empresa_no_valida_aun)
-    return { label: 'Propuesta · No validar aún', cls: 'bg-red-50 border-red-300 text-red-700', dot: 'bg-red-400' };
-  if (p.enviado_a_empresa_mail)
-    return { label: 'Propuesta · Enviada, esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' };
-  return { label: 'Propuesta · Pendiente enviar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
+    return { label: 'Completada', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
+  // La validan el docente o la empresa; quién lo hizo se ve en el bloque de validación
+  if (p.estado === 'validado')
+    return { label: 'Validada', cls: 'bg-centros/10 border-centros/30 text-centros', dot: 'bg-centros' };
+  return { label: 'Pendiente de validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
 }
 
 // Mantener compat con modal-borrador (que comprueba estado directo)
@@ -155,7 +147,7 @@ function getEstadoKey(p) {
   if (!p) return 'en_edicion';
   if (p.estado === 'en_edicion') return 'en_edicion';
   if (p.estado === 'archivado')  return 'archivado';
-  return (p.estado === 'validado' || p.estado === 'completado' || p.empresa_validado) ? 'proyecto' : 'propuesta';
+  return (p.estado === 'validado' || p.estado === 'completado') ? 'proyecto' : 'propuesta';
 }
 
 const landingUrl = computed(() => {
@@ -191,13 +183,13 @@ const raCeBlocks = computed(() => {
 })
 
 async function archivar() {
-  if (!confirm('¿Archivar este proyecto?')) return;
+  if (!confirm('¿Archivar esta propuesta?')) return;
   await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'archivado' });
   proyecto.value.estado = 'archivado';
 }
 
 async function completar() {
-  if (!confirm('¿Marcar este proyecto como completado?')) return;
+  if (!confirm('¿Marcar esta propuesta como completada?')) return;
   await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'completado' });
   proyecto.value.estado = 'completado';
 }
@@ -215,7 +207,8 @@ async function completar() {
     <div class="relative z-10 mx-auto mb-6 max-w-[90rem]">
       <!-- Volver con historial y no push a la lista: la ficha se abre desde varios sitios
            (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) -->
-      <CabeceraSeccion titulo="Ficha de" destacado="Proyecto" :color="theme.text" :volver="{ name: 'startup-day' }"
+      <CabeceraSeccion :titulo="esPlan ? 'Ficha del' : 'Ficha de la'" :destacado="esPlan ? 'plan' : 'propuesta'" :color="theme.text"
+                       :volver="esPlan ? { name: 'planes' } : { name: 'startup-day' }"
                        subtitulo="Consulta el detalle completo, el estado de validación y el progreso del grupo." />
     </div>
 
@@ -246,7 +239,7 @@ async function completar() {
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                  :class="[theme.bg5, theme.border20]">
               <span class="w-2 h-2 rounded-full" :class="theme.bg" />
-              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Proyecto</span>
+              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Propuesta</span>
             </div>
             <!-- Badge estado principal -->
             <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
@@ -307,7 +300,7 @@ async function completar() {
                      uppercase tracking-widest shadow-sm
                      hover:text-white transition-all flex items-center gap-1.5"
               :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
-              title="Ver la ficha del reto original del que deriva este proyecto"
+              title="Ver la ficha del reto original del que deriva esta propuesta"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -327,13 +320,35 @@ async function completar() {
               </svg>
               Validar
             </button>
+            <!-- Plan de proyecto (etapa 2): su cronograma en vez de un encuentro creativo -->
             <button
-              v-if="!authStore.isEmpresa && proyecto.estado === 'validado'"
+              v-if="!authStore.isEmpresa && esPlan && proyecto.estado === 'validado'"
+              @click="router.push({ name: 'plan-cronograma', params: { uuid: proyecto.uuid } })"
+              class="px-4 py-2 bg-empresas/10 border border-empresas/30 rounded-full text-xs font-black
+                     uppercase tracking-widest text-empresas-dark shadow-sm
+                     hover:bg-empresas/20 transition-all flex items-center gap-1.5"
+              title="Fechas, hitos y alumnado del plan en la empresa"
+            >
+              Crear cronograma
+            </button>
+            <!-- Propuesta validada o completada: se puede ampliar en un plan de proyecto -->
+            <button
+              v-if="!authStore.isEmpresa && !esPlan && ['validado', 'completado'].includes(proyecto.estado)"
+              @click="router.push({ name: 'planes-crear', query: { origen: proyecto.uuid } })"
+              class="px-4 py-2 bg-white border border-empresas/30 rounded-full text-xs font-black
+                     uppercase tracking-widest text-empresas-dark shadow-sm
+                     hover:bg-empresas/10 transition-all flex items-center gap-1.5"
+              title="Ampliar esta propuesta en un plan de proyecto para las prácticas en la empresa"
+            >
+              Ampliar en un plan
+            </button>
+            <button
+              v-if="!authStore.isEmpresa && !esPlan && proyecto.estado === 'validado'"
               @click="router.push({ name: 'dashboard-docente', query: { microproyecto_id: proyecto.id } })"
               class="px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-blue-700 shadow-sm
                      hover:bg-blue-100 transition-all flex items-center gap-1.5"
-              title="Crear un encuentro asociado a este proyecto"
+              title="Llevar esta propuesta al aula en un encuentro"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -357,12 +372,12 @@ async function completar() {
               class="px-4 py-2 bg-sky-50 border border-sky-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-sky-700 shadow-sm
                      hover:bg-sky-100 transition-all flex items-center gap-1.5"
-              title="El proyecto ha terminado su ejecución"
+              title="Los grupos han terminado de trabajar esta propuesta"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              Marcar completado
+              Marcar completada
             </button>
             <button v-if="!['archivado', 'validado', 'completado'].includes(proyecto.estado) && !authStore.isEmpresa"
                     @click="archivar"
@@ -477,7 +492,7 @@ async function completar() {
               </svg>
             </div>
             <div>
-              <p class="text-sm font-black text-empresas-dark">La empresa ha validado el proyecto</p>
+              <p class="text-sm font-black text-empresas-dark">La empresa ha validado la propuesta</p>
               <p class="text-[10px] mt-0.5 text-empresas-dark/70">
                 {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }}
                 respondió con validación positiva.
@@ -497,10 +512,10 @@ async function completar() {
               </svg>
             </div>
             <div>
-              <p class="text-sm font-black text-red-700">La empresa contestó: "No validar aún"</p>
+              <p class="text-sm font-black text-red-700">La empresa propone cambios</p>
               <p class="text-[10px] text-red-500 mt-0.5">
-                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} revisó el proyecto
-                pero indicó que aún no puede validarlo. Contacta con la empresa para resolver las dudas.
+                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} revisó la propuesta
+                y respondió «No validar aún». Revisa sus comentarios o contacta con la empresa.
               </p>
             </div>
           </div>
@@ -517,7 +532,7 @@ async function completar() {
               </svg>
             </div>
             <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
-              <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Pendiente de respuesta</p>
+              <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Sin respuesta todavía</p>
               <p class="text-[10px] text-blue-500 mt-0.5 break-words">
                 Esperando que {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} acceda y responda.
               </p>
@@ -542,10 +557,10 @@ async function completar() {
               </svg>
             </div>
             <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
-              <p class="text-sm font-black text-violet-700">Propuesta pendiente de enviar a empresa</p>
+              <p class="text-sm font-black text-violet-700">Pendiente de enviar a la empresa</p>
               <p class="text-[10px] text-gray-400 mt-0.5">
-                El enlace está generado pero aún no se ha confirmado el envío a
-                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }}.
+                Puedes enviarle el enlace a
+                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} para que la valide, o validarla tú directamente.
               </p>
             </div>
             <button v-if="!authStore.isEmpresa"
@@ -567,8 +582,8 @@ async function completar() {
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-black text-centros">Validado por docente</p>
-              <p class="text-[10px] text-centros/70 mt-0.5">Validación pedagógica aprobada por el docente responsable.</p>
+              <p class="text-sm font-black text-centros">Validada por el docente</p>
+              <p class="text-[10px] text-centros/70 mt-0.5">Lista para llevarla al aula en un encuentro.</p>
             </div>
           </div>
           <!-- Sin validación docente aún -->
@@ -583,7 +598,7 @@ async function completar() {
             </div>
             <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
               <p class="text-sm font-black text-gray-500">Pendiente de validación docente</p>
-              <p class="text-[10px] text-gray-400 mt-0.5">Puedes validar el proyecto directamente como docente.</p>
+              <p class="text-[10px] text-gray-400 mt-0.5">Puedes validarla tú directamente, sin esperar a la empresa.</p>
             </div>
             <button @click="modalValidarDocente = true"
                     class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
@@ -743,7 +758,7 @@ async function completar() {
              class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Fases — duración siempre visible, no desplegable -->
           <div v-if="proyecto.diseno_microproyecto?.fases?.length" class="card-section">
-            <p class="section-label">Fases del proyecto</p>
+            <p class="section-label">Fases del trabajo en el aula</p>
             <ol class="space-y-2.5">
               <li v-for="(f, i) in proyecto.diseno_microproyecto.fases" :key="i"
                   class="flex items-start gap-2.5 text-sm">
@@ -1024,7 +1039,7 @@ async function completar() {
                     {{ key === 'reto_comprensible'   ? '¿El reto es comprensible y realista?'
                      : key === 'objetivos_alineados' ? '¿Los objetivos se alinean con la empresa?'
                      : key === 'equipo_adecuado'     ? '¿El perfil del grupo es adecuado?'
-                     : key === 'viabilidad'           ? '¿El proyecto es viable en la empresa?'
+                     : key === 'viabilidad'           ? '¿La propuesta es viable en la empresa?'
                      : key.replace(/_/g, ' ') }}
                   </p>
                   <p class="text-base font-black"
@@ -1199,13 +1214,13 @@ async function completar() {
         </div>
 
         <h3 class="text-xl font-black text-azul-noche text-center mb-4">
-          Proyecto en edición
+          Propuesta en edición
         </h3>
 
         <p class="text-sm text-gray-600 leading-relaxed text-center">
-          Este proyecto está marcado como <strong>En edición</strong> porque se guardó así para seguir construyéndolo.
-          Cuando esté listo para enviarlo a la empresa, entra en <strong>Editar</strong> y en el desplegable
-          <strong>Estado del proyecto</strong> selecciona <strong>Propuesta</strong> para generar el enlace de validación.
+          Esta propuesta está marcada como <strong>En edición</strong> porque se guardó así para seguir construyéndola.
+          Cuando esté lista, entra en <strong>Editar</strong> y en el desplegable
+          <strong>Estado de la propuesta</strong> selecciona <strong>Pendiente de validar</strong> para validarla.
         </p>
 
         <div class="flex gap-3 mt-7">

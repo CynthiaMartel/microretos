@@ -101,21 +101,13 @@ function getEstadoBadge(p) {
   if (p.estado === 'en_edicion')
     return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' }
   if (p.estado === 'archivado')
-    return { label: 'Archivado', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' }
-  if (p.estado === 'validado') {
-    if (p.empresa_validado && p.docente_validado)
-      return { label: 'Validado · Completo', cls: `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`, dot: theme.value.bg }
-    if (p.empresa_validado)
-      return { label: 'Validado · Empresa', cls: `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`, dot: theme.value.bg }
-    if (p.docente_validado)
-      return { label: 'Validado · Docente', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' }
-    return { label: 'Validado', cls: `${theme.value.bg5} ${theme.value.border20} ${theme.value.text}`, dot: theme.value.bg }
-  }
-  if (p.empresa_no_valida_aun)
-    return { label: 'Propuesta · No validar aún', cls: 'bg-red-50 border-red-300 text-red-700', dot: 'bg-red-400' }
-  if (p.enviado_a_empresa_mail)
-    return { label: 'Propuesta · Enviada, esperando', cls: 'bg-blue-50 border-blue-200 text-blue-700', dot: 'bg-blue-400' }
-  return { label: 'Propuesta · Pendiente enviar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' }
+    return { label: 'Archivada', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' }
+  if (p.estado === 'completado')
+    return { label: 'Completada', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' }
+  // La validan el docente o la empresa; quién lo hizo se ve en el bloque de validación
+  if (p.estado === 'validado')
+    return { label: 'Validada', cls: 'bg-emerald-50 border-emerald-300 text-emerald-700', dot: 'bg-emerald-500' }
+  return { label: 'Pendiente de validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' }
 }
 
 const { descargarPDF } = useMicroproyectoPdfExport()
@@ -167,7 +159,7 @@ function irAPaginaCompleta() {
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cerrar" />
 
         <div ref="panel" role="dialog" aria-modal="true" tabindex="-1"
-             :aria-label="proyecto?.titulo ? `Ficha del proyecto: ${proyecto.titulo}` : 'Ficha del proyecto'"
+             :aria-label="proyecto?.titulo ? `Ficha de la propuesta: ${proyecto.titulo}` : 'Ficha de la propuesta'"
              class="relative z-10 bg-[#f4f6fa] rounded-[2rem] shadow-2xl w-full max-w-4xl my-4
                     max-h-[92vh] flex flex-col overflow-hidden outline-none">
 
@@ -177,7 +169,7 @@ function irAPaginaCompleta() {
               <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                    :class="[theme.bg5, theme.border20]">
                 <span class="w-2 h-2 rounded-full" :class="theme.bg" />
-                <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Proyecto</span>
+                <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Propuesta</span>
               </div>
               <span v-if="proyecto"
                     :class="['hidden sm:inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
@@ -207,7 +199,7 @@ function irAPaginaCompleta() {
                              hover:text-white transition-all flex items-center gap-1.5"
                       :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
                       aria-label="Ficha reto original"
-                      title="Ver la ficha del reto original del que deriva este proyecto">
+                      title="Ver la ficha del reto original del que deriva esta propuesta">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -332,7 +324,7 @@ function irAPaginaCompleta() {
                       </svg>
                     </div>
                     <div>
-                      <p class="text-sm font-black" :class="theme.text">La empresa ha validado el proyecto</p>
+                      <p class="text-sm font-black" :class="theme.text">La empresa ha validado la propuesta</p>
                       <p class="text-[10px] mt-0.5" :class="theme.text50">
                         {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} respondió con validación positiva.
                       </p>
@@ -346,9 +338,9 @@ function irAPaginaCompleta() {
                       </svg>
                     </div>
                     <div>
-                      <p class="text-sm font-black text-red-700">La empresa contestó: "No validar aún"</p>
+                      <p class="text-sm font-black text-red-700">La empresa propone cambios</p>
                       <p class="text-[10px] text-red-500 mt-0.5">
-                        {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} revisó el proyecto pero indicó que aún no puede validarlo.
+                        {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} revisó la propuesta y respondió «No validar aún». Revisa sus comentarios o contacta con la empresa.
                       </p>
                     </div>
                   </div>
@@ -360,7 +352,7 @@ function irAPaginaCompleta() {
                       </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Pendiente de respuesta</p>
+                      <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Sin respuesta todavía</p>
                       <p class="text-[10px] text-blue-500 mt-0.5 truncate">
                         Esperando que {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} acceda y responda.
                       </p>
@@ -373,10 +365,10 @@ function irAPaginaCompleta() {
                       </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-black text-violet-700">Propuesta pendiente de enviar a empresa</p>
+                      <p class="text-sm font-black text-violet-700">Pendiente de enviar a la empresa</p>
                       <p class="text-[10px] text-gray-400 mt-0.5">
-                        El enlace está generado pero aún no se ha confirmado el envío a
-                        {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }}.
+                        Puedes enviarle el enlace a
+                        {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} para que la valide, o validarla tú directamente.
                       </p>
                     </div>
                   </div>
@@ -389,8 +381,8 @@ function irAPaginaCompleta() {
                       </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-black text-emerald-700">Validado por docente</p>
-                      <p class="text-[10px] text-emerald-600/70 mt-0.5">Validación pedagógica aprobada por el docente responsable.</p>
+                      <p class="text-sm font-black text-emerald-700">Validada por el docente</p>
+                      <p class="text-[10px] text-emerald-600/70 mt-0.5">Lista para llevarla al aula en un encuentro.</p>
                     </div>
                   </div>
                   <div v-else class="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 shadow-sm">
@@ -401,7 +393,7 @@ function irAPaginaCompleta() {
                     </div>
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-black text-gray-500">Pendiente de validación docente</p>
-                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona el envío y la validación desde la página completa del proyecto.</p>
+                      <p class="text-[10px] text-gray-400 mt-0.5">Gestiona el envío y la validación desde la página completa de la propuesta.</p>
                     </div>
                   </div>
                 </div>
@@ -537,7 +529,7 @@ function irAPaginaCompleta() {
                 <p v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia" class="group-header">Propuesta</p>
                 <div v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia" class="grid gap-4 sm:grid-cols-2 mb-6">
                   <div v-if="proyecto.diseno_microproyecto?.fases?.length" class="card-section">
-                    <p class="section-label">Fases del proyecto</p>
+                    <p class="section-label">Fases del trabajo en el aula</p>
                     <ol class="space-y-2.5">
                       <li v-for="(f, i) in proyecto.diseno_microproyecto.fases" :key="i" class="flex items-start gap-2.5 text-sm">
                         <span class="w-5 h-5 rounded-full font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5"
@@ -747,7 +739,7 @@ function irAPaginaCompleta() {
                             {{ key === 'reto_comprensible'   ? '¿El reto es comprensible y realista?'
                              : key === 'objetivos_alineados' ? '¿Los objetivos se alinean con la empresa?'
                              : key === 'equipo_adecuado'     ? '¿El perfil del grupo es adecuado?'
-                             : key === 'viabilidad'           ? '¿El proyecto es viable en la empresa?'
+                             : key === 'viabilidad'           ? '¿La propuesta es viable en la empresa?'
                              : key.replace(/_/g, ' ') }}
                           </p>
                           <p class="text-base font-black" :class="val === 'Sí' ? theme.text : val === 'No' ? 'text-red-500' : 'text-amber-600'">{{ val }}</p>
@@ -770,7 +762,7 @@ function irAPaginaCompleta() {
                 <div v-if="!proyecto.datos_empresa?.nombre && !raCeBlocks.length
                             && !proyecto.diseno_reto?.descripcion && !proyecto.objetivos?.lista?.length"
                      class="text-center py-6 text-gray-400">
-                  <p class="text-xs">Este proyecto aún no tiene secciones rellenas.</p>
+                  <p class="text-xs">Esta propuesta aún no tiene secciones rellenas.</p>
                 </div>
 
               </div><!-- /notebook-page -->

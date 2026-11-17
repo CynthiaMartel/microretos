@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
+import EtapaRecorrido from '../components/EtapaRecorrido.vue'
 
 const router   = useRouter()
 const codigo   = ref('')
@@ -23,6 +24,7 @@ onMounted(() => {
       token:  tokenGuardado,
       nombre: localStorage.getItem('dualab_equipo_nombre') || 'mi equipo',
       titulo: localStorage.getItem('dualab_proyecto_titulo') || '',
+      etapa:  localStorage.getItem('dualab_equipo_etapa') || 'taller',
     }
   }
 })
@@ -34,6 +36,7 @@ function limpiarGuardado() {
   localStorage.removeItem('dualab_equipo_token')
   localStorage.removeItem('dualab_equipo_nombre')
   localStorage.removeItem('dualab_proyecto_titulo')
+  localStorage.removeItem('dualab_equipo_etapa')
   equipoGuardado.value = null
 }
 
@@ -80,6 +83,7 @@ function accederAlWorkspace() {
   localStorage.setItem('dualab_equipo_token', token)
   localStorage.setItem('dualab_equipo_nombre', nombre_equipo)
   localStorage.setItem('dualab_proyecto_titulo', proyecto_titulo)
+  localStorage.setItem('dualab_equipo_etapa', resultado.value.etapa || 'taller')
   router.push({ name: 'equipo-workspace', params: { token } })
 }
 
@@ -87,6 +91,7 @@ function seleccionarEquipo(equipo) {
   localStorage.setItem('dualab_equipo_token', equipo.token)
   localStorage.setItem('dualab_equipo_nombre', equipo.nombre)
   localStorage.setItem('dualab_proyecto_titulo', resultado.value.proyecto_titulo)
+  localStorage.setItem('dualab_equipo_etapa', resultado.value.etapa || 'taller')
   router.push({ name: 'equipo-workspace', params: { token: equipo.token } })
 }
 
@@ -124,6 +129,7 @@ function continuarConEquipoGuardado() {
       <div v-if="equipoGuardado && !resultado"
            class="mb-5 bg-alumnos/10 border border-alumnos/25 rounded-3xl p-4">
         <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-2">Sesión guardada</p>
+        <EtapaRecorrido :etapa="equipoGuardado.etapa" class="mb-2" />
         <p class="text-sm font-bold text-white leading-snug mb-0.5">{{ equipoGuardado.nombre }}</p>
         <p class="text-xs text-white/40 mb-3 truncate">{{ equipoGuardado.titulo }}</p>
         <div class="flex gap-2">
@@ -214,6 +220,7 @@ function continuarConEquipoGuardado() {
 
           <div class="text-center mb-2">
             <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-1">¡Proyecto encontrado!</p>
+            <EtapaRecorrido :etapa="resultado.etapa" class="mb-2" />
             <p class="text-lg font-black text-white leading-snug">{{ resultado.proyecto_titulo }}</p>
             <p v-if="resultado.curso" class="text-xs text-white/40 mt-0.5">{{ resultado.curso }}</p>
           </div>
@@ -275,6 +282,7 @@ function continuarConEquipoGuardado() {
             </svg>
           </div>
           <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-2">¡Equipo encontrado!</p>
+          <EtapaRecorrido :etapa="resultado.etapa" class="mb-3" />
           <p class="text-xl font-black text-white mb-1">{{ resultado.nombre_equipo }}</p>
           <p class="text-sm text-white/50 mb-6 leading-snug">{{ resultado.proyecto_titulo }}</p>
           <button @click="accederAlWorkspace"

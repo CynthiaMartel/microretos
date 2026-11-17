@@ -18,6 +18,7 @@ import CrearEmpresaFicticiaIA from '../components/CrearEmpresaFicticiaIA.vue';
 import { ejemploInteres } from '../config/ejemplosInteresFamilia.js';
 import { SECTORES_EMPRESA } from '../config/sectoresEmpresa.js';
 import { TAMANOS_EMPRESA } from '../config/tamanosEmpresa.js';
+import { PREGUNTA, OPCIONES_CONSECUENCIAS, OPCIONES_LIMITACIONES } from '../config/preguntasDiagnostico.js';
 import { queryRedirect } from '../utils/redirectLogin.js';
 
 const authStore = useAuthStore();
@@ -412,27 +413,22 @@ const scrollAGaleriaRetos = () => {
   setTimeout(() => { refGaleriaRetos.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
 };
 
-const consecuenciasOpciones = [
-  'Errores frecuentes', 'Costes innecesarios', 'Pérdida de tiempo', 
-  'Insatisfacción del cliente', 'Riesgos de seguridad', 'Desperdicio de materiales', 'Falta de comunicación interna'
-];
-
-const limitacionesOpciones = [
-  'Presupuesto Cero/Muy Bajo', 'Equipos obsoletos', 'Internet inestable',
-  'Software cerrado', 'Resistencia al cambio', 'Espacio reducido',
-  'Falta de tiempo', 'Normativa RGPD'
-];
+// Textos y opciones de las preguntas: config/preguntasDiagnostico.json (los comparte con la app comercial)
+const consecuenciasOpciones = OPCIONES_CONSECUENCIAS;
+const limitacionesOpciones = OPCIONES_LIMITACIONES;
 
 // Límites de caracteres por campo. Aviso al 85%, bloqueo en max.
 // Objetivo: ~1.600 tokens de contexto de empresa en el peor caso (≈ 5.800 chars ÷ 3,5).
+// Los de las preguntas de texto libre salen de preguntasDiagnostico.json (= límites del backend).
+const limiteDe = (max) => ({ max, warn: Math.round(max * 0.85) });
 const CHAR_LIMITS = {
-  diaANormal:         { max: 1000, warn: 850 },
-  friccionArea:       { max: 400,  warn: 340 },
-  friccionProblema:   { max: 1200, warn: 1020 },
-  otraLimitacion:     { max: 600,  warn: 510 },
-  loQueNoQuieren:     { max: 500,  warn: 425 },
+  diaANormal:         limiteDe(PREGUNTA.diaANormal.max),
+  friccionArea:       limiteDe(PREGUNTA.friccionArea.max),
+  friccionProblema:   limiteDe(PREGUNTA.friccionProblema.max),
+  otraLimitacion:     limiteDe(PREGUNTA.restricciones.max),
+  loQueNoQuieren:     limiteDe(PREGUNTA.loQueNoQuieren.max),
   otraConsecuencia:   { max: 300,  warn: 255 },
-  expectativasAlumno: { max: 800,  warn: 680 },
+  expectativasAlumno: limiteDe(PREGUNTA.expectativasAlumno.max),
   enfoqueReto:        { max: 500,  warn: 425 },
 };
 // Reactivo en template: Vue rastrea seleccion.value al renderizar
@@ -2683,8 +2679,8 @@ watch(modoGuia, async (v) => {
                     Si quieres editarlo o volver a generarlo con IA, pulsa «Editar empresa».
                   </p>
                   <p class="text-xs text-gray-500 leading-relaxed mt-2">
-                    Algunas de las preguntas son: «¿Qué ofrece su empresa y qué hace en su día a día?»,
-                    «¿Qué tarea da más trabajo del que debería?» y «¿Qué NO quieren bajo ningún concepto?».
+                    Algunas de las preguntas son: «{{ PREGUNTA.diaANormal.pregunta }}»,
+                    «{{ PREGUNTA.friccionArea.pregunta }}» y «{{ PREGUNTA.loQueNoQuieren.pregunta }}».
                   </p>
                   <button type="button" @click="verDiagnostico = !verDiagnostico" :aria-expanded="verDiagnostico"
                     class="mt-1 min-h-[36px] py-2 inline-flex items-center gap-1 text-xs font-bold text-centros hover:underline">
@@ -2753,7 +2749,7 @@ watch(modoGuia, async (v) => {
                   <div class="flex items-center gap-2 mb-3">
                     <label class="label-style !mb-0 flex items-center gap-2">
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">1</span>
-                      ¿Qué ofrece su empresa y qué hace en su día a día?
+                      {{ PREGUNTA.diaANormal.pregunta }}
                     </label>
                     <button type="button" @click="abrirPopup('info', 1)" aria-label="Ayuda" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-centros hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button type="button" @click="abrirPopup('ejemplo', 1)" aria-label="Ejemplo" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-primary-400 hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
@@ -2771,7 +2767,7 @@ watch(modoGuia, async (v) => {
                     <div class="flex items-center gap-2 mb-3">
                       <label class="label-style !mb-0 flex items-center gap-2">
                         <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">2</span>
-                        ¿Qué tarea da más trabajo del que debería?
+                        {{ PREGUNTA.friccionArea.pregunta }}
                       </label>
                       <button type="button" @click="abrirPopup('info', 2)" aria-label="Ayuda" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-centros hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                       <button type="button" @click="abrirPopup('ejemplo', 2)" aria-label="Ejemplo" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-primary-400 hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
@@ -2785,7 +2781,7 @@ watch(modoGuia, async (v) => {
                   <div>
                     <label class="label-style flex items-center gap-2 mb-3">
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">2b</span>
-                      ¿Por qué? Cuéntanos qué ocurre hoy
+                      {{ PREGUNTA.friccionProblema.pregunta }}
                     </label>
                     <textarea v-model="seleccion.friccionProblema" :disabled="camposDiagnosticoBloqueados" :title="tituloDemo" :maxlength="CHAR_LIMITS.friccionProblema.max" class="input-style h-24" placeholder="Se pierde mucho tiempo porque... hay errores cuando..."></textarea>
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -2799,7 +2795,7 @@ watch(modoGuia, async (v) => {
                   <div class="flex items-center gap-2 mb-4">
                     <label class="label-style !mb-0 flex items-center gap-2">
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">3</span>
-                      ¿Han probado solucionarlo? ¿Qué limitaciones tienen?
+                      {{ PREGUNTA.restricciones.pregunta }}
                     </label>
                     <button type="button" @click="abrirPopup('info', 3)" aria-label="Ayuda" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-centros hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button type="button" @click="abrirPopup('ejemplo', 3)" aria-label="Ejemplo" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-primary-400 hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
@@ -2824,7 +2820,7 @@ watch(modoGuia, async (v) => {
                 <div>
                   <label class="label-style flex items-center gap-2 mb-3">
                     <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">3b</span>
-                    ¿Qué NO quieren bajo ningún concepto?
+                    {{ PREGUNTA.loQueNoQuieren.pregunta }}
                   </label>
                   <textarea v-model="seleccion.loQueNoQuieren" :disabled="camposDiagnosticoBloqueados" :title="tituloDemo" :maxlength="CHAR_LIMITS.loQueNoQuieren.max" class="input-style h-16" placeholder="Ej: Nada que requiera suscripción mensual..."></textarea>
                   <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -2837,7 +2833,7 @@ watch(modoGuia, async (v) => {
                   <div class="flex items-center gap-2 mb-4">
                     <label class="label-style !mb-0 flex items-center gap-2">
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">4</span>
-                      Si pudieran mejorar algo YA mismo...
+                      {{ PREGUNTA.consecuencias.pregunta }}
                     </label>
                     <button type="button" @click="abrirPopup('info', 4)" aria-label="Ayuda" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-centros hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button type="button" @click="abrirPopup('ejemplo', 4)" aria-label="Ejemplo" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-primary-400 hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
@@ -2873,7 +2869,7 @@ watch(modoGuia, async (v) => {
                   <div class="flex items-center gap-2 mb-3">
                     <label class="label-style !mb-0 flex items-center gap-2" :class="!seleccion.expectativasAlumno && !esModoDemo ? 'text-red-500' : ''">
                       <span class="bg-[#1F2937] text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px]">5</span>
-                      Si tuvieras a un alumno aquí, ¿qué esperas que realice? *
+                      {{ PREGUNTA.expectativasAlumno.pregunta }} *
                     </label>
                     <button type="button" @click="abrirPopup('info', 5)" aria-label="Ayuda" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-centros hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                     <button type="button" @click="abrirPopup('ejemplo', 5)" aria-label="Ejemplo" class="w-9 h-9 -my-2 inline-flex items-center justify-center rounded-full shrink-0 text-gray-400 hover:text-primary-400 hover:bg-gray-100 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>

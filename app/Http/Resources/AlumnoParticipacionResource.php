@@ -37,6 +37,7 @@ class AlumnoParticipacionResource extends JsonResource
             'id'            => $this->id,
             'alias'         => $this->alias,
             'rol'           => $this->rol,
+            'destacado'     => $this->esDestacado(), // seleccionado por DuaLab para prácticas (P3b)
             'fortalezas'    => $this->fortalezas ?? [],
             'puntos_mejora' => $this->puntos_mejora ?? [],
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateMicroproyectoRequest;
+use App\Http\Requests\ValidarDocenteRequest;
 use App\Http\Requests\ValidarPropuestaEmpresaRequest;
 use App\Http\Requests\SugerirRaCeRequest;
 use App\Http\Requests\SugerirKpisRequest;
@@ -27,10 +28,14 @@ class MicroproyectoController extends Controller
         $user  = $request->user();
         // withMin precarga el id del primer encuentro de cada proyecto en la misma consulta
         // (antes formatProyecto lanzaba una consulta por proyecto: N+1).
-        $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada'])
+        $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada', 'origen:id,uuid,titulo'])
             ->withMin('encuentros', 'id')
             ->withMin('encuentros', 'fecha')
             ->orderByDesc('updated_at');
+
+        // Propuestas del taller por defecto; ?etapa=plan para la biblioteca de planes de proyecto
+        $query->where('etapa', $request->query('etapa') === Microproyecto::ETAPA_PLAN
+            ? Microproyecto::ETAPA_PLAN : Microproyecto::ETAPA_TALLER);
 
         if ($user->isSuperAdmin()) {
             // sin filtro
@@ -96,7 +101,7 @@ class MicroproyectoController extends Controller
         $pasoDestino = $data['paso_actual'] ?? $proyecto->paso_actual;
         if (!$proyecto->microreto_id && $pasoDestino > 1) {
             return response()->json([
-                'message' => 'Este proyecto no tiene un reto vinculado. Vincula uno antes de continuar.',
+                'message' => 'Esta propuesta no tiene un reto vinculado. Vincula uno antes de continuar.',
             ], 422);
         }
 
@@ -132,7 +137,9 @@ class MicroproyectoController extends Controller
                     $data['empresa_validado']   = false;
                     $data['docente_validado']   = false;
                     $data['validacion_empresa'] = null;
-                    if (!array_key_exists('estado', $data)) {
+                    // El asistente reenvía el estado actual ('validado'): sin validación docente
+                    // la propuesta no puede seguir validada.
+                    if (!array_key_exists('estado', $data) || $data['estado'] === 'validado') {
                         $data['estado'] = 'propuesta';
                     }
                     break;
@@ -177,7 +184,7 @@ class MicroproyectoController extends Controller
         $this->authorize('publicarEscaparate', $proyecto);
 
         if ($proyecto->estado !== 'completado' && !$proyecto->visible_publico) {
-            return response()->json(['error' => 'Solo se puede publicar un proyecto ya completado.'], 422);
+            return response()->json(['error' => 'Solo se puede publicar una propuesta ya completada.'], 422);
         }
 
         $proyecto->visible_publico = !$proyecto->visible_publico;
@@ -249,8 +256,10 @@ class MicroproyectoController extends Controller
 
         $data = $request->validated();
 
+        // Validan la propuesta el docente o la empresa: cualquiera de las dos la lleva a
+        // 'validado' (y al aula). «No validar aún» solo la devuelve a 'propuesta' si el docente
+        // tampoco la ha validado.
         if ($data['decision'] === 'validar') {
-            // La empresa valida: guardar respuestas, marcar validado, avanzar estado
             $proyecto->update([
                 'estado'                => 'validado',
                 'validacion_empresa'    => ['respuestas' => $data['respuestas'], 'comentarios' => $data['comentarios'] ?? null],
@@ -258,9 +267,8 @@ class MicroproyectoController extends Controller
                 'empresa_no_valida_aun' => false,
             ]);
         } else {
-            // La empresa responde "no validar aún": guardar respuestas, mantener en propuesta
             $proyecto->update([
-                'estado'                => 'propuesta',
+                'estado'                => $proyecto->docente_validado ? 'validado' : 'propuesta',
                 'validacion_empresa'    => ['respuestas' => $data['respuestas'], 'comentarios' => $data['comentarios'] ?? null],
                 'empresa_validado'      => false,
                 'empresa_no_valida_aun' => true,
@@ -274,31 +282,29 @@ class MicroproyectoController extends Controller
 
     // --- Validación docente ---
 
-    public function validarDocente(Request $request, $uuid)
+    public function validarDocente(ValidarDocenteRequest $request, $uuid)
     {
         $proyecto = Microproyecto::where('uuid', $uuid)->firstOrFail();
 
         $this->authorize('update', $proyecto);
 
         if (!in_array($proyecto->estado, ['propuesta', 'validado'])) {
-            return response()->json(['error' => 'Solo se puede validar un proyecto en estado propuesta o validado'], 422);
+            return response()->json(['error' => 'Solo se puede validar una propuesta pendiente de validar o ya validada'], 422);
         }
 
-        $data = $request->validate([
-            'decision' => 'required|in:validar,desvalidar',
-        ]);
+        $data = $request->validated();
 
+        // La validación docente y la de la empresa son independientes: cualquiera de las dos
+        // basta para 'validado'. Al desvalidar, sigue validada si la empresa la validó.
         if ($data['decision'] === 'validar') {
             $proyecto->update([
                 'docente_validado' => true,
                 'estado'           => 'validado',
             ]);
         } else {
-            // Desvalidar docente: si empresa también validó, mantener 'validado'; si no, volver a 'propuesta'
-            $nuevoEstado = $proyecto->empresa_validado ? 'validado' : 'propuesta';
             $proyecto->update([
                 'docente_validado' => false,
-                'estado'           => $nuevoEstado,
+                'estado'           => $proyecto->empresa_validado ? 'validado' : 'propuesta',
             ]);
         }
 
@@ -569,6 +575,11 @@ class MicroproyectoController extends Controller
         return [
             'id'               => $p->id,
             'uuid'             => $p->uuid,
+            'etapa'            => $p->etapa ?? Microproyecto::ETAPA_TALLER,
+            // Plan de proyecto: propuesta de la que sale y datos propios de las prácticas
+            'origen'           => $p->origen_id ? ['uuid' => $p->origen?->uuid, 'titulo' => $p->origen?->titulo] : null,
+            'horas_estimadas'  => $p->horas_estimadas,
+            'expectativas_empresa' => $p->expectativas_empresa,
             'titulo'           => $p->titulo,
             'curso'            => $p->curso,
             'estado'           => $p->estado,

@@ -947,7 +947,7 @@ async function copiarEmail(email) {
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar empresas">
                 <option value="nombre">Nombre (A-Z)</option>
                 <option value="estado">Estado de contacto</option>
-                <option value="proyectos">Más proyectos</option>
+                <option value="proyectos">Más propuestas</option>
               </select>
             </label>
           </div>
@@ -1023,7 +1023,7 @@ async function copiarEmail(email) {
               <!-- Pie: proyectos + «Ver ficha» y «⋯» (mismo esquema que las demás bibliotecas) -->
               <div class="flex items-center gap-2 border-t border-borde pt-3">
                 <span class="min-w-0 flex-1 truncate text-xs text-texto-secundario">
-                  {{ proyectosDeEmpresa(empresa.id).length }} {{ proyectosDeEmpresa(empresa.id).length === 1 ? 'proyecto' : 'proyectos' }}
+                  {{ proyectosDeEmpresa(empresa.id).length }} {{ proyectosDeEmpresa(empresa.id).length === 1 ? 'propuesta' : 'propuestas' }}
                 </span>
                 <button type="button" @click="abrirFicha(empresa)"
                         class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
@@ -1386,7 +1386,7 @@ async function copiarEmail(email) {
                                      "ver más" destacada (borde discontinuo) las despliega todas. -->
                                 <div v-if="proyectosDeEmpresa(empresa.id).length" class="pt-3 border-t border-borde">
                                   <p class="text-sm font-semibold text-texto-secundario mb-2">
-                                    Proyectos asociados
+                                    Propuestas asociadas
                                     <span class="text-gray-300 normal-case font-semibold">
                                       ({{ proyectosDeEmpresa(empresa.id).length }})
                                     </span>

@@ -26,10 +26,13 @@ import SelectorCurso from '../components/SelectorCurso.vue'
 import FiltrosPanel from '../components/FiltrosPanel.vue'
 import FiltroSegmentado from '../components/FiltroSegmentado.vue'
 import FiltroSelect from '../components/FiltroSelect.vue'
-import { getEncuentros, getMisGrupos, actualizarEncuentro, crearCodigoAcceso, crearCodigoIa as crearCodigoIaApi } from '../services/encuentroService.js'
+import { getEncuentros, getMisGrupos, actualizarEncuentro, crearCodigoAcceso, crearCodigoIa as crearCodigoIaApi,
+  getValoracionEmpresa, solicitarValoracionEmpresa, marcarValoracionEnviada } from '../services/encuentroService.js'
+import { PREGUNTAS_VALORACION } from '../services/valoracionEmpresaService.js'
+import PlanificacionSesiones from '../components/PlanificacionSesiones.vue'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
-import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
+import { FASES_PROYECTO, progresoPonderado, duracionPorFase } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
 
@@ -451,10 +454,61 @@ const { cargandoRaCe, modulosExpandidos, raCeBlocksEncuentro, toggleModulo, carg
 
 async function verEncuentro(s) {
   encuentroAbierto.value = s
+  cargarValoracion(s.id)
   await cargarRaCe(s.microproyecto_uuid)
 }
 
-function cerrarEncuentro()   { encuentroAbierto.value = null; editandoFechaFin.value = false }
+// ─── Valoración final de la empresa (P3) ──────────────────────────────────────
+// El docente la pide cuando sus grupos han entregado (F3): enlace con token que caduca.
+const valoracion          = ref(null)
+const cargandoValoracion  = ref(false)
+const trabajandoValoracion = ref(false)
+const errorValoracion     = ref('')
+const valoracionCopiada   = ref(false)
+
+const enlaceValoracion = computed(() =>
+  valoracion.value?.token ? `${window.location.origin}/valoracion/${valoracion.value.token}` : '')
+
+async function cargarValoracion(id) {
+  valoracion.value = null
+  errorValoracion.value = ''
+  cargandoValoracion.value = true
+  try {
+    valoracion.value = (await getValoracionEmpresa(id)).data
+  } catch {
+    errorValoracion.value = 'No se pudo cargar la valoración de la empresa.'
+  } finally {
+    cargandoValoracion.value = false
+  }
+}
+
+async function accionValoracion(llamada) {
+  trabajandoValoracion.value = true
+  errorValoracion.value = ''
+  try {
+    valoracion.value = (await llamada(encuentroAbierto.value.id)).data
+  } catch (e) {
+    errorValoracion.value = e.response?.data?.message || 'No se pudo completar la acción.'
+  } finally {
+    trabajandoValoracion.value = false
+  }
+}
+const pedirValoracion   = () => accionValoracion(solicitarValoracionEmpresa)
+const marcarEnviadaVal  = () => accionValoracion(marcarValoracionEnviada)
+
+async function copiarEnlaceValoracion() {
+  try {
+    await navigator.clipboard.writeText(enlaceValoracion.value)
+    valoracionCopiada.value = true
+    setTimeout(() => { valoracionCopiada.value = false }, 2500)
+  } catch {
+    errorValoracion.value = 'No se pudo copiar el enlace. Selecciónalo y cópialo a mano.'
+  }
+}
+
+const fechaCorta = (iso) => iso ? new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+
+function cerrarEncuentro()   { encuentroAbierto.value = null; editandoFechaFin.value = false; editandoPlanificacion.value = false }
 
 const seccionAccesoAlumnado = ref(null)
 
@@ -465,7 +519,7 @@ function irAAccesoAlumnado() {
 function alumnadosDelEquipoAbierto(n) {
   const equipo = (encuentroAbierto.value?.equipos || []).find(e => e.numero_equipo === n)
   if (equipo) {
-    return equipo.miembros.map(m => ({ alias: m.alias }))
+    return equipo.miembros.map(m => ({ alias: m.alias, destacado: !!m.destacado }))
   }
   // Encuentros sin equipos cargados todavía: snapshot plano del reparto (solo alias).
   return (encuentroAbierto.value?.alumnados || [])
@@ -560,6 +614,39 @@ async function guardarFechaFin() {
     errorFechaFin.value = e.response?.data?.errors?.fecha_fin?.[0] || e.response?.data?.message || 'No se pudo guardar la fecha fin.'
   } finally {
     guardandoFechaFin.value = false
+  }
+}
+
+// ─── Editar planificación de sesiones del encuentro ───────────────────────────
+const editandoPlanificacion  = ref(false)
+const planificacionInput     = ref([])
+const guardandoPlanificacion = ref(false)
+const errorPlanificacion     = ref('')
+
+function empezarEditarPlanificacion() {
+  planificacionInput.value = (encuentroAbierto.value?.planificacion_sesiones || []).map(s => ({ fases: [...(s.fases || [])] }))
+  errorPlanificacion.value = ''
+  editandoPlanificacion.value = true
+}
+
+async function guardarPlanificacion() {
+  if (!planificacionInput.value.length || planificacionInput.value.some(s => !(s.fases || []).length)) {
+    errorPlanificacion.value = 'Cada sesión debe trabajar al menos una fase.'
+    return
+  }
+  guardandoPlanificacion.value = true
+  errorPlanificacion.value     = ''
+  try {
+    const res = await actualizarEncuentro(encuentroAbierto.value.id, { planificacion_sesiones: planificacionInput.value })
+    const cambios = { planificacion_sesiones: res.data.planificacion_sesiones }
+    encuentroAbierto.value = { ...encuentroAbierto.value, ...cambios }
+    encuentros.value = encuentros.value.map(s => s.id === encuentroAbierto.value.id ? { ...s, ...cambios } : s)
+    editandoPlanificacion.value = false
+  } catch (e) {
+    const errores = e.response?.data?.errors || {}
+    errorPlanificacion.value = Object.values(errores)[0]?.[0] || e.response?.data?.message || 'No se pudo guardar la planificación.'
+  } finally {
+    guardandoPlanificacion.value = false
   }
 }
 
@@ -726,7 +813,7 @@ function formatFecha(isoDate) {
       </div>
 
       <!-- ─── Filtros (mismo panel que el explorador de retos) ─────────────── -->
-      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del proyecto…">
+      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título de la propuesta…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
@@ -873,7 +960,7 @@ function formatFecha(isoDate) {
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar encuentros">
                 <option value="recientes">Más recientes</option>
                 <option value="antiguos">Más antiguos</option>
-                <option value="titulo">Proyecto (A-Z)</option>
+                <option value="titulo">Propuesta (A-Z)</option>
                 <option v-if="ver === 'seguimiento'" value="avance">Más avance</option>
               </select>
             </label>
@@ -907,7 +994,7 @@ function formatFecha(isoDate) {
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </span>
             <h3 class="mt-3 text-lg font-bold text-azul-noche">Aún no hay encuentros</h3>
-            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Crea el primero a partir de un proyecto validado.</p>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Crea el primero a partir de una propuesta validada.</p>
             <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal mt-4">Nuevo encuentro</button>
           </div>
 
@@ -1110,7 +1197,7 @@ function formatFecha(isoDate) {
                       <button v-if="s.microreto_id" type="button" role="menuitem" @click="menuEncuentro = null; abrirMicroretoModal(s.microreto_id)"
                               class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del reto</button>
                       <button v-if="s.microproyecto_uuid" type="button" role="menuitem" @click="menuEncuentro = null; abrirProyectoFicha(s.microproyecto_uuid)"
-                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del proyecto</button>
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha de la propuesta</button>
                       <button v-if="s.puede_editar" type="button" role="menuitem" @click="menuEncuentro = null; abrirModalEliminar(s)"
                               class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Eliminar encuentro</button>
                     </div>
@@ -1264,6 +1351,95 @@ function formatFecha(isoDate) {
                 <p class="text-sm font-bold text-azul-noche">{{ encuentroAbierto.num_alumnos }}</p>
               </div>
             </div>
+            <!-- Valoración final de la empresa sobre la propuesta (P3) -->
+            <div v-if="encuentroAbierto.microproyecto_uuid" class="p-4 rounded-xl border border-empresas/25 bg-empresas/5" aria-live="polite">
+              <p class="text-xs font-bold uppercase tracking-wider text-empresas-dark">Valoración de la empresa</p>
+              <p v-if="cargandoValoracion" class="mt-1 text-sm text-texto-secundario">Cargando…</p>
+              <template v-else-if="valoracion">
+                <p class="mt-1 text-sm text-azul-noche">
+                  {{ valoracion.grupos_con_entrega }} de {{ valoracion.grupos_total }} grupos han entregado su solución (F3).
+                </p>
+
+                <!-- Respondida -->
+                <div v-if="valoracion.respondido_en" class="mt-3 space-y-2">
+                  <p class="text-sm font-bold text-empresas-dark">
+                    Valorada el {{ fechaCorta(valoracion.respondido_en) }} · {{ valoracion.valoracion_global }}/5
+                  </p>
+                  <dl class="space-y-1.5 text-sm">
+                    <div v-for="p in PREGUNTAS_VALORACION" :key="p.key" class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+                      <dt class="min-w-0 text-texto-secundario sm:flex-1">{{ p.label }}</dt>
+                      <dd class="shrink-0 font-semibold text-azul-noche">{{ valoracion.respuestas?.[p.key] || '—' }}</dd>
+                    </div>
+                  </dl>
+                  <p v-if="valoracion.comentarios" class="whitespace-pre-line break-words rounded-xl bg-white px-3 py-2 text-sm italic text-azul-noche">«{{ valoracion.comentarios }}»</p>
+                </div>
+
+                <!-- Sin pedir, o enlace caducado sin respuesta -->
+                <template v-else-if="!valoracion.solicitada || valoracion.caducado">
+                  <p class="mt-1 text-sm text-texto-secundario">
+                    {{ valoracion.caducado ? 'El enlace caducó sin respuesta. Genera uno nuevo para volver a pedirla.'
+                       : 'Cuando tus grupos hayan entregado, pide a la empresa que valore la propuesta terminada.' }}
+                  </p>
+                  <button v-if="valoracion.puede_editar" type="button" @click="pedirValoracion" :disabled="trabajandoValoracion"
+                          class="mt-3 inline-flex min-h-9 items-center rounded-full bg-empresas-dark px-4 text-xs font-bold uppercase text-white disabled:opacity-50">
+                    {{ trabajandoValoracion ? 'Generando…' : (valoracion.caducado ? 'Generar enlace nuevo' : 'Pedir valoración a la empresa') }}
+                  </button>
+                </template>
+
+                <!-- Pedida, pendiente de respuesta -->
+                <template v-else>
+                  <template v-if="enlaceValoracion">
+                    <label for="enlace-valoracion" class="mt-3 block text-xs font-semibold text-azul-noche">Enlace para la empresa</label>
+                    <div class="mt-1 flex flex-col gap-2 sm:flex-row">
+                      <input id="enlace-valoracion" type="text" readonly :value="enlaceValoracion" @focus="$event.target.select()"
+                             class="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm text-texto-secundario" />
+                      <button type="button" @click="copiarEnlaceValoracion"
+                              class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-empresas-dark/40 bg-white px-4 text-xs font-bold uppercase text-empresas-dark">
+                        {{ valoracionCopiada ? 'Copiado' : 'Copiar' }}
+                      </button>
+                    </div>
+                  </template>
+                  <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-texto-secundario">
+                    <span>Caduca el {{ fechaCorta(valoracion.token_expira_en) }}<template v-if="valoracion.enviado_en"> · Enviado el {{ fechaCorta(valoracion.enviado_en) }}</template></span>
+                    <button v-if="valoracion.puede_editar && !valoracion.enviado_en" type="button" @click="marcarEnviadaVal" :disabled="trabajandoValoracion"
+                            class="inline-flex min-h-9 items-center rounded-full px-2 text-xs font-bold uppercase text-empresas-dark hover:underline disabled:opacity-50">Marcar como enviado</button>
+                  </div>
+                </template>
+              </template>
+              <p v-if="errorValoracion" class="mt-2 text-xs text-red-600" role="alert">{{ errorValoracion }}</p>
+            </div>
+
+            <!-- Planificación de sesiones del encuentro (qué fases se trabajan en cada sesión) -->
+            <div v-if="encuentroAbierto.microproyecto_uuid" class="p-4 rounded-xl bg-[#F8FAFC] border border-borde">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-bold uppercase tracking-wider text-texto-secundario">
+                  Planificación · {{ (encuentroAbierto.planificacion_sesiones || []).length }}
+                  {{ (encuentroAbierto.planificacion_sesiones || []).length === 1 ? 'sesión' : 'sesiones' }}
+                </p>
+                <button v-if="encuentroAbierto.puede_editar && !editandoPlanificacion" @click="empezarEditarPlanificacion"
+                        class="inline-flex min-h-9 items-center rounded-full px-2 text-xs font-bold uppercase text-rol-fuerte hover:underline shrink-0">Editar</button>
+              </div>
+              <template v-if="!editandoPlanificacion">
+                <p v-if="!(encuentroAbierto.planificacion_sesiones || []).length" class="mt-1 text-sm text-texto-secundario">Sin sesiones planificadas.</p>
+                <ul v-else class="mt-2 flex flex-wrap gap-1.5" aria-label="Sesiones por fase">
+                  <li v-for="f in FASES_PROYECTO" :key="f.num"
+                      class="inline-flex items-center gap-1 rounded-full border border-borde bg-white px-2.5 py-1 text-xs font-semibold text-azul-noche">
+                    F{{ f.num }} · {{ duracionPorFase(encuentroAbierto.planificacion_sesiones, f.num) }}
+                  </li>
+                </ul>
+              </template>
+              <div v-else class="mt-3">
+                <PlanificacionSesiones v-model="planificacionInput" />
+                <p v-if="errorPlanificacion" class="mt-2 text-xs text-red-600" role="alert">{{ errorPlanificacion }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <button @click="guardarPlanificacion" :disabled="guardandoPlanificacion"
+                          class="inline-flex min-h-9 items-center rounded-full bg-rol-fuerte px-4 text-xs font-bold uppercase text-white disabled:opacity-50">{{ guardandoPlanificacion ? 'Guardando…' : 'Guardar planificación' }}</button>
+                  <button @click="editandoPlanificacion = false" class="inline-flex min-h-9 items-center rounded-full px-3 text-xs font-bold uppercase text-texto-secundario">Cancelar</button>
+                </div>
+                <p class="mt-2 text-xs text-texto-secundario">Si la fecha fin queda antes de lo que piden las sesiones, ajústala después.</p>
+              </div>
+            </div>
+
             <div v-if="encuentroAbierto.notas"
                  class="p-4 rounded-xl bg-[#F8FAFC] border border-borde">
               <p class="text-xs font-bold uppercase tracking-wider text-texto-secundario mb-1.5">Notas adicionales</p>
@@ -1445,7 +1621,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                 </svg>
-                Ficha del proyecto
+                Ficha de la propuesta
               </button>
             </div>
             <div v-if="encuentroAbierto.puede_editar" class="flex justify-end">

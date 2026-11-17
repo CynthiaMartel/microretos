@@ -7,6 +7,7 @@ use App\Models\Equipo;
 use App\Models\Microproyecto;
 use App\Models\User;
 use App\Notifications\EmpresaRespondioPropuesta;
+use App\Notifications\EmpresaValoroPropuesta;
 use App\Notifications\EquipoCompletoFase;
 use App\Notifications\InvitacionEncuentro;
 use App\Notifications\ProyectoPendienteValidacion;
@@ -48,6 +49,17 @@ class NotificacionDocenteService
             ->unique('id');
 
         $this->enviar($destinatarios, new EquipoCompletoFase($equipo, $fase));
+    }
+
+    public function empresaValoroPropuesta(Encuentro $encuentro): void
+    {
+        // Propietario del encuentro + colaboradores, como el avance de los grupos
+        $destinatarios = collect([$encuentro->docente])
+            ->merge($encuentro->colaboradores)
+            ->filter()
+            ->unique('id');
+
+        $this->enviar($destinatarios, new EmpresaValoroPropuesta($encuentro));
     }
 
     public function invitacionEncuentro(Encuentro $encuentro, User $invitado, User $invitador, bool $puedeEditar): void

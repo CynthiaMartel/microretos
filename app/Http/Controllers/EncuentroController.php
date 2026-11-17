@@ -44,6 +44,13 @@ class EncuentroController extends Controller
             'equipos.miembros',
         ])->visiblesPara($user)->orderBy('created_at', 'desc')->take(self::MAX_LISTADO);
 
+        // Encuentros creativos por defecto (biblioteca de encuentros); ?tipo=plan_practicas_etapa2 para
+        // los cronogramas de planes y ?tipo=todos para ambos (calendario)
+        $tipo = $request->query('tipo');
+        if ($tipo !== 'todos') {
+            $query->where('tipo', in_array($tipo, Encuentro::TIPOS, true) ? $tipo : Encuentro::TIPO_CREATIVO);
+        }
+
         // response()->json() evita el envoltorio {"data": [...]} que Laravel aplica
         // cuando se devuelve una Resource/colección directamente desde el controller —
         // el frontend espera un array plano (mismo criterio que MicroretoFichaResource).
@@ -62,12 +69,17 @@ class EncuentroController extends Controller
             $validated['centro_educativo_id'] = $user->centro_educativo_id;
         }
 
-        if (!empty($validated['microproyecto_id'])) {
-            $proyecto = Microproyecto::find($validated['microproyecto_id']);
-            $validated['fecha_fin'] = $this->fechaFinSugerida($validated['fecha'], $proyecto);
+        // Sin planificación propia, el encuentro parte del calendario que traía la propuesta
+        if (empty($validated['planificacion_sesiones']) && !empty($validated['microproyecto_id'])) {
+            $validated['planificacion_sesiones'] = Microproyecto::find($validated['microproyecto_id'])
+                ?->diseno_microproyecto['clases'] ?? null;
         }
 
-        $encuentro = Encuentro::create($validated);
+        $encuentro = new Encuentro($validated);
+        // Etapa: no es fillable (no la decide el cliente). De momento solo se crean encuentros creativos.
+        $encuentro->tipo = Encuentro::TIPO_CREATIVO;
+        $encuentro->fecha_fin = $encuentro->fechaFinSugerida(Carbon::parse($validated['fecha']))?->toDateString();
+        $encuentro->save();
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
 
         return response()->json(new EncuentroResource($encuentro), 201);
@@ -83,14 +95,6 @@ class EncuentroController extends Controller
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
 
         return response()->json(new EncuentroResource($encuentro));
-    }
-
-    // Sugiere fecha_fin a partir de las clases estimadas en las fases del proyecto
-    // (heurística centralizada en Microproyecto::fechaFinSugerida). Es solo una
-    // sugerencia editable, nunca un límite duro en creación.
-    private function fechaFinSugerida(string $fecha, ?Microproyecto $proyecto): ?string
-    {
-        return $proyecto?->fechaFinSugerida(Carbon::parse($fecha))?->toDateString();
     }
 
     public function storeLote(StoreEncuentroLoteRequest $request)
@@ -149,7 +153,7 @@ class EncuentroController extends Controller
 
         if (!$proyecto || !in_array($proyecto->estado, ['propuesta', 'validado'])) {
             return response()->json([
-                'error' => 'Este encuentro no tiene ningún proyecto publicado. Asocia un proyecto al encuentro y márcalo como Propuesta primero.',
+                'error' => 'Este encuentro no tiene ninguna propuesta lista. Asocia una propuesta al encuentro y márcala como Pendiente de validar primero.',
             ], 422);
         }
 
@@ -250,7 +254,7 @@ class EncuentroController extends Controller
 
         $proyecto = $encuentro->microproyecto;
         if (!$proyecto) {
-            return response()->json(['error' => 'Este encuentro no tiene ningún proyecto asociado.'], 422);
+            return response()->json(['error' => 'Este encuentro no tiene ninguna propuesta asociada.'], 422);
         }
 
         $numEquipos = (int) $request->validated('num_equipos');

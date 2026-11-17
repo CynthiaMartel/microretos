@@ -113,7 +113,7 @@ class EmpresaContactoController extends Controller
         Mail::raw($cuerpo, function ($mail) use ($empresa, $data, $destinatario, $proyecto) {
             $mail->to($destinatario, $empresa->nombre_comercial)
                  ->replyTo($data['remitente'])
-                 ->subject("Validación de microproyecto: {$proyecto->titulo}");
+                 ->subject("Propuesta para vuestra empresa: {$proyecto->titulo}");
         });
 
         // Marcar el proyecto como "enviado a empresa por mail" para mostrar la etiqueta en la miniatura

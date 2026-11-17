@@ -25,6 +25,7 @@ use App\Models\EquipoPrototipo;
 use App\Models\EquipoTarea;
 use App\Models\EquipoReflexion;
 use App\Models\Encuentro;
+use App\Models\Microproyecto;
 use App\Models\MicroproyectoRecurso;
 use App\Services\MicroretoFichaService;
 use App\Services\NotificacionDocenteService;
@@ -74,6 +75,9 @@ class EquipoPublicoController extends Controller
 
         return response()->json([
             'tipo'            => 'clase',
+            // Etapa del recorrido (taller = encuentro creativo en el aula; plan = prácticas en la
+            // empresa): el alumnado la ve distinta desde que mete el código
+            'etapa'           => $proyecto->etapa ?? Microproyecto::ETAPA_TALLER,
             'proyecto_titulo' => $proyecto->titulo,
             'curso'           => $proyecto->curso,
             'equipos'         => $equipos->map(fn($e) => [
@@ -111,6 +115,7 @@ class EquipoPublicoController extends Controller
             'nombre_equipo'   => $equipo->nombre,
             'proyecto_titulo' => $equipo->microproyecto->titulo,
             'fase_actual'     => $equipo->fase_actual,
+            'etapa'           => $equipo->microproyecto->etapa ?? Microproyecto::ETAPA_TALLER,
         ]);
     }
 
@@ -927,6 +932,30 @@ class EquipoPublicoController extends Controller
                 ])->values(),
                 'imagen_portada_id' => $mp->imagen_portada_id,
             ],
+            // Etapa del trabajo (cabecera del workspace): encuentro creativo del Taller de ideas o
+            // cronograma del plan de proyecto en la empresa (P4), con lo que espera la empresa
+            'etapa' => [
+                'es_plan'              => $equipo->encuentro?->tipo === \App\Models\Encuentro::TIPO_PLAN,
+                'empresa'              => $mp->empresa?->nombre_comercial ?? ($mp->datos_empresa['nombre'] ?? null),
+                'hitos'                => $equipo->encuentro?->totalSesiones() ?? 0,
+                'horas_estimadas'      => $mp->horas_estimadas,
+                'expectativas_empresa' => $mp->expectativas_empresa,
+                // Horas de prácticas de cada alumno/a del equipo (A3): solo lectura, las anotan docente y DuaLab
+                'horas' => $equipo->encuentro?->tipo === \App\Models\Encuentro::TIPO_PLAN
+                    // Acotado a un solo equipo (pocos alumnos, un periodo de prácticas): se cargan sus registros y se
+                    // muestran los 100 más recientes de cada uno (un take() en el eager load sería global, no por alumno)
+                    ? $equipo->miembros()->with('registrosHoras')->get()->map(fn ($m) => [
+                        'alias'     => $m->alias,
+                        'total'     => round((float) $m->registrosHoras->sum('horas'), 2),
+                        'registros' => $m->registrosHoras->take(100)->map(fn ($r) => [
+                            'fecha' => $r->fecha?->format('Y-m-d'), 'horas' => (float) $r->horas, 'descripcion' => $r->descripcion,
+                        ])->values(),
+                    ])->values()
+                    : [],
+            ],
+            // Sesiones del encuentro del equipo y fases de cada una (duración de cada fase en el
+            // workspace). Sin encuentro, las de la propuesta.
+            'planificacion_sesiones' => $equipo->encuentro?->sesiones() ?? ($mp->diseno_microproyecto['clases'] ?? []),
             // Diagnóstico de empresa del microreto origen (solo lectura en F0)
             'diagnostico' => $mr ? [
                 // Para qué quería la empresa al alumnado de esta familia (copia guardada en el reto)

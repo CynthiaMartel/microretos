@@ -42,6 +42,8 @@ class EquipoProgresoResource extends JsonResource
                 'id'         => $m->id,
                 'alias'      => $m->alias,
                 'rol'        => $m->rol,
+                // Seleccionado por DuaLab para prácticas (P3b): lo ve el docente, no el alumnado
+                'destacado'  => $m->esDestacado(),
                 'fortalezas' => $m->fortalezas,
                 'puntos_mejora' => $m->puntos_mejora,
             ]),

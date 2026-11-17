@@ -16,13 +16,13 @@ class ProyectoPendienteValidacion extends NotificacionDocente
 
     protected function titulo(): string
     {
-        return 'Proyecto pendiente de validar';
+        return 'Propuesta pendiente de validar';
     }
 
     protected function mensaje(): string
     {
-        $titulo = $this->proyecto->titulo ?: 'Un proyecto';
-        return "«{$titulo}» ha cambiado y necesita validarse de nuevo (empresa y docente).";
+        $titulo = $this->proyecto->titulo ?: 'Una propuesta';
+        return "«{$titulo}» ha cambiado y necesita validarse de nuevo (por ti o por la empresa).";
     }
 
     protected function ruta(): ?string

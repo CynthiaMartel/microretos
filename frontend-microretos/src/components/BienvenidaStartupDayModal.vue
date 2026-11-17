@@ -21,12 +21,12 @@ const emit = defineEmits(['seleccionar'])
             </svg>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Biblioteca de proyectos</p>
+            <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Biblioteca de propuestas</p>
             <h2 class="text-xl font-black tracking-tight text-azul-noche">¿Qué necesitas?</h2>
           </div>
         </div>
         <p class="text-xs text-gray-500 leading-relaxed mb-6 pl-[3.75rem]">
-          Aquí se trabajan los retos para convertirlos en proyectos reales de empresa.
+          Aquí se trabajan los retos para convertirlos en propuestas que tu alumnado resolverá en el aula.
         </p>
 
         <!-- Opciones -->
@@ -45,8 +45,8 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear proyecto</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Abre el Taller de Ideas para crear un nuevo proyecto paso a paso.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Crear propuesta</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Abre el Taller de Ideas para crear una nueva propuesta paso a paso.</p>
             </div>
           </button>
 
@@ -66,8 +66,8 @@ const emit = defineEmits(['seleccionar'])
               </svg>
             </div>
             <div>
-              <p class="font-black text-[#1F2937] text-sm mb-0.5">Continuar con una propuesta o proyecto</p>
-              <p class="text-xs text-gray-500 leading-relaxed">Accede a la biblioteca y continúa editando una propuesta o proyecto existente.</p>
+              <p class="font-black text-[#1F2937] text-sm mb-0.5">Continuar con una propuesta</p>
+              <p class="text-xs text-gray-500 leading-relaxed">Accede a la biblioteca y continúa editando una propuesta existente.</p>
             </div>
           </button>
 

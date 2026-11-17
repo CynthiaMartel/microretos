@@ -23,14 +23,12 @@ class EmpresaRespondioPropuesta extends NotificacionDocente
     {
         // La columna es nombre_comercial: con ->nombre el aviso decía siempre «La empresa»
         $empresa = $this->proyecto->empresa->nombre_comercial ?? 'La empresa';
-        $titulo  = $this->proyecto->titulo ?: 'tu proyecto';
+        $titulo  = $this->proyecto->titulo ?: 'tu propuesta';
 
         if (!$this->validada) {
             return "{$empresa} ha respondido «no validar aún» a «{$titulo}». Revisa sus comentarios.";
         }
-        return $this->proyecto->docente_validado
-            ? "{$empresa} ha validado «{$titulo}»."
-            : "{$empresa} ha validado «{$titulo}». Falta tu validación docente.";
+        return "{$empresa} ha validado «{$titulo}». Ya puedes llevarla al aula en un encuentro.";
     }
 
     protected function ruta(): ?string

@@ -353,7 +353,7 @@ const tituloCabecera = computed(() =>
         <button v-if="proyecto?.uuid" type="button" class="accion-secundaria"
                 @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          Ver proyecto
+          Ver propuesta
         </button>
       </CabeceraSeccion>
     </div>
@@ -423,9 +423,9 @@ const tituloCabecera = computed(() =>
             </div>
 
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
-              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Proyecto</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Propuesta</p>
               <p v-if="proyecto" class="text-base font-black text-[#121212] leading-snug">{{ proyecto.titulo }}</p>
-              <p v-else class="text-sm text-gray-400 italic">Sin proyecto asociado</p>
+              <p v-else class="text-sm text-gray-400 italic">Sin propuesta asociada</p>
               <span v-if="proyecto?.estado"
                     class="inline-block px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
                 {{ proyecto.estado }}
@@ -438,7 +438,7 @@ const tituloCabecera = computed(() =>
              porcentajes: el progreso real y concreto de cada equipo ya se muestra arriba
              (contadores) y en su tarjeta (ring/badges). -->
         <section class="space-y-3 pt-6 border-t border-gray-100">
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Fases del proyecto</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Fases del trabajo en el aula</p>
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div v-for="f in FASES" :key="f.num"
                  class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-1.5">
@@ -526,7 +526,7 @@ const tituloCabecera = computed(() =>
                 </div>
 
                 <p v-if="!evaluacionForms[eq.id].ras.length" class="text-xs text-gray-400 italic">
-                  El proyecto no tiene RA/CE oficiales asignados todavía.
+                  La propuesta no tiene RA/CE oficiales asignados todavía.
                 </p>
 
                 <div v-for="(r, idx) in evaluacionForms[eq.id].ras" :key="idx"
@@ -553,7 +553,7 @@ const tituloCabecera = computed(() =>
                   <span class="text-xs text-gray-400">/ 10 (opcional)</span>
                 </div>
                 <textarea v-model="evaluacionForms[eq.id].observaciones_docente" rows="2"
-                          placeholder="Observaciones generales del proyecto (opcional)"
+                          placeholder="Observaciones generales de la propuesta (opcional)"
                           class="w-full text-xs border border-gray-200 rounded-xl px-2.5 py-1.5 bg-white resize-none
                                  focus:outline-none focus:border-emerald-400"/>
 

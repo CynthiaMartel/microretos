@@ -162,7 +162,7 @@ function labelFase(numero) {
 
             <!-- Contexto: proyecto, curso, clase, ciclo, centro, familia y miembros -->
             <section class="space-y-2 rounded-2xl border border-borde bg-white p-4 shadow-sm">
-              <p class="font-heading text-base font-bold text-azul-noche">{{ equipo.proyecto?.titulo || 'Sin proyecto asociado' }}</p>
+              <p class="font-heading text-base font-bold text-azul-noche">{{ equipo.proyecto?.titulo || 'Sin propuesta asociada' }}</p>
               <div class="flex flex-wrap gap-1.5 text-xs">
                 <span v-if="encuentro?.curso" class="rounded-full bg-administraciones/10 px-2.5 py-1 font-semibold text-administraciones-dark">{{ formatCurso(encuentro.curso) }} curso</span>
                 <span v-if="encuentro?.grupo" class="rounded-full bg-azul-noche px-2.5 py-1 font-semibold text-white">Clase {{ encuentro.grupo }}</span>
@@ -185,7 +185,7 @@ function labelFase(numero) {
                 </button>
                 <button v-if="equipo.proyecto?.uuid" type="button" @click="proyectoModalUuid = equipo.proyecto.uuid"
                         class="inline-flex h-9 items-center rounded-full border border-rol-fuerte/30 bg-white px-4 text-sm font-semibold text-rol-fuerte hover:bg-rol-fuerte/5">
-                  Ficha del proyecto
+                  Ficha de la propuesta
                 </button>
               </div>
             </section>

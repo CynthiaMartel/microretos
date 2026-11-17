@@ -106,15 +106,15 @@ function alternar(id) {
             <span class="break-words">{{ m.nombre }}</span>
             <span v-if="destacados.includes(m.id)" class="ml-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
                   :class="seleccion.includes(m.id) ? 'bg-white' : 'bg-centros'"
-                  title="Lo usas en tus proyectos" aria-hidden="true"></span>
-            <span v-if="destacados.includes(m.id)" class="sr-only">(lo usas en tus proyectos)</span>
+                  title="Lo usas en tus propuestas" aria-hidden="true"></span>
+            <span v-if="destacados.includes(m.id)" class="sr-only">(lo usas en tus propuestas)</span>
           </button>
         </div>
       </div>
 
       <p v-if="destacados.length" class="flex items-center gap-1.5 text-[11px] text-gray-500">
         <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-centros" aria-hidden="true"></span>
-        Lo usas en alguno de tus proyectos
+        Lo usas en alguna de tus propuestas
       </p>
 
       <div v-if="resumen && elegidos.length" class="rounded-xl bg-gray-50 px-3 py-2">

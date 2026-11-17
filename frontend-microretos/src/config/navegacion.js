@@ -49,10 +49,13 @@ export const GRUPOS_NAV = [
     ],
   },
   {
+    // Orden del recorrido: taller de ideas (retos, propuestas, encuentros) │ plan de proyecto │ alumnado y
+    // empresas. Sin títulos de etapa (decisión de Cynthia 2026-11-17): los bloques se separan con una línea
+    // discreta (`separadorAntes`); la explicación de las etapas va en Recursos → ¿Qué es DUALAB?.
     titulo: 'Gestión académica',
     items: [
-      { key: 'retos-proyectos', label: 'Retos y proyectos', icon: 'capas', ruta: '/seccion/retos-proyectos', routeName: 'seccion', color: 'docente',
-        tip: 'Genera retos y proyectos, y consulta sus bibliotecas',
+      { key: 'retos-proyectos', label: 'Retos y propuestas', icon: 'capas', ruta: '/seccion/retos-proyectos', routeName: 'seccion', color: 'docente',
+        tip: 'Genera retos y propuestas, y consulta sus bibliotecas',
         activa: (p) => p === '/seccion/retos-proyectos' || p.startsWith('/retos')
           || (p.startsWith('/proyectos') && !esPantallaAcceso(p)) },
       // Antes había dos entradas, «Encuentros» y «Mis grupos»: el seguimiento de los grupos es
@@ -61,7 +64,10 @@ export const GRUPOS_NAV = [
       { key: 'encuentros-grupos', label: 'Encuentros y grupos', icon: 'portapapeles', ruta: '/seccion/encuentros-grupos', routeName: 'seccion', color: 'docente',
         tip: 'Crea encuentros con el alumnado, gestiónalos y sigue el avance de sus grupos',
         activa: (p) => p === '/seccion/encuentros-grupos' || p.startsWith('/encuentros') || p.startsWith('/mis-grupos') },
-      { key: 'alumnado', label: 'Alumnado', icon: 'alumnado', ruta: '/seccion/alumnado', routeName: 'seccion', color: 'alumnos',
+      { key: 'planes-proyecto', separadorAntes: true, label: 'Planes de proyecto', icon: 'trofeo', ruta: '/seccion/planes-proyecto', routeName: 'seccion', color: 'docente',
+        tip: 'Planes que el alumnado seleccionado desarrolla en la empresa durante las prácticas, y sus cronogramas',
+        activa: (p) => p === '/seccion/planes-proyecto' || (p.startsWith('/planes') && !p.startsWith('/planes/agenda')) },
+      { key: 'alumnado', separadorAntes: true, label: 'Alumnado', icon: 'alumnado', ruta: '/seccion/alumnado', routeName: 'seccion', color: 'alumnos',
         tip: 'Listado del alumnado, diagnósticos y acceso al encuentro',
         activa: (p) => p === '/seccion/alumnado' || p.startsWith('/alumnado') || p.startsWith('/evaluacion') || esPantallaAcceso(p) || p.startsWith('/unirse') || p.startsWith('/workspace-proyecto') },
       { key: 'empresas', label: 'Empresas', icon: 'empresa', ruta: '/seccion/empresas', routeName: 'seccion', color: 'empresas',
@@ -73,8 +79,13 @@ export const GRUPOS_NAV = [
     titulo: 'Organización',
     items: [
       { key: 'calendario', label: 'Calendario', icon: 'calendario', ruta: '/calendario', routeName: 'calendario', color: 'docente',
-        tip: 'Calendario de encuentros, tareas pendientes y notas',
+        tip: 'Tu día a día: encuentros, hitos de los planes, notas y tareas',
         activa: (p) => p.startsWith('/calendario') },
+      // Acceso diario a la agenda (también está en el hub Planes de proyecto): se usa cada día durante
+      // las prácticas, como el calendario. Calendario = qué tengo cada día; agenda = cómo avanza el alumnado.
+      { key: 'agenda-practicas', label: 'Agenda de prácticas', icon: 'grafica', ruta: '/planes/agenda', routeName: 'agenda-practicas', color: 'docente',
+        tip: 'Cómo avanza el alumnado en las empresas: fase de cada grupo, retrasos según los hitos y horas anotadas',
+        activa: (p) => p.startsWith('/planes/agenda') },
       { key: 'notificaciones', label: 'Notificaciones', icon: 'campana', ruta: '/notificaciones', routeName: 'notificaciones', color: 'docente',
         badge: 'notificaciones',
         tip: 'Avisos de empresas, grupos e invitaciones a encuentros',
@@ -104,13 +115,13 @@ export const GRUPOS_NAV = [
 // `destacarPrimera`: la primera opción va resaltada (vía directa); `icon`: junto al título.
 export const SECCIONES = {
   'retos-proyectos': {
-    titulo: 'Retos y', destacado: 'proyectos', color: 'text-centros',
-    subtitulo: 'Crea proyectos para tu alumnado y gestiona los que ya tienes en marcha.',
+    titulo: 'Retos y', destacado: 'propuestas', color: 'text-centros',
+    subtitulo: 'Crea propuestas para tu alumnado y gestiona las que ya tienes en marcha.',
     cards: [
-      { titulo: 'Generar proyecto', desc: 'Crea una propuesta de proyecto a partir de un reto y envíala a la empresa.',
+      { titulo: 'Generar propuesta', desc: 'Concreta un reto en una propuesta para tu alumnado y valídala (tú o la empresa) para llevarla al aula.',
         integrada: true,
         ruta: '/proyectos/crear', routeName: 'startup-day-crear', icon: 'masCirculo', tile: 'bg-centros' },
-      { titulo: 'Biblioteca de proyectos', desc: 'Tus propuestas y proyectos: en edición, pendientes de validar, en marcha y terminados.',
+      { titulo: 'Biblioteca de propuestas', desc: 'Tus propuestas: en edición, pendientes de validar, validadas y completadas.',
         integrada: true,
         ruta: '/proyectos',routeName: 'startup-day', icon: 'capas', tile: 'bg-empresas' },
     ],
@@ -119,14 +130,14 @@ export const SECCIONES = {
     // porque los retos concretos se eligen dentro de «Generar proyecto».
     bloqueSecundario: {
       separador: 'o', destacarPrimera: true,
-      titulo: '¿De qué reto parte tu proyecto?',
-      texto: 'Todo proyecto nace de un reto: la necesidad real de una empresa convertida en una pregunta para tu alumnado. Crea tu reto a medida con el generador o consulta la biblioteca de retos. Al pulsar «Generar proyecto» también podrás elegir ahí mismo los retos concretos de la biblioteca.',
+      titulo: '¿De qué reto parte tu propuesta?',
+      texto: 'Toda propuesta nace de un reto: la necesidad real de una empresa convertida en una pregunta para tu alumnado. Crea tu reto a medida con el generador o consulta la biblioteca de retos. Al pulsar «Generar propuesta» también podrás elegir ahí mismo los retos concretos de la biblioteca.',
       cards: [
         { titulo: 'Generador de retos', etiqueta: 'Para personalizar',
           desc: 'Crea un reto a medida: eliges la empresa, los módulos y los RA y CE.',
           ruta: '/retos/crear', routeName: 'microretos', icon: 'rayo', tile: 'bg-centros' },
         { titulo: 'Biblioteca de retos', etiqueta: 'Consultar', compacta: true,
-          desc: 'Acceso directo para ver los retos disponibles. Para usarlos, elígelos en «Generar proyecto».',
+          desc: 'Acceso directo para ver los retos disponibles. Para usarlos, elígelos en «Generar propuesta».',
           ruta: '/retos', routeName: 'biblioteca', icon: 'libro', tile: 'bg-azul-noche' },
       ],
     },
@@ -157,25 +168,71 @@ export const SECCIONES = {
             { titulo: 'Biblioteca de retos',
               desc: 'Aquí están los retos ya disponibles y los que guardes tú: elige el que quieras trabajar.' },
           ] },
-        { nombre: 'Proyectos', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: null,
-          concepto: { color: 'empresas', pregunta: '¿Qué es un proyecto?', segmentos: [
-            { t: 'Un ' }, { t: 'PROYECTO', b: true }, { t: ' es la respuesta a la pregunta del reto que el alumnado deberá responder, con sus fases, entregables y evaluación.' },
+        { nombre: 'Propuestas', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: null,
+          concepto: { color: 'empresas', pregunta: '¿Qué es una propuesta?', segmentos: [
+            { t: 'Una ' }, { t: 'PROPUESTA', b: true },
+            { t: ' es la concreción curricular de un reto: la empresa, los módulos, los RA y CE y los objetivos con los que tu alumnado trabajará en el aula.' },
             { br: true },
-            { t: 'Todo proyecto parte de una ' },
-            { t: 'PROPUESTA', b: true },
-            { t: ', que es la concreción curricular del reto y la asignación de alumnado en equipos de trabajo (grupos) acordado previamente por el docente. Esta propuesta, al ser validada por el docente y/o por la empresa, pasa a convertirse en el proyecto a trabajar por el alumnado.' },
+            { t: 'Cuando la validas tú como docente o la valida la empresa, la llevas al aula en un ' }, { t: 'encuentro creativo', b: true },
+            { t: ', donde cada grupo trabaja su ' }, { t: 'solución', b: true },
+            { t: ' por fases.' },
             { br: true },
             { t: 'Puedes ver la ' },
-            { t: 'biblioteca de proyectos', ruta: '/proyectos', routeName: 'startup-day', tip: 'Ir a la biblioteca de proyectos' },
+            { t: 'biblioteca de propuestas', ruta: '/proyectos', routeName: 'startup-day', tip: 'Ir a la biblioteca de propuestas' },
             { t: ' que hayas creado y/o ' },
-            { t: 'crear un proyecto', ruta: '/proyectos/crear', routeName: 'startup-day-crear', tip: 'Ir a generar proyecto' },
+            { t: 'crear una propuesta', ruta: '/proyectos/crear', routeName: 'startup-day-crear', tip: 'Ir a generar propuesta' },
             { t: '.' },
           ] },
           pasos: [
-            { titulo: 'Crea un proyecto', conector: 'Guárdalo',
+            { titulo: 'Crea una propuesta', conector: 'Guárdala',
               desc: 'Selecciona el reto a trabajar y concrétalo en una propuesta para tu alumnado.' },
-            { titulo: 'Consúltalo y valídalo',
-              desc: 'En la biblioteca de proyectos: cuando la empresa o tú lo validáis, pasa a ser proyecto.' },
+            { titulo: 'Consúltala y valídala',
+              desc: 'En la biblioteca de propuestas: cuando la empresa o tú la validáis, ya puedes llevarla al aula.' },
+          ] },
+      ],
+    },
+  },
+  // Etapa 2: plan de proyecto en la empresa (P4)
+  'planes-proyecto': {
+    titulo: 'Plan de', destacado: 'proyecto', color: 'text-centros',
+    subtitulo: 'El trabajo ampliado que el alumnado seleccionado desarrolla en la empresa durante sus prácticas.',
+    conceptos: [
+      { color: 'empresas', segmentos: [
+        { t: 'Un ' }, { t: 'PLAN DE PROYECTO', b: true },
+        { t: ' amplía una propuesta del taller (u otro reto) para trabajarla en la empresa durante las prácticas, con su ' },
+        { t: 'cronograma', b: true }, { t: ' de hitos. Su alumnado es el que DuaLab selecciona entre los más destacados de los encuentros creativos.' },
+        { br: true },
+        { t: 'Consulta tus planes en la ' },
+        { t: 'biblioteca de planes', ruta: '/planes', routeName: 'planes', tip: 'Ir a la biblioteca de planes' },
+        { t: ' o ' },
+        { t: 'crea uno nuevo', ruta: '/planes/crear', routeName: 'planes-crear', tip: 'Ir a crear plan' },
+        { t: '.' },
+      ] },
+    ],
+    cards: [
+      { titulo: 'Crear plan', desc: 'Amplía una propuesta del taller o parte de otro reto.',
+        ruta: '/planes/crear', routeName: 'planes-crear', icon: 'masCirculo', tile: 'bg-centros', integrada: true },
+      { titulo: 'Biblioteca de planes', desc: 'Tus planes y sus cronogramas: grupos, códigos y seguimiento.',
+        ruta: '/planes', routeName: 'planes', icon: 'libro', tile: 'bg-centros', integrada: true },
+      { titulo: 'Agenda de prácticas', desc: 'Cómo avanza en la empresa el alumnado de tus planes: hitos, fases y retrasos.',
+        ruta: '/planes/agenda', routeName: 'agenda-practicas', icon: 'calendario', tile: 'bg-centros', integrada: true },
+    ],
+    flujo: {
+      titulo: 'Mira cómo funciona',
+      fases: [
+        { nombre: 'Selección', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Crea el plan',
+          pasos: [
+            { titulo: 'DuaLab elige al alumnado', desc: 'Entre los más destacados de los encuentros creativos, con la valoración de la empresa.' },
+          ] },
+        { nombre: 'Plan', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Organiza las prácticas',
+          pasos: [
+            { titulo: 'Crea y valida el plan', conector: 'Validado',
+              desc: 'Amplía la propuesta o parte de otro reto; lo validáis tú o la empresa.' },
+            { titulo: 'Crea el cronograma', desc: 'Fechas, hitos y alumnado del plan, de uno o varios encuentros.' },
+          ] },
+        { nombre: 'En la empresa', texto: 'text-alumnos-dark', borde: 'border-alumnos', halo: 'ring-alumnos/15',
+          pasos: [
+            { titulo: 'Trabajan por fases', desc: 'Mismo workspace por fases, durante las prácticas, y su seguimiento.' },
           ] },
       ],
     },
@@ -190,7 +247,7 @@ export const SECCIONES = {
     conceptos: [
       { color: 'centros', segmentos: [
         { t: 'Un ' }, { t: 'ENCUENTRO', b: true }, { t: ' es el ' }, { t: 'cuándo', b: true },
-        { t: ': la fecha y los grupos con los que ese proyecto se trabaja en el aula. A partir de ahí, cada grupo avanza el proyecto por fases en su ' },
+        { t: ': la fecha y los grupos con los que esa propuesta se trabaja en el aula. A partir de ahí, cada grupo avanza por fases en su ' },
         { t: 'workspace', b: true }, { t: '.' },
         { br: true },
         { t: 'Gestiona los encuentros que ya has creado en la ' },
@@ -216,7 +273,7 @@ export const SECCIONES = {
         { nombre: 'Preparar', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Genera el código',
           pasos: [
             { titulo: 'Crea el encuentro', conector: 'Guárdalo',
-              desc: 'Asocia un proyecto validado, pon la fecha y reparte al alumnado en grupos.' },
+              desc: 'Asocia una propuesta validada, pon la fecha y reparte al alumnado en grupos.' },
             { titulo: 'Consúltalo en la biblioteca',
               desc: 'Desde la biblioteca de encuentros generas el código del alumnado y lo compartes con otros docentes.' },
           ] },
@@ -224,8 +281,10 @@ export const SECCIONES = {
           pasos: [
             { titulo: 'Da acceso al alumnado', conector: 'Trabajan por fases',
               desc: 'Proyecta la pantalla de acceso: cada grupo entra en su workspace con su QR.' },
-            { titulo: 'Sigue a tus grupos',
+            { titulo: 'Sigue a tus grupos', conector: 'Cuando entreguen',
               desc: 'En Seguimiento de grupos ves el avance de cada grupo, fase a fase.' },
+            { titulo: 'Pide la valoración',
+              desc: 'Desde el encuentro envías a la empresa un enlace para que valore la propuesta con las soluciones de tus grupos.' },
           ] },
       ],
     },
@@ -237,9 +296,9 @@ export const SECCIONES = {
     // curso hoy y, dentro, «Dar acceso a otro encuentro» (/pantalla-acceso)
     accesoRapido: true,
     cards: [
-      { titulo: 'Listado de alumnado', desc: 'Cada alumno con sus proyectos, encuentros, grupo, fase y nota final.',
+      { titulo: 'Listado de alumnado', desc: 'Cada alumno con sus propuestas, encuentros, grupo, fase y nota final.',
         ruta: '/alumnado/listado', routeName: 'alumnado-listado', icon: 'alumnado', tile: 'bg-alumnos' },
-      { titulo: 'Biblioteca de diagnósticos', desc: 'Diagnósticos finales de los proyectos terminados.',
+      { titulo: 'Biblioteca de diagnósticos', desc: 'Diagnósticos finales de los grupos que han terminado sus fases.',
         ruta: '/evaluacion/diagnosticos', routeName: 'biblioteca-diagnosticos', icon: 'diagnostico', tile: 'bg-administraciones' },
     ],
     // Pantallas del propio alumnado: el docente solo las abre para ver qué ve su alumnado
@@ -269,7 +328,7 @@ export const SECCIONES = {
             { titulo: 'Se une a su grupo', conector: 'Entra al workspace',
               desc: 'La primera vez escanea el QR, o escribe el código en /unirse, y elige su grupo.' },
             { titulo: 'Trabaja por fases', conector: 'Otro día',
-              desc: 'Avanza el proyecto desde F0 Inicio del equipo hasta F4 Presentación.' },
+              desc: 'Avanza por fases desde F0 Inicio del equipo hasta F4 Presentación.' },
             { titulo: 'Retoma su workspace',
               desc: 'Vuelve con el código de su grupo, sin necesidad de cuenta.' },
           ] },
@@ -284,7 +343,7 @@ export const SECCIONES = {
       { color: 'empresas', segmentos: [
         { t: 'Una ' }, { t: 'EMPRESA COLABORADORA', b: true },
         { t: ' aporta la necesidad real de la que nace el reto y ' }, { t: 'valida', b: true },
-        { t: ' la propuesta de proyecto que preparas para tu alumnado. No necesita cuenta: la revisa y responde desde el enlace que le llega por email.' },
+        { t: ' la propuesta que preparas para tu alumnado. No necesita cuenta: la revisa y responde desde el enlace que le llega por email.' },
         { br: true },
         { t: 'Sigue tus envíos en ' },
         { t: 'propuestas a empresas', ruta: '/empresas/propuestas', routeName: 'propuestas-empresas', tip: 'Ir a propuestas a empresas' },
@@ -309,9 +368,9 @@ export const SECCIONES = {
         { nombre: 'Docente', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Le llega un enlace',
           pasos: [
             { titulo: 'Prepara la propuesta', conector: 'Guárdala',
-              desc: 'En «Generar proyecto» concretas el reto de la empresa: módulos, RA y CE, y grupos.' },
+              desc: 'En «Generar propuesta» concretas el reto de la empresa: módulos, RA y CE, y grupos.' },
             { titulo: 'Envíala a la empresa',
-              desc: 'En Propuestas a empresas ves las pendientes de enviar; el envío se hace desde la ficha del proyecto.' },
+              desc: 'En Propuestas a empresas ves las pendientes de enviar; el envío se hace desde la ficha de la propuesta.' },
           ] },
         { nombre: 'Empresa', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Te avisamos',
           pasos: [
@@ -322,8 +381,8 @@ export const SECCIONES = {
           pasos: [
             { titulo: 'Lee su respuesta', conector: 'Validada',
               desc: 'Te llega una notificación. Si pide cambios, ajusta la propuesta y vuelve a enviarla; si tarda, recuérdaselo.' },
-            { titulo: 'Proyecto listo',
-              desc: 'Validada por la empresa o por ti, pasa a ser proyecto y ya puedes trabajarlo en un encuentro.' },
+            { titulo: 'Propuesta lista',
+              desc: 'Validada por la empresa o por ti, ya puedes llevarla al aula en un encuentro.' },
           ] },
       ],
     },
@@ -334,33 +393,37 @@ export const SECCIONES = {
     cards: [
       { titulo: '¿Qué es DUALAB?', desc: 'Cómo funciona la plataforma, paso a paso.',
         accion: 'comoFunciona', icon: 'info', tile: 'bg-centros' },
-      { titulo: 'Glosario', desc: 'Retos, proyectos, encuentros, RA, CE… explicados.',
+      { titulo: 'Glosario', desc: 'Retos, propuestas, encuentros, RA, CE… explicados.',
         proximamente: true, icon: 'glosario', tile: 'bg-centros' },
       { titulo: 'Guías y plantillas', desc: 'Material de apoyo para preparar tus encuentros.',
         proximamente: true, icon: 'libro', tile: 'bg-empresas' },
       { titulo: 'Acerca de', desc: 'El equipo que ha desarrollado DUALAB Studio Tool.',
         accion: 'creditos', icon: 'codigo', tile: 'bg-azul-noche' },
     ],
+    // Las dos etapas de DUALAB (ver CLAUDE.md «Etapas»): lo usan este hub y el modal «¿Qué es DUALAB?»
     flujo: {
       titulo: 'El recorrido completo',
+      subtitulo: 'Dos etapas: el taller de ideas en el aula y el plan de proyecto en la empresa.',
       fases: [
-        { nombre: 'Retos', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Elige el reto',
+        { nombre: '1 · Taller de ideas', texto: 'text-centros', borde: 'border-centros', halo: 'ring-centros/15', conector: 'Al terminar',
           pasos: [
-            { titulo: 'Crea un reto', desc: 'La necesidad real de una empresa, convertida en reto con IA.' },
+            { titulo: 'Elige o crea el reto', conector: 'Concrétalo',
+              desc: 'La necesidad real de una empresa, convertida en reto con IA.' },
+            { titulo: 'Crea y valida la propuesta', conector: 'Al aula',
+              desc: 'Su concreción curricular; la validáis tú o la empresa.' },
+            { titulo: 'Encuentro creativo', conector: 'Entregan',
+              desc: 'En el aula, cada grupo trabaja su solución por fases en su workspace.' },
+            { titulo: 'La empresa valora', desc: 'Valora la propuesta con las soluciones de los grupos.' },
           ] },
-        { nombre: 'Proyectos', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Asócialo',
+        { nombre: 'Selección', texto: 'text-administraciones-dark', borde: 'border-administraciones', halo: 'ring-administraciones/15', conector: 'A la empresa',
           pasos: [
-            { titulo: 'Crea y valida el proyecto', desc: 'Concretas el reto en una propuesta; la empresa o tú la validáis.' },
+            { titulo: 'DuaLab elige al alumnado', desc: 'Los más destacados pasan a las prácticas en la empresa.' },
           ] },
-        { nombre: 'Encuentros', texto: 'text-alumnos-dark', borde: 'border-alumnos', halo: 'ring-alumnos/15', conector: 'Trabajan en el aula',
+        { nombre: '2 · Plan de proyecto', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20',
           pasos: [
-            { titulo: 'Organiza el encuentro', desc: 'Fecha, grupos y acceso del alumnado con su QR.' },
-          ] },
-        { nombre: 'Evaluación', texto: 'text-azul-noche', borde: 'border-administraciones', halo: 'ring-administraciones/15',
-          pasos: [
-            { titulo: 'Sigue a tus grupos', conector: 'Al terminar',
-              desc: 'En Seguimiento de grupos ves el avance por fases de cada grupo, sus tareas y entregas, y quién necesita ayuda.' },
-            { titulo: 'Evalúa', desc: 'Evaluación RA/CE y diagnóstico final con IA.' },
+            { titulo: 'Crea el plan y su cronograma', conector: 'En prácticas',
+              desc: 'Amplía la propuesta (u otro reto), con hitos fechados y su alumnado.' },
+            { titulo: 'Seguimiento en la agenda', desc: 'Avance por fases, retrasos y horas, del docente y de DuaLab.' },
           ] },
       ],
     },

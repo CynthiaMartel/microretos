@@ -7,6 +7,7 @@ import MicroretoModal from '../components/MicroretoModal.vue'
 import DesbloquearIaModal from '../components/DesbloquearIaModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
+import EtapaRecorrido from '../components/EtapaRecorrido.vue'
 import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
 import {
   MegaphoneIcon,
@@ -63,6 +64,8 @@ function onIaDesbloqueada() {
 // ── Helpers de acceso a datos ─────────────────────────────────────────────
 const equipo      = computed(() => workspace.value?.equipo)
 const proyecto    = computed(() => workspace.value?.proyecto)
+// Etapa del trabajo: encuentro creativo (Taller de ideas) o plan de proyecto en la empresa (P4)
+const etapa       = computed(() => workspace.value?.etapa ?? null)
 const diagnostico = computed(() => workspace.value?.diagnostico)
 const preguntasF0 = computed(() => workspace.value?.preguntas_f0 ?? [])
 const tareas      = computed(() => workspace.value?.tareas ?? [])
@@ -74,9 +77,12 @@ function getFase(n) {
   return workspace.value?.fases?.[n] ?? { numero_fase: n, datos: null, completada: false, validado_docente: false }
 }
 
-// Duración real (en clases) — nº de clases del calendario que cubren esta fase
+// Duración real (en sesiones) — nº de sesiones del encuentro que cubren esta fase
+// (encuentros antiguos sin planificación propia: el calendario de la propuesta)
 function duracionFase(n) {
-  const clases = proyecto.value?.diseno_microproyecto?.clases || []
+  const clases = workspace.value?.planificacion_sesiones?.length
+    ? workspace.value.planificacion_sesiones
+    : (proyecto.value?.diseno_microproyecto?.clases || [])
   const count = clases.filter(c => (c.fases || []).includes(n)).length
   return count || null
 }
@@ -1068,14 +1074,19 @@ watch(workspace, (val) => {
       </div>
 
       <!-- ══ CABECERA OSCURA ══ -->
-      <div class="bg-[#0C1220] text-white">
+      <div class="border-t-4 bg-[#0C1220] text-white" :class="etapa?.es_plan ? 'border-centros-light' : 'border-alumnos'">
         <div class="max-w-[1380px] mx-auto px-4 sm:px-8 py-4 sm:py-5
                     flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
           <!-- Izquierda: info del microreto -->
           <div class="min-w-0 flex-1">
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-alumnos mb-1">
-              Microreto activo
-            </p>
+            <!-- Etapa del recorrido: Taller de ideas (aula) o Plan de proyecto (empresa) -->
+            <div class="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <EtapaRecorrido :etapa="etapa?.es_plan ? 'plan' : 'taller'" :detalle="etapa?.es_plan ? (etapa.empresa || '') : ''" />
+              <span class="text-[11px] font-semibold text-white/60">
+                <template v-if="etapa?.es_plan">Prácticas en la empresa<template v-if="etapa.hitos"> · {{ etapa.hitos }} hitos</template></template>
+                <template v-else>Encuentro creativo en el aula</template>
+              </span>
+            </div>
             <h1 class="text-lg sm:text-xl font-black text-white leading-tight mb-2 sm:mb-3">
               {{ proyecto.titulo }}
             </h1>
@@ -1095,6 +1106,11 @@ watch(workspace, (val) => {
                 {{ proyecto.curso }}
               </span>
             </div>
+            <!-- Plan de proyecto: lo que espera la empresa del alumnado durante las prácticas -->
+            <p v-if="etapa?.es_plan && etapa.expectativas_empresa"
+               class="mt-2 max-w-3xl whitespace-pre-line break-words text-xs text-white/80 sm:text-sm">
+              <span class="font-bold text-white">Qué espera la empresa de vosotros:</span> {{ etapa.expectativas_empresa }}
+            </p>
           </div>
           <!-- Derecha: nombre de equipo + miembros -->
           <div class="sm:text-right min-w-0 sm:max-w-[40%]">
@@ -2407,6 +2423,38 @@ watch(workspace, (val) => {
                   <span v-else class="text-gray-300 text-sm flex-1">—</span>
                 </div>
               </div>
+            </div>
+
+            <!-- Horas de prácticas (plan de proyecto, A3): las anotan el docente y DuaLab con el tutor de
+                 empresa; aquí el alumnado solo las consulta -->
+            <div v-if="etapa?.es_plan" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+              <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Horas de prácticas</h3>
+              <p class="text-[11px] text-gray-400 mb-3">
+                Las anota tu docente con el tutor de la empresa<template v-if="etapa.horas_estimadas">. Previstas: {{ etapa.horas_estimadas }} h por persona</template>.
+              </p>
+              <p v-if="!(etapa.horas || []).length" class="text-sm text-gray-400">Aún no hay horas anotadas.</p>
+              <ul v-else class="space-y-3">
+                <li v-for="h in etapa.horas" :key="h.alias">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="min-w-0 truncate text-sm font-semibold text-azul-noche">{{ h.alias }}</span>
+                    <span class="shrink-0 text-sm font-black text-alumnos-dark">{{ h.total }} h</span>
+                  </div>
+                  <div v-if="etapa.horas_estimadas" class="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100" role="progressbar"
+                       :aria-valuenow="Math.min(100, Math.round(h.total / etapa.horas_estimadas * 100))" aria-valuemin="0" aria-valuemax="100"
+                       :aria-label="`Horas de ${h.alias}`">
+                    <div class="h-full rounded-full bg-alumnos" :style="{ width: Math.min(100, h.total / etapa.horas_estimadas * 100) + '%' }" />
+                  </div>
+                  <details v-if="h.registros.length" class="mt-1">
+                    <summary class="cursor-pointer text-[11px] font-semibold text-gray-500">Ver días ({{ h.registros.length }})</summary>
+                    <ul class="mt-1 space-y-1">
+                      <li v-for="(r, i) in h.registros" :key="i" class="text-[11px] text-gray-600">
+                        <span class="font-semibold">{{ new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) }}</span>
+                        · {{ r.horas }} h<template v-if="r.descripcion"> · <span class="break-words">{{ r.descripcion }}</span></template>
+                      </li>
+                    </ul>
+                  </details>
+                </li>
+              </ul>
             </div>
 
             <!-- Tarjeta banco de imágenes del proyecto -->

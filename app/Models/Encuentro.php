@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,11 +14,18 @@ class Encuentro extends Model
     use SoftDeletes;
     protected $table = 'encuentros';
 
+    // Etapa del encuentro (columna `tipo`): encuentro creativo del Taller de ideas (aula) o hito
+    // del cronograma del plan de prácticas (empresa). Ver CLAUDE.md «Etapas».
+    public const TIPO_CREATIVO = 'creativo_etapa1';
+    public const TIPO_PLAN     = 'plan_practicas_etapa2';
+    public const TIPOS         = [self::TIPO_CREATIVO, self::TIPO_PLAN];
+
     protected $fillable = [
         'user_id',
         'microproyecto_id',
         'fecha',
         'fecha_fin',
+        'planificacion_sesiones',
         'centro_educativo',
         'centro_educativo_id',
         'ciclo_formativo',
@@ -37,9 +45,46 @@ class Encuentro extends Model
         'num_alumnos'      => 'integer',
         'num_equipos'      => 'integer',
         'microproyecto_id' => 'integer',
+        'planificacion_sesiones' => 'array',
         // Nombres del alumnado: cifrados igual que equipo_miembros.nombre (datos personales)
         'alumnados'        => 'encrypted:array',
     ];
+
+    /**
+     * Sesiones del encuentro ([{fases: [0..4]}]). Los encuentros antiguos sin planificación propia
+     * usan el calendario que tenía su propuesta (microproyectos.diseno_microproyecto.clases).
+     *
+     * @return array<int, array{fases: array<int, int>}>
+     */
+    public function sesiones(): array
+    {
+        $sesiones = $this->planificacion_sesiones;
+        if (!is_array($sesiones) || $sesiones === []) {
+            $sesiones = $this->microproyecto?->diseno_microproyecto['clases'] ?? [];
+        }
+
+        return array_values(array_filter((array) $sesiones, 'is_array'));
+    }
+
+    public function totalSesiones(): int
+    {
+        return count($this->sesiones());
+    }
+
+    // Fecha fin sugerida/mínima a partir de una fecha de inicio: con hitos fechados (cronograma de un
+    // plan), la del último hito; si no, según el nº de sesiones (Microproyecto::SEMANAS_POR_CLASE).
+    public function fechaFinSugerida(Carbon $fechaInicio): ?Carbon
+    {
+        $fechas = collect($this->sesiones())->pluck('fecha')->filter();
+        if ($fechas->isNotEmpty()) {
+            return Carbon::parse($fechas->max());
+        }
+
+        $total = $this->totalSesiones();
+        if ($total <= 0) return null;
+
+        return $fechaInicio->copy()->addWeeks($total * Microproyecto::SEMANAS_POR_CLASE);
+    }
 
     /** @return BelongsTo<User, $this> */
     public function docente(): BelongsTo
@@ -51,6 +96,12 @@ class Encuentro extends Model
     public function microproyecto(): BelongsTo
     {
         return $this->belongsTo(Microproyecto::class);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\HasOne<EncuentroValoracionEmpresa, $this> */
+    public function valoracionEmpresa(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EncuentroValoracionEmpresa::class);
     }
 
     /** @return HasMany<Equipo, $this> */

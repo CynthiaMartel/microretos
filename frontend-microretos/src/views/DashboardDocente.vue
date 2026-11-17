@@ -12,11 +12,12 @@ import EncuentroResumen from '../components/EncuentroResumen.vue'
 import TourPromptModal from '../components/TourPromptModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
+import PlanificacionSesiones from '../components/PlanificacionSesiones.vue'
 import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
-import { formatCurso } from '../utils/formatCurso.js'
+import { formatCurso, nivelCurso, CURSO_ENCUENTRO } from '../utils/formatCurso.js'
 import { useUIState } from '../composables/useUIState.js'
 import { useAuthStore } from '../stores/auth.js'
-import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase } from '../config/fasesProyecto.js'
+import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase, CLASES_PROYECTO_DEFECTO } from '../config/fasesProyecto.js'
 
 const { tourActivo } = useUIState()
 const authStore = useAuthStore()
@@ -38,7 +39,16 @@ const form = ref({
   alumnados:        [],
   notas:            '',
   microproyecto_id: null,
+  // Sesiones del encuentro y sus fases: se rellena con las de la propuesta y se ajusta aquí
+  planificacion_sesiones: [],
 })
+
+// Copia del calendario de la propuesta (o el de por defecto) como punto de partida del encuentro
+const planificacionInicial = (p) => {
+  const clases = p?.diseno_microproyecto?.clases
+  return (Array.isArray(clases) && clases.length ? clases : CLASES_PROYECTO_DEFECTO)
+    .map(c => ({ fases: [...(c.fases || [])] }))
+}
 
 // ─── Buscador de proyectos ─────────────────────────────────────────────────────
 const proyectoSeleccionado  = ref(null)
@@ -57,12 +67,14 @@ const ciclosDisponiblesProy = computed(() => {
   return [...set].sort()
 })
 
-const proyectosFiltrados = computed(() => {
+// Todas las que pasan los filtros; la lista muestra como mucho 60 (contador «60 de N»)
+const proyectosFiltradosTodos = computed(() => {
   // Solo proyectos ya validados (al menos por el docente) pueden asociarse a un
   // encuentro — una propuesta sin validar, un borrador o un archivado no tiene
   // sentido programarlo en clase (ver StoreEncuentroRequest, mismo criterio en backend).
   let base = todosMisProyectos.value.filter(p => p.estado === 'validado' || p.estado === 'completado')
-  if (filtroProyCurso.value)  base = base.filter(p => p.curso === filtroProyCurso.value)
+  // Las propuestas guardan '1' | '2' | 'ambos_cursos' (antes se comparaba con '1º'/'2º' y casi nunca coincidía)
+  if (filtroProyCurso.value)  base = base.filter(p => nivelCurso(p.curso) === filtroProyCurso.value)
   if (filtroProyCiclo.value)  base = base.filter(p => p.ciclo_nombre === filtroProyCiclo.value)
   if (filtroProyEstado.value) base = base.filter(p => p.estado === filtroProyEstado.value)
   if (busquedaProy.value.trim()) {
@@ -73,8 +85,10 @@ const proyectosFiltrados = computed(() => {
       (p.ciclo_nombre   || '').toLowerCase().includes(q)
     )
   }
-  return base.slice(0, 60)
+  return base
 })
+const proyectosFiltrados = computed(() => proyectosFiltradosTodos.value.slice(0, 60))
+const totalProyectosFiltrados = computed(() => proyectosFiltradosTodos.value.length)
 
 async function abrirBuscadorProy() {
   mostrarBuscadorProy.value = true
@@ -98,14 +112,17 @@ function cerrarBuscadorProy() {
 function seleccionarProyecto(p) {
   proyectoSeleccionado.value   = p
   form.value.microproyecto_id  = p.id
+  form.value.planificacion_sesiones = planificacionInicial(p)
   if (p.ciclo_nombre) form.value.ciclo_formativo = p.ciclo_nombre
-  if (p.curso)        form.value.curso           = p.curso
+  // Curso del encuentro = el de la propuesta (1º, 2º o ambos), ya marcado en el formulario
+  if (nivelCurso(p.curso)) form.value.curso   = CURSO_ENCUENTRO[nivelCurso(p.curso)]
   mostrarBuscadorProy.value    = false
 }
 
 function limpiarProyecto() {
   proyectoSeleccionado.value   = null
   form.value.microproyecto_id  = null
+  form.value.planificacion_sesiones = []
   form.value.ciclo_formativo   = ''
   form.value.curso             = ''
   // El reparto de equipos se hizo pensando en el proyecto anterior — no tiene
@@ -114,11 +131,12 @@ function limpiarProyecto() {
   form.value.alumnados         = []
 }
 
-// Duración total (en clases) del calendario del proyecto elegido — el backend
-// calcula la fecha_fin real con la misma heurística centralizada (fasesProyecto.js).
-const totalClasesProyectoSeleccionado = computed(() => {
-  return proyectoSeleccionado.value?.diseno_microproyecto?.clases?.length || 0
-})
+// Nº de sesiones planificadas en este encuentro — el backend calcula la fecha_fin real
+// con la misma heurística centralizada (fasesProyecto.js / Encuentro::fechaFinSugerida).
+const totalClasesProyectoSeleccionado = computed(() => form.value.planificacion_sesiones.length)
+const planificacionValida = computed(() =>
+  form.value.planificacion_sesiones.length > 0
+  && form.value.planificacion_sesiones.every(s => (s.fases || []).length > 0))
 
 const fechaFinEstimada = computed(() => {
   return calcularFechaFinEstimada(form.value.fecha, totalClasesProyectoSeleccionado.value)
@@ -126,21 +144,17 @@ const fechaFinEstimada = computed(() => {
 
 function estadoProyectoBadge(proyectoOEstado) {
   const estado          = typeof proyectoOEstado === 'object' ? proyectoOEstado?.estado : proyectoOEstado
-  const empresaValidado = typeof proyectoOEstado === 'object' && !!proyectoOEstado?.empresa_validado
-  const docenteValidado = typeof proyectoOEstado === 'object' && !!proyectoOEstado?.docente_validado
 
   if (estado === 'borrador' || estado === 'en_edicion')
     return { label: 'En edición',  cls: 'bg-amber-100 text-amber-600' }
   if (estado === 'archivado')
-    return { label: 'Archivado',   cls: 'bg-red-50 text-red-400' }
-  if (estado === 'validado') {
-    if (empresaValidado && docenteValidado) return { label: 'Validado · Completo', cls: 'bg-centros/10 text-centros' }
-    if (empresaValidado)  return { label: 'Validado · Empresa',  cls: 'bg-centros/10 text-centros' }
-    if (docenteValidado)  return { label: 'Validado · Docente',  cls: 'bg-empresas/10 text-empresas-dark' }
-    return { label: 'Validado', cls: 'bg-centros/10 text-centros' }
-  }
+    return { label: 'Archivada',   cls: 'bg-red-50 text-red-400' }
+  if (estado === 'validado')
+    return { label: 'Validada', cls: 'bg-empresas/10 text-empresas-dark' }
+  if (estado === 'completado')
+    return { label: 'Completada', cls: 'bg-sky-50 text-sky-700' }
   if (estado === 'propuesta')
-    return { label: 'Propuesta',   cls: 'bg-violet-50 text-violet-600' }
+    return { label: 'Pendiente de validar', cls: 'bg-violet-50 text-violet-600' }
   return { label: estado || '—',   cls: 'bg-gray-100 text-gray-500' }
 }
 
@@ -200,7 +214,7 @@ function alumnadoDe(encuentro) {
 const encuentrosParaCopiar = computed(() => encuentros.value
   .filter(e => e.es_propietario)
   .map(e => ({ id: e.id, alumnado: alumnadoDe(e), etiqueta: [
-    formatFecha(e.fecha), e.proyecto_titulo || 'Sin proyecto',
+    formatFecha(e.fecha), e.proyecto_titulo || 'Sin propuesta',
     [e.curso && formatCurso(e.curso), e.grupo].filter(Boolean).join(' '),
   ].filter(Boolean).join(' · ') }))
   .filter(e => e.alumnado.length))
@@ -524,17 +538,18 @@ const equiposRepartidos = computed(() =>
   alumnadosSinEquipo.value.length === 0
 )
 
-const formularioValido = computed(() => equiposRepartidos.value)
+const formularioValido = computed(() => equiposRepartidos.value && planificacionValida.value)
 
 const requisitosFaltantes = computed(() => {
   const faltantes = []
   if (!proyectoAsociado.value) {
-    faltantes.push('Asocia un proyecto al encuentro.')
+    faltantes.push('Asocia una propuesta al encuentro.')
     return faltantes
   }
   if (!form.value.fecha) faltantes.push('Establece la fecha de trabajo.')
   if (!form.value.curso) faltantes.push('Indica el curso del encuentro.')
   if (!form.value.grupo) faltantes.push('Indica la clase del encuentro.')
+  if (!planificacionValida.value) faltantes.push('Planifica las sesiones: cada una con al menos una fase.')
   if ((form.value.num_equipos || 0) < 1) faltantes.push('Indica el número de grupos.')
   if (form.value.alumnados.length === 0) faltantes.push('Reparte el alumnado en los grupos.')
   else if (alumnadosSinEquipo.value.length > 0) faltantes.push('Hay alumnado sin grupo asignado.')
@@ -560,10 +575,11 @@ watch(pasoEnc, (v) => {
 
 const faltantesPaso1 = computed(() => {
   const f = []
-  if (!proyectoAsociado.value) f.push('Asocia un proyecto al encuentro.')
+  if (!proyectoAsociado.value) f.push('Asocia una propuesta al encuentro.')
   if (!form.value.fecha) f.push('Establece la fecha de trabajo.')
   if (!form.value.curso) f.push('Indica el curso del encuentro.')
   if (!form.value.grupo) f.push('Indica la clase del encuentro.')
+  if (proyectoAsociado.value && !planificacionValida.value) f.push('Planifica las sesiones: cada una con al menos una fase.')
   return f
 })
 const faltantesPaso2 = computed(() => {
@@ -618,7 +634,7 @@ const datosResumenEncuentro = computed(() => [
 ].filter(d => d.valor))
 
 const CONSEJO_PASO_ENC = {
-  1: 'Verifica que el proyecto y los datos sean correctos. Podrás modificar la información del encuentro más adelante.',
+  1: 'Verifica que la propuesta y los datos sean correctos. Podrás modificar la información del encuentro más adelante.',
   2: 'Usa solo alias (nombre de pila + animal + color): nunca nombres reales completos del alumnado.',
   3: 'Revisa el resumen. Al guardar, los grupos quedarán listos para generar su código de acceso.',
   4: 'En la biblioteca de encuentros generarás el código de acceso y, en «Seguimiento de grupos», seguirás el avance de cada grupo.',
@@ -631,9 +647,10 @@ const antesDeContinuarEnc = computed(() => {
 
 // Paso 3: resumen para confirmar.
 const confirmacionEncuentro = computed(() => [
-  { label: 'Proyecto',         valor: proyectoSeleccionado.value?.titulo || '—', ancho: true },
+  { label: 'Propuesta',        valor: proyectoSeleccionado.value?.titulo || '—', ancho: true },
   { label: 'Fecha de trabajo', valor: formatFecha(form.value.fecha) || '—' },
   { label: 'Fecha fin estimada', valor: fechaFinEstimada.value ? formatFecha(fechaFinEstimada.value) : '—' },
+  { label: 'Sesiones planificadas', valor: String(form.value.planificacion_sesiones.length) },
   { label: 'Centro educativo', valor: authStore.userCentroNombre || form.value.centro_educativo || '—' },
   { label: 'Ciclo formativo',  valor: form.value.ciclo_formativo || '—' },
   { label: 'Curso y clase',    valor: `${form.value.curso || '—'} · Clase ${form.value.grupo || '—'}` },
@@ -769,14 +786,14 @@ function formatFecha(isoDate) {
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
               </span>
               <div class="min-w-0">
-                <h2 id="titulo-proyecto-asociado" class="text-lg font-bold text-azul-noche">Reto y proyecto asociado</h2>
-                <p class="mt-0.5 text-sm text-texto-secundario">Selecciona el proyecto con el que se trabajará en este encuentro.</p>
+                <h2 id="titulo-proyecto-asociado" class="text-lg font-bold text-azul-noche">Propuesta asociada</h2>
+                <p class="mt-0.5 text-sm text-texto-secundario">Selecciona la propuesta validada que se trabajará en este encuentro. Cada propuesta parte de un reto: lo verás junto a ella.</p>
               </div>
             </div>
             <button v-if="proyectoSeleccionado && !mostrarBuscadorProy" type="button" @click="cambiarProyecto"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-rol-fuerte/30 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              Cambiar proyecto
+              Cambiar propuesta
             </button>
           </div>
 
@@ -828,8 +845,8 @@ function formatFecha(isoDate) {
                       <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                     </svg>
                     <input v-model="busquedaProy" type="text"
-                           placeholder="Buscar por título o empresa..."
-                           class="field-input pl-9 !text-xs" />
+                           placeholder="Buscar por título o empresa"
+                           class="field-input !pl-9 !text-xs" />
                   </div>
 
                   <!-- Filtro estado -->
@@ -852,7 +869,7 @@ function formatFecha(isoDate) {
                   <div>
                     <label class="field-label">Curso</label>
                     <div class="flex gap-2 mt-1">
-                      <button v-for="op in [{ val: '', label: 'Todos' }, { val: '1º', label: '1º' }, { val: '2º', label: '2º' }]"
+                      <button v-for="op in [{ val: '', label: 'Todos' }, { val: '1', label: '1º' }, { val: '2', label: '2º' }, { val: 'ambos', label: 'Ambos' }]"
                               :key="op.val"
                               @click="filtroProyCurso = op.val"
                               class="flex-1 inline-flex h-9 items-center justify-center rounded-full text-xs font-bold uppercase tracking-widest
@@ -871,8 +888,8 @@ function formatFecha(isoDate) {
                   <p class="text-xs text-texto-secundario font-medium">
                     <span v-if="cargandoProyectos">Cargando proyectos...</span>
                     <span v-else>
-                      {{ proyectosFiltrados.length }}
-                      {{ proyectosFiltrados.length === 1 ? 'proyecto' : 'proyectos' }}
+                      <template v-if="totalProyectosFiltrados > proyectosFiltrados.length">{{ proyectosFiltrados.length }} de </template>{{ totalProyectosFiltrados }}
+                      {{ totalProyectosFiltrados === 1 ? 'propuesta' : 'propuestas' }}
                     </span>
                   </p>
                   <div class="flex gap-3">
@@ -917,7 +934,7 @@ function formatFecha(isoDate) {
                         </span>
                         <span v-if="p.empresa_nombre" class="tag tag-gray">{{ p.empresa_nombre }}</span>
                         <span v-if="p.ciclo_nombre"   class="tag tag-gray truncate max-w-[140px]">{{ p.ciclo_nombre }}</span>
-                        <span v-if="p.curso"          class="tag tag-lime">{{ p.curso }}</span>
+                        <span v-if="nivelCurso(p.curso)" class="tag tag-lime">{{ nivelCurso(p.curso) === 'ambos' ? 'Ambos cursos' : nivelCurso(p.curso) + 'º' }}</span>
                       </div>
                     </button>
                     <!-- Botón Ver (abre modal) -->
@@ -941,7 +958,7 @@ function formatFecha(isoDate) {
                   <svg class="w-8 h-8 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
-                  <p class="text-xs font-medium">Sin proyectos para esos filtros</p>
+                  <p class="text-xs font-medium">Sin propuestas para esos filtros</p>
                 </div>
 
               </div>
@@ -951,7 +968,7 @@ function formatFecha(isoDate) {
             <p class="flex items-start gap-2 rounded-xl bg-rol/5 px-3 py-2.5 text-sm text-azul-noche">
               <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span>
-                Solo se pueden asociar proyectos validados. Los proyectos se crean en el
+                Solo se pueden asociar propuestas validadas (por ti o por la empresa). Las propuestas se crean en el
                 <button type="button" @click="router.push({ name: 'startup-day-crear' })"
                         class="font-semibold text-rol-fuerte underline hover:no-underline">Taller de Ideas</button>.
               </span>
@@ -959,7 +976,7 @@ function formatFecha(isoDate) {
             <button type="button" @click="abrirBuscadorProy"
                     class="inline-flex h-10 items-center gap-2 rounded-full bg-rol-fuerte px-5 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Buscar proyecto
+              Buscar propuesta
             </button>
           </div>
         </section>
@@ -982,11 +999,11 @@ function formatFecha(isoDate) {
               <label for="enc-fecha" class="field-label">Fecha de trabajo <span class="text-red-600" aria-hidden="true">*</span></label>
               <input id="enc-fecha" v-model="form.fecha" type="date" class="field-input" :disabled="!proyectoAsociado" required />
               <p v-if="!proyectoAsociado" class="mt-1.5 text-xs font-medium text-amber-800">
-                Asocia primero un proyecto para poder establecer la fecha de trabajo.
+                Asocia primero una propuesta para poder establecer la fecha de trabajo.
               </p>
               <p v-else-if="fechaFinEstimada" class="mt-1.5 text-xs text-texto-secundario">
                 Fecha fin estimada: <span class="font-semibold text-azul-noche">{{ formatFecha(fechaFinEstimada) }}</span>
-                ({{ totalClasesProyectoSeleccionado }} clases). Podrás ajustarla luego en el detalle del encuentro.
+                ({{ totalClasesProyectoSeleccionado }} {{ totalClasesProyectoSeleccionado === 1 ? 'sesión' : 'sesiones' }}, según la planificación de abajo). Podrás ajustarla luego en el detalle del encuentro.
               </p>
             </div>
 
@@ -1015,14 +1032,14 @@ function formatFecha(isoDate) {
 
             <fieldset class="min-w-0">
               <legend class="field-label">Curso <span class="text-red-600" aria-hidden="true">*</span></legend>
-              <div class="grid grid-cols-2 gap-2">
-                <button v-for="c in ['1º', '2º']" :key="c" type="button" @click="form.curso = c"
+              <div class="grid grid-cols-3 gap-2">
+                <button v-for="c in ['1º', '2º', '1º y 2º']" :key="c" type="button" @click="form.curso = c"
                         :aria-pressed="form.curso === c"
                         class="h-10 rounded-full border text-sm font-semibold transition-colors"
                         :class="form.curso === c
                           ? 'border-rol-fuerte bg-rol-fuerte text-white shadow-sm'
                           : 'border-borde bg-white text-azul-noche hover:border-rol-fuerte/40 hover:text-rol-fuerte'">
-                  {{ c }}
+                  {{ c === '1º y 2º' ? 'Ambos' : c }}
                 </button>
               </div>
             </fieldset>
@@ -1045,6 +1062,21 @@ function formatFecha(isoDate) {
                      placeholder="Ej. 24" class="field-input" />
             </div>
           </div>
+        </section>
+
+        <!-- Planificación de sesiones: qué fases se trabajan en cada sesión de este encuentro -->
+        <section v-if="proyectoAsociado" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-planificacion"
+                 :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'datos' }">
+          <div class="mb-5 flex items-start gap-3 sm:gap-4">
+            <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol-fuerte text-white sm:h-12 sm:w-12" aria-hidden="true">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </span>
+            <div class="min-w-0">
+              <h2 id="titulo-planificacion" class="text-lg font-bold text-azul-noche">Planificación de sesiones</h2>
+              <p class="mt-0.5 text-sm text-texto-secundario">Parte de la planificación de la propuesta; ajústala a este encuentro. De aquí sale la fecha fin estimada.</p>
+            </div>
+          </div>
+          <PlanificacionSesiones v-model="form.planificacion_sesiones" />
         </section>
       </template>
 

@@ -118,7 +118,7 @@ function makeRenderer(doc) {
     // ── FASES DEL PROYECTO ───────────────────────────────────────────────────
     const fases = p.diseno_microproyecto?.fases;
     if (fases?.length) {
-      addSectionTitle('Fases del proyecto', BLUE);
+      addSectionTitle('Fases del trabajo en el aula', BLUE);
       const clases = p.diseno_microproyecto?.clases;
       fases.forEach((f, i) => {
         const nombre     = f.nombre || `Fase ${i + 1}`;

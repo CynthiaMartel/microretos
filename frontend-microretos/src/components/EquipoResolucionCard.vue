@@ -10,6 +10,7 @@
      y `diagnostico-acciones`, que solo MisGruposDetalle.vue rellena. La ficha del proyecto
      no los usa — sin contenido en el slot, sencillamente no se pinta nada ahí. -->
 <script setup>
+import MarcaDestacado from './MarcaDestacado.vue'
 import { computed } from 'vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
@@ -202,6 +203,7 @@ function formatItemFase(item) {
           <span v-for="m in equipo.miembros" :key="m.id"
                 class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 py-0.5 pl-2.5 pr-0.5 text-sm font-semibold text-azul-noche">
             {{ m.alias }}
+            <MarcaDestacado v-if="m.destacado" />
             <RolGrupo v-if="m.rol" :rol="m.rol" />
           </span>
         </div>

@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidaPlanificacionSesiones;
 use App\Models\Microproyecto;
 use App\Rules\AliasAlumnado;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreEncuentroRequest extends FormRequest
 {
+    use ValidaPlanificacionSesiones;
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -38,6 +41,8 @@ class StoreEncuentroRequest extends FormRequest
                 ->toArray();
         }
 
+        $sanitized += $this->planificacionSesionesSaneada();
+
         if ($sanitized) {
             $this->merge($sanitized);
         }
@@ -57,12 +62,12 @@ class StoreEncuentroRequest extends FormRequest
                 }
 
                 if (!$proyecto->esVisiblePara($user)) {
-                    $fail('No tienes acceso a este proyecto. Pide al docente propietario que lo comparta contigo o crea uno nuevo.');
+                    $fail('No tienes acceso a esta propuesta. Pide al docente propietario que la comparta contigo o crea una nueva.');
                     return;
                 }
 
                 if (!in_array($proyecto->estado, ['validado', 'completado'], true)) {
-                    $fail('Solo se pueden asociar proyectos ya validados a un encuentro. Valida el proyecto antes de crear el encuentro.');
+                    $fail('Solo se pueden llevar al aula propuestas validadas (por el docente o por la empresa). Valida la propuesta antes de crear el encuentro.');
                 }
             }],
             'fecha'                  => 'required|date',
@@ -81,13 +86,14 @@ class StoreEncuentroRequest extends FormRequest
                 }
             }],
             'alumnados.*.rol'        => 'nullable|string|max:50',
+            ...$this->reglasPlanificacionSesiones(),
         ];
     }
 
     public function messages(): array
     {
         return [
-            'microproyecto_id.required' => 'Debes asociar un proyecto al encuentro antes de guardarlo.',
+            'microproyecto_id.required' => 'Debes asociar una propuesta al encuentro antes de guardarlo.',
             'curso.required'            => 'Indica el curso del encuentro.',
             'grupo.required'            => 'Indica la clase del encuentro.',
             'num_equipos.required'      => 'Indica el número de grupos del encuentro.',
@@ -96,6 +102,7 @@ class StoreEncuentroRequest extends FormRequest
             'alumnados.*.equipo_num.required' => 'Todos los alumnos deben tener un grupo asignado.',
             'alumnados.*.alias.required'      => 'Todos los alumnos necesitan un alias.',
             'alumnados.*.alias.distinct'      => 'Hay dos alumnos con el mismo alias. Genera otro con el dado.',
+            ...$this->mensajesPlanificacionSesiones(),
         ];
     }
 }

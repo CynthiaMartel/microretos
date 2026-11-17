@@ -111,15 +111,15 @@ const fichaUuid = ref(null)
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Propuestas a" destacado="empresas" color="text-empresas" volver="/seccion/empresas"
-                       subtitulo="Envía tus propuestas de proyecto a las empresas y sigue sus respuestas. El envío se confirma desde la ficha de cada proyecto.">
+                       subtitulo="Comparte tus propuestas con las empresas y sigue sus respuestas. El envío se confirma desde la ficha de cada propuesta.">
         <button type="button" @click="router.push('/proyectos/crear')" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-          Nuevo proyecto
+          Nueva propuesta
         </button>
       </CabeceraSeccion>
 
       <!-- Filtros: buscador, curso académico, empresa y familia -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por proyecto o empresa…"
+      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por propuesta o empresa…"
                     :hay-activos="hayFiltros" @limpiar="limpiar">
         <template #curso>
           <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />

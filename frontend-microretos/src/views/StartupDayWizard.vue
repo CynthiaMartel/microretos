@@ -54,23 +54,18 @@ function abrirRecurso(item) {
   modalRecurso.value = { url: item.url, label: item.label || item.filename, tipo };
 }
 
-// Estado del proyecto con etiqueta y color para el desplegable
+// Estado de la propuesta con etiqueta y color para el desplegable
 const estadoOpciones = {
   en_edicion: { label: 'En edición', dot: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50' },
   archivado:  { label: 'Archivar',   dot: 'bg-gray-400',   text: 'text-gray-500',   bg: 'bg-gray-50' },
-  propuesta:  { label: 'Propuesta',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
-  validado:   { label: 'Validado',   dot: 'bg-rol-fuerte',  text: 'text-rol-fuerte',  bg: 'bg-rol/10' },
-  completado: { label: 'Completado', dot: 'bg-sky-500',    text: 'text-sky-700',    bg: 'bg-sky-50' },
+  propuesta:  { label: 'Pendiente de validar',  dot: 'bg-violet-400', text: 'text-violet-700', bg: 'bg-violet-50' },
+  validado:   { label: 'Validada',   dot: 'bg-rol-fuerte',  text: 'text-rol-fuerte',  bg: 'bg-rol/10' },
+  completado: { label: 'Completada', dot: 'bg-sky-500',    text: 'text-sky-700',    bg: 'bg-sky-50' },
 };
 
 // Label dinámico del botón de estado — distingue si ya se envió por mail o no
 const labelEstadoBtn = computed(() => {
   const e = form.value.estado;
-  if (e === 'propuesta') {
-    return form.value.enviado_a_empresa_mail
-      ? 'Propuesta · SÍ enviada por mail'
-      : 'Propuesta · NO enviada por mail';
-  }
   return estadoOpciones[e]?.label || 'En edición';
 });
 
@@ -247,7 +242,12 @@ const form = ref({
   kpis: { lista: [] },
   estado: 'en_edicion',
   enviado_a_empresa_mail: false,
+  // Plan de proyecto (etapa 2): 'etapa' es de solo lectura (el backend no la acepta en el PUT)
+  etapa: 'taller',
+  horas_estimadas: null,
+  expectativas_empresa: '',
 });
+const esPlan = computed(() => form.value.etapa === 'plan');
 
 // ── Estado local de recursos (no se guarda en BD — vive en Cloudinary) ────────
 const videosLocales     = ref([])
@@ -270,7 +270,7 @@ async function subirArchivo(tipo, event) {
   if (!file) return
 
   if (!uuid.value) {
-    errorSubida.value = 'Guarda el proyecto al menos una vez antes de adjuntar archivos.'
+    errorSubida.value = 'Guarda la propuesta al menos una vez antes de adjuntar archivos.'
     return
   }
 
@@ -384,19 +384,12 @@ watch(() => paso.value === 5, (enPaso5) => {
       nombre: f.label, descripcion: f.desc,
     }));
   }
+  // Calendario de sesiones por defecto: ya no se edita aquí (se planifica en cada encuentro),
+  // pero se guarda como punto de partida del encuentro y como contexto de la IA de metodología.
   if (!Array.isArray(form.value.diseno_microproyecto.clases) || form.value.diseno_microproyecto.clases.length === 0) {
     form.value.diseno_microproyecto.clases = CLASES_PROYECTO_DEFECTO.map(c => ({ fases: [...c.fases] }));
   }
 }, { immediate: true });
-
-function addSesion() { form.value.diseno_microproyecto.clases.push({ fases: [] }); }
-function removeSesion(i) { form.value.diseno_microproyecto.clases.splice(i, 1); }
-function toggleFaseEnSesion(i, numFase) {
-  const sesion = form.value.diseno_microproyecto.clases[i];
-  const pos = sesion.fases.indexOf(numFase);
-  if (pos === -1) sesion.fases.push(numFase);
-  else sesion.fases.splice(pos, 1);
-}
 
 // ── Helpers listas ────────────────────────────────────────────────────────────
 // Lo que sugiere la IA para objetivos y KPIs queda aparte, pendiente de revisar: no
@@ -1049,6 +1042,9 @@ async function cargarProyecto() {
       ciclo_id: p.ciclo_id || '', curso: p.curso || '',
       microreto_id: p.microreto_id || '', estado: p.estado || 'en_edicion',
       enviado_a_empresa_mail: !!p.enviado_a_empresa_mail,
+      etapa: p.etapa || 'taller',
+      horas_estimadas: p.horas_estimadas ?? null,
+      expectativas_empresa: p.expectativas_empresa || '',
       ...(p.datos_empresa    && { datos_empresa: p.datos_empresa }),
       ...(p.datos_centro     && { datos_centro: p.datos_centro }),
       ...(p.equipo           && { equipo: p.equipo }),
@@ -1166,8 +1162,8 @@ async function aprobarProyecto() {
   if (!errorMsg.value) modalPropuestaAviso.value = true;
 }
 
-// Cierra el modal de validación (Vía A empresa / Vía B docente) y, una vez
-// gestionada la validación, muestra la pantalla "¡Proyecto aprobado!".
+// Cierra el modal de validación (vía docente / vía empresa) y, una vez
+// gestionada la validación, muestra la pantalla "¡Propuesta lista!".
 function cerrarModalPropuestaAviso() {
   modalPropuestaAviso.value = false;
   publicadoExito.value = true;
@@ -1191,11 +1187,14 @@ const pasos = [
   { num: 2, label: 'Empresa',   titulo: 'Datos de la',   destacado: 'empresa' },
   { num: 3, label: 'Currículo', titulo: 'Currículo y',   destacado: 'criterios' },
   { num: 4, label: 'El reto',   titulo: 'Definición del', destacado: 'reto' },
-  { num: 5, label: 'Propuesta', titulo: 'Diseño de la',  destacado: 'propuesta' },
+  { num: 5, label: 'Metodología', titulo: 'Fases y', destacado: 'metodología' },
   { num: 6, label: 'Objetivos', titulo: 'Objetivos y',   destacado: 'KPIs' },
   { num: 7, label: 'Publicar',  titulo: 'Revisar y',     destacado: 'publicar' },
 ];
 const pasoInfo = computed(() => pasos[paso.value - 1]);
+// En un plan de proyecto, los mismos textos hablando del plan (el asistente es común)
+const subtituloEtapa = computed(() => !esPlan.value ? subtituloPaso.value : (subtituloPaso.value || '')
+  .replace(/esta propuesta/g, 'este plan').replace(/la propuesta/g, 'el plan').replace(/de propuesta/g, 'del plan'));
 const subtituloPaso = computed(() => ({
   1: uuid.value ? 'Revisa los datos de base de la propuesta.' : 'Elige el reto de la biblioteca al que responde esta propuesta y completa los datos de base.',
   2: empresaDesdeReto.value ? 'Información autocompletada desde el reto. Solo lectura.' : 'Confirma o completa la información de la empresa colaboradora.',
@@ -1220,12 +1219,10 @@ const tipoEmpresa = computed(() => {
 })
 const estadoResumen = computed(() => {
   const e = form.value.estado
-  if (e === 'propuesta') return proyectoValidado.value
-    ? { label: 'Validada por la empresa', clase: 'bg-empresas/10 text-empresas-dark' }
-    : { label: 'Pendiente de validar', clase: 'bg-amber-50 text-amber-800' }
-  if (e === 'validado')   return { label: 'Validado', clase: 'bg-empresas/10 text-empresas-dark' }
-  if (e === 'completado') return { label: 'Completado', clase: 'bg-sky-50 text-sky-800' }
-  if (e === 'archivado')  return { label: 'Archivado', clase: 'bg-gray-100 text-gray-700' }
+  if (e === 'propuesta')  return { label: 'Pendiente de validar', clase: 'bg-amber-50 text-amber-800' }
+  if (e === 'validado')   return { label: 'Validada', clase: 'bg-empresas/10 text-empresas-dark' }
+  if (e === 'completado') return { label: 'Completada', clase: 'bg-sky-50 text-sky-800' }
+  if (e === 'archivado')  return { label: 'Archivada', clase: 'bg-gray-100 text-gray-700' }
   return { label: 'Borrador', clase: 'bg-gray-100 text-gray-700' }
 })
 const portadaUrl = computed(() =>
@@ -1250,7 +1247,7 @@ const CONSEJO_PASO = {
   4: 'Cuanto más concretos sean la pregunta reto y los entregables, más fácil será evaluar el resultado.',
   5: 'El resumen ejecutivo es lo primero que leerá la empresa al abrir el enlace de validación.',
   6: 'Añade al menos un objetivo. Los KPIs son opcionales, pero hacen la propuesta evaluable.',
-  7: 'De momento es una propuesta: cuando la valide la empresa (o tú como docente), pasará a llamarse proyecto.',
+  7: 'Cuando la valide la empresa (o tú como docente), podrás llevarla al aula en un encuentro creativo.',
 }
 const antesDeContinuar = computed(() => {
   if (proyectoValidado.value) return { tipo: 'aviso', titulo: 'Ya validado por la empresa',
@@ -1341,8 +1338,8 @@ const guiaWizard = [
     texto: 'Define el núcleo de la propuesta: la fundamentación (contexto de partida, justificación pedagógica e innovación) y el diseño del reto (descripción de la problemática, pregunta reto en formato "¿Cómo podríamos…?", restricciones que condicionan la solución y los entregables que el grupo debe producir). Cuanto más concreto, más fácil será la evaluación final.',
   },
   {
-    titulo: 'Paso 5 · Diseño de la propuesta',
-    texto: 'Revisa las 5 fases del proyecto (las mismas que el grupo recorrerá en su workspace cuando la propuesta se convierta en proyecto) con su duración orientativa, describe la metodología que seguirá el grupo y esboza el cronograma con los hitos clave. Termina con un resumen ejecutivo de 3-4 líneas que la empresa verá al abrir el enlace de validación.',
+    titulo: 'Paso 5 · Fases y metodología',
+    texto: 'Revisa las 5 fases (las mismas que el grupo recorrerá en su workspace cuando lleves la propuesta al aula; las sesiones se planifican al crear el encuentro), describe la metodología que seguirá el grupo y esboza el cronograma con los hitos clave. Termina con un resumen ejecutivo de 3-4 líneas que la empresa verá al abrir el enlace de validación.',
   },
   {
     titulo: 'Paso 6 · Objetivos y KPIs',
@@ -1350,7 +1347,7 @@ const guiaWizard = [
   },
   {
     titulo: 'Paso 7 · Publicar',
-    texto: 'Revisa el resumen de la propuesta. Aquí también puedes adjuntar vídeos o documentos de presentación que la empresa verá al abrir el enlace de validación. La propuesta se guarda como borrador por defecto. Usa el desplegable "Estado del proyecto" → "Propuesta" para generar el enlace único y enviárselo a la empresa cuando estés listo. En cuanto se valide, pasará a llamarse proyecto.',
+    texto: 'Revisa el resumen de la propuesta. Aquí también puedes adjuntar vídeos o documentos de presentación que la empresa verá al abrir el enlace de validación. La propuesta se guarda como borrador por defecto. Usa el desplegable "Estado de la propuesta" → "Pendiente de validar" para validarla como docente o enviar el enlace a la empresa para que la valide.',
   },
 ];
 
@@ -1428,8 +1425,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
       <!-- Cabecera: misma pieza que el resto de vistas; título según el paso -->
       <CabeceraSeccion plano :titulo="pasoInfo.titulo" :destacado="pasoInfo.destacado" color="text-rol-fuerte"
-                       :antetitulo="`Taller de Ideas · Paso ${paso} de ${totalPasos}`"
-                       :volver="{ name: 'startup-day', query: { ver: 'proceso' } }" volver-label="Volver a proyectos" :subtitulo="subtituloPaso">
+                       :antetitulo="`${esPlan ? 'Plan de proyecto' : 'Taller de Ideas'} · Paso ${paso} de ${totalPasos}`"
+                       :volver="esPlan ? { name: 'planes' } : { name: 'startup-day', query: { ver: 'proceso' } }" :volver-label="esPlan ? 'Volver a planes' : 'Volver a propuestas'" :subtitulo="subtituloEtapa">
         <div class="flex flex-wrap items-center gap-3">
           <!-- Ayuda: mismo botón y sitio en todas las vistas -->
           <button type="button" @click="modoGuia = true" aria-label="Ayuda: guía de este paso"
@@ -1486,7 +1483,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
         </svg>
         <p class="text-sm text-amber-800">
-          Este proyecto ya ha sido validado por la empresa. Modificar el contenido requerirá una nueva validación.
+          Esta propuesta ya está validada. Si cambias algo importante, tendrás que volver a validarla.
         </p>
       </div>
 
@@ -2224,14 +2221,14 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
         </div>
 
-        <!-- ═══ PASO 5: Diseño de la propuesta ═══ -->
+        <!-- ═══ PASO 5: Fases y metodología (las sesiones se planifican en el encuentro) ═══ -->
         <div v-if="paso === 5">
 
           <div class="space-y-4">
             <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div>
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Fases de la propuesta</p>
-                <p class="text-xs text-texto-secundario mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace. La duración de cada una se calcula sola según el calendario de sesiones de abajo.</p>
+                <p class="text-xs text-texto-secundario mt-1">Son las mismas 5 fases que el grupo recorrerá en su workspace.</p>
               </div>
               <div class="space-y-2">
                 <div v-for="f in FASES_PROYECTO" :key="f.num"
@@ -2241,73 +2238,13 @@ onUnmounted(() => { tourActivo.value = false; });
                     <p class="font-bold text-sm text-azul-noche">F{{ f.num }} - {{ f.label }}</p>
                     <p class="text-xs text-texto-secundario mt-0.5">{{ f.descLarga }}</p>
                   </div>
-                  <span class="text-xs font-bold uppercase tracking-wide opacity-80 shrink-0 whitespace-nowrap">
-                    {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
-                  </span>
                 </div>
               </div>
 
-              <div class="pt-2 border-t border-borde">
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Modificar duración de cada fase</p>
-                <p class="text-xs text-texto-secundario mt-1 mb-3">Marca qué fase(s) se trabajan en cada sesión — una misma sesión puede cubrir varias fases.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div v-for="(c, i) in form.diseno_microproyecto.clases" :key="i"
-                       class="rounded-2xl border border-borde bg-white p-4 space-y-3">
-                    <div class="flex items-center justify-between">
-                      <p class="text-sm font-bold text-azul-noche">Sesión {{ i + 1 }}</p>
-                      <button @click="removeSesion(i)" type="button"
-                              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full -mr-2
-                                     text-texto-secundario hover:text-red-500 hover:bg-red-50 font-bold text-sm leading-none">×</button>
-                    </div>
-                    <div class="space-y-1.5">
-                      <button v-for="f in FASES_PROYECTO" :key="f.num" type="button"
-                              @click="toggleFaseEnSesion(i, f.num)"
-                              class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 border-2 transition-all text-left"
-                              :class="c.fases.includes(f.num)
-                                ? colorMapFases[f.color] + ' border-current shadow-sm'
-                                : 'border-transparent bg-gray-50 text-texto-secundario hover:bg-gray-100'">
-                        <span class="text-lg leading-none shrink-0">{{ f.icono }}</span>
-                        <span class="text-xs font-bold flex-1" :class="c.fases.includes(f.num) ? 'text-azul-noche' : 'text-texto-secundario'">
-                          F{{ f.num }} - {{ f.label }}
-                        </span>
-                        <span v-if="c.fases.includes(f.num)" class="text-rol-fuerte font-bold text-sm shrink-0">✓</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <button @click="addSesion" type="button"
-                        class="mt-3 inline-flex min-h-9 items-center px-4 py-2 rounded-full border border-dashed border-rol/40 text-rol-fuerte
-                               text-xs font-bold uppercase tracking-widest hover:bg-rol/5 transition-all">
-                  + Añadir sesión
-                </button>
-                <p class="text-xs font-bold text-azul-noche mt-3">Total: {{ form.diseno_microproyecto.clases.length }} sesión(es)</p>
-              </div>
-            </div>
-
-            <!-- Cronograma general — hitos derivados de las fases + el calendario de arriba -->
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
-              <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Cronograma general</p>
-                <p class="text-xs text-texto-secundario mt-1">Hito a conseguir en cada fase, según el calendario de sesiones de arriba.</p>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-3">
-                <div v-for="f in FASES_PROYECTO" :key="f.num"
-                     class="rounded-2xl border p-3 space-y-1" :class="colorMapFases[f.color]">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-base leading-none">{{ f.icono }}</span>
-                    <p class="font-bold text-xs text-azul-noche">{{ f.label }}</p>
-                  </div>
-                  <p class="text-xs font-bold uppercase tracking-wide opacity-70">
-                    {{ duracionPorFase(form.diseno_microproyecto.clases, f.num) }} sesión(es)
-                  </p>
-                  <p class="text-xs text-texto-secundario leading-snug">🎯 {{ f.desc }}</p>
-                </div>
-              </div>
-              <div class="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
-                <p class="text-xs text-amber-800">
-                  📅 Las fechas reales de este cronograma (inicio y fin) se establecen al crear la sesión de clase que va a trabajar esta propuesta.
-                </p>
-              </div>
+              <p class="flex items-start gap-2.5 rounded-2xl border border-rol/20 bg-rol/5 px-4 py-3 text-sm text-azul-noche">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span>Las <strong>sesiones</strong> (cuántas y qué fases se trabajan en cada una) se planifican al <strong>crear el encuentro</strong> con tu alumnado: cada encuentro puede tener la suya.</span>
+              </p>
             </div>
 
             <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
@@ -2352,6 +2289,23 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 6">
           <div class="space-y-4">
 
+            <!-- Plan de proyecto (etapa 2): datos propios de las prácticas en la empresa -->
+            <section v-if="esPlan" class="rounded-2xl border border-empresas/25 bg-empresas/5 p-4 shadow-sm sm:p-6" aria-labelledby="titulo-datos-plan">
+              <h2 id="titulo-datos-plan" class="text-lg font-bold text-azul-noche">Plan de prácticas</h2>
+              <p class="mt-0.5 text-sm text-texto-secundario">Lo propio del plan de proyecto que el alumnado desarrolla en la empresa.</p>
+              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="min-w-0">
+                  <label for="plan-horas" class="field-label">Horas estimadas</label>
+                  <input id="plan-horas" v-model.number="form.horas_estimadas" type="number" min="1" max="2000" class="field-input" placeholder="Ej. 120" />
+                </div>
+                <div class="min-w-0 sm:col-span-2">
+                  <label for="plan-expectativas" class="field-label">¿Qué espera la empresa del alumnado?</label>
+                  <textarea id="plan-expectativas" v-model="form.expectativas_empresa" rows="3" maxlength="3000" class="field-input resize-none"
+                            placeholder="Lo que la empresa espera que el alumnado aporte durante las prácticas" />
+                </div>
+              </div>
+            </section>
+
             <!-- Objetivos del proyecto -->
             <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
               <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -2360,7 +2314,7 @@ onUnmounted(() => { tourActivo.value = false; });
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
                   </span>
                   <div class="min-w-0">
-                    <h2 id="titulo-objetivos" class="text-lg font-bold text-azul-noche">Objetivos del proyecto</h2>
+                    <h2 id="titulo-objetivos" class="text-lg font-bold text-azul-noche">Objetivos de la propuesta</h2>
                     <p class="mt-0.5 text-sm text-texto-secundario">Define qué se quiere conseguir con esta propuesta. Puedes añadir varios objetivos.</p>
                   </div>
                 </div>
@@ -2446,8 +2400,8 @@ onUnmounted(() => { tourActivo.value = false; });
             <div>
               <h2 class="text-2xl font-bold text-azul-noche">¡Propuesta lista!</h2>
               <p class="text-texto-secundario text-sm mt-1.5 max-w-sm mx-auto">
-                El enlace de validación ya está listo. Puedes enviárselo a la empresa por correo para que valide la propuesta.
-                Cuando la valide, pasará a llamarse <strong>proyecto</strong>.
+                Envía el enlace a la empresa para que la valide, o valídala tú como docente.
+                Con cualquiera de las dos podrás llevarla al aula en un encuentro creativo.
               </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
@@ -2485,8 +2439,8 @@ onUnmounted(() => { tourActivo.value = false; });
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <p class="text-xs text-azul-noche leading-relaxed">
-              Esto es, de momento, una <strong>propuesta</strong>. Cuando la publiques y la empresa (o el docente) la valide,
-              pasará a llamarse <strong>proyecto</strong>.
+              Esto es una <strong>propuesta</strong>. Cuando la valide la empresa (o tú como docente), podrás
+              llevarla al aula en un encuentro creativo.
             </p>
           </div>
 
@@ -2718,17 +2672,16 @@ onUnmounted(() => { tourActivo.value = false; });
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               <p class="text-sm text-azul-noche leading-relaxed">
-                La propuesta se guarda como <strong>En edición</strong> por defecto. Usa el desplegable <strong>Estado del proyecto</strong> para cambiar el estado.
-                Selecciona <strong>Propuesta</strong> para generar el enlace de validación empresa o para validar directamente como docente.
-                Pasará a llamarse <strong>proyecto</strong> y quedará <strong>Validado</strong> cuando lo valide la empresa, el docente, o ambos.
+                La propuesta se guarda como <strong>En edición</strong> por defecto. Usa el desplegable <strong>Estado de la propuesta</strong> para cambiar el estado.
+                Selecciona <strong>Pendiente de validar</strong> para validarla como docente o enviar el enlace a la empresa; cuando la valide cualquiera de los dos, quedará <strong>Validada</strong> y podrás llevarla al aula.
               </p>
             </div>
           </div>
 
-          <!-- Acciones del proyecto (fila propia, encima de los botones de paso) -->
+          <!-- Acciones de la propuesta (fila propia, encima de los botones de paso) -->
           <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
 
-              <!-- ── Desplegable Estado del proyecto ── -->
+              <!-- ── Desplegable Estado de la propuesta ── -->
               <div class="relative">
                 <button
                   @click="dropdownEstadoAbierto = !dropdownEstadoAbierto"
@@ -2797,7 +2750,7 @@ onUnmounted(() => { tourActivo.value = false; });
                         <span class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full shrink-0"
                                 :class="form.estado === 'propuesta' && form.enviado_a_empresa_mail ? 'bg-rol-fuerte' : 'bg-violet-400'" />
-                          Propuesta
+                          Pendiente de validar
                           <svg v-if="form.estado === 'propuesta'" class="w-3.5 h-3.5 ml-auto"
                                :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-alumnos'"
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2808,12 +2761,12 @@ onUnmounted(() => { tourActivo.value = false; });
                         <span v-if="form.estado === 'propuesta'"
                               class="text-xs font-bold uppercase tracking-wider pl-4"
                               :class="form.enviado_a_empresa_mail ? 'text-rol-fuerte' : 'text-alumnos'">
-                          {{ form.enviado_a_empresa_mail ? '✅ SÍ enviada por mail' : '✉ NO enviada por mail' }}
+                          {{ form.enviado_a_empresa_mail ? '✅ Enlace enviado a la empresa' : '✉ Sin enviar a la empresa' }}
                         </span>
                       </button>
                       <!-- Tooltip (i) -->
                       <div class="relative group/info shrink-0">
-                        <button type="button" aria-label="Qué significa marcarla como Propuesta"
+                        <button type="button" aria-label="Qué significa marcarla como Pendiente de validar"
                                 :aria-expanded="infoPropuestaAbierta"
                                 @click.stop="infoPropuestaAbierta = !infoPropuestaAbierta"
                                 class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
@@ -2826,7 +2779,7 @@ onUnmounted(() => { tourActivo.value = false; });
                              class="absolute group-hover/info:block group-focus-within/info:block bottom-full right-0 mb-2
                                     bg-azul-noche text-white text-xs rounded-xl p-3 w-60 z-30
                                     leading-relaxed shadow-2xl">
-                          Márcala como <strong class="text-white">Propuesta</strong> para generar el enlace de validación empresa, o para validarla directamente como docente. Pasará a llamarse <strong class="text-white">proyecto</strong> y a <strong class="text-rol-fuerte">Validado</strong> cuando lo valide la empresa, el docente, o ambos.
+                          Márcala como <strong class="text-white">Pendiente de validar</strong> cuando esté lista: podrás validarla como docente o enviar el enlace a la empresa. Cuando la valide cualquiera de los dos pasará a <strong class="text-rol-fuerte">Validada</strong> y podrás llevarla al aula.
                           <div class="absolute bottom-[-4px] right-3 w-2 h-2 bg-azul-noche rotate-45" />
                         </div>
                       </div>
@@ -2841,9 +2794,9 @@ onUnmounted(() => { tourActivo.value = false; });
                      @click="dropdownEstadoAbierto = false" />
               </div>
 
-              <!-- Archivar Proyecto (antes: Guardar borrador) -->
+              <!-- Archivar propuesta (antes: Guardar borrador) -->
               <button @click="archivarProyecto" :disabled="guardando" class="btn-secondary">
-                {{ guardando ? 'Archivando…' : 'Archivar Proyecto' }}
+                {{ guardando ? 'Archivando…' : 'Archivar propuesta' }}
               </button>
 
               <!-- Biblioteca de proyectos (pestaña En proceso: es donde está este proyecto) -->
@@ -2920,8 +2873,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <p class="text-sm text-texto-secundario leading-relaxed text-center">
           Esta propuesta está <strong>En edición</strong> — aún no se ha enviado a validar.
-          Cuando esté lista, usa el desplegable <strong>Estado del proyecto</strong> y selecciona
-          <strong>Propuesta</strong> para enviarla a la empresa o validarla como docente.
+          Cuando esté lista, usa el desplegable <strong>Estado de la propuesta</strong> y selecciona
+          <strong>Pendiente de validar</strong> para validarla como docente o enviarla a la empresa.
         </p>
 
         <button
@@ -3061,10 +3014,8 @@ onUnmounted(() => { tourActivo.value = false; });
 
         <p class="text-sm text-texto-secundario leading-relaxed text-center">
           Esta propuesta se guarda como <strong>borrador</strong> por defecto.
-          Puedes modificar esta opción, pero se aconseja validar con la empresa
-          previamente enviándoles el enlace, antes de marcarla como validada.
-          El enlace se generará una vez selecciones <strong>Propuesta</strong> en el desplegable de Estado del proyecto.
-          Al validarla, pasará a llamarse <strong>proyecto</strong>.
+          Cuando esté lista, selecciona <strong>Pendiente de validar</strong> en el desplegable de Estado de la propuesta
+          y valídala como docente o envía el enlace a la empresa para que la valide. Con cualquiera de las dos podrás llevarla al aula.
         </p>
 
         <button

@@ -14,10 +14,24 @@ class EquipoMiembro extends Model
     // AliasGenerator), único dentro de su encuentro. No hay columna con el nombre completo.
     protected $fillable = ['equipo_id', 'alias', 'rol', 'fortalezas', 'puntos_mejora'];
 
+    // destacado_en / destacado_por_id (selección para prácticas, P3b) no son fillable: solo los
+    // cambia el superadmin desde DuaLab Central (DestacadoCentralController)
     protected $casts = [
         'fortalezas'    => 'array',
         'puntos_mejora' => 'array',
+        'destacado_en'  => 'datetime',
     ];
+
+    public function esDestacado(): bool
+    {
+        return $this->destacado_en !== null;
+    }
+
+    /** Horas de prácticas anotadas (A3) */
+    public function registrosHoras(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RegistroHoras::class, 'equipo_miembro_id')->orderByDesc('fecha');
+    }
 
     protected static function booted(): void
     {

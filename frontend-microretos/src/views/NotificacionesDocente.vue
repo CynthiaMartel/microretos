@@ -26,6 +26,7 @@ const irApartado = (captacion) => router.replace({ query: captacion ? { apartado
 // Presentación por tipo: icono (trazo SVG), color de marca y filtro al que pertenece
 const TIPOS = {
   propuesta_validada:        { filtro: 'empresas',   tile: 'bg-empresas',         icon: 'M9 12l2 2 4-4M3 21h18M5 21V7l7-4 7 4v14' },
+  propuesta_valorada:        { filtro: 'empresas',   tile: 'bg-empresas',         icon: 'M11.48 3.5a.56.56 0 011.04 0l2.13 5.11 5.52.44c.5.04.7.66.32.98l-4.2 3.6 1.28 5.38a.56.56 0 01-.84.61L12 16.73l-4.73 2.89a.56.56 0 01-.84-.61l1.28-5.38-4.2-3.6a.56.56 0 01.32-.98l5.52-.44 2.13-5.11z' },
   propuesta_no_validada_aun: { filtro: 'empresas',   tile: 'bg-alumnos',          icon: 'M12 8v4l2 2M3 21h18M5 21V7l7-4 7 4v14' },
   pendiente_validar:         { filtro: 'validacion', tile: 'bg-centros',          icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
   equipo_fase:               { filtro: 'equipos',    tile: 'bg-administraciones', icon: 'M3 3v18h18M7 15l4-6 4 4 5-8' },
@@ -114,7 +115,7 @@ const haceCuanto = (isoStr) => {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Notificaciones"
-                       subtitulo="Respuestas de empresas, proyectos que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
+                       subtitulo="Respuestas de empresas, propuestas que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
         <button v-if="noLeidas" type="button" @click="leerTodas" class="accion-secundaria">
           <svg aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
           Marcar todas como leídas

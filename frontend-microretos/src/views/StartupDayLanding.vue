@@ -54,9 +54,9 @@ async function enviarValidacion() {
 
 const preguntas = [
   { key: 'reto_comprensible',   label: '¿El planteamiento del reto es comprensible y realista?' },
-  { key: 'objetivos_alineados', label: '¿Los objetivos del proyecto se alinean con las necesidades de la empresa?' },
+  { key: 'objetivos_alineados', label: '¿Los objetivos de la propuesta se alinean con las necesidades de la empresa?' },
   { key: 'equipo_adecuado',     label: '¿El perfil del equipo de alumnos os parece adecuado para este reto?' },
-  { key: 'viabilidad',          label: '¿Consideráis que el proyecto es viable en el contexto de vuestra empresa?' },
+  { key: 'viabilidad',          label: '¿Consideráis que la propuesta es viable en el contexto de vuestra empresa?' },
 ];
 
 const raCeBlocks = computed(() => {
@@ -100,7 +100,7 @@ function youtubeId(url) {
       </div>
       <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-empresas/8 border border-empresas/15">
         <span class="w-1.5 h-1.5 rounded-full bg-empresas animate-pulse"/>
-        <span class="text-[9px] font-black uppercase tracking-widest text-empresas">Proyecto activo</span>
+        <span class="text-[9px] font-black uppercase tracking-widest text-empresas">Propuesta activa</span>
       </div>
     </header>
 
@@ -174,7 +174,7 @@ function youtubeId(url) {
           <div class="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full
                       bg-empresas/10 border border-empresas/20">
             <span class="w-2 h-2 rounded-full bg-empresas" />
-            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">Proyecto</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-empresas">Propuesta</span>
           </div>
 
           <!-- ════════════════════════════════════════════════════════
@@ -220,11 +220,11 @@ function youtubeId(url) {
                 </p>
               </div>
 
-              <!-- Qué es un proyecto -->
+              <!-- Qué es una propuesta -->
               <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 mb-4">
-                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">¿Qué es un proyecto?</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">¿Qué es una propuesta?</p>
                 <p class="text-sm text-gray-600 leading-relaxed">
-                  Un proyecto es una propuesta de trabajo del alumnado en torno a un reto
+                  Una propuesta es un trabajo del alumnado en torno a un reto
                   relacionado con vuestra empresa. No es un encargo real ni un compromiso contractual —
                   es un ejercicio de aprendizaje donde los alumnos y alumnas practican cómo
                   <strong class="text-[#121212]">detectar problemas, diseñar soluciones y presentar resultados</strong>
@@ -280,7 +280,7 @@ function youtubeId(url) {
                 </div>
                 <button @click="guiaVisible = false"
                         class="inline-flex h-9 items-center rounded-full px-3 text-xs font-bold text-empresas hover:text-empresas/70 hover:bg-empresas/5 transition-colors">
-                  Entendido, ir al proyecto →
+                  Entendido, ir a la propuesta →
                 </button>
               </div>
             </div>
@@ -303,13 +303,13 @@ function youtubeId(url) {
             <svg class="w-5 h-5 text-empresas shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
-            <p class="text-sm font-bold text-empresas">Este proyecto ya ha sido validado. Gracias por vuestra participación.</p>
+            <p class="text-sm font-bold text-empresas">Ya habéis validado esta propuesta. Gracias por vuestra participación.</p>
           </div>
 
           <!-- Ficha del proyecto -->
           <div class="bg-white border border-gray-100 rounded-[1.5rem] shadow-sm p-6 mb-5 space-y-6">
             <div>
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Proyecto</p>
+              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Propuesta</p>
               <h1 class="text-xl font-black text-azul-noche">{{ proyecto.titulo }}</h1>
             </div>
 
@@ -321,7 +321,7 @@ function youtubeId(url) {
 
             <!-- Contexto -->
             <div v-if="proyecto.fundamentacion?.contexto">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Contexto del proyecto</p>
+              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Contexto de la propuesta</p>
               <p class="text-sm text-gray-600 leading-relaxed">{{ proyecto.fundamentacion.contexto }}</p>
               <p v-if="proyecto.fundamentacion.justificacion" class="text-sm text-gray-600 leading-relaxed mt-2">{{ proyecto.fundamentacion.justificacion }}</p>
               <div v-if="proyecto.fundamentacion.innovacion"
@@ -374,7 +374,7 @@ function youtubeId(url) {
 
             <!-- Fases -->
             <div v-if="proyecto.diseno_microproyecto?.fases?.length">
-              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Fases del proyecto</p>
+              <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Fases del trabajo en el aula</p>
               <ol class="space-y-2.5">
                 <li v-for="(f, i) in proyecto.diseno_microproyecto.fases" :key="i"
                     class="flex items-start gap-3">
@@ -475,7 +475,7 @@ function youtubeId(url) {
                 </svg>
               </div>
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-empresas">Recursos del proyecto</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-empresas">Recursos de la propuesta</p>
                 <p class="text-xs text-gray-400 mt-0.5">Material adicional preparado por el equipo docente</p>
               </div>
             </div>
@@ -628,7 +628,7 @@ function youtubeId(url) {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                   </svg>
                   <p class="text-[11px] text-empresas font-medium leading-snug">
-                    El proyecto quedará marcado como validado por vuestra empresa. El equipo docente recibirá la notificación.
+                    La propuesta quedará marcada como validada por vuestra empresa. El equipo docente recibirá la notificación.
                   </p>
                 </div>
                 <div v-else-if="decision === 'no_validar_aun'"

@@ -1,4 +1,5 @@
 <script setup>
+import MarcaDestacado from './MarcaDestacado.vue'
 defineProps({
   numEquipos: { type: Number, default: 0 },
   alumnadosDelEquipo: { type: Function, required: true }, // (n) => { alias }[] — sin nombres reales
@@ -43,11 +44,13 @@ defineEmits(['toggle-modulo', 'ver-alumno', 'ver-grupo'])
                     class="inline-flex min-h-9 max-w-full items-center rounded-full border border-gray-200 bg-white px-3 text-left
                            text-[11px] font-semibold text-[#1F2937] transition-colors hover:border-rol-fuerte/40 hover:bg-rol/5 hover:text-rol-fuerte">
               <span class="break-words">{{ a.alias }}</span>
+              <MarcaDestacado v-if="a.destacado" class="ml-1" />
             </button>
             <span v-else
                   class="text-[11px] font-semibold text-[#1F2937] bg-white border border-gray-200
                          rounded-full px-2 py-0.5">
               {{ a.alias }}
+              <MarcaDestacado v-if="a.destacado" />
             </span>
           </template>
         </div>

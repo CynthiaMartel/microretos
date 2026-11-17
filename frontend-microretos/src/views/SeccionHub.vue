@@ -195,7 +195,7 @@ const abrir = (card) => {
             </span>
             <div class="min-w-0">
               <h2 id="titulo-flujo" class="card-title">{{ flujo.titulo }}</h2>
-              <p class="mt-0.5 text-sm text-texto-secundario">El recorrido de esta sección, paso a paso.</p>
+              <p class="mt-0.5 text-sm text-texto-secundario">{{ flujo.subtitulo || 'El recorrido de esta sección, paso a paso.' }}</p>
             </div>
           </div>
           <button type="button" class="accion-secundaria self-start sm:self-auto" @click="abrirComoFunciona">

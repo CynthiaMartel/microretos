@@ -17,11 +17,12 @@ export function useTareasDocente(proyectos, cargando) {
     const s = (n) => (n > 1 ? 's' : '')
     const t = []
     const revisar = proyectos.value.filter(p => p.estado === 'propuesta' && p.empresa_no_valida_aun)
-    if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar la respuesta de ${revisar.length} empresa${s(revisar.length)}`, ruta: '/proyectos', nivel: 'alta' })
-    const sinEnviar = proyectos.value.filter(p => p.estado === 'propuesta' && !p.enviado_a_empresa_mail && !p.empresa_no_valida_aun)
-    if (sinEnviar.length) t.push({ id: `enviar:${sinEnviar.length}`, texto: `Enviar ${sinEnviar.length} propuesta${s(sinEnviar.length)} a la empresa`, ruta: '/proyectos', nivel: 'media' })
+    if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar los cambios que propone${revisar.length > 1 ? 'n' : ''} ${revisar.length} empresa${s(revisar.length)}`, ruta: '/proyectos', nivel: 'alta' })
+    // La validan el docente o la empresa: se avisa de las que esperan cualquiera de las dos
+    const validar = proyectos.value.filter(p => p.estado === 'propuesta' && !p.empresa_no_valida_aun)
+    if (validar.length) t.push({ id: `validar:${validar.length}`, texto: `Validar ${validar.length} propuesta${s(validar.length)} pendiente${s(validar.length)}`, ruta: '/proyectos', nivel: 'media' })
     const estancados = proyectos.value.filter(p => p.estado === 'en_edicion' && p.updated_at && dias(p.updated_at) >= 14)
-    if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} proyecto${s(estancados.length)} parado${s(estancados.length)} hace +14 días`, ruta: '/proyectos', nivel: 'media' })
+    if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} propuesta${s(estancados.length)} parada${s(estancados.length)} hace +14 días`, ruta: '/proyectos', nivel: 'media' })
     const sinRespuesta = proyectos.value.filter(p => p.estado === 'propuesta' && p.enviado_a_empresa_mail && !p.empresa_validado && p.updated_at && dias(p.updated_at) >= 10)
     if (sinRespuesta.length) t.push({ id: `recordar:${sinRespuesta.length}`, texto: `Recordar a ${sinRespuesta.length} empresa${s(sinRespuesta.length)} sin responder (+10 días)`, ruta: '/proyectos', nivel: 'media' })
     return t

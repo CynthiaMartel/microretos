@@ -12,6 +12,7 @@
      de grupo), así que un alumno se identifica por alias + centro + ciclo + curso + clase:
      si el docente reutiliza el mismo alias en otro encuentro de esa clase, se agrupan. -->
 <script setup>
+import MarcaDestacado from '../components/MarcaDestacado.vue'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getParticipacionesAlumnado } from '../services/alumnadoService.js'
@@ -177,6 +178,8 @@ function agrupar(lista) {
     return {
       ...a,
       reciente: a.participaciones[0],
+      // Seleccionado/a por DuaLab para prácticas en alguno de sus encuentros (P3b)
+      destacado: a.participaciones.some(p => p.destacado),
       completados: a.participaciones.filter(p => estadoDe(p) === 'completado').length,
       notaMedia: notas.length ? notas.reduce((t, n) => t + n, 0) / notas.length : null,
     }
@@ -319,7 +322,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Listado de" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
-                       subtitulo="Cada alumno con los proyectos y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de los proyectos terminados." />
+                       subtitulo="Cada alumno con las propuestas y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de las propuestas terminadas." />
 
       <!-- Filtros principales (FiltrosPanel común) -->
       <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar alumno por alias…">
@@ -343,7 +346,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
         <FiltroSelect label="Ciclo formativo" v-model="filtroCiclo" :opciones="ciclosDisponibles" todos="Todos los ciclos"
           title="Filtra por el ciclo formativo del encuentro." />
         <FiltroSelect v-if="modulosDisponibles.length" label="Módulo" v-model="filtroModulo" :opciones="modulosDisponibles" todos="Todos los módulos"
-          title="Filtra por módulo profesional del proyecto. Los proyectos de varios módulos aparecen en cada uno." />
+          title="Filtra por módulo profesional de la propuesta. Las propuestas de varios módulos aparecen en cada uno." />
         <FiltroSegmentado v-if="cursosDisponibles.length" label="Nivel" v-model="filtroCurso" :opciones="opcionesNivel" />
         <FiltroSegmentado v-if="clasesDisponibles.length" label="Clase" v-model="filtroClase" :opciones="opcionesClase" />
       </FiltrosPanel>
@@ -368,7 +371,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 
           <!-- Estado del proyecto del alumno (cuenta alumnos) -->
           <div class="border-t border-borde pt-3" role="radiogroup" aria-labelledby="titulo-filtro-estado">
-            <p id="titulo-filtro-estado" class="mb-1.5 text-sm font-semibold text-azul-noche">Estado del proyecto</p>
+            <p id="titulo-filtro-estado" class="mb-1.5 text-sm font-semibold text-azul-noche">Estado de la propuesta</p>
             <label v-for="e in ESTADOS" :key="e.value || 'todos'"
                    class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
               <input type="radio" name="al-filtro-estado" :value="e.value" v-model="filtroEstado" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
@@ -405,12 +408,12 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 
           <details v-if="proyectosDisponibles.length" class="group mt-3 border-t border-borde pt-3" :open="!!filtroProyecto">
             <summary class="flex cursor-pointer list-none items-center justify-between py-1 text-sm font-semibold text-azul-noche">
-              Proyecto
+              Propuesta
               <svg class="h-4 w-4 text-texto-secundario transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </summary>
-            <label for="al-filtro-proyecto" class="sr-only">Proyecto</label>
+            <label for="al-filtro-proyecto" class="sr-only">Propuesta</label>
             <select id="al-filtro-proyecto" v-model="filtroProyecto" class="mt-2 h-10 w-full rounded-xl px-3 text-sm">
-              <option value="">Todos los proyectos</option>
+              <option value="">Todas las propuestas</option>
               <option v-for="[uuid, titulo] in proyectosDisponibles" :key="uuid" :value="uuid">{{ titulo }}</option>
             </select>
           </details>
@@ -450,7 +453,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                       :aria-label="`Quitar filtro ${SEGUIMIENTO[k].label}`">
                 {{ SEGUIMIENTO[k].label }}<span aria-hidden="true">✕</span>
               </button>
-              <button v-if="filtroProyecto" type="button" @click="filtroProyecto = ''" class="chip-filtro max-w-full" aria-label="Quitar filtro de proyecto">
+              <button v-if="filtroProyecto" type="button" @click="filtroProyecto = ''" class="chip-filtro max-w-full" aria-label="Quitar filtro de propuesta">
                 <span class="truncate">{{ proyectosDisponibles.find(([u]) => u === filtroProyecto)?.[1] || 'Proyecto' }}</span><span aria-hidden="true">✕</span>
               </button>
               <button v-if="hayFechas" type="button" @click="fechaDesde = ''; fechaHasta = ''" class="chip-filtro" aria-label="Quitar filtro de fechas">
@@ -503,7 +506,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                   {{ iniciales(a.alias) }}
                 </span>
                 <span class="min-w-0 flex-1">
-                  <span class="block truncate font-semibold text-azul-noche">{{ a.alias }}</span>
+                  <span class="flex min-w-0 items-center gap-1 font-semibold text-azul-noche"><span class="truncate">{{ a.alias }}</span><MarcaDestacado v-if="a.destacado" /></span>
                   <span class="block truncate text-sm text-texto-secundario">{{ a.clase || 'Sin clase' }}</span>
                   <span class="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
                     <span :class="['max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
@@ -511,18 +514,18 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 </span>
 
                 <span class="hidden min-w-0 max-w-[16rem] flex-col items-end gap-1 sm:flex">
-                  <span class="max-w-full truncate text-sm font-semibold text-azul-noche">{{ a.reciente.proyecto?.titulo || 'Sin proyecto' }}</span>
+                  <span class="max-w-full truncate text-sm font-semibold text-azul-noche">{{ a.reciente.proyecto?.titulo || 'Sin propuesta' }}</span>
                   <span :class="['max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
                 </span>
 
-                <span class="hidden w-20 shrink-0 text-center md:block" :title="`${a.participaciones.length} proyecto(s), ${a.completados} completado(s)`">
+                <span class="hidden w-20 shrink-0 text-center md:block" :title="`${a.participaciones.length} propuesta(s), ${a.completados} completada(s)`">
                   <span class="block font-heading text-lg font-bold text-azul-noche">{{ a.completados }}/{{ a.participaciones.length }}</span>
                   <span class="block text-xs text-texto-secundario">completados</span>
                 </span>
 
                 <span class="w-14 shrink-0 text-center">
                   <span v-if="a.notaMedia !== null" class="block rounded-full bg-administraciones/10 px-2 py-1 font-heading text-sm font-bold text-administraciones-dark"
-                        :title="a.completados > 1 ? 'Nota media de sus proyectos completados' : 'Nota final'">{{ formatNota(a.notaMedia) }}</span>
+                        :title="a.completados > 1 ? 'Nota media de sus propuestas completadas' : 'Nota final'">{{ formatNota(a.notaMedia) }}</span>
                   <span v-else class="block text-sm text-texto-secundario" title="Sin nota final todavía">—</span>
                 </span>
 
@@ -533,7 +536,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
               <!-- Solo icono en filas estrechas; con texto cuando la fila tiene sitio (@container del li) -->
               <button type="button" @click="irAGrupo(a.reciente)"
                       :aria-label="`Ver el detalle del ${nombreGrupo(a.reciente.equipo)} de ${a.alias}`"
-                      :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin proyecto'}`"
+                      :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin propuesta'}`"
                       class="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @4xl:w-auto @4xl:px-4">
                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span class="hidden @4xl:inline">Ver detalle del grupo</span>
@@ -547,7 +550,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                                   resaltado?.participacion === p.id ? 'border-rol-fuerte/50 ring-2 ring-rol/30' : 'border-borde']">
                   <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="font-heading font-bold leading-snug text-azul-noche">{{ p.proyecto?.titulo || 'Sin proyecto asociado' }}</p>
+                      <p class="font-heading font-bold leading-snug text-azul-noche">{{ p.proyecto?.titulo || 'Sin propuesta asociada' }}</p>
                       <p class="mt-0.5 text-sm text-texto-secundario">
                         Encuentro {{ fecha(p.encuentro.fecha) || 'sin fecha' }}<template v-if="p.encuentro.fecha_fin && p.encuentro.fecha_fin !== p.encuentro.fecha"> → {{ fecha(p.encuentro.fecha_fin) }}</template>
                       </p>
@@ -643,7 +646,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                       Ver en workspace
                     </router-link>
                     <button v-if="p.equipo.tiene_diagnostico" type="button" class="accion" @click="irADiagnostico(p)">Ver diagnóstico</button>
-                    <button v-if="p.proyecto" type="button" class="accion" @click="irAProyecto(p)">Ficha del proyecto</button>
+                    <button v-if="p.proyecto" type="button" class="accion" @click="irAProyecto(p)">Ficha de la propuesta</button>
                   </div>
                 </section>
               </div>

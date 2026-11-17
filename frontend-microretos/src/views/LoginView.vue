@@ -1,7 +1,9 @@
 <script setup>
+import { URL_CENTRAL } from '../utils/urlCentral.js'
+import { useAccesoWorkspace } from '../composables/useAccesoWorkspace.js'
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL } from '../stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE } from '../stores/auth'
 import { URL_APP_COMERCIAL } from '../utils/urlComercial.js'
 import { useLoginForm } from '../composables/useLoginForm.js'
 import { useUIState } from '../composables/useUIState.js'
@@ -12,6 +14,14 @@ import CampoContrasena from '../components/CampoContrasena.vue'
 import SoporteModal from '../components/SoporteModal.vue'
 import { redirectVigente } from '../utils/redirectLogin.js'
 
+// Alumnado: desplegable «¿Eres alumnado? Entra con tu código» bajo el formulario. Siempre pide el código
+// (no recuerda el grupo: en un dispositivo compartido otra persona podría entrar en un workspace ajeno)
+const workspace = useAccesoWorkspace({ recordar: false })
+const accesoAlumnadoAbierto = ref(false)
+function alternarAccesoAlumnado() {
+  accesoAlumnadoAbierto.value = !accesoAlumnadoAbierto.value
+  if (accesoAlumnadoAbierto.value) setTimeout(() => document.getElementById('login-codigo-grupo')?.focus(), 50)
+}
 const route     = useRoute()
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -30,6 +40,11 @@ const { form, errors, loginError, isLoading, handleLogin } = useLoginForm((data)
   // con su cuenta
   if (role === ROLE_COMERCIAL) {
     authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
+    return
+  }
+  // Atención al cliente: su sitio es DuaLab Central («Primer contacto»), con su propia sesión
+  if (role === ROLE_ATENCION_CLIENTE) {
+    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/primer-contacto`))
     return
   }
   router.push(destinoTrasLogin(role)).finally(() => triggerWelcome(role, authStore.userName))
@@ -196,6 +211,32 @@ async function enviarRecuperar() {
       >
         Solicitar registro
       </a>
+
+      <!-- Alumnado: desplegable discreto bajo el registro. Entra a su workspace con el código de su
+           grupo, sin cuenta; siempre se pide el código (no se recuerda el grupo en el dispositivo). -->
+      <section class="mt-5 sm:mt-6 [@media(min-width:1024px)_and_(max-height:820px)]:mt-4 rounded-2xl border border-alumnos/30 bg-alumnos/5">
+        <button type="button" @click="alternarAccesoAlumnado" :aria-expanded="accesoAlumnadoAbierto" aria-controls="acceso-alumnado"
+                class="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl px-4 text-left text-sm font-bold text-acceso-tinta sm:text-base">
+          <span class="min-w-0">¿Eres alumnado? <span class="text-alumnos-dark">Entra con tu código</span></span>
+          <svg class="h-5 w-5 shrink-0 text-alumnos-dark transition-transform" :class="accesoAlumnadoAbierto && 'rotate-180'"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div v-show="accesoAlumnadoAbierto" id="acceso-alumnado" class="px-4 pb-4">
+          <p class="text-sm text-acceso-texto">Escribe el código de tu grupo que te ha dado tu docente.</p>
+          <form class="mt-3 flex flex-col gap-2 sm:flex-row" novalidate @submit.prevent="workspace.entrar">
+            <label for="login-codigo-grupo" class="sr-only">Código de tu grupo</label>
+            <input id="login-codigo-grupo" :value="workspace.codigo.value" @input="workspace.onInput" type="text"
+                   inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                   placeholder="ABC-123" maxlength="7" :aria-invalid="!!workspace.error.value"
+                   class="h-12 min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-4 text-center font-mono text-lg font-bold uppercase tracking-[0.25em] outline-none transition placeholder:text-gray-400 focus:border-alumnos focus:ring-4 focus:ring-alumnos/15" />
+            <button type="submit" :disabled="!workspace.codigoValido.value || workspace.cargando.value"
+                    class="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-alumnos-dark px-6 text-base font-bold text-white transition hover:bg-alumnos-dark/90 disabled:cursor-not-allowed disabled:opacity-50">
+              {{ workspace.cargando.value ? 'Buscando…' : 'Entrar' }}
+            </button>
+          </form>
+          <p v-if="workspace.error.value" role="alert" class="mt-2 text-sm font-semibold text-red-600">{{ workspace.error.value }}</p>
+        </div>
+      </section>
     </template>
 
     <!-- ── Recuperar contraseña ───────────────────────────────────────── -->

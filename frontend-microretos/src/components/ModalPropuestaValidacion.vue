@@ -1,11 +1,12 @@
-<!-- Modal «Proyecto en propuesta» (diseño modal_propuesta_validación_proyecto.png), común al
-     Taller de Ideas (paso 7) y a la ficha del proyecto. Dos vías independientes:
-     · Vía A · empresa: enlace real del backend (token_empresa) con «Copiar», empresa asociada
+<!-- Modal «Propuesta pendiente de validar» (diseño modal_propuesta_validación_proyecto.png), común
+     al Taller de Ideas (paso 7) y a la ficha de la propuesta. Dos vías independientes; cualquiera
+     de las dos lleva la propuesta a 'validado' y al aula:
+     · Docente: «Validar como docente» con confirmación; permiso comprobado en servidor.
+     · Empresa: enlace real del backend (token_empresa) con «Copiar», empresa asociada
        y «Enviar enlace a la empresa». El correo desde DUALAB solo existe en el directorio de
        empresas (POST /empresas/{id}/enviar-validacion, con contraseña especial); aquí se ofrece
        ir allí o registrar que el docente ya lo envió (escribiendo «enviar»). «Enviado» solo se
        muestra cuando el servidor lo confirma (prop `enviado`).
-     · Vía B · docente: «Validar como docente» con confirmación; permiso comprobado en servidor.
      Las acciones llegan como funciones async (`marcarEnviado`, `validarDocente`): si fallan, el
      error se muestra aquí en vez de tragarse. Accesible por ModalTaller (GUIA_DISENO §6.4). -->
 <script setup>
@@ -18,8 +19,8 @@ const props = defineProps({
   empresa:         { type: Object, default: null },   // { nombre, sector, persona_contacto, email, descripcion }
   enviado:         { type: Boolean, default: false }, // enviado_a_empresa_mail confirmado por el servidor
   docenteValidado: { type: Boolean, default: false },
-  mostrarEditar:   { type: Boolean, default: false }, // «Ir a editar proyecto»
-  // Vista con la que se abre: 'principal' (las dos vías) o 'envio' (desde un botón «Enviar» de la página).
+  mostrarEditar:   { type: Boolean, default: false }, // «Ir a editar propuesta»
+  // Vista con la que se abre: 'principal' (los dos bloques) o 'envio' (desde un botón «Enviar» de la página).
   vistaInicial:    { type: String, default: 'principal' },
   marcarEnviado:   { type: Function, required: true },
   validarDocente:  { type: Function, required: true },
@@ -68,15 +69,15 @@ async function ejecutar(accion, mensajeError) {
 const confirmarEnvio = () => confirmacionValida.value &&
   ejecutar(props.marcarEnviado, 'No se pudo registrar el envío. Inténtalo de nuevo.')
 const confirmarDocente = () =>
-  ejecutar(props.validarDocente, 'No se pudo validar el proyecto. Comprueba tus permisos e inténtalo de nuevo.')
+  ejecutar(props.validarDocente, 'No se pudo validar la propuesta. Comprueba tus permisos e inténtalo de nuevo.')
 </script>
 
 <template>
-  <ModalTaller :abierto="abierto" titulo="Proyecto en propuesta" ancho="w-[min(44rem,calc(100vw-2rem))]"
+  <ModalTaller :abierto="abierto" titulo="Propuesta pendiente de validar" ancho="w-[min(44rem,calc(100vw-2rem))]"
                @cerrar="emit('cerrar')">
     <template #cabecera="{ idTitulo }">
       <div class="pl-0 sm:pl-10 text-center">
-        <!-- En móvil, cabecera compacta: deja sitio a las dos vías (la cabecera no hace scroll) -->
+        <!-- En móvil, cabecera compacta: deja sitio a los dos bloques (la cabecera no hace scroll) -->
         <span class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-xl bg-alumnos/15 text-alumnos-dark sm:h-16 sm:w-16 sm:rounded-2xl" aria-hidden="true">
           <svg class="h-5 w-5 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12L3.27 3.13a59.77 59.77 0 0118.22 8.88 59.77 59.77 0 01-18.22 8.88L6 12zm0 0h7.5"/></svg>
         </span>
@@ -87,10 +88,10 @@ const confirmarDocente = () =>
           </span>
         </p>
         <h2 :id="idTitulo" class="mt-2 font-heading text-xl font-bold text-azul-noche sm:mt-3 sm:text-3xl">
-          Proyecto en <span class="text-rol-fuerte">propuesta</span>
+          Valida tu <span class="text-rol-fuerte">propuesta</span>
         </h2>
         <p class="mx-auto mt-2 hidden max-w-md text-sm text-texto-secundario sm:block sm:text-base">
-          Este proyecto puede validarse a través de la empresa, directamente como docente, o por ambas vías.
+          Puedes validarla tú como docente o dejar que la valide la empresa: con cualquiera de las dos queda lista para llevarla al aula.
         </p>
       </div>
     </template>
@@ -99,10 +100,49 @@ const confirmarDocente = () =>
       {{ error }}
     </p>
 
-    <!-- ═══ Vista principal: las dos vías ═══ -->
+    <!-- ═══ Vista principal: validación docente y empresa ═══ -->
     <div v-if="vista === 'principal'" class="space-y-4">
 
-      <!-- Vía A · empresa -->
+      <!-- Vía docente -->
+      <section class="rounded-2xl border border-rol/20 bg-rol/5 p-4 sm:p-5" aria-labelledby="via-b">
+        <div class="flex items-start gap-3 sm:gap-4">
+          <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol/15 text-rol-fuerte sm:h-12 sm:w-12" aria-hidden="true">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0118.82 17.5L12 21l-6.82-3.5a12.08 12.08 0 01.66-6.922L12 14z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <h3 id="via-b" class="text-base font-bold text-azul-noche sm:text-lg">
+              <span class="text-rol-fuerte">Validación docente</span>
+            </h3>
+            <p class="mt-0.5 text-sm text-texto-secundario">Valídala tú directamente, sin esperar a la empresa.</p>
+          </div>
+          <button type="button" @click="ayuda.b = !ayuda.b" :aria-expanded="ayuda.b"
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-rol-fuerte hover:bg-rol/10"
+                  aria-label="Cómo funciona la validación docente">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </button>
+        </div>
+        <p v-if="ayuda.b" class="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-texto-secundario">
+          Confirmas que la propuesta cumple los criterios pedagógicos. Quedará «Validada» y podrás
+          crear con ella un encuentro creativo para trabajarla con tu alumnado.
+        </p>
+
+        <p class="mt-4 flex items-start gap-2.5 rounded-xl border border-rol/20 bg-white/70 px-3 py-2.5 text-sm text-azul-noche">
+          <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Las dos validaciones son independientes y complementarias: puedes validarla tú y que la empresa también la valide.
+        </p>
+
+        <button v-if="!docenteValidado" type="button" @click="irA('docente')"
+                class="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          Validar como docente
+        </button>
+        <p v-else class="mt-4 flex items-center gap-2 rounded-xl bg-empresas/10 px-3 py-2.5 text-sm font-semibold text-empresas-dark" role="status">
+          <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          Ya has validado esta propuesta como docente
+        </p>
+      </section>
+
+      <!-- Vía empresa -->
       <section class="rounded-2xl border border-empresas/20 bg-empresas/5 p-4 sm:p-5" aria-labelledby="via-a">
         <div class="flex items-start gap-3 sm:gap-4">
           <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-empresas/15 text-empresas-dark sm:h-12 sm:w-12" aria-hidden="true">
@@ -110,7 +150,7 @@ const confirmarDocente = () =>
           </span>
           <div class="min-w-0 flex-1">
             <h3 id="via-a" class="text-base font-bold text-azul-noche sm:text-lg">
-              Vía A · <span class="text-empresas-dark">Validación empresa</span>
+              <span class="text-empresas-dark">Validación empresa</span>
             </h3>
             <p class="mt-0.5 text-sm text-texto-secundario">Comparte el enlace con la empresa para que revise y valide la propuesta.</p>
           </div>
@@ -121,8 +161,8 @@ const confirmarDocente = () =>
           </button>
         </div>
         <p v-if="ayuda.a" class="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-texto-secundario">
-          La empresa abre el enlace, revisa la propuesta y la valida o propone cambios. Cuando la valide,
-          el proyecto pasará a «Validado · Empresa».
+          La empresa abre el enlace, revisa la propuesta y la valida o propone cambios. Si la valida,
+          la propuesta queda «Validada» y puedes llevarla al aula. Te llega un aviso con su respuesta.
         </p>
 
         <label for="enlace-validacion" class="mt-4 block text-sm font-semibold text-azul-noche">Enlace de validación</label>
@@ -174,45 +214,6 @@ const confirmarDocente = () =>
           </button>
         </div>
       </section>
-
-      <!-- Vía B · docente -->
-      <section class="rounded-2xl border border-rol/20 bg-rol/5 p-4 sm:p-5" aria-labelledby="via-b">
-        <div class="flex items-start gap-3 sm:gap-4">
-          <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol/15 text-rol-fuerte sm:h-12 sm:w-12" aria-hidden="true">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0118.82 17.5L12 21l-6.82-3.5a12.08 12.08 0 01.66-6.922L12 14z"/></svg>
-          </span>
-          <div class="min-w-0 flex-1">
-            <h3 id="via-b" class="text-base font-bold text-azul-noche sm:text-lg">
-              Vía B · <span class="text-rol-fuerte">Validación docente</span>
-            </h3>
-            <p class="mt-0.5 text-sm text-texto-secundario">Puedes validar el proyecto directamente sin esperar a la empresa.</p>
-          </div>
-          <button type="button" @click="ayuda.b = !ayuda.b" :aria-expanded="ayuda.b"
-                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-rol-fuerte hover:bg-rol/10"
-                  aria-label="Cómo funciona la validación docente">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </button>
-        </div>
-        <p v-if="ayuda.b" class="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-texto-secundario">
-          Confirmas que el proyecto cumple los criterios pedagógicos. Quedará como «Validado · Docente»
-          y podrás seguir esperando la respuesta de la empresa.
-        </p>
-
-        <p class="mt-4 flex items-start gap-2.5 rounded-xl border border-rol/20 bg-white/70 px-3 py-2.5 text-sm text-azul-noche">
-          <svg class="mt-0.5 h-4 w-4 shrink-0 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Esto no sustituye la validación de la empresa: ambas son independientes y complementarias.
-        </p>
-
-        <button v-if="!docenteValidado" type="button" @click="irA('docente')"
-                class="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-          Validar como docente
-        </button>
-        <p v-else class="mt-4 flex items-center gap-2 rounded-xl bg-empresas/10 px-3 py-2.5 text-sm font-semibold text-empresas-dark" role="status">
-          <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-          Ya has validado este proyecto como docente
-        </p>
-      </section>
     </div>
 
     <!-- ═══ Vista: enviar el enlace a la empresa ═══ -->
@@ -260,10 +261,10 @@ const confirmarDocente = () =>
         ← Volver
       </button>
       <h3 class="text-lg font-bold text-azul-noche">Validar como docente</h3>
-      <p class="text-sm text-texto-secundario">¿Confirmas que este proyecto cumple los criterios pedagógicos?</p>
+      <p class="text-sm text-texto-secundario">¿Confirmas que esta propuesta cumple los criterios pedagógicos?</p>
       <p class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
         <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-        Es independiente de la validación de la empresa: el proyecto quedará como «Validado · Docente» y la empresa podrá seguir respondiendo.
+        Es independiente de la validación de la empresa: la propuesta quedará «Validada» y la empresa podrá seguir respondiendo.
       </p>
       <div class="fila-pasos">
         <button type="button" @click="irA('principal')" class="btn-paso-atras">Cancelar</button>
@@ -283,7 +284,7 @@ const confirmarDocente = () =>
         <button v-if="mostrarEditar" type="button" @click="emit('editar')"
                 class="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-rol-fuerte/40 bg-white px-5 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-          Ir a editar proyecto
+          Ir a editar propuesta
         </button>
       </div>
     </template>

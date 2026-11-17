@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import {
   proponerEmpresaFicticiaIA, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, getFamiliasFicticiaIA,
 } from '../services/empresaService.js'
+import { PREGUNTAS_DIAGNOSTICO, COLUMNA_DE } from '../config/preguntasDiagnostico.js'
 
 // «Crear empresa ficticia con IA»: único flujo de creación con IA (Generador de Retos y
 // «Base de datos»). La IA genera una propuesta completa (datos + diagnóstico P1–P5) que se
@@ -178,13 +179,8 @@ const cerrar = () => { descartar(); emit('cerrar') }
 // Si el padre lo desmonta (Vaciar, cambio de paso...), no dejar propuestas colgando.
 onBeforeUnmount(descartar)
 
-const CAMPOS_DIAGNOSTICO = [
-  ['¿Qué ofrece y qué hace en su día a día?', 'dia_a_normal'],
-  ['¿Qué tarea da más trabajo del que debería?', 'friccion_area'],
-  ['¿Por qué? Qué ocurre hoy', 'friccion_problema'],
-  ['¿Qué NO quieren bajo ningún concepto?', 'lo_que_no_quieren'],
-  ['¿Qué esperan que realice el alumno?', 'expectativas_alumno'],
-]
+// Preguntas de texto libre del diagnóstico, con su versión corta (config/preguntasDiagnostico.json)
+const CAMPOS_DIAGNOSTICO = PREGUNTAS_DIAGNOSTICO.filter(p => !p.opciones).map(p => [p.corta, COLUMNA_DE[p.campo]])
 const resumen = computed(() => {
   const e = propuesta.value?.empresa
   if (!e) return ''

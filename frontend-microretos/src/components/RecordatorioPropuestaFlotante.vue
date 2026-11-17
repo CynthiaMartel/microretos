@@ -34,8 +34,8 @@ onMounted(() => {
           d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
       <span class="flex-1">
-        <strong class="font-black">Recuerda:</strong> una propuesta es un proyecto que aún no está validado.
-        Para convertir la propuesta en proyecto debes validarlo como docente y/o como empresa.
+        <strong class="font-black">Recuerda:</strong> para llevar la propuesta al aula en un encuentro
+        tiene que estar validada, por ti como docente o por la empresa.
       </span>
       <button
         @click="cerrar"

@@ -50,10 +50,10 @@ const refBtnGuia  = ref(null);
 const tourRefs = { refBusqueda, refFiltros, refGrid, refBtnNuevo, refBtnGuia };
 
 const guiaPasosDataBase = [
-  { ref: 'refFiltros',  seccion: 'filtros',   texto: 'Elige qué quieres ver: «Completados» (proyectos ya terminados por los grupos, se abre por defecto) o «En proceso» (borradores, propuestas pendientes, validados y archivados). El número indica cuántos hay con los filtros actuales.' },
+  { ref: 'refFiltros',  seccion: 'filtros',   texto: 'Elige qué quieres ver: «Completadas» (propuestas que los grupos ya han terminado, se abre por defecto) o «En proceso» (borradores, pendientes de validar, validadas y archivadas). El número indica cuántos hay con los filtros actuales.' },
   { ref: 'refBusqueda', seccion: 'busqueda',  texto: 'Busca por título, empresa o centro y filtra por ciclo, módulo y nivel. En «Más filtros» tienes la familia profesional y el estado (en proceso) o quién lo validó (completados).' },
-  { ref: 'refGrid',     seccion: 'grid',      texto: 'Aquí aparecen los proyectos. Cada tarjeta muestra su estado con un color, el curso, los módulos y la empresa. Pulsa en una tarjeta para ver el detalle completo.' },
-  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear un nuevo proyecto en el Taller de Ideas. Necesitarás haber registrado previamente un encuentro para poder vincularlo al reto correspondiente.' },
+  { ref: 'refGrid',     seccion: 'grid',      texto: 'Aquí aparecen las propuestas. Cada tarjeta muestra su estado con un color, el curso, los módulos y la empresa. Pulsa en una tarjeta para ver el detalle completo.' },
+  { ref: 'refBtnNuevo', seccion: 'btn-nuevo', texto: 'Pulsa aquí para crear una nueva propuesta en el Taller de Ideas a partir de un reto. Cuando la valides, podrás llevarla al aula en un encuentro.' },
   { ref: 'refBtnGuia',  seccion: null,        texto: 'Pulsa «Ayuda» en cualquier momento para ver qué puedes hacer aquí o volver a esta guía.' },
 ];
 
@@ -261,10 +261,10 @@ function aplicarComunes(lista) {
 // Estado (solo «En proceso»). Sin ninguno marcado se ve todo lo vivo: los archivados
 // solo aparecen al marcar «Archivados».
 const ESTADOS_PROCESO = [
-  { key: 'validado',   label: 'Validados',             punto: 'bg-emerald-500' },
+  { key: 'validado',   label: 'Validadas',             punto: 'bg-emerald-500' },
   { key: 'propuesta',  label: 'Pendientes de validar', punto: 'bg-violet-500' },
   { key: 'en_edicion', label: 'En edición',            punto: 'bg-amber-500' },
-  { key: 'archivado',  label: 'Archivados',            punto: 'bg-gray-400' },
+  { key: 'archivado',  label: 'Archivadas',            punto: 'bg-gray-400' },
 ];
 const ETIQUETA_ESTADO = Object.fromEntries(ESTADOS_PROCESO.map(e => [e.key, e.label]));
 const pasaEstado = p => filtroEstados.value.length ? filtroEstados.value.includes(p.estado) : p.estado !== 'archivado';
@@ -447,7 +447,7 @@ function mostrarSnack(mensaje, accion = null) {
           <!-- Bocadillo -->
           <div class="bg-[#1a2332] border border-white/10 rounded-2xl p-4 shadow-2xl">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-[9px] font-black uppercase tracking-widest text-amber-400">Biblioteca de proyectos · Guía</span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-amber-400">Biblioteca de propuestas · Guía</span>
               <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }} / {{ guiaPasosData.length }}</span>
             </div>
             <p class="text-xs text-white/80 leading-relaxed mb-3">{{ pasoActual?.texto }}</p>
@@ -481,9 +481,9 @@ function mostrarSnack(mensaje, accion = null) {
 
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Biblioteca de" destacado="Proyectos" color="text-centros"
+      <CabeceraSeccion titulo="Biblioteca de" destacado="Propuestas" color="text-centros"
                        :volver="authStore.isEmpresa ? null : '/seccion/retos-proyectos'"
-                       subtitulo="Aquí se trabajan los retos para convertirlos en propuestas y, tras su validación, en proyectos de empresa.">
+                       subtitulo="Aquí concretas los retos en propuestas y, cuando las validas, las llevas al aula.">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Ayuda: mismo botón y sitio en todas las vistas. Abre "¿Qué necesitas?", que
                incluye la opción de la guía (paso del tour: refBtnGuia) -->
@@ -500,8 +500,8 @@ function mostrarSnack(mensaje, accion = null) {
           <button v-if="authStore.isSuperAdmin" type="button"
                   @click="router.push({ name: 'papelera' })"
                   class="accion-icono"
-                  title="Ver proyectos eliminados en la papelera"
-                  aria-label="Ver proyectos eliminados en la papelera">
+                  title="Ver propuestas eliminadas en la papelera"
+                  aria-label="Ver propuestas eliminadas en la papelera">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -518,7 +518,7 @@ function mostrarSnack(mensaje, accion = null) {
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
             </svg>
-            Crear proyecto
+            Crear propuesta
           </button>
         </div>
       </CabeceraSeccion>
@@ -535,9 +535,9 @@ function mostrarSnack(mensaje, accion = null) {
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'filtros'
              }"
              class="flex max-w-full shrink-0 rounded-full sm:w-fit">
-          <div class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué proyectos ver">
+          <div class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué propuestas ver">
             <button v-for="t in [
-                      { v: 'completados', label: 'Completados', n: listaCompletados.length, icono: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3' },
+                      { v: 'completados', label: 'Completadas', n: listaCompletados.length, icono: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3' },
                       { v: 'proceso', label: 'En proceso', n: listaEnProceso.length, icono: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                     ]" :key="t.v" type="button" @click="elegirAmbito(t.v)" :aria-pressed="ambito === t.v"
                     class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold transition-colors sm:flex-none sm:gap-2 sm:px-5"
@@ -584,9 +584,9 @@ function mostrarSnack(mensaje, accion = null) {
           <FiltroSelect label="Ciclo formativo" v-model="filtroCiclo" :opciones="ciclosDisponibles" todos="Todos los ciclos"
             title="Filtra por el ciclo formativo al que va dirigido el proyecto." />
           <FiltroSelect v-if="modulosDisponibles.length" label="Módulo" v-model="filtroModulo" :opciones="modulosDisponibles" todos="Todos los módulos"
-            title="Filtra por módulo profesional. Los proyectos de varios módulos aparecen en cada uno." />
+            title="Filtra por módulo profesional. Las propuestas de varios módulos aparecen en cada uno." />
           <FiltroSegmentado v-if="cursosDisponibles.length" label="Nivel" v-model="filtroCurso" :opciones="opcionesNivel"
-            title="Nivel del ciclo: 1º (primer año) o 2º (segundo año). Ambos: proyectos que valen para 1º y 2º." />
+            title="Nivel del ciclo: 1º (primer año) o 2º (segundo año). Ambos: propuestas que valen para 1º y 2º." />
         </FiltrosPanel>
       </div>
 
@@ -649,7 +649,7 @@ function mostrarSnack(mensaje, accion = null) {
               <span class="min-w-0 flex-1 truncate text-sm text-azul-noche" :title="f.label">{{ f.label }}</span>
               <span class="shrink-0 text-xs text-texto-secundario">{{ f.n }}</span>
             </label>
-            <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin proyectos en este curso.</p>
+            <p v-if="!familiasPanel.length && !cargando" class="px-1 py-1 text-sm text-texto-secundario">Sin propuestas en este curso.</p>
             <button v-if="familiasPanel.length > 6" type="button" @click="familiasExpandidas = !familiasExpandidas"
                     class="mt-1 inline-flex h-9 items-center rounded-full px-1 text-sm font-semibold text-rol-fuerte hover:underline">
               {{ familiasExpandidas ? 'Ver menos' : `Ver todas (${familiasPanel.length})` }}
@@ -658,19 +658,19 @@ function mostrarSnack(mensaje, accion = null) {
         </aside>
 
         <!-- ═══ Resultados (paso del tour: refGrid) ═══ -->
-        <section id="resultados-proyectos" ref="refGrid" class="min-w-0 flex-1 scroll-mt-24 rounded-2xl" aria-label="Proyectos"
+        <section id="resultados-proyectos" ref="refGrid" class="min-w-0 flex-1 scroll-mt-24 rounded-2xl" aria-label="Propuestas"
                  :class="{
                    'tour-active': pasoRefActivo === 'refGrid',
                    'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'grid'
                  }">
           <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
-              <template v-if="cargando">Cargando proyectos…</template>
+              <template v-if="cargando">Cargando propuestas…</template>
               <template v-else>
                 {{ proyectosFiltrados.length }}
                 {{ ambito === 'completados'
-                     ? (proyectosFiltrados.length === 1 ? 'proyecto completado' : 'proyectos completados')
-                     : (proyectosFiltrados.length === 1 ? 'proyecto en proceso' : 'proyectos en proceso') }}
+                     ? (proyectosFiltrados.length === 1 ? 'propuesta completada' : 'propuestas completadas')
+                     : (proyectosFiltrados.length === 1 ? 'propuesta en proceso' : 'propuestas en proceso') }}
               </template>
             </TituloResultados>
             <!-- Chips de filtros activos del lateral -->
@@ -698,7 +698,7 @@ function mostrarSnack(mensaje, accion = null) {
             </div>
             <label class="flex items-center gap-2 text-sm text-texto-secundario">
               <span class="hidden sm:inline">Ordenar por</span>
-              <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar proyectos">
+              <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar propuestas">
                 <option value="recientes">Actividad más reciente</option>
                 <option value="antiguos">Actividad más antigua</option>
                 <option value="titulo">Título (A-Z)</option>
@@ -712,7 +712,7 @@ function mostrarSnack(mensaje, accion = null) {
                class="mb-3 flex flex-col gap-2 rounded-2xl border border-borde bg-gray-50 px-4 py-3 text-sm text-azul-noche sm:flex-row sm:flex-wrap sm:items-center">
             <span class="min-w-0 flex-1">
               También hay
-              <template v-for="(c, i) in enOtrosCursos" :key="c.curso">{{ i ? ' y ' : '' }}<strong>{{ c.n }} {{ c.n === 1 ? 'proyecto' : 'proyectos' }} en {{ etiquetaCurso(c.curso) }}</strong></template>
+              <template v-for="(c, i) in enOtrosCursos" :key="c.curso">{{ i ? ' y ' : '' }}<strong>{{ c.n }} {{ c.n === 1 ? 'propuesta' : 'propuestas' }} en {{ etiquetaCurso(c.curso) }}</strong></template>
               con estos filtros.
             </span>
             <div class="flex flex-wrap gap-2">
@@ -733,7 +733,7 @@ function mostrarSnack(mensaje, accion = null) {
               <div class="h-4 w-1/3 rounded-full bg-gray-200" /><div class="h-4 w-4/5 rounded-full bg-gray-200" />
               <div class="h-16 rounded-xl bg-gray-100" /><div class="h-3 w-2/3 rounded-full bg-gray-200" />
             </div>
-            <span class="sr-only">Cargando proyectos…</span>
+            <span class="sr-only">Cargando propuestas…</span>
           </div>
 
           <!-- Vacío -->
@@ -746,18 +746,18 @@ function mostrarSnack(mensaje, accion = null) {
             </span>
             <h3 class="mb-1 text-lg font-bold text-azul-noche">
               <template v-if="hayFiltrosActivos">Sin resultados con estos filtros</template>
-              <template v-else-if="ambito === 'completados'">Todavía no hay proyectos completados</template>
-              <template v-else>Todavía no hay proyectos en proceso</template>
+              <template v-else-if="ambito === 'completados'">Todavía no hay propuestas completadas</template>
+              <template v-else>Todavía no hay propuestas en proceso</template>
             </h3>
             <p class="mx-auto max-w-md text-sm text-texto-secundario">
               <template v-if="hayFiltrosActivos">Prueba a quitar algún filtro.</template>
-              <template v-else-if="ambito === 'completados'">Aparecerán aquí cuando los grupos terminen los proyectos validados.</template>
-              <template v-else>Crea tu primer proyecto en el Taller de Ideas.</template>
+              <template v-else-if="ambito === 'completados'">Aparecerán aquí cuando los grupos terminen las propuestas validadas.</template>
+              <template v-else>Crea tu primera propuesta en el Taller de Ideas.</template>
             </p>
             <div class="mt-5 flex flex-wrap justify-center gap-2">
               <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros" class="accion-secundaria">Quitar filtros</button>
               <button v-else-if="ambito === 'proceso' && !authStore.isEmpresa" type="button"
-                      @click="router.push({ name: 'startup-day-crear' })" class="accion-principal">Crear proyecto</button>
+                      @click="router.push({ name: 'startup-day-crear' })" class="accion-principal">Crear propuesta</button>
             </div>
           </div>
 
@@ -775,9 +775,9 @@ function mostrarSnack(mensaje, accion = null) {
           <!-- Paginación -->
           <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">
-              Mostrando {{ proyectosPagina.length }} de {{ proyectosFiltrados.length }} proyectos
+              Mostrando {{ proyectosPagina.length }} de {{ proyectosFiltrados.length }} propuestas
             </p>
-            <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de proyectos">
+            <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de propuestas">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">«</button>
               <button type="button" @click="irAPagina(pagina - 1)" :disabled="pagina === 0" aria-label="Página anterior"

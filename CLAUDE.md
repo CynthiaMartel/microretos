@@ -16,6 +16,18 @@ Complementa las instrucciones globales de `~/.claude/CLAUDE.md`. Las reglas de L
 - **Dominios, APIs y bases de datos:** [docs/MAPA_DOMINIOS.md](docs/MAPA_DOMINIOS.md) — qué sirve `dualab.es`, `api.dualab.es`, `info.dualab.es` (API de la web, sitio propio en hPanel con su propia BD: no borrarlo), `comercial.`, `central.` y `nexo.dualab.es`, y sus puertos en local. Leerlo antes de tocar nada en hPanel; comprobar con `./scripts/comprobar-dominios.sh`.
 - **Apps del repo:** app DuaLab (`frontend-microretos/src`), app comercial (`comercial/`), DuaLab Central (`central/`, solo superadmin) y Nexo (`nexo/`, página de acceso). La web pública y Gestión web están en el repo aparte `FRONTOFFICE/dualab_proyecto`.
 
+## Etapas: Taller de ideas y Plan de proyecto (rediseño en curso, nov-2026)
+
+El recorrido del alumnado se divide en dos etapas. Plan por fases y decisiones en `TAREAS_PENDIENTES.md` (sección P).
+
+1. **Taller de ideas** (en el aula). Reto → **Propuesta** (lo que el docente concreta: reto, empresa, módulos, RA/CE, objetivos; en BD es `microproyectos`, que no cambia de nombre) → **validación del docente o de la empresa** (cualquiera de las dos basta para llevarla al aula) → **encuentro creativo** (fecha, grupos y planificación de sesiones por fases) → workspace F0–F4 → al terminar, **la empresa valora la propuesta entera**.
+2. **Plan de proyecto** (en la empresa, durante las prácticas). Parte de la propuesta terminada (ampliada), de otro reto o de una necesidad que surja en las prácticas sin reto en la plataforma → validación docente y/o empresa → **cronograma del plan** (hitos durante meses) → mismo workspace por fases, con subfases y más contenido, y los mismos RA/CE más «qué espera la empresa de ti».
+
+Términos: **Propuesta** = el documento del docente; **Solución** = lo que entrega cada grupo (F3). «Proyecto» queda para el Plan de proyecto.
+
+- **Quién pasa a prácticas lo decide DuaLab**, como empresa intermediaria, eligiendo al alumnado más destacado; no lo decide la empresa. En la plataforma solo hay alias: DuaLab pregunta al docente quién es cada alias (p. ej. «Lucía Nutria Azul») y envía los datos reales a la empresa **fuera de la plataforma**.
+- La empresa entra con un enlace con token, sin cuenta.
+
 ## Ramas Git
 
 - `main` → producción (deploy a Hostinger)

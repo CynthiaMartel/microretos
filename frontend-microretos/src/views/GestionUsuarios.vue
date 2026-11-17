@@ -250,6 +250,7 @@ const TIPOS = [
   { val: 4, label: 'Admins de centro', punto: 'bg-administraciones' },
   { val: 3, label: 'Empresas',         punto: 'bg-empresas' },
   { val: 5, label: 'Comerciales',      punto: 'bg-empresas-dark' },
+  { val: 6, label: 'Atención al cliente', punto: 'bg-alumnos' },
   { val: 1, label: 'Superadmin',       punto: 'bg-azul-noche' },
 ]
 const conteoTipos = computed(() => {
@@ -694,6 +695,7 @@ const ROLE_COLORS = {
   3: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas',        avatar: 'bg-empresas/10 text-empresas-dark',            label: 'Empresa' },
   4: { bg: 'bg-administraciones/10 text-administraciones-dark',  punto: 'bg-administraciones', avatar: 'bg-administraciones/10 text-administraciones-dark', label: 'Admin de centro' },
   5: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas-dark',   avatar: 'bg-empresas/10 text-empresas-dark',              label: 'Comercial' },
+  6: { bg: 'bg-alumnos/10 text-alumnos-dark',                    punto: 'bg-alumnos',         avatar: 'bg-alumnos/10 text-alumnos-dark',                label: 'Atención al cliente' },
 }
 function roleChip(role) {
   return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-azul-noche', punto: 'bg-azul-noche', avatar: 'bg-gray-100 text-azul-noche', label: 'Superadmin' }
@@ -1156,6 +1158,16 @@ onMounted(async () => {
                     </svg>
                     Comercial
                   </button>
+                  <!-- Atención al cliente: formularios y correo de info@ en DuaLab Central («Primer contacto»); sin centro ni empresa -->
+                  <button type="button" @click="form.role = '6'; form.centro_educativo_id = null; form.empresa_id = null"
+                    :class="form.role === '6' ? 'bg-alumnos/10 border-alumnos/40 text-alumnos-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="truncate">Atención al cliente</span>
+                  </button>
                 </div>
 
                 <!-- Sub-opción anidada: ¿es admin del centro? Solo si Docente está seleccionado -->
@@ -1551,6 +1563,16 @@ onMounted(async () => {
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 3h6v4H9V3zM9 13h6M9 17h4"/>
                     </svg>
                     Comercial
+                  </button>
+                  <!-- Atención al cliente: formularios y correo de info@ en DuaLab Central («Primer contacto»); sin centro ni empresa -->
+                  <button type="button" @click="formEditar.role = '6'; formEditar.centro_educativo_id = null; formEditar.empresa_id = null"
+                    :class="formEditar.role === '6' ? 'bg-alumnos/10 border-alumnos/40 text-alumnos-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="truncate">Atención al cliente</span>
                   </button>
                 </div>
 

@@ -5,6 +5,10 @@
  * botón X opcional y límite de alto con scroll interno (max-h-[90vh]) para que el contenido
  * nunca quede cortado en viewports bajos.
  *
+ * Se pinta en <body> (Teleport): si se quedara dentro de la vista, un contenedor con su propio
+ * apilamiento (z-index, transform…) lo dejaría por debajo de la TopBar fija (z-50), que en
+ * móvil tapaba la cabecera del modal y su X. Los estilos scoped de quien lo usa siguen aplicando.
+ *
  * El contenido (cabecera fija + cuerpo scrollable, o un único bloque) lo decide quien lo usa
  * a través del slot por defecto — este componente solo resuelve el "chrome" común.
  *
@@ -29,6 +33,7 @@ defineEmits(['cerrar'])
 </script>
 
 <template>
+  <Teleport to="body">
   <Transition name="modal-overlay">
     <div v-if="visible"
          class="fixed inset-0 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
@@ -50,6 +55,7 @@ defineEmits(['cerrar'])
       </Transition>
     </div>
   </Transition>
+  </Teleport>
 </template>
 
 <style scoped>

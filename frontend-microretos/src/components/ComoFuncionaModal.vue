@@ -28,11 +28,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const roles = [
   { label: 'Docente',          icon: AcademicCapIcon,    bg: 'bg-centros/10',  border: 'border-centros/25',  text: 'text-centros',
-    desc: 'Crea retos y proyectos, organiza encuentros con su alumnado y sigue y evalúa a sus grupos.' },
+    desc: 'Crea retos y propuestas, organiza encuentros con su alumnado y, en las prácticas, sus planes de proyecto.' },
   { label: 'Alumnado / Grupo', icon: UserGroupIcon,      bg: 'bg-alumnos/10',  border: 'border-alumnos/25',  text: 'text-alumnos-dark',
-    desc: 'Entra sin cuenta con el QR o el código del encuentro y avanza el proyecto por fases en el workspace de su grupo.' },
+    desc: 'Entra sin cuenta con el código de su grupo y avanza por fases en su workspace: en el aula y, si DuaLab lo selecciona, en las prácticas.' },
   { label: 'Empresa',          icon: BuildingOfficeIcon, bg: 'bg-empresas/10', border: 'border-empresas/25', text: 'text-empresas',
-    desc: 'Aporta la necesidad real de la que nace el reto y valida la propuesta del docente desde su enlace.' },
+    desc: 'Aporta la necesidad real, valida y valora la propuesta desde su enlace y acoge al alumnado en prácticas.' },
   { label: 'Admin',            icon: ShieldCheckIcon,    bg: 'bg-violet-50',   border: 'border-violet-200',  text: 'text-violet-600',
     desc: 'Gestiona centros, ciclos formativos y usuarios de forma transversal.' },
 ]
@@ -43,6 +43,7 @@ const fasesRetosProyectos = SECCIONES['retos-proyectos'].flujo.fases
 const conceptos = [
   ...fasesRetosProyectos.map(f => f.concepto).filter(Boolean),
   ...(SECCIONES['encuentros-grupos'].conceptos ?? []),
+  ...(SECCIONES['planes-proyecto'].conceptos ?? []),
 ]
 // En escritorio, cada columna es más ancha cuanto más texto tiene su concepto, para que las
 // tres cajas queden con una altura parecida y las cortas no se llenen de hueco en blanco.
@@ -183,7 +184,7 @@ const ir = (destino) => {
                 <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-1">
                   {{ recorrido.titulo }}
                 </p>
-                <p class="text-sm text-gray-500 mb-5">Del reto de la empresa al diagnóstico final de cada grupo.</p>
+                <p class="text-sm text-gray-500 mb-5">{{ recorrido.subtitulo }}</p>
                 <FlujoDiagrama :fases="recorrido.fases" class="text-azul-noche" />
               </section>
 

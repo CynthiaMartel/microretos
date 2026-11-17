@@ -52,12 +52,12 @@ const ICONOS = {
   <!-- Compacta, pero con la imagen grande (decisión de Cynthia: mejor la imagen aunque en
        pantallas de 800px de alto haga falta un poco de scroll, que la columna tiene propio). -->
   <aside class="flex w-full shrink-0 flex-col gap-3 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-7.75rem)] lg:w-60 lg:overflow-y-auto lg:overscroll-contain lg:pb-1 xl:w-72 2xl:w-[21rem]"
-         aria-label="Resumen del proyecto">
+         aria-label="Resumen de la propuesta">
 
     <!-- 1 · Resumen del proyecto (+ «Antes de continuar» dentro) -->
     <section class="rounded-2xl border border-borde bg-white p-3.5 shadow-sm">
       <div class="mb-2.5 flex items-center gap-2">
-        <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen del proyecto</h2>
+        <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen de la propuesta</h2>
         <button v-if="hayReto" type="button" @click="emit('ver-ficha')"
                 class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
                 aria-label="Ver la ficha completa del reto" title="Ver ficha completa">
@@ -70,7 +70,7 @@ const ICONOS = {
         <MiniaturaReto :src="portadaUrl" class="flex aspect-[12/5] w-full" />
         <button v-if="puedeEditarImagen" type="button" @click="emit('editar-imagen')"
                 class="absolute bottom-1.5 right-1.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-rol-fuerte shadow-md hover:bg-gray-50"
-                aria-label="Cambiar la imagen del proyecto" title="Cambiar imagen (paso 7)">
+                aria-label="Cambiar la imagen de la propuesta" title="Cambiar imagen (paso 7)">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
         </button>
       </div>

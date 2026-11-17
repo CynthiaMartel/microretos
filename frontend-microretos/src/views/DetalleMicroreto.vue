@@ -749,11 +749,11 @@ async function copiarUrl() {
                 </svg>
                 <p class="text-xs font-semibold leading-relaxed">
                   Módulos, RA y CE que la IA considera que más encajan con este reto. Podrás cambiarlos al crear
-                  el proyecto en
+                  la propuesta en
                   <span class="underline underline-offset-2 decoration-amber-400 cursor-pointer hover:text-amber-900"
                         @mouseenter="uiHighlight.setHighlight('generar-proyecto')"
                         @mouseleave="uiHighlight.clearHighlight('generar-proyecto')"
-                        @click="router.push('/proyectos/crear')">2. Taller de Ideas → Generar Proyecto</span>
+                        @click="router.push('/proyectos/crear')">2. Taller de Ideas → Generar propuesta</span>
                   (menú izquierdo).
                   Cubre un mínimo de 3 módulos distintos (salvo que se forzaran módulos concretos)<template v-if="reto.curso === 'ambos_cursos'">, incluyendo al menos uno de 1º y uno de 2º</template>.
                 </p>

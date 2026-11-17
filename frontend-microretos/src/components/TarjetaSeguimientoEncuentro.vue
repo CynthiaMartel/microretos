@@ -6,6 +6,7 @@
      El padre guarda qué está desplegado (para poder abrir un encuentro o un grupo al llegar desde
      un enlace) y muestra el aviso al copiar un código. -->
 <script setup>
+import MarcaDestacado from './MarcaDestacado.vue'
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FamiliaModulos from './FamiliaModulos.vue'
@@ -222,6 +223,7 @@ function accionMenu(fn) { menu.value = false; fn() }
               <span v-for="m in equipo.miembros" :key="m.id"
                     class="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 py-0.5 pl-2 pr-0.5 text-xs font-semibold text-azul-noche">
                 {{ m.alias }}
+                <MarcaDestacado v-if="m.destacado" />
                 <RolGrupo v-if="m.rol" :rol="m.rol" :ayuda="false" />
               </span>
             </div>

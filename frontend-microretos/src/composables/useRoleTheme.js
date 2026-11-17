@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_COMERCIAL, useAuthStore } from '../stores/auth.js'
+import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE, useAuthStore } from '../stores/auth.js'
 
 // Color de marca por rol de quien ha iniciado sesión — mismo criterio que el
 // frontoffice (ver logo_colores.png): docente/centro=azul, empresa=verde,
@@ -98,6 +98,8 @@ const THEME_BY_ROLE = {
 // Sin sesión todavía (Home antes de login) o rol desconocido: azul de marca genérico.
 // Comercial: verde de empresas, que es con quien trabaja (app comercial.dualab.es)
 THEME_BY_ROLE[ROLE_COMERCIAL] = THEME_BY_ROLE[ROLE_EMPRESA]
+// Atención al cliente: trabaja en DuaLab Central, con el turquesa del superadmin
+THEME_BY_ROLE[ROLE_ATENCION_CLIENTE] = THEME_BY_ROLE[ROLE_SUPERADMIN]
 
 const DEFAULT_THEME = {
   key: 'primary',

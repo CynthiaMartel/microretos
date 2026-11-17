@@ -8,8 +8,6 @@ import { useSidePanel } from '../composables/useSidePanel.js'
 import ModalTaller from './ModalTaller.vue'
 import { GRUPOS_NAV, ICONOS_NAV } from '../config/navegacion.js'
 import { useNotificaciones } from '../composables/useNotificaciones.js'
-import { useInstalarApp } from '../composables/useInstalarApp.js'
-import InstalarAppModal from './InstalarAppModal.vue'
 
 const authStore = useAuthStore()
 const uiHighlight = useUiHighlightStore()
@@ -67,13 +65,6 @@ watch(() => route.fullPath, () => {
   if (authStore.canAccess('notificaciones')) refrescarNoLeidas()
 }, { immediate: true })
 
-// Instalar como app: si el navegador ofrece su diálogo se usa; si no, instrucciones
-const { puedeInstalar, instalar, plataforma } = useInstalarApp()
-const mostrarInstrucciones = ref(false)
-const abrirInstalacion = async () => {
-  hideTooltip()
-  if (!(await instalar())) mostrarInstrucciones.value = true
-}
 </script>
 
 <template>
@@ -89,7 +80,7 @@ const abrirInstalacion = async () => {
   <!-- Panel lateral (también oculto durante el tour) — cajón deslizante en móvil/tablet, fijo en lg+ -->
   <aside
       v-if="!tourActivo"
-      class="fixed top-16 left-0 h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] z-40 flex flex-col
+      class="panel-lateral fixed top-16 left-0 h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] z-40 flex flex-col
              bg-azul-noche border-r border-azul-noche-border
              shadow-[6px_0_32px_rgba(0,0,0,0.25)]
              transition-transform duration-300 ease-in-out
@@ -106,8 +97,10 @@ const abrirInstalacion = async () => {
           <template v-for="grupo in gruposVisibles" :key="grupo.titulo ?? 'principal'">
             <p v-if="grupo.titulo" class="nav-grupo">{{ grupo.titulo }}</p>
             <div class="space-y-0.5">
+              <template v-for="(item, i) in grupo.items" :key="item.key">
+              <!-- Línea discreta entre bloques de un grupo (taller de ideas │ plan de proyecto │ alumnado y empresas) -->
+              <div v-if="item.separadorAntes && i > 0" class="nav-separador" aria-hidden="true" />
               <button
-                v-for="item in grupo.items" :key="item.key"
                 @click="item.ruta && irA(item.ruta)"
                 :disabled="item.proximamente"
                 :data-tip="item.tip"
@@ -132,6 +125,7 @@ const abrirInstalacion = async () => {
                 <span v-if="item.badge === 'notificaciones' && noLeidas" class="nav-badge"
                       :aria-label="`${noLeidas} sin leer`">{{ noLeidas > 99 ? '99+' : noLeidas }}</span>
               </button>
+              </template>
             </div>
           </template>
         </template>
@@ -156,7 +150,7 @@ const abrirInstalacion = async () => {
           <button
             v-if="authStore.canAccess('startup-day')"
             @click="irA('/proyectos')"
-            data-tip="Consulta las propuestas y proyectos"
+            data-tip="Consulta tus propuestas"
             class="nav-item w-full text-left"
             @mouseenter="showTooltip"
             @mouseleave="hideTooltip"
@@ -166,7 +160,7 @@ const abrirInstalacion = async () => {
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path :d="ICONOS_NAV.capas" />
             </svg>
-            <span>Biblioteca Proyectos</span>
+            <span>Biblioteca Propuestas</span>
           </button>
         </div>
 
@@ -243,31 +237,14 @@ const abrirInstalacion = async () => {
           </div>
         </template>
 
-        <!-- Instalar DuaLab como app: diálogo nativo en Chrome/Edge, instrucciones en Safari y
-             Firefox (ver useInstalarApp). Lleva el mt-auto para que el banner siga abajo
-             también cuando ya está instalada y el botón no se pinta. -->
-        <div class="mt-auto pt-3 shrink-0">
-          <button
-            v-if="puedeInstalar"
-            type="button"
-            @click="abrirInstalacion"
-            data-tip="Abre DuaLab desde su icono, a pantalla completa"
-            class="nav-item nav-item--idle w-full text-left"
-            @mouseenter="showTooltip"
-            @mouseleave="hideTooltip"
-          >
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" />
-            </svg>
-            <span>Instalar app</span>
-          </button>
-        </div>
+        <!-- «Instalar app» está ahora en la barra superior (BotonInstalarApp). Este hueco con mt-auto
+             mantiene el banner de marca al fondo del panel. -->
+        <div class="mt-auto shrink-0" aria-hidden="true"></div>
 
         <!-- Banner de marca (como en el moodboard): al fondo del nav, sobre el pie.
              Se oculta en pantallas muy bajas para no robar alto a la navegación -->
         <div class="pt-4 shrink-0 [@media(max-height:600px)]:hidden" aria-hidden="true">
-          <div class="relative h-24 sm:h-28 overflow-hidden rounded-2xl border border-white/15 px-4 py-3
+          <div class="panel-banner relative h-24 sm:h-28 overflow-hidden rounded-2xl border border-white/15 px-4 py-3
                       bg-gradient-to-br from-[#2E5F8F] via-[#24486E] to-[#1B3553]
                       shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
             <!-- Ondas de marca (naranja y turquesa) en la base -->
@@ -277,10 +254,10 @@ const abrirInstalacion = async () => {
               <path d="M0 44 C80 38 160 52 240 44 V48 H0Z" fill="#ffffff" opacity="0.35" />
             </svg>
             <img src="../assets/logo_colores.png" alt=""
-                 class="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 h-16 sm:h-20 w-auto object-contain
+                 class="panel-banner-logo absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 h-16 sm:h-20 w-auto object-contain
                         drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" />
             <p class="relative text-white font-black text-base tracking-wide">DUALAB</p>
-            <p class="relative mt-1 max-w-[8.5rem] text-white/85 text-xs font-semibold leading-snug">
+            <p class="panel-banner-sub relative mt-1 max-w-[8.5rem] text-white/85 text-xs font-semibold leading-snug">
               Un ecosistema de oportunidades
             </p>
           </div>
@@ -301,7 +278,6 @@ const abrirInstalacion = async () => {
     </div>
   </Teleport>
 
-  <InstalarAppModal :abierto="mostrarInstrucciones" :plataforma="plataforma" @cerrar="mostrarInstrucciones = false" />
 
   <!-- ── Modal de bienvenida por rol ── -->
   <!-- Misma estructura que el modal «Proyecto en propuesta» (ModalPropuestaValidacion):
@@ -363,6 +339,7 @@ const abrirInstalacion = async () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.nav-separador { height: 1px; margin: 0.5rem 0.75rem; background: rgba(255,255,255,0.12); }
 .nav-item--idle   { color: rgba(255,255,255,0.68); }
 .nav-item--idle:hover {
   background-color: rgba(255,255,255,0.07);

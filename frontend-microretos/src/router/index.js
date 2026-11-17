@@ -19,6 +19,11 @@ const StartupDayProyectos = () => import('../views/StartupDayProyectos.vue')
 const StartupDayWizard = () => import('../views/StartupDayWizard.vue')
 const StartupDayDetalle = () => import('../views/StartupDayDetalle.vue')
 const StartupDayLanding = () => import('../views/StartupDayLanding.vue')
+const ValoracionEmpresa = () => import('../views/ValoracionEmpresa.vue')
+const PlanesProyecto = () => import('../views/PlanesProyecto.vue')
+const CrearPlan = () => import('../views/CrearPlan.vue')
+const CronogramaPlan = () => import('../views/CronogramaPlan.vue')
+const AgendaPracticasDocente = () => import('../views/AgendaPracticasDocente.vue')
 const UnirseEquipo = () => import('../views/UnirseEquipo.vue')
 const EquipoWorkspace = () => import('../views/EquipoWorkspace.vue')
 const EmpresasView = () => import('../views/EmpresasView.vue')
@@ -188,6 +193,12 @@ const router = createRouter({
       name: 'proyectos-terminados',
       redirect: to => ({ name: 'startup-day', query: { ...to.query, ver: 'completados' } })
     },
+    // Plan de proyecto (etapa 2). Específicas antes que la paramétrica. La ficha y la edición del
+    // plan son las de la propuesta (/proyectos/:uuid, /proyectos/:uuid/editar).
+    { path: '/planes',                 name: 'planes',         component: PlanesProyecto, meta: { requiresAuth: true, roles: [SA, AD, DO] } },
+    { path: '/planes/crear',           name: 'planes-crear',   component: CrearPlan,      meta: { requiresAuth: true, roles: [SA, AD, DO] } },
+    { path: '/planes/agenda',          name: 'agenda-practicas', component: AgendaPracticasDocente, meta: { requiresAuth: true, roles: [SA, AD, DO] } },
+    { path: '/planes/:uuid/cronograma', name: 'plan-cronograma', component: CronogramaPlan, meta: { requiresAuth: true, roles: [SA, AD, DO] } },
     {
       path: '/proyectos/crear',
       name: 'startup-day-crear',
@@ -225,6 +236,12 @@ const router = createRouter({
       path: '/startup/landing/:token',
       name: 'startup-day-landing',
       component: StartupDayLanding
+    },
+    {
+      // Vista pública: la empresa valora la propuesta terminada de un encuentro creativo (token que caduca)
+      path: '/valoracion/:token',
+      name: 'valoracion-empresa',
+      component: ValoracionEmpresa
     },
     // ── Compatibilidad: enlaces antiguos con el prefijo /startup-day ──────────
     { path: '/startup-day', redirect: '/proyectos' },

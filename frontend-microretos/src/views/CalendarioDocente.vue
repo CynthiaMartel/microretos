@@ -3,6 +3,8 @@
      una copia ampliada de los del panel docente (InicioDocente.vue), que se mantienen
      allí; las tareas personales se guardan en BD y son las mismas que en el panel (useTareasPersonales). -->
 <script setup>
+import { FASES_PROYECTO } from '../config/fasesProyecto.js'
+import AyudaVista from '../components/AyudaVista.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
@@ -11,6 +13,7 @@ import PaginacionFlechas from '../components/PaginacionFlechas.vue'
 import { useTareasDocente } from '../composables/useTareasDocente.js'
 import { usePaginacion } from '../composables/usePaginacion.js'
 import { getNotas, crearNota, actualizarNota, borrarNota } from '../services/notaService.js'
+import { modulosDeEncuentro } from '../utils/modulos.js'
 
 const router = useRouter()
 
@@ -22,7 +25,7 @@ const cargando   = ref(true)
 const errorNotas = ref('')
 
 onMounted(async () => {
-  const [enc, pro, not] = await Promise.allSettled([api.get('/encuentros'), api.get('/startup/proyectos'), getNotas()])
+  const [enc, pro, not] = await Promise.allSettled([api.get('/encuentros', { params: { tipo: 'todos' } }), api.get('/startup/proyectos'), getNotas()])
   if (enc.status === 'fulfilled') encuentros.value = enc.value.data
   if (pro.status === 'fulfilled') proyectos.value  = pro.value.data
   if (not.status === 'fulfilled') notas.value      = not.value.data.data
@@ -36,7 +39,27 @@ const iso    = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const hoy    = new Date()
 const hoyISO = iso(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
 
-const tituloEnc  = (e) => e.proyecto_titulo || e.microreto_titulo || 'Encuentro'
+// Dos cronogramas en el mismo calendario: encuentros creativos (etapa 1, color de centros) y
+// planes de prácticas (etapa 2, en la empresa: color de empresas, como sus hitos). El color
+// siempre va con texto («Plan ·», etiqueta del tipo), nunca solo.
+const ES_PLAN = 'plan_practicas_etapa2'
+const esPlan = (e) => e?.tipo === ES_PLAN
+const tituloBase = (e) => e.proyecto_titulo || e.microreto_titulo || 'Encuentro'
+const tituloEnc  = (e) => (esPlan(e) ? 'Plan · ' : '') + tituloBase(e)
+const tipoEnc    = (e) => (esPlan(e) ? 'Plan de prácticas' : 'Encuentro creativo')
+const COLORES = {
+  creativo: {
+    chip: 'bg-centros/10 text-centros', chipActivo: 'bg-centros text-white', punto: 'bg-centros', texto: 'text-centros',
+    fila: 'bg-white ring-centros/30 hover:bg-centros/[0.06] hover:ring-centros/60', filaActiva: 'bg-centros/[0.12] ring-centros shadow-sm',
+    flecha: 'hover:text-centros', tramo: 'bg-centros/15', tramoRing: 'ring-centros/25', numero: 'bg-centros text-white shadow-md shadow-centros/30',
+  },
+  plan: {
+    chip: 'bg-empresas/10 text-empresas-dark', chipActivo: 'bg-empresas text-white', punto: 'bg-empresas', texto: 'text-empresas-dark',
+    fila: 'bg-white ring-empresas/40 hover:bg-empresas/[0.06] hover:ring-empresas/70', filaActiva: 'bg-empresas/[0.12] ring-empresas shadow-sm',
+    flecha: 'hover:text-empresas-dark', tramo: 'bg-empresas/15', tramoRing: 'ring-empresas/25', numero: 'bg-empresas text-white shadow-md shadow-empresas/30',
+  },
+}
+const colorEnc = (e) => COLORES[esPlan(e) ? 'plan' : 'creativo']
 const fechaLarga = (isoStr) => _pf(isoStr).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 
 // ── Calendario mensual ────────────────────────────────────────────────────────
@@ -54,6 +77,16 @@ function irAHoy() {
 // y, al seleccionar un día, se listan también los que están en curso ese día.
 const cubreDia = (e, diaISO) => e.fecha && diaISO >= e.fecha && diaISO <= (e.fecha_fin || e.fecha)
 
+// Hitos de los planes de proyecto: cada uno en su fecha real (planificacion_sesiones[].fecha del
+// cronograma), como evento propio del día, además del rango inicio–fin del plan
+const hitos = computed(() => encuentros.value
+  .filter(e => e.tipo === ES_PLAN)
+  .flatMap(e => (e.planificacion_sesiones || []).map((h, i) => ({
+    clave: `${e.id}-${i}`, fecha: h.fecha, numero: i + 1, fases: h.fases || [], encuentro: e,
+  })))
+  .filter(h => h.fecha))
+const nombreFaseCorto = (n) => FASES_PROYECTO.find(f => f.num === n)?.label ?? `F${n}`
+
 const calDias = computed(() => {
   const y = calMes.value.getFullYear(), m = calMes.value.getMonth()
   const offset = (new Date(y, m, 1).getDay() + 6) % 7 // semana empieza en lunes
@@ -65,7 +98,10 @@ const calDias = computed(() => {
     celdas.push({
       d, iso: diaISO,
       encs:  encuentros.value.filter(e => e.fecha === diaISO),
+      creativos: encuentros.value.some(e => e.fecha === diaISO && !esPlan(e)),
+      planes:    encuentros.value.some(e => e.fecha === diaISO && esPlan(e)),
       notas: notas.value.filter(n => n.fecha === diaISO),
+      hitos: hitos.value.filter(h => h.fecha === diaISO),
       hoy:   diaISO === hoyISO,
     })
   }
@@ -73,8 +109,12 @@ const calDias = computed(() => {
   return celdas
 })
 
+// Lo que no cabe en la celda (se ven 2 encuentros, 1 hito y 1 nota)
+const ocultosDia = (c) => Math.max(0, c.encs.length - 2) + Math.max(0, c.hitos.length - 1) + Math.max(0, c.notas.length - 1)
+
 const encuentrosDia = computed(() => encuentros.value.filter(e => cubreDia(e, selDia.value)))
 const notasDia      = computed(() => notas.value.filter(n => n.fecha === selDia.value))
+const hitosDia      = computed(() => hitos.value.filter(h => h.fecha === selDia.value))
 
 // Encuentros del día agrupados por módulo(s) del proyecto + familia. Un proyecto
 // puede trabajar varios módulos a la vez: ese conjunto forma un único grupo para
@@ -82,7 +122,8 @@ const notasDia      = computed(() => notas.value.filter(n => n.fecha === selDia.
 const gruposDia = computed(() => {
   const mapa = new Map()
   for (const e of encuentrosDia.value) {
-    const modulos = e.modulos?.length ? e.modulos.join(' · ') : 'Sin módulo asignado'
+    const nombres = modulosDeEncuentro(e)
+    const modulos = nombres.length ? nombres.join(' · ') : 'Sin módulo asignado'
     const familia = e.familia_nombre || 'Sin familia asignada'
     const clave   = `${familia}|${modulos}`
     if (!mapa.has(clave)) mapa.set(clave, { clave, modulos, familia, encs: [] })
@@ -105,6 +146,7 @@ const encActivo  = computed(() => {
   const id = hoverEncId.value ?? selEncId.value
   return id ? encuentros.value.find(e => e.id === id) : null
 })
+const colorActivo = computed(() => colorEnc(encActivo.value))
 const fijarEncuentro = (e) => { selEncId.value = selEncId.value === e.id ? null : e.id }
 watch(selDia, (d) => {
   const fijado = encuentros.value.find(e => e.id === selEncId.value)
@@ -195,11 +237,14 @@ function enviarTarea() {
     <div class="@container/page relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Mi" destacado="calendario"
-                       subtitulo="Tus encuentros del mes, las notas que apuntes en cada día y las tareas que tienes pendientes.">
+                       subtitulo="Qué tienes cada día: encuentros creativos, hitos de tus planes de proyecto, notas y tareas pendientes.">
+        <div class="flex flex-wrap items-center gap-2">
+        <AyudaVista titulo="Calendario: tu día a día" :textos="['Tu organización del día a día: encuentros creativos, cronogramas de planes con la fecha de cada hito, y tus notas y tareas.', 'Para ver qué tienes cada día. El avance del alumnado en las empresas está en la Agenda de prácticas (Planes de proyecto).']" />
         <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
           Nuevo encuentro
         </button>
+        </div>
       </CabeceraSeccion>
 
       <!-- Fila superior: calendario + día seleccionado (mismo alto en escritorio) -->
@@ -219,12 +264,14 @@ function enviarTarea() {
             </div>
             <!-- Encuentro activo: cuántos días dura y de cuándo a cuándo; si no, la leyenda -->
             <p v-if="encActivo" class="flex min-w-0 items-center gap-2 text-xs" aria-live="polite">
-              <span class="shrink-0 rounded-full bg-centros px-2 py-0.5 font-bold text-white">{{ diasTexto(encActivo) }}</span>
+              <span class="shrink-0 rounded-full px-2 py-0.5 font-bold" :class="colorActivo.chipActivo">{{ diasTexto(encActivo) }}</span>
               <span class="min-w-0 truncate text-gray-600"><strong class="font-semibold text-azul-noche">{{ tituloEnc(encActivo) }}</strong> · {{ rangoEnc(encActivo) }}</span>
               <button v-if="selEncId" type="button" class="-my-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Dejar de destacar el encuentro" @click="selEncId = null">×</button>
             </p>
-            <div v-else class="flex items-center gap-4 text-xs text-gray-500">
-              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-centros" />Encuentro</span>
+            <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-centros" />Encuentro creativo</span>
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-empresas" />Plan de prácticas</span>
+              <span class="flex items-center gap-1.5"><span class="h-2 w-2 rotate-45 rounded-[1px] bg-empresas-dark" />Hito de plan</span>
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-alumnos" />Nota</span>
               <button type="button" class="-my-1.5 inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-centros hover:bg-centros/10" @click="irAHoy">Hoy</button>
             </div>
@@ -240,29 +287,35 @@ function enviarTarea() {
               <button v-else type="button" @click="selDia = c.iso"
                       class="flex min-h-[64px] min-w-0 flex-col gap-0.5 rounded-lg p-1.5 text-left ring-1 transition sm:min-h-[84px]"
                       :class="[
-                        tramoDia(c) ? 'bg-centros/15' : (selDia === c.iso ? 'bg-centros/8' : 'hover:bg-gray-50'),
-                        selDia === c.iso ? 'ring-centros/50' : (tramoDia(c) ? 'ring-centros/25' : 'ring-transparent'),
+                        tramoDia(c) ? colorActivo.tramo : (selDia === c.iso ? 'bg-centros/8' : 'hover:bg-gray-50'),
+                        selDia === c.iso ? 'ring-centros/50' : (tramoDia(c) ? colorActivo.tramoRing : 'ring-transparent'),
                       ]"
-                      :aria-label="`${fechaLarga(c.iso)}: ${c.encs.length} encuentros, ${c.notas.length} notas`">
+                      :aria-label="`${fechaLarga(c.iso)}: ${c.encs.length} encuentros, ${c.hitos.length} hitos, ${c.notas.length} notas`">
                 <span class="flex items-center gap-1">
                   <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                        :class="['inicio', 'fin', 'unico'].includes(tramoDia(c)) ? 'bg-centros text-white shadow-md shadow-centros/30'
+                        :class="['inicio', 'fin', 'unico'].includes(tramoDia(c)) ? colorActivo.numero
                               : c.hoy ? 'bg-alumnos text-white'
-                              : tramoDia(c) ? 'font-bold text-centros' : 'text-gray-700'">{{ c.d }}</span>
+                              : tramoDia(c) ? ['font-bold', colorActivo.texto] : 'text-gray-700'">{{ c.d }}</span>
                   <!-- Primer día del encuentro activo: cuántos días dura -->
                   <span v-if="['inicio', 'unico'].includes(tramoDia(c))"
-                        class="hidden truncate text-[10px] font-bold text-centros sm:inline">{{ diasTexto(encActivo) }}</span>
+                        class="hidden truncate text-[10px] font-bold sm:inline" :class="colorActivo.texto">{{ diasTexto(encActivo) }}</span>
                 </span>
-                <!-- En móvil, solo puntos; desde sm, el título -->
+                <!-- En móvil, solo puntos; desde sm, el título (azul = encuentro creativo, verde = plan de prácticas) -->
                 <span v-for="e in c.encs.slice(0, 2)" :key="'e' + e.id"
                       class="hidden truncate rounded px-1 text-[11px] font-medium leading-5 sm:block"
-                      :class="encActivo?.id === e.id ? 'bg-centros text-white' : 'bg-centros/10 text-centros'"
+                      :class="encActivo?.id === e.id ? colorEnc(e).chipActivo : colorEnc(e).chip"
+                      :title="`${tipoEnc(e)} · ${tituloBase(e)}`"
                       @mouseenter="hoverEncId = e.id" @mouseleave="hoverEncId = null">{{ tituloEnc(e) }}</span>
+                <span v-for="h in c.hitos.slice(0, 1)" :key="'h' + h.clave"
+                      class="hidden truncate rounded bg-empresas/15 px-1 text-[11px] font-semibold leading-5 text-empresas-dark sm:block"
+                      :title="`Hito ${h.numero} · ${h.encuentro.proyecto_titulo}`">◆ Hito {{ h.numero }}</span>
                 <span v-for="n in c.notas.slice(0, 1)" :key="'n' + n.id"
                       class="hidden truncate rounded bg-alumnos/10 px-1 text-[11px] font-medium leading-5 text-alumnos-dark sm:block">{{ n.texto }}</span>
-                <span v-if="c.encs.length + c.notas.length > 3" class="hidden text-[10px] text-gray-400 sm:block">+{{ c.encs.length + c.notas.length - 3 }} más</span>
-                <span class="flex gap-1 sm:hidden">
-                  <span v-if="c.encs.length" class="h-1.5 w-1.5 rounded-full bg-centros" />
+                <span v-if="ocultosDia(c)" class="hidden text-[10px] text-gray-400 sm:block">+{{ ocultosDia(c) }} más</span>
+                <span class="flex items-center gap-1 sm:hidden">
+                  <span v-if="c.creativos" class="h-1.5 w-1.5 rounded-full bg-centros" />
+                  <span v-if="c.planes" class="h-1.5 w-1.5 rounded-full bg-empresas" />
+                  <span v-if="c.hitos.length" class="h-1.5 w-1.5 rotate-45 rounded-[1px] bg-empresas-dark" />
                   <span v-if="c.notas.length" class="h-1.5 w-1.5 rounded-full bg-alumnos" />
                 </span>
               </button>
@@ -274,32 +327,44 @@ function enviarTarea() {
              Tamaño fijo: en escritorio no aporta altura a la fila (h-0) y ocupa la del
              calendario (min-h-full); en pantallas estrechas, alto fijo. El contenido
              hace scroll dentro y el formulario queda siempre abajo. -->
-        <article class="card flex h-[26rem] min-w-0 flex-col p-4 @4xl/page:h-0 @4xl/page:min-h-full">
+        <article class="card flex max-h-[min(26rem,80dvh)] min-w-0 flex-col p-4 @4xl/page:h-0 @4xl/page:max-h-none @4xl/page:min-h-full">
           <h2 class="card-title shrink-0 text-base capitalize">{{ fechaLarga(selDia) }}</h2>
           <div class="-mx-1 mt-3 min-h-0 flex-1 overflow-y-auto px-1">
             <!-- Encuentros del día agrupados por módulo, indicando la familia -->
             <div v-if="gruposDia.length" class="space-y-2.5">
-              <section v-for="g in gruposPagina" :key="g.clave" class="rounded-xl bg-gray-50/80 p-2 ring-1 ring-gray-100">
-                <header class="mb-1.5 px-1">
-                  <p class="text-[13px] font-bold leading-snug text-azul-noche">{{ g.modulos }}</p>
-                  <span class="mt-0.5 inline-block max-w-full truncate rounded-full bg-centros/10 px-2 py-0.5 text-[10px] font-semibold text-centros" :title="g.familia">{{ g.familia }}</span>
+              <!-- Bloque por módulo(s): fondo gris y borde visibles sobre la tarjeta blanca, con rótulo
+                   «Módulo/Módulos» para no depender solo del color; las filas de encuentro van en blanco -->
+              <section v-for="g in gruposPagina" :key="g.clave" :aria-label="`Módulo: ${g.modulos}`"
+                       class="rounded-xl border border-gray-400 bg-gray-100 p-2">
+                <header class="mb-2 border-b border-gray-300 px-1 pb-1.5">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-gray-600">{{ g.modulos.includes(' · ') ? 'Módulos' : 'Módulo' }}</p>
+                  <p class="break-words text-[13px] font-bold leading-snug text-azul-noche">{{ g.modulos }}</p>
+                  <span class="mt-1 inline-block max-w-full truncate rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-centros ring-1 ring-centros/30" :title="g.familia">{{ g.familia }}</span>
                 </header>
-                <ul class="space-y-1">
+                <ul class="space-y-1.5">
                   <!-- Pasar el ratón ilumina sus días en el calendario; clic lo deja fijado; la flecha lo abre -->
                   <li v-for="e in g.encs" :key="e.id"
                       class="flex items-stretch rounded-lg ring-1 transition"
-                      :class="encActivo?.id === e.id ? 'bg-centros/[0.14] ring-centros/50 shadow-sm' : 'bg-centros/[0.07] ring-centros/20 hover:bg-centros/[0.12] hover:ring-centros/45'"
+                      :class="encActivo?.id === e.id ? colorEnc(e).filaActiva : colorEnc(e).fila"
                       @mouseenter="hoverEncId = e.id" @mouseleave="hoverEncId = null">
                     <button class="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left" :aria-pressed="selEncId === e.id"
                             @click="fijarEncuentro(e)" @focus="hoverEncId = e.id" @blur="hoverEncId = null">
-                      <span class="h-8 w-1 shrink-0 rounded-full bg-centros" />
+                      <span class="h-10 w-1 shrink-0 rounded-full" :class="colorEnc(e).punto" />
                       <span class="min-w-0 flex-1">
-                        <span class="block truncate text-[13px] font-semibold">{{ tituloEnc(e) }}</span>
+                        <!-- Tipo: encuentro creativo (Taller de ideas) o plan de prácticas (en la empresa) -->
+                        <span class="mb-0.5 inline-flex max-w-full items-center gap-1 rounded-full px-1.5 text-[10px] font-bold uppercase leading-4 tracking-wide" :class="colorEnc(e).chip">
+                          <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                            <path v-if="esPlan(e)" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                            <path v-else d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" />
+                          </svg>
+                          <span class="truncate">{{ tipoEnc(e) }}</span>
+                        </span>
+                        <span class="block truncate text-[13px] font-semibold">{{ tituloBase(e) }}</span>
                         <span class="block truncate text-[11px] text-gray-500">{{ [e.ciclo_formativo, e.curso, e.grupo && `Clase ${e.grupo}`].filter(Boolean).join(' · ') }}</span>
-                        <span class="block truncate text-[11px] font-semibold text-centros">{{ diasTexto(e) }} · {{ rangoEnc(e) }}</span>
+                        <span class="block truncate text-[11px] font-semibold" :class="colorEnc(e).texto">{{ diasTexto(e) }} · {{ rangoEnc(e) }}</span>
                       </span>
                     </button>
-                    <button class="flex w-9 shrink-0 items-center justify-center rounded-r-lg text-gray-400 hover:text-centros"
+                    <button class="flex w-9 shrink-0 items-center justify-center rounded-r-lg text-gray-400" :class="colorEnc(e).flecha"
                             :aria-label="`Abrir ${tituloEnc(e)}`" @click="router.push('/mis-grupos/' + e.id)">
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </button>
@@ -308,6 +373,18 @@ function enviarTarea() {
               </section>
               <PaginacionFlechas v-model="paginaGrupos" :total="totalPagGrupos" etiqueta="Páginas de encuentros del día" class="pt-0.5" />
             </div>
+            <!-- Hitos de planes de proyecto en este día -->
+            <ul v-if="hitosDia.length" class="mt-2 space-y-1" aria-label="Hitos de planes">
+              <li v-for="h in hitosDia" :key="h.clave" class="flex items-stretch rounded-lg bg-empresas/[0.08] ring-1 ring-empresas/25">
+                <button type="button" class="flex min-w-0 flex-1 items-center gap-2.5 p-1.5 text-left" @click="router.push({ name: 'agenda-practicas' })">
+                  <span class="h-8 w-1 shrink-0 rounded-full bg-empresas" />
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-[13px] font-semibold">Hito {{ h.numero }} · {{ h.encuentro.proyecto_titulo }}</span>
+                    <span class="block truncate text-[11px] text-gray-500">{{ h.fases.map(f => 'F' + f + ' ' + nombreFaseCorto(f)).join(' · ') }}</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
             <ul v-if="notasDia.length" class="mt-2 space-y-1">
               <li v-for="n in notasDia" :key="n.id" class="group flex items-start gap-2 rounded-lg bg-alumnos/5 p-2 text-sm">
                 <span class="min-w-0 flex-1 break-words text-gray-700">{{ n.texto }}</span>
@@ -317,7 +394,7 @@ function enviarTarea() {
                         :aria-label="`Borrar nota: ${n.texto}`" @click="eliminarNota(n)">×</button>
               </li>
             </ul>
-            <p v-if="!encuentrosDia.length && !notasDia.length" class="text-sm text-gray-500">Nada programado este día.</p>
+            <p v-if="!encuentrosDia.length && !notasDia.length && !hitosDia.length" class="text-sm text-gray-500">Nada programado este día.</p>
           </div>
             <form class="mt-3 flex shrink-0 gap-2" @submit.prevent="addNotaDia">
               <input v-model="textoDia" maxlength="1000" placeholder="Apuntar una nota en este día…"

@@ -1,65 +1,16 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import EtapaRecorrido from '../components/EtapaRecorrido.vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../api.js'
+import { useAccesoWorkspace } from '../composables/useAccesoWorkspace.js'
 
 const router   = useRouter()
-const codigo   = ref('')
-const cargando = ref(false)
-const error    = ref('')
 const isLoaded = ref(false)
+// Lógica común con el bloque «¿Eres alumnado?» del login
+const { codigo, cargando, error, codigoValido, equipoGuardado, onInput, entrar,
+        continuar: continuarConEquipoGuardado, olvidar: limpiarGuardado } = useAccesoWorkspace()
 
-const equipoGuardado = ref(null)
-
-onMounted(() => {
-  setTimeout(() => { isLoaded.value = true }, 60)
-
-  const tokenGuardado = localStorage.getItem('dualab_equipo_token')
-  if (tokenGuardado) {
-    equipoGuardado.value = {
-      token:  tokenGuardado,
-      nombre: localStorage.getItem('dualab_equipo_nombre') || 'mi equipo',
-      titulo: localStorage.getItem('dualab_proyecto_titulo') || '',
-    }
-  }
-})
-
-function limpiarGuardado() {
-  localStorage.removeItem('dualab_equipo_token')
-  localStorage.removeItem('dualab_equipo_nombre')
-  localStorage.removeItem('dualab_proyecto_titulo')
-  equipoGuardado.value = null
-}
-
-function onInput(e) {
-  let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
-  if (val.length > 3) val = val.slice(0, 3) + '-' + val.slice(3)
-  codigo.value = val
-  error.value  = ''
-}
-
-const codigoValido = computed(() => /^[A-Z]{3}-\d{3}$/.test(codigo.value))
-
-async function entrar() {
-  if (!codigoValido.value) return
-  cargando.value = true
-  error.value = ''
-  try {
-    const res = await api.get(`/equipo/unirse/${codigo.value}`)
-    localStorage.setItem('dualab_equipo_token', res.data.token)
-    localStorage.setItem('dualab_equipo_nombre', res.data.nombre_equipo)
-    localStorage.setItem('dualab_proyecto_titulo', res.data.proyecto_titulo)
-    router.push({ name: 'equipo-workspace', params: { token: res.data.token } })
-  } catch (e) {
-    error.value = e.response?.data?.error || 'No se encontró ese código. Comprueba que lo has escrito bien.'
-  } finally {
-    cargando.value = false
-  }
-}
-
-function continuarConEquipoGuardado() {
-  router.push({ name: 'equipo-workspace', params: { token: equipoGuardado.value.token } })
-}
+onMounted(() => { setTimeout(() => { isLoaded.value = true }, 60) })
 </script>
 
 <template>
@@ -88,6 +39,7 @@ function continuarConEquipoGuardado() {
       <!-- Acceso rápido si ya tiene equipo guardado en este dispositivo -->
       <div v-if="equipoGuardado" class="mb-5 bg-alumnos/10 border border-alumnos/25 rounded-3xl p-4">
         <p class="text-[9px] font-black uppercase tracking-widest text-alumnos mb-2">Sesión guardada</p>
+        <EtapaRecorrido :etapa="equipoGuardado.etapa" class="mb-2" />
         <p class="text-sm font-bold text-white leading-snug mb-0.5">{{ equipoGuardado.nombre }}</p>
         <p class="text-xs text-white/40 mb-3 truncate">{{ equipoGuardado.titulo }}</p>
         <div class="flex gap-2">

@@ -13,6 +13,7 @@ import {
   getEmpresasCaptadas, validarEmpresaCaptada, descartarEmpresaCaptada, getCoincidenciasEmpresa, getBorradoresPendientes, getBorradorCaptacion,
   publicarBorrador, descartarBorrador, getImagenFirma, getCentrosCaptacion,
 } from '../services/captacionService.js'
+import { PREGUNTAS_DIAGNOSTICO, COLUMNA_DE } from '../config/preguntasDiagnostico.js'
 
 const emit = defineEmits(['cambio'])
 
@@ -153,6 +154,22 @@ async function confirmarDescarte() {
   }
 }
 
+// ── Entrevista: lo que contó la empresa ───────────────────────────────────────
+// Respuestas que partieron de una idea de la IA que la empresa confirmó al comercial, y si
+// respondió ella misma el formulario que se le envió por correo.
+const respuestasDe = (e) => PREGUNTAS_DIAGNOSTICO
+  .map(p => ({ campo: p.campo, pregunta: p.pregunta, respuesta: e[COLUMNA_DE[p.campo]], ia: (e.respuestas_ia ?? []).includes(p.campo) }))
+  .filter(r => r.respuesta)
+const resumenEntrevista = (e) => {
+  const n = respuestasDe(e).length
+  if (!n) return ''
+  const partes = [`${n} de ${PREGUNTAS_DIAGNOSTICO.length} preguntas respondidas`]
+  if (e.respuestas_ia?.length) partes.push(`${e.respuestas_ia.length} a partir de ideas de la IA`)
+  if (e.formulario?.respondido_at) partes.push('respondida por la empresa por correo')
+  return partes.join(' · ')
+}
+const empresaEntrevista = ref(null)
+
 // ── Firma (imagen privada, se pide como blob) ─────────────────────────────────
 const firmaUrl     = ref(null)
 const firmaEmpresa = ref(null)
@@ -228,9 +245,10 @@ async function descartar() {
     <article class="card p-4 sm:p-5">
       <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="font-heading text-lg font-bold">Empresas captadas</h2>
-        <div class="inline-flex w-fit gap-1 rounded-full bg-gray-100 p-1" role="group" aria-label="Qué empresas ver">
+        <!-- En 360px las tres pestañas casi no caben: se estrechan y, si aun así no caben, el carril se desplaza -->
+        <div class="inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-gray-100 p-1" role="group" aria-label="Qué empresas ver">
           <button v-for="e in ESTADOS" :key="e.key" type="button" :aria-pressed="estado === e.key" @click="cambiarEstado(e.key)"
-                  class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
+                  class="inline-flex h-9 shrink-0 items-center rounded-full px-2 text-sm font-semibold transition sm:px-4"
                   :class="estado === e.key ? 'bg-white text-azul-noche shadow-sm' : 'text-gray-600 hover:text-azul-noche'">
             {{ e.label }}
           </button>
@@ -278,6 +296,10 @@ async function descartar() {
             </span>
           </div>
 
+          <p v-if="resumenEntrevista(e)" class="text-xs text-texto-secundario">
+            <span class="font-semibold text-azul-noche">Entrevista:</span> {{ resumenEntrevista(e) }}
+          </p>
+
           <p v-if="e.centros?.length" class="text-sm text-texto-secundario">
             <span class="font-semibold text-azul-noche">Centros:</span> {{ e.centros.map(c => c.nombre).join(', ') }}
           </p>
@@ -293,6 +315,7 @@ async function descartar() {
               {{ e.estado === 'validada' ? 'Cambiar centros' : 'Validar y colocar en centros' }}
             </button>
             <button v-if="e.estado === 'pendiente_validacion'" type="button" class="accion-secundaria" @click="abrirDescartar(e)">Descartar</button>
+            <button v-if="respuestasDe(e).length" type="button" class="accion-secundaria" @click="empresaEntrevista = e">Ver entrevista</button>
             <button v-if="e.firma" type="button" class="accion-secundaria" @click="verFirma(e)">Ver firma</button>
           </div>
         </li>
@@ -311,8 +334,9 @@ async function descartar() {
               <span class="block break-words text-sm font-bold">{{ b.reto.titulo }}</span>
               <span class="block text-sm text-gray-500">{{ b.captacion?.nombre_comercial }} · {{ b.familia }}</span>
             </span>
-            <span class="w-fit shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-              Creado por comercial · pendiente de validar para publicar
+            <!-- Sin shrink-0 y corta: en tablet no debe estrechar el título del reto -->
+            <span class="w-fit rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 sm:whitespace-nowrap">
+              Pendiente de validar
             </span>
           </button>
         </li>
@@ -394,6 +418,31 @@ async function descartar() {
           <button type="button" class="btn-paso-atras" @click="empresaDescartando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="descartando" @click="confirmarDescarte">{{ descartando ? 'Descartando…' : 'Descartar' }}</button>
         </div>
+      </div>
+    </Modal>
+
+    <!-- Modal: entrevista (lo que contó la empresa) -->
+    <Modal :visible="!!empresaEntrevista" max-width="max-w-2xl" @cerrar="empresaEntrevista = null">
+      <div v-if="empresaEntrevista" class="flex max-h-[90dvh] min-h-0 flex-col">
+        <div class="border-b border-gray-100 p-6 pr-16 sm:p-8 sm:pr-16">
+          <h2 class="break-words font-heading text-xl font-bold text-azul-noche">Entrevista · {{ empresaEntrevista.nombre_comercial }}</h2>
+          <p class="mt-1 text-sm text-texto-secundario">
+            <template v-if="empresaEntrevista.formulario?.respondido_at">La empresa respondió el formulario por correo el {{ fecha(empresaEntrevista.formulario.respondido_at) }}<template v-if="empresaEntrevista.comercial">; después la completó {{ empresaEntrevista.comercial }}</template>.</template>
+            <template v-else-if="empresaEntrevista.comercial">Entrevista en persona de {{ empresaEntrevista.comercial }}.</template>
+          </p>
+          <p v-if="empresaEntrevista.respuestas_ia?.length" class="mt-2 text-xs text-texto-secundario">
+            Las marcadas con «Idea de la IA» partieron de una sugerencia que la empresa confirmó al comercial: revísalas con más cuidado.
+          </p>
+        </div>
+        <dl class="min-h-0 space-y-4 overflow-y-auto p-6 text-sm sm:p-8">
+          <div v-for="r in respuestasDe(empresaEntrevista)" :key="r.campo">
+            <dt class="font-semibold text-azul-noche">
+              {{ r.pregunta }}
+              <span v-if="r.ia" class="ml-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">Idea de la IA</span>
+            </dt>
+            <dd class="mt-1 whitespace-pre-line break-words text-gray-600">{{ r.respuesta }}</dd>
+          </div>
+        </dl>
       </div>
     </Modal>
 

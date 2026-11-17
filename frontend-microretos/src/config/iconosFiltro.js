@@ -27,7 +27,7 @@ const ICONOS = {
 const ALIAS = {
   centro: 'centro', familia: 'familia', ciclo: 'ciclo', modulo: 'modulo', nivel: 'nivel',
   dificultad: 'dificultad', estado: 'estado', clase: 'clase', ordenar: 'orden', orden: 'orden',
-  proyecto: 'proyecto', validado: 'validado', provincia: 'provincia', empresa: 'empresa',
+  proyecto: 'proyecto', propuesta: 'proyecto', validado: 'validado', validada: 'validado', provincia: 'provincia', empresa: 'empresa',
   curso: 'curso', fecha: 'fecha', desde: 'fecha', hasta: 'fecha', tipo: 'tipo',
 }
 
