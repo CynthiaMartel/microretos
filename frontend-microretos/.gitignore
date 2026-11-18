@@ -30,6 +30,9 @@ dist-central
 pwa/*
 !pwa/icono-dualab.png
 !pwa/iconos-herramientas.mjs
+# Código de las configuraciones de Vite de las herramientas (no son iconos generados)
+!pwa/pwaHerramienta.mjs
+!pwa/versionarIconos.mjs
 
 # Carpeta temporal de npm run iconos:comercial
 .pwa-comercial/
