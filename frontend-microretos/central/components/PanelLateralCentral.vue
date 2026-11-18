@@ -7,7 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getFormulariosWeb, getCorreos } from '../../src/services/primerContactoService.js'
 import logo from '../../src/assets/logo_colores.png'
-import { ICONOS, espacioDe } from '../espacios.js'
+import { ESPACIOS, ICONOS, espacioDe } from '../espacios.js'
 
 const abierto = defineModel('abierto', { type: Boolean, default: false })
 
@@ -19,7 +19,7 @@ const espacio = computed(() => espacioDe(route.meta.espacio))
 const GRUPO_COMUN = {
   titulo: 'Central',
   items: [
-    { key: 'espacios', label: 'Cambiar de espacio', ruta: { name: 'inicio' }, nombres: ['inicio'],
+    { key: 'espacios', label: 'Cambiar de espacio', desplegable: true,
       icono: 'M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zm-9 9a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z' },
     { key: 'usuario', label: 'Mi usuario', ruta: { name: 'mi-usuario' }, nombres: ['mi-usuario'], icono: ICONOS.usuario },
   ],
@@ -27,7 +27,18 @@ const GRUPO_COMUN = {
 const GRUPOS = computed(() => [...(espacio.value?.grupos ?? []), GRUPO_COMUN])
 const activo = item => !!item.nombres?.includes(route.name)
 
+// «Cambiar de espacio» se despliega con los otros espacios (como en la barra superior)
+const espaciosAbierto = ref(false)
+const otrosEspacios = computed(() => ESPACIOS.filter(e => e.clave !== espacio.value?.clave))
+const PUNTO_ESPACIO = { 'espacio-contacto': 'bg-espacio-contacto', 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
+function irAEspacio(e) {
+  abierto.value = false
+  espaciosAbierto.value = false
+  router.push(e ? e.ruta : { name: 'inicio' })
+}
+
 function ir(item) {
+  if (item.desplegable) { espaciosAbierto.value = !espaciosAbierto.value; return }
   abierto.value = false
   if (item.externo) window.open(item.externo, '_blank', 'noopener')
   else router.push(item.ruta)
@@ -76,9 +87,11 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
       <template v-for="grupo in GRUPOS" :key="grupo.titulo">
         <p class="nav-grupo">{{ grupo.titulo }}</p>
         <div class="space-y-0.5">
-          <button v-for="item in grupo.items" :key="item.key" type="button" class="nav-item w-full text-left"
+          <template v-for="item in grupo.items" :key="item.key">
+          <button type="button" class="nav-item w-full text-left"
                   :class="activo(item) ? 'nav-item--activo' : 'nav-item--idle'"
-                  :aria-current="activo(item) ? 'page' : undefined" @click="ir(item)">
+                  :aria-current="activo(item) ? 'page' : undefined"
+                  :aria-expanded="item.desplegable ? espaciosAbierto : undefined" @click="ir(item)">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path :d="item.icono" />
             </svg>
@@ -87,7 +100,21 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
             <svg v-if="item.externo" class="h-3.5 w-3.5 shrink-0 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             <span v-if="item.externo" class="sr-only">(se abre en otra pestaña)</span>
             <span v-if="item.proximamente" class="text-[10px] font-bold uppercase tracking-wider text-white/40">Pronto</span>
+            <svg v-if="item.desplegable" class="h-4 w-4 shrink-0 text-white/50 transition-transform" :class="espaciosAbierto && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
           </button>
+          <!-- Otros espacios (submenú) -->
+          <div v-if="item.desplegable && espaciosAbierto" class="mb-1 ml-9 space-y-0.5 border-l border-white/10 pl-2">
+            <button v-for="e in otrosEspacios" :key="e.clave" type="button" @click="irAEspacio(e)"
+                    class="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm font-semibold text-white/75 transition-colors hover:bg-white/5 hover:text-white">
+              <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="PUNTO_ESPACIO[e.color]" aria-hidden="true" />
+              <span class="min-w-0 truncate">{{ e.nombre }}</span>
+            </button>
+            <button type="button" @click="irAEspacio(null)"
+                    class="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-xs font-semibold text-white/55 transition-colors hover:bg-white/5 hover:text-white">
+              Ver todos los espacios
+            </button>
+          </div>
+          </template>
         </div>
       </template>
 

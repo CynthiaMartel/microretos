@@ -26,6 +26,7 @@ class DestacadoEncuentroResource extends JsonResource
             'curso'            => $this->curso,
             'grupo'            => $this->grupo,
             'centro_educativo' => $this->centro_educativo,
+            'ciclo_formativo'  => $this->ciclo_formativo,
             'docente'          => $this->docente?->name,
             'propuesta'        => [
                 'uuid'    => $mp?->uuid,

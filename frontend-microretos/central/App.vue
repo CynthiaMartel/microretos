@@ -8,7 +8,7 @@ import { useAuthStore } from '../src/stores/auth.js'
 import AppCredit from '../src/components/AppCredit.vue'
 import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import PanelLateralCentral from './components/PanelLateralCentral.vue'
-import { espacioDe } from './espacios.js'
+import { ESPACIOS, espacioDe } from './espacios.js'
 import { forzarTemaRol } from '../src/composables/useRoleTheme.js'
 // Icono de la herramienta, igual que su favicon (pwa/iconos-herramientas.mjs --barra)
 import logo from './icono-barra.png'
@@ -39,8 +39,21 @@ const onSesionCaducada = async () => {
 const menuAbierto = ref(false)
 const menuRef     = ref(null)
 const saliendo    = ref(false)
-const cerrarMenuFuera = (e) => { if (menuRef.value && !menuRef.value.contains(e.target)) menuAbierto.value = false }
-const cerrarMenuEsc   = (e) => { if (e.key === 'Escape') menuAbierto.value = false }
+const cerrarMenuFuera = (e) => {
+  if (menuRef.value && !menuRef.value.contains(e.target)) menuAbierto.value = false
+  if (espaciosRef.value && !espaciosRef.value.contains(e.target)) espaciosAbierto.value = false
+}
+const cerrarMenuEsc   = (e) => { if (e.key === 'Escape') { menuAbierto.value = false; espaciosAbierto.value = false } }
+
+// ── Desplegable «cambiar de espacio» (píldora del espacio en la barra superior) ──
+const espaciosAbierto = ref(false)
+const espaciosRef = ref(null)
+// Clases literales (Tailwind no genera clases compuestas al vuelo)
+const PUNTO_ESPACIO = { 'espacio-contacto': 'bg-espacio-contacto', 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
+function irAEspacio(e) {
+  espaciosAbierto.value = false
+  router.push(e ? e.ruta : { name: 'inicio' })
+}
 
 onMounted(() => {
   window.addEventListener('auth:token-expired', onSesionCaducada)
@@ -82,15 +95,40 @@ const salir = async () => {
       </RouterLink>
       <span class="hidden select-none text-white/15 sm:inline" aria-hidden="true">/</span>
       <span class="hidden min-w-0 truncate text-xs font-bold uppercase tracking-[0.15em] text-white/60 sm:inline">Central</span>
-      <!-- Espacio actual: lleva al selector para cambiar de espacio -->
+      <!-- Espacio actual: desplegable para cambiar a otro espacio sin pasar por el selector -->
       <template v-if="espacio">
         <span class="hidden select-none text-white/15 md:inline" aria-hidden="true">/</span>
-        <RouterLink :to="{ name: 'inicio' }" title="Cambiar de espacio"
-                    class="hidden min-w-0 items-center gap-1.5 truncate rounded-full px-3 py-1.5 text-xs font-bold text-white/85 ring-1 ring-white/20 transition hover:bg-white/10 md:inline-flex">
-          <span class="truncate">{{ espacio.nombre }}</span>
-          <svg class="h-3.5 w-3.5 shrink-0 text-white/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg>
-          <span class="sr-only">· cambiar de espacio</span>
-        </RouterLink>
+        <div ref="espaciosRef" class="relative hidden min-w-0 md:block">
+          <button type="button" :aria-expanded="espaciosAbierto" aria-haspopup="menu" @click="espaciosAbierto = !espaciosAbierto"
+                  class="inline-flex min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold text-white/90 ring-1 ring-white/20 transition hover:bg-white/10">
+            <span class="h-2 w-2 shrink-0 rounded-full" :class="PUNTO_ESPACIO[espacio.color]" aria-hidden="true" />
+            <span class="truncate">{{ espacio.nombre }}</span>
+            <svg class="h-3.5 w-3.5 shrink-0 text-white/50 transition-transform" :class="espaciosAbierto && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            <span class="sr-only">· cambiar de espacio</span>
+          </button>
+          <Transition name="menu-usuario">
+            <div v-if="espaciosAbierto" role="menu" aria-label="Cambiar de espacio"
+                 class="absolute left-0 top-full mt-2 w-72 overflow-hidden rounded-2xl bg-white py-1.5 text-sm text-azul-noche shadow-xl ring-1 ring-black/5">
+              <p class="px-4 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.15em] text-texto-secundario">Cambiar de espacio</p>
+              <button v-for="e in ESPACIOS" :key="e.clave" type="button" role="menuitem"
+                      :disabled="e.clave === espacio.clave" :aria-current="e.clave === espacio.clave ? 'true' : undefined"
+                      class="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 disabled:cursor-default disabled:bg-gray-50"
+                      @click="irAEspacio(e)">
+                <span class="h-3 w-3 shrink-0 rounded-full" :class="PUNTO_ESPACIO[e.color]" aria-hidden="true" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate font-semibold">{{ e.nombre }}</span>
+                  <span class="block truncate text-xs text-texto-secundario">{{ e.clave === espacio.clave ? 'Estás aquí' : e.quien }}</span>
+                </span>
+                <svg v-if="e.clave === espacio.clave" class="h-4 w-4 shrink-0 text-texto-secundario" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </button>
+              <button type="button" role="menuitem" class="mt-1 flex min-h-11 w-full items-center gap-3 border-t border-gray-100 px-4 py-2.5 text-left font-medium text-texto-secundario hover:bg-gray-50 hover:text-azul-noche"
+                      @click="irAEspacio(null)">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zm-9 9a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z" /></svg>
+                Ver todos los espacios
+              </button>
+            </div>
+          </Transition>
+        </div>
       </template>
 
       <div class="flex-1" />

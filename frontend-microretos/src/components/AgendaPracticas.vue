@@ -19,7 +19,7 @@ const emit = defineEmits(['ver-grupos'])
 const cronogramas = ref([])
 const cargando = ref(true)
 const error = ref('')
-const filtro = ref('en_curso')   // 'todos' | 'en_curso' | 'por_empezar' | 'terminado'
+const filtro = ref('todos')   // 'todos' | 'en_curso' | 'por_empezar' | 'terminado'
 const filtroRetrasos = ref('')
 const soloRetrasos = computed(() => filtroRetrasos.value === 'con')
 const buscar = ref('')
@@ -78,12 +78,21 @@ const hoyPct = computed(() => {
   return p >= 0 && p <= 100 ? p : null
 })
 const barra = (c) => ({ left: pct(t(c.fecha)) + '%', width: Math.max(1, pct(t(c.fecha_fin) + DIA) - pct(t(c.fecha))) + '%' })
-const COLOR_BARRA = { en_curso: 'bg-empresas-dark', por_empezar: 'bg-centros', terminado: 'bg-gray-400' }
 
 const FILTROS = [
-  { value: 'en_curso', label: 'En curso' }, { value: 'por_empezar', label: 'Por empezar' },
-  { value: 'terminado', label: 'Terminados' }, { value: 'todos', label: 'Todos' },
+  { value: 'todos', label: 'Todos' }, { value: 'en_curso', label: 'En curso' },
+  { value: 'por_empezar', label: 'Por empezar' }, { value: 'terminado', label: 'Terminados' },
 ]
+
+// Cada plan con un color (de la familia de la marca) que se repite en su barra del calendario y en
+// su tarjeta: así se ve qué hitos son de qué plan. Por posición en la lista completa, para que no
+// cambie al filtrar.
+const COLORES_PLAN = ['#3072AA', '#8E6FD8', '#2BA672', '#F2665E', '#19A7A8', '#B85E0A', '#509928', '#6B4BB8']
+const colorPlan = (c) => COLORES_PLAN[Math.max(0, cronogramas.value.indexOf(c)) % COLORES_PLAN.length]
+const hitoPct = (h) => pct(t(h.fecha) + DIA / 2)
+function irAPlan(c) {
+  document.getElementById(`plan-${c.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin fecha'
 // Tras anotar o borrar horas: se actualizan los totales en la propia agenda
 function aplicarHoras(c, miembroId, delta) {
@@ -106,11 +115,11 @@ const ESTADO_CRONO = { en_curso: 'En curso', por_empezar: 'Por empezar', termina
     <!-- Resumen -->
     <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Resumen de la agenda">
       <li class="rounded-2xl border border-borde bg-white p-4 shadow-sm">
-        <p class="font-heading text-3xl font-black text-empresas-dark">{{ resumen.en_curso }}</p>
+        <p class="font-heading text-3xl font-black text-rol-fuerte">{{ resumen.en_curso }}</p>
         <p class="text-sm font-semibold">Planes en curso</p>
       </li>
       <li class="rounded-2xl border border-borde bg-white p-4 shadow-sm">
-        <p class="font-heading text-3xl font-black text-centros">{{ resumen.por_empezar }}</p>
+        <p class="font-heading text-3xl font-black text-azul-noche">{{ resumen.por_empezar }}</p>
         <p class="text-sm font-semibold">Por empezar</p>
       </li>
       <li class="rounded-2xl border bg-white p-4 shadow-sm" :class="resumen.grupos_retrasados ? 'border-red-200' : 'border-borde'">
@@ -133,12 +142,70 @@ const ESTADO_CRONO = { en_curso: 'En curso', por_empezar: 'Por empezar', termina
       No hay planes con estos filtros.
     </p>
 
-    <ul v-else class="space-y-4">
-      <li v-for="c in visibles" :key="c.id" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-5">
+    <!-- Calendario de planes: una fila por plan, de inicio a fin, con sus hitos y la línea de hoy.
+         Mismo color que su tarjeta; pulsar una fila lleva a la tarjeta. -->
+    <section v-if="!cargando && rango" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-5" aria-labelledby="titulo-calendario-planes">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="titulo-calendario-planes" class="font-heading text-lg font-bold text-azul-noche">Calendario de planes</h2>
+        <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-texto-secundario">
+          <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-azul-noche" aria-hidden="true" />Hito</span>
+          <span v-if="hoyPct !== null" class="inline-flex items-center gap-1.5"><span class="h-3 w-0.5 bg-red-500" aria-hidden="true" />Hoy</span>
+        </p>
+      </div>
+      <div class="overflow-x-auto">
+        <div class="min-w-[40rem]">
+          <!-- Meses -->
+          <div class="flex">
+            <span class="w-44 shrink-0 sm:w-56" />
+            <div class="relative h-6 flex-1 border-b border-borde">
+              <span v-for="m in meses" :key="m.clave" class="absolute top-0 border-l border-borde pl-1.5 text-[11px] font-semibold uppercase tracking-wide text-texto-secundario"
+                    :style="{ left: m.izq + '%', width: m.ancho + '%' }">{{ m.nombre }}</span>
+            </div>
+          </div>
+          <!-- Una fila por plan -->
+          <ul class="relative [--col-plan:11rem] sm:[--col-plan:14rem]">
+            <li v-for="c in conFechas" :key="c.id" class="flex items-center border-b border-gray-100 last:border-b-0">
+              <button type="button" @click="irAPlan(c)" class="flex w-44 shrink-0 items-center gap-2 py-2.5 pr-3 text-left sm:w-56"
+                      :title="`Ir a «${c.plan.titulo}»`">
+                <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: colorPlan(c) }" aria-hidden="true" />
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-semibold text-azul-noche hover:underline">{{ c.plan.titulo || 'Plan sin título' }}</span>
+                  <span class="block truncate text-xs text-texto-secundario">{{ c.plan.empresa || ESTADO_CRONO[c.estado] }}</span>
+                </span>
+              </button>
+              <div class="relative h-10 flex-1">
+                <!-- Rejilla de meses -->
+                <span v-for="m in meses" :key="m.clave" class="absolute inset-y-0 border-l border-gray-100" :style="{ left: m.izq + '%' }" aria-hidden="true" />
+                <!-- Barra del plan -->
+                <button type="button" @click="irAPlan(c)" class="absolute top-1/2 h-3 -translate-y-1/2 rounded-full opacity-90 transition-opacity hover:opacity-100"
+                        :style="{ ...barra(c), background: colorPlan(c) + '33', boxShadow: `inset 0 0 0 1.5px ${colorPlan(c)}` }"
+                        :aria-label="`${c.plan.titulo}: del ${fecha(c.fecha)} al ${fecha(c.fecha_fin)}`" />
+                <!-- Hitos -->
+                <span v-for="h in c.hitos" :key="h.numero"
+                      class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[3px] ring-2 ring-white"
+                      :style="{ left: hitoPct(h) + '%', background: colorPlan(c) }"
+                      :title="`Hito ${h.numero} · ${fecha(h.fecha)} · ${h.fases.map(f => 'F' + f).join(' · ')}`" />
+              </div>
+            </li>
+            <!-- Hoy -->
+            <span v-if="hoyPct !== null" class="pointer-events-none absolute inset-y-0 w-0.5 bg-red-500/70"
+                  :style="{ left: `calc(${hoyPct / 100} * (100% - var(--col-plan)) + var(--col-plan))` }" aria-hidden="true" />
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <ul v-if="!cargando && visibles.length" class="space-y-4">
+      <li v-for="c in visibles" :key="c.id" :id="`plan-${c.id}`"
+          class="scroll-mt-24 rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5"
+          :style="{ borderTop: `4px solid ${colorPlan(c)}` }">
         <!-- Cabecera del plan -->
         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div class="min-w-0">
-            <p class="break-words font-heading text-base font-bold">{{ c.plan.titulo || 'Plan sin título' }}</p>
+            <p class="flex items-start gap-2 break-words font-heading text-base font-bold">
+              <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: colorPlan(c) }" aria-hidden="true" />
+              {{ c.plan.titulo || 'Plan sin título' }}
+            </p>
             <p class="mt-0.5 text-sm text-texto-secundario">
               <template v-if="c.plan.empresa">{{ c.plan.empresa }} · </template>
               <template v-if="central">{{ c.centro || 'Sin centro' }} · {{ c.docente || 'Sin docente' }} · </template>
@@ -155,8 +222,9 @@ const ESTADO_CRONO = { en_curso: 'En curso', por_empezar: 'Por empezar', termina
         <ol class="mt-3 flex gap-2 overflow-x-auto pb-1" :aria-label="`Hitos de ${c.plan.titulo}`">
           <li v-for="h in c.hitos" :key="h.numero"
               class="min-w-[7.5rem] shrink-0 rounded-xl border px-3 py-2"
-              :class="h.numero === c.hito_actual ? 'border-rol-fuerte bg-rol/10' : (c.hito_actual && h.numero < c.hito_actual ? 'border-borde bg-gray-50 opacity-70' : 'border-borde')">
-            <p class="text-xs font-bold">Hito {{ h.numero }}<span v-if="h.numero === c.hito_actual" class="sr-only"> (actual)</span></p>
+              :class="h.numero === c.hito_actual ? 'bg-white' : (c.hito_actual && h.numero < c.hito_actual ? 'border-borde bg-gray-50 opacity-70' : 'border-borde')"
+              :style="h.numero === c.hito_actual ? { borderColor: colorPlan(c), boxShadow: `inset 0 0 0 1px ${colorPlan(c)}` } : {}">
+            <p class="flex items-center gap-1.5 text-xs font-bold"><span class="h-2 w-2 rotate-45 rounded-[2px]" :style="{ background: colorPlan(c) }" aria-hidden="true" />Hito {{ h.numero }}<span v-if="h.numero === c.hito_actual" class="sr-only"> (actual)</span></p>
             <p class="text-xs text-texto-secundario">{{ fechaCorta(h.fecha) }}</p>
             <p class="text-[11px] font-semibold text-azul-noche">{{ h.fases.map(f => 'F' + f).join(' · ') }}</p>
           </li>
@@ -181,7 +249,7 @@ const ESTADO_CRONO = { en_curso: 'En curso', por_empezar: 'Por empezar', termina
               <template v-if="c.fase_esperada !== null && g.estado === 'retrasado'"> (toca F{{ c.fase_esperada }})</template>
             </p>
             <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" :aria-valuenow="g.progreso" aria-valuemin="0" aria-valuemax="100" :aria-label="`Avance de ${g.nombre}`">
-              <div class="h-full rounded-full bg-empresas-dark" :style="{ width: g.progreso + '%' }" />
+              <div class="h-full rounded-full" :style="{ width: g.progreso + '%', background: colorPlan(c) }" />
             </div>
             <ul class="mt-2 flex flex-wrap gap-1.5">
               <li v-for="m in g.miembros" :key="m.alias"
