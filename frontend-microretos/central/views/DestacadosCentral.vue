@@ -38,6 +38,11 @@ const filtroCiclo = ref('')
 const filtroNivel = ref('')
 const filtroValoracion = ref('')   // '' | 'valorados' | 'sin_valorar'
 const filtroDestacados = ref('')   // '' | 'con' | 'sin'
+const filtroEstado = ref('')       // '' | 'terminados' | 'en_marcha'
+
+// Encuentro terminado: todos sus grupos han completado las 5 fases (F0–F4, el «5/5» de cada grupo)
+const TOTAL_FASES = 5
+const terminado = (e) => e.equipos.length > 0 && e.equipos.every(g => g.fases_completadas >= TOTAL_FASES)
 
 const destacadosDe = (e) => e.equipos.reduce((n, g) => n + g.miembros.filter(m => m.destacado).length, 0)
 const unicos = (lista) => [...new Set(lista.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
@@ -45,6 +50,11 @@ const centros = computed(() => unicos(encuentros.value.map(e => e.centro_educati
 const ciclos = computed(() => unicos(encuentros.value.filter(e => !filtroCentro.value || e.centro_educativo === filtroCentro.value).map(e => e.ciclo_formativo)))
 const OPCIONES_NIVEL = [{ value: '', label: 'Todos' }, { value: '1', label: '1º' }, { value: '2', label: '2º' }]
 const OPCIONES_VALORACION = [{ value: '', label: 'Todos' }, { value: 'valorados', label: 'Valorados' }, { value: 'sin_valorar', label: 'Sin valorar' }]
+const OPCIONES_ESTADO = computed(() => [
+  { value: '', label: 'Todos' },
+  { value: 'terminados', label: 'Terminados', count: encuentros.value.filter(terminado).length },
+  { value: 'en_marcha', label: 'En marcha', count: encuentros.value.filter(e => !terminado(e)).length },
+])
 const OPCIONES_DESTACADOS = [{ value: '', label: 'Todos' }, { value: 'con', label: 'Con destacados' }, { value: 'sin', label: 'Sin destacados' }]
 
 const norm = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -56,13 +66,14 @@ const visibles = computed(() => {
     && (!filtroNivel.value || nivelCurso(e.curso) === filtroNivel.value)
     && (!filtroValoracion.value || (filtroValoracion.value === 'valorados') === !!e.valoracion)
     && (!filtroDestacados.value || (filtroDestacados.value === 'con') === destacadosDe(e) > 0)
+    && (!filtroEstado.value || (filtroEstado.value === 'terminados') === terminado(e))
     && (!q || [e.propuesta.titulo, e.propuesta.empresa, e.centro_educativo, e.docente, e.ciclo_formativo,
       ...e.equipos.flatMap(g => g.miembros.map(m => m.alias))].some(t => norm(t).includes(q))))
 })
 const totalDestacados = computed(() => visibles.value.reduce((n, e) => n + destacadosDe(e), 0))
-const hayFiltros = computed(() => !!(busqueda.value.trim() || filtroCentro.value || filtroCiclo.value || filtroNivel.value || filtroValoracion.value || filtroDestacados.value))
+const hayFiltros = computed(() => !!(busqueda.value.trim() || filtroEstado.value || filtroCentro.value || filtroCiclo.value || filtroNivel.value || filtroValoracion.value || filtroDestacados.value))
 function limpiar() {
-  busqueda.value = ''; filtroCentro.value = ''; filtroCiclo.value = ''; filtroNivel.value = ''; filtroValoracion.value = ''; filtroDestacados.value = ''
+  busqueda.value = ''; filtroEstado.value = ''; filtroCentro.value = ''; filtroCiclo.value = ''; filtroNivel.value = ''; filtroValoracion.value = ''; filtroDestacados.value = ''
 }
 
 async function alternar(m) {
@@ -113,6 +124,8 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
       <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por propuesta, empresa, centro, docente o alias…"
                     :resultados="cargando ? null : visibles.length" :unidad="['encuentro', 'encuentros']"
                     :hay-activos="hayFiltros" @limpiar="limpiar">
+        <FiltroSegmentado label="Estado" v-model="filtroEstado" :opciones="OPCIONES_ESTADO"
+                          title="Terminados: todos los grupos del encuentro han completado las 5 fases." />
         <FiltroSelect label="Centro educativo" v-model="filtroCentro" :opciones="centros" todos="Todos los centros" />
         <FiltroSelect label="Ciclo formativo" v-model="filtroCiclo" :opciones="ciclos" todos="Todos los ciclos" />
         <FiltroSegmentado label="Nivel" v-model="filtroNivel" :opciones="OPCIONES_NIVEL" />
@@ -142,6 +155,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
             <span class="inline-flex items-center rounded-full bg-rol/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-rol-fuerte">
               {{ e.curso }} · Clase {{ e.grupo }}
             </span>
+            <span v-if="terminado(e)" class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-800">✓ Terminado</span>
             <span v-if="e.valoracion" class="inline-flex items-center gap-1 rounded-full bg-empresas/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-empresas-dark"
                   :title="e.valoracion.interes_plan_practicas ? `Interés en un plan en prácticas: ${e.valoracion.interes_plan_practicas}` : ''">
               ★ Empresa {{ e.valoracion.global }}/5
