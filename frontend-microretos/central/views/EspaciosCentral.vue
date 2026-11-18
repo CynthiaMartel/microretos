@@ -38,9 +38,9 @@ onMounted(() => {
 const TEXTO_PENDIENTE = { 'primer-contacto': 'formularios nuevos', red: 'por validar', practicas: 'grupos retrasados' }
 
 const COLORES = {
-  alumnos:  { icono: 'bg-alumnos/10 text-alumnos-dark', boton: 'bg-alumnos-dark hover:bg-alumnos-dark/90', franja: 'bg-alumnos' },
-  centros:  { icono: 'bg-centros/10 text-centros', boton: 'bg-centros hover:bg-centros/90', franja: 'bg-centros' },
-  empresas: { icono: 'bg-empresas/10 text-empresas-dark', boton: 'bg-empresas-dark hover:bg-empresas-dark/90', franja: 'bg-empresas' },
+  'espacio-contacto':  { icono: 'bg-espacio-contacto/10 text-espacio-contacto-fuerte', boton: 'bg-espacio-contacto-fuerte hover:bg-espacio-contacto-fuerte/90', franja: 'bg-espacio-contacto', texto: 'text-espacio-contacto-fuerte' },
+  'espacio-red':       { icono: 'bg-espacio-red/10 text-espacio-red-fuerte', boton: 'bg-espacio-red-fuerte hover:bg-espacio-red-fuerte/90', franja: 'bg-espacio-red', texto: 'text-espacio-red-fuerte' },
+  'espacio-practicas': { icono: 'bg-espacio-practicas/10 text-espacio-practicas-fuerte', boton: 'bg-espacio-practicas-fuerte hover:bg-espacio-practicas-fuerte/90', franja: 'bg-espacio-practicas', texto: 'text-espacio-practicas-fuerte' },
 }
 
 // Sin sesión (o sin la cuenta que pide el espacio), el router lleva al acceso de ese espacio
@@ -79,7 +79,7 @@ function abrir(e) {
           <p v-if="puede(e.clave)" class="mt-3 text-sm font-semibold" aria-live="polite">
             <span v-if="pendientes[e.clave] === null" class="inline-block h-4 w-24 animate-pulse rounded bg-gray-200 align-middle" aria-label="Cargando" />
             <template v-else>
-              <span :class="pendientes[e.clave] ? 'text-alumnos-dark' : 'text-texto-secundario'">{{ pendientes[e.clave] }} {{ TEXTO_PENDIENTE[e.clave] }}</span>
+              <span :class="pendientes[e.clave] ? COLORES[e.color].texto : 'text-texto-secundario'">{{ pendientes[e.clave] }} {{ TEXTO_PENDIENTE[e.clave] }}</span>
             </template>
           </p>
           <button type="button" @click="abrir(e)"

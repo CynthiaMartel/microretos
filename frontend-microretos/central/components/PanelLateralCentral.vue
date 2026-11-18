@@ -70,7 +70,7 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
   </Transition>
 
   <aside id="panel-central" aria-label="Navegación de DuaLab Central"
-         class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-azul-noche-border bg-azul-noche shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
+         class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-white/10 bg-[var(--color-panel,#17283E)] shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
          :class="abierto ? 'translate-x-0' : '-translate-x-full'">
     <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-3">
       <template v-for="grupo in GRUPOS" :key="grupo.titulo">

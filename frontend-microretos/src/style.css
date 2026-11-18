@@ -88,6 +88,22 @@
      · rol        → color de marca tal cual: acentos, iconos grandes, fondos suaves (/10)
      · rol-fuerte → variante con contraste ≥ 4,5:1 sobre blanco: fondo de botones con
                     texto blanco, texto y enlaces en el color del rol, foco */
+  /* Espacios de DuaLab Central (central/espacios.js): de la familia de la paleta de marca pero
+     distintos a los colores de colectivo. base = acentos · fuerte = botones/texto (≥ 4,5:1 sobre
+     blanco) · claro = sobre su panel oscuro (≥ 7:1) · panel = fondo del panel lateral */
+  --color-espacio-contacto: #F2665E;
+  --color-espacio-contacto-fuerte: #C2413A;
+  --color-espacio-contacto-claro: #FF9A93;
+  --color-espacio-contacto-panel: #3A1F2B;
+  --color-espacio-red: #2BA672;
+  --color-espacio-red-fuerte: #1A7A52;
+  --color-espacio-red-claro: #5FD6A0;
+  --color-espacio-red-panel: #14302A;
+  --color-espacio-practicas: #8E6FD8;
+  --color-espacio-practicas-fuerte: #6B4BB8;
+  --color-espacio-practicas-claro: #BBA6F5;
+  --color-espacio-practicas-panel: #261E3D;
+
   --color-rol: #3072AA;
   --color-rol-fuerte: #3072AA;
   /* rol-claro → variante legible sobre azul noche (paneles laterales, barra superior) */
@@ -104,17 +120,24 @@ html[data-rol="empresas"] {
   --color-rol-fuerte: #3D7A1E;
   --color-rol-claro: #6EC13F;
 }
-/* DuaLab Central pinta cada espacio con el color de su botón (central/espacios.js):
-   Primer contacto naranja (alumnado) y Red DuaLab azul (centros) */
-html[data-rol="alumnos"] {
-  --color-rol: #FF8920;
-  --color-rol-fuerte: #B85E0A; /* 4,5:1 sobre blanco */
-  --color-rol-claro: #FF8920;
+/* DuaLab Central pinta cada espacio con su color (central/espacios.js), también el panel lateral */
+html[data-rol="espacio-contacto"] {
+  --color-rol: var(--color-espacio-contacto);
+  --color-rol-fuerte: var(--color-espacio-contacto-fuerte);
+  --color-rol-claro: var(--color-espacio-contacto-claro);
+  --color-panel: var(--color-espacio-contacto-panel);
 }
-html[data-rol="centros"] {
-  --color-rol: #3072AA;
-  --color-rol-fuerte: #3072AA;
-  --color-rol-claro: #6BA4D5;
+html[data-rol="espacio-red"] {
+  --color-rol: var(--color-espacio-red);
+  --color-rol-fuerte: var(--color-espacio-red-fuerte);
+  --color-rol-claro: var(--color-espacio-red-claro);
+  --color-panel: var(--color-espacio-red-panel);
+}
+html[data-rol="espacio-practicas"] {
+  --color-rol: var(--color-espacio-practicas);
+  --color-rol-fuerte: var(--color-espacio-practicas-fuerte);
+  --color-rol-claro: var(--color-espacio-practicas-claro);
+  --color-panel: var(--color-espacio-practicas-panel);
 }
 
 /* ---------------------------------------------------
