@@ -156,9 +156,9 @@ const TEMA_ESPACIO_RED = {
   border15: 'border-espacio-red/15',
   border20: 'border-espacio-red/20',
   ring: 'ring-espacio-red-fuerte',
-  hex: '#1A7A52',
-  hexDark: '#5FD6A0',
-  hexSoft: 'rgba(43,166,114,0.15)',
+  hex: '#8A6400',
+  hexDark: '#E8B84A',
+  hexSoft: 'rgba(201,151,28,0.15)',
 }
 const TEMA_ESPACIO_PRACTICAS = {
   key: 'espacio-practicas',

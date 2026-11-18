@@ -17,7 +17,7 @@
     Header set Strict-Transport-Security "max-age=31536000"
     Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
     # index.html y lo de la PWA (service worker, versión, manifest) sin caché: tras un deploy se carga la versión nueva
-    <FilesMatch "^(index\.html|sw\.js|registerSW\.js|version\.json|manifest\.webmanifest)$">
+    <FilesMatch "^(index\.html|sw\.js|registerSW\.js|version\.json|manifest\.webmanifest|favicon\.(ico|png)|apple-touch-icon\.png|pwa-\d+x\d+\.png|maskable-icon-\d+x\d+\.png)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
 </IfModule>

@@ -1,4 +1,5 @@
-<!-- Panel lateral de la app comercial: misma estética que el SidePanel de DuaLab (azul noche,
+<!-- Panel lateral de la app comercial: misma estética que el SidePanel de DuaLab, sobre un verde
+     muy oscuro a juego con el icono de la herramienta (antes azul noche);
      .nav-item con indicador lateral en el color del rol, banner de marca al fondo). Fijo en lg+,
      cajón deslizante en móvil y tablet (lo abre el botón de menú de la barra superior). -->
 <script setup>
@@ -66,7 +67,7 @@ watch(() => route.fullPath, () => { abierto.value = false })
   </Transition>
 
   <aside id="panel-comercial" aria-label="Navegación de la app comercial"
-         class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-azul-noche-border bg-azul-noche shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
+         class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-white/10 bg-[#1A2E14] shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
          :class="abierto ? 'translate-x-0' : '-translate-x-full'">
     <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-3">
       <template v-for="grupo in GRUPOS" :key="grupo.titulo">

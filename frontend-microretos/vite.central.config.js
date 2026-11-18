@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { pwaHerramienta } from './pwa/pwaHerramienta.mjs'
+import { versionarIconos } from './pwa/versionarIconos.mjs'
 
 // DuaLab Central (central.dualab.es): herramienta del superadmin. Un build aparte que comparte
 // src/ (api.js, store de auth, estilos y las vistas Base de datos, Papelera, Usuarios y los
@@ -33,7 +34,7 @@ export default defineConfig(({ mode }) => {
     envDir: fileURLToPath(new URL('.', import.meta.url)),
     // Caché propia: si comparten node_modules/.vite, un `vite --force` de otra app borra sus deps
     cacheDir: fileURLToPath(new URL('./node_modules/.vite-central', import.meta.url)),
-    plugins: [vue(), tailwindcss(), versionJson(),
+    plugins: [vue(), tailwindcss(), versionJson(), versionarIconos(),
       // Instalable como app (botón «Instalar app» de la barra superior)
       pwaHerramienta({ name: 'DuaLab Central', shortName: 'Central', description: 'Herramienta interna de DuaLab: agenda de prácticas, captaciones y datos' })],
     // Cookie XSRF-TOKEN-central: sesión propia, aparte de la app y de la comercial (src/api.js)
