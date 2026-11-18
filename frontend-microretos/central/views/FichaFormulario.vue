@@ -62,7 +62,7 @@ const volver = computed(() => ({ name: 'primer-contacto', query: route.query }))
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Primer contacto" :titulo="f ? nombre : 'Formulario'" color="text-administraciones"
+      <CabeceraSeccion antetitulo="Primer contacto" :titulo="f ? nombre : 'Formulario'" color="text-rol"
                        :volver="volver" volver-label="Formularios"
                        :subtitulo="f ? [f.formulario_nombre, f.accion_nombre].filter(Boolean).join(' · ') : ''" />
 
@@ -90,7 +90,7 @@ const volver = computed(() => ({ name: 'primer-contacto', query: route.query }))
                 <div v-for="c in contacto" :key="c.etiqueta" class="min-w-0">
                   <dt class="text-xs font-bold uppercase tracking-wider text-texto-secundario">{{ c.etiqueta }}</dt>
                   <dd class="mt-0.5 break-words text-sm">
-                    <a v-if="c.enlace" :href="c.enlace" class="font-semibold text-administraciones-dark underline-offset-2 hover:underline">{{ c.valor }}</a>
+                    <a v-if="c.enlace" :href="c.enlace" class="font-semibold text-rol-fuerte underline-offset-2 hover:underline">{{ c.valor }}</a>
                     <template v-else>{{ c.valor }}</template>
                   </dd>
                 </div>

@@ -2,13 +2,14 @@
      SidePanel de DuaLab), en el turquesa del superadmin. Sin sesión, solo la pantalla de acceso. -->
 <script setup>
 import BotonInstalarApp from '../src/components/BotonInstalarApp.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '../src/stores/auth.js'
 import AppCredit from '../src/components/AppCredit.vue'
 import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import PanelLateralCentral from './components/PanelLateralCentral.vue'
 import { espacioDe } from './espacios.js'
+import { forzarTemaRol } from '../src/composables/useRoleTheme.js'
 // Icono de la herramienta, igual que su favicon (pwa/iconos-herramientas.mjs --barra)
 import logo from './icono-barra.png'
 
@@ -21,6 +22,12 @@ const panelAbierto = ref(false)
 // El selector de espacios y Mi usuario van sin panel lateral; el resto, con el de su espacio
 const conPanel = computed(() => conChrome.value && !route.meta.sinPanel)
 const espacio = computed(() => espacioDe(route.meta.espacio))
+
+// Cada espacio en el color de su botón del selector (botones, foco, panel, cabecera): pone
+// html[data-rol] y style.css cambia las variables --color-rol*. El selector y lo común (Mi usuario),
+// en el turquesa de Central. En /acceso, el del espacio al que se va a entrar.
+watch(() => espacioDe(route.meta.espacio ?? route.query.espacio)?.color ?? 'administraciones',
+  (color) => { document.documentElement.dataset.rol = color; forzarTemaRol(color) }, { immediate: true })
 
 // 401 (sesión caducada): a la pantalla de acceso
 const onSesionCaducada = async () => {
@@ -71,7 +78,7 @@ const salir = async () => {
 
       <RouterLink :to="{ name: 'inicio' }" class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80" aria-label="DuaLab Central · Inicio">
         <img :src="logo" alt="" class="h-10 w-10 shrink-0 rounded-[22%] ring-1 ring-white/25" />
-        <span class="select-none text-lg font-black uppercase tracking-tighter text-white">Dua<span class="text-administraciones">Lab</span></span>
+        <span class="select-none text-lg font-black uppercase tracking-tighter text-white">Dua<span class="text-rol-claro">Lab</span></span>
       </RouterLink>
       <span class="hidden select-none text-white/15 sm:inline" aria-hidden="true">/</span>
       <span class="hidden min-w-0 truncate text-xs font-bold uppercase tracking-[0.15em] text-white/60 sm:inline">Central</span>

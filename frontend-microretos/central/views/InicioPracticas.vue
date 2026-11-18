@@ -30,7 +30,7 @@ const SECCIONES = [
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-6 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Seguimiento de" destacado="prácticas" color="text-administraciones"
+      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Seguimiento de" destacado="prácticas" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
                        subtitulo="Cómo avanza el alumnado seleccionado en las empresas y quién pasa a las prácticas." />
 
@@ -40,9 +40,9 @@ const SECCIONES = [
         <ul v-else class="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <li v-for="r in resumen" :key="r.clave">
             <RouterLink :to="{ name: 'agenda' }"
-                        class="flex h-full items-center gap-4 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-administraciones/40 sm:p-5"
+                        class="flex h-full items-center gap-4 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-rol/40 sm:p-5"
                         :class="r.alerta && r.valor ? 'border-red-200' : 'border-borde'">
-              <span class="min-w-[3rem] font-heading text-3xl font-black" :class="r.alerta && r.valor ? 'text-red-600' : 'text-administraciones-dark'">
+              <span class="min-w-[3rem] font-heading text-3xl font-black" :class="r.alerta && r.valor ? 'text-red-600' : 'text-rol-fuerte'">
                 <span v-if="cronogramas === null" class="inline-block h-8 w-10 animate-pulse rounded-lg bg-gray-200 align-middle" aria-label="Cargando" />
                 <template v-else>{{ r.valor }}</template>
               </span>
@@ -56,7 +56,7 @@ const SECCIONES = [
         <h2 id="secciones-practicas" class="mb-3 font-heading text-lg font-bold">Secciones</h2>
         <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <li v-for="s in SECCIONES" :key="s.titulo">
-            <RouterLink :to="s.ruta" class="flex h-full flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition hover:border-administraciones/40 sm:p-5">
+            <RouterLink :to="s.ruta" class="flex h-full flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition hover:border-rol/40 sm:p-5">
               <span class="font-heading text-base font-bold">{{ s.titulo }}</span>
               <span class="mt-1 text-sm text-texto-secundario">{{ s.texto }}</span>
             </RouterLink>

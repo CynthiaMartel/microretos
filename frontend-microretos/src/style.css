@@ -90,15 +90,31 @@
                     texto blanco, texto y enlaces en el color del rol, foco */
   --color-rol: #3072AA;
   --color-rol-fuerte: #3072AA;
+  /* rol-claro → variante legible sobre azul noche (paneles laterales, barra superior) */
+  --color-rol-claro: #6BA4D5;
 }
 
 html[data-rol="administraciones"] {
   --color-rol: #19A7A8;
   --color-rol-fuerte: #0F7C7D;
+  --color-rol-claro: #3FC7C8;
 }
 html[data-rol="empresas"] {
   --color-rol: #509928;
   --color-rol-fuerte: #3D7A1E;
+  --color-rol-claro: #6EC13F;
+}
+/* DuaLab Central pinta cada espacio con el color de su botón (central/espacios.js):
+   Primer contacto naranja (alumnado) y Red DuaLab azul (centros) */
+html[data-rol="alumnos"] {
+  --color-rol: #FF8920;
+  --color-rol-fuerte: #B85E0A; /* 4,5:1 sobre blanco */
+  --color-rol-claro: #FF8920;
+}
+html[data-rol="centros"] {
+  --color-rol: #3072AA;
+  --color-rol-fuerte: #3072AA;
+  --color-rol-claro: #6BA4D5;
 }
 
 /* ---------------------------------------------------

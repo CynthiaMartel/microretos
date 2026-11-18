@@ -727,7 +727,7 @@ onMounted(async () => {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Gestión de" destacado="cuentas" color="text-administraciones" antetitulo="Administración"
+      <CabeceraSeccion titulo="Gestión de" destacado="cuentas" color="text-rol" antetitulo="Administración"
                        subtitulo="Crea, activa, bloquea y elimina cuentas de docentes y empresas." class="mb-5">
         <button type="button" @click="abrirModalCrear()" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14"/></svg>

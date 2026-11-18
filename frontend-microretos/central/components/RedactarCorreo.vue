@@ -172,7 +172,7 @@ async function enviar() {
           <div>
             <div class="flex items-end justify-between gap-2">
               <label :for="`${id}-para`" class="field-label">Para</label>
-              <button v-if="!verCopias" type="button" class="mb-1 text-xs font-bold text-administraciones-dark hover:underline" @click="verCopias = true">CC / CCO</button>
+              <button v-if="!verCopias" type="button" class="mb-1 text-xs font-bold text-rol-fuerte hover:underline" @click="verCopias = true">CC / CCO</button>
             </div>
             <input :id="`${id}-para`" v-model="form.para" type="text" inputmode="email" autocomplete="off" class="field-input" :aria-invalid="!!errorDe('para')" />
             <p v-if="errorDe('para')" class="mt-1 text-xs font-semibold text-red-600">{{ errorDe('para') }}</p>

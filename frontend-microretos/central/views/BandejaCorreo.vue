@@ -104,7 +104,7 @@ function enviado() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Primer contacto" titulo="Correo" :destacado="resumen?.buzon?.email || 'info@'" color="text-administraciones"
+      <CabeceraSeccion antetitulo="Primer contacto" titulo="Correo" :destacado="resumen?.buzon?.email || 'info@'" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
                        subtitulo="El buzón de info@dualab.es: leer, responder y reenviar sin abrir el webmail.">
         <button type="button" class="accion-principal" @click="redactando = true">
@@ -122,7 +122,7 @@ function enviado() {
       </p>
       <p v-if="resumen?.retencion?.meses" class="text-xs text-texto-secundario">
         Aquí se guardan los últimos {{ resumen.retencion.meses }} meses<template v-if="resumen.sincronizado?.en"> · última sincronización: {{ fechaHora(resumen.sincronizado.en) }}</template>.
-        <template v-if="resumen.retencion.webmail">Lo anterior está en el <a :href="resumen.retencion.webmail" target="_blank" rel="noopener" class="font-semibold text-administraciones-dark underline-offset-2 hover:underline">webmail<span class="sr-only"> (se abre en otra pestaña)</span></a>.</template>
+        <template v-if="resumen.retencion.webmail">Lo anterior está en el <a :href="resumen.retencion.webmail" target="_blank" rel="noopener" class="font-semibold text-rol-fuerte underline-offset-2 hover:underline">webmail<span class="sr-only"> (se abre en otra pestaña)</span></a>.</template>
       </p>
 
       <!-- Bandeja de salida: lo que aún no ha salido o ha fallado -->
@@ -161,13 +161,13 @@ function enviado() {
       <ul v-else class="space-y-2" :class="cargando && 'opacity-60'" :aria-busy="cargando">
         <li v-for="c in items" :key="c.id">
           <RouterLink :to="{ name: 'correo-ficha', params: { id: c.id }, query: route.query }"
-                      class="flex flex-col gap-1.5 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-administraciones/40 sm:flex-row sm:items-center sm:gap-4"
+                      class="flex flex-col gap-1.5 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-rol/40 sm:flex-row sm:items-center sm:gap-4"
                       :class="c.estado === 'nuevo' ? 'border-alumnos/40' : 'border-borde'">
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="flex min-w-0 items-center gap-2">
                 <span v-if="c.estado === 'nuevo'" class="h-2 w-2 shrink-0 rounded-full bg-alumnos" aria-hidden="true" />
                 <span class="min-w-0 truncate text-sm" :class="c.estado === 'nuevo' ? 'font-black' : 'font-semibold'">{{ remitente(c) }}</span>
-                <span v-if="conocido(c)" class="shrink-0 rounded-full bg-administraciones/10 px-2 py-0.5 text-[11px] font-bold text-administraciones-dark">{{ conocido(c).tipo_nombre }}</span>
+                <span v-if="conocido(c)" class="shrink-0 rounded-full bg-rol/10 px-2 py-0.5 text-[11px] font-bold text-rol-fuerte">{{ conocido(c).tipo_nombre }}</span>
               </span>
               <span class="mt-0.5 min-w-0 truncate font-heading text-base" :class="c.estado === 'nuevo' ? 'font-bold' : 'font-semibold'">{{ c.asunto || '(Sin asunto)' }}</span>
               <span v-if="c.extracto" class="min-w-0 truncate text-sm text-texto-secundario">{{ c.extracto }}</span>

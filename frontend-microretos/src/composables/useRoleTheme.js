@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE, useAuthStore } from '../stores/auth.js'
 
 // Color de marca por rol de quien ha iniciado sesión — mismo criterio que el
@@ -120,8 +120,18 @@ const DEFAULT_THEME = {
   hexSoft: 'rgba(48,114,170,0.15)',
 }
 
+// DuaLab Central pinta cada espacio con el color de su botón (central/App.vue): mientras se está en
+// un espacio, las vistas compartidas con la app (Base de datos, Usuarios…) usan ese tema en vez del
+// del rol. null = el del rol. Solo claves que existen arriba (centros, empresas, administraciones).
+const THEME_BY_KEY = Object.fromEntries(Object.values(THEME_BY_ROLE).map(t => [t.key, t]))
+const temaForzado = ref(null)
+export function forzarTemaRol(clave) {
+  temaForzado.value = THEME_BY_KEY[clave] ? clave : null
+}
+
 export function useRoleTheme() {
   const authStore = useAuthStore()
-  const theme = computed(() => THEME_BY_ROLE[authStore.userRole] ?? DEFAULT_THEME)
+  const theme = computed(() => (temaForzado.value && THEME_BY_KEY[temaForzado.value])
+    || THEME_BY_ROLE[authStore.userRole] || DEFAULT_THEME)
   return { theme }
 }

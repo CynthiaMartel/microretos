@@ -49,7 +49,7 @@ const entrar = () => {
       <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0l6 6m-6-6l6-6" /></svg>
       Espacios
     </RouterLink>
-    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-administraciones-dark sm:mb-3">{{ espacio?.quien ?? 'DuaLab Central' }}</p>
+    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-rol-fuerte sm:mb-3">{{ espacio?.quien ?? 'DuaLab Central' }}</p>
     <h1 class="break-words text-[1.75rem] font-black leading-tight tracking-tight text-acceso-tinta sm:text-4xl xl:text-[2.6rem]">
       {{ espacio?.nombre ?? 'DuaLab Central' }}
     </h1>
@@ -74,7 +74,7 @@ const entrar = () => {
           </svg>
           <input id="central-email" v-model="form.email" type="email" placeholder="tuemail@dualab.es"
                  autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" :aria-invalid="!!errors.email"
-                 class="h-12 w-full rounded-xl border bg-white pl-12 pr-4 text-base outline-none transition placeholder:text-gray-500 focus:border-administraciones-dark focus:ring-4 focus:ring-administraciones/15"
+                 class="h-12 w-full rounded-xl border bg-white pl-12 pr-4 text-base outline-none transition placeholder:text-gray-500 focus:border-rol-fuerte focus:ring-4 focus:ring-rol/15"
                  :class="errors.email ? 'border-red-300 bg-red-50' : 'border-borde-campo'"
                  @focus="errors.email = ''" />
         </div>
@@ -90,7 +90,7 @@ const entrar = () => {
       </div>
 
       <button type="submit" :disabled="isLoading"
-              class="mt-1 inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-administraciones-dark text-base font-bold text-white shadow-[0_8px_24px_rgba(15,124,125,0.28)] transition hover:bg-administraciones-dark/90 disabled:cursor-not-allowed disabled:opacity-60">
+              class="mt-1 inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-rol-fuerte text-base font-bold text-white shadow-lg shadow-rol-fuerte/30 transition hover:bg-rol-fuerte/90 disabled:cursor-not-allowed disabled:opacity-60">
         <template v-if="!isLoading">
           Entrar
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m0 0l-6-6m6 6l-6 6" /></svg>

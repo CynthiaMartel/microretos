@@ -124,11 +124,11 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
 }
 .nav-item--idle { color: rgba(255, 255, 255, 0.68); }
 .nav-item--idle:hover { background-color: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.9); }
-/* Turquesa claro del superadmin: legible sobre el azul noche */
+/* Color del espacio en su variante clara (--color-rol-claro): legible sobre el azul noche */
 .nav-item--activo {
-  background: color-mix(in srgb, #3FC7C8 18%, transparent);
-  color: #3FC7C8;
-  box-shadow: inset 3px 0 0 #3FC7C8;
+  background: color-mix(in srgb, var(--color-rol-claro) 18%, transparent);
+  color: var(--color-rol-claro);
+  box-shadow: inset 3px 0 0 var(--color-rol-claro);
 }
 .nav-badge {
   min-width: 1.4rem;
@@ -140,7 +140,7 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
   font-weight: 800;
   color: #17283E;
 }
-.banner-central { background-image: linear-gradient(to bottom right, #0F7C7D, #0B5F60, #083F40); }
+.banner-central { background-image: linear-gradient(to bottom right, var(--color-rol-fuerte), color-mix(in srgb, var(--color-rol-fuerte) 75%, #000), color-mix(in srgb, var(--color-rol-fuerte) 50%, #000)); }
 .nav-grupo {
   padding: 14px 12px 6px;
   font-size: 12px;

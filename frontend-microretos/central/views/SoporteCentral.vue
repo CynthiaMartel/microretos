@@ -7,10 +7,10 @@ import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-6 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Soporte" color="text-administraciones"
+      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Soporte" color="text-rol"
                        subtitulo="Incidencias de las personas que usan la app DuaLab." />
       <div class="rounded-2xl border border-borde bg-white p-6 shadow-sm sm:p-8">
-        <span class="inline-flex rounded-full bg-administraciones/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-administraciones-dark">Próximamente</span>
+        <span class="inline-flex rounded-full bg-rol/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-rol-fuerte">Próximamente</span>
         <h2 class="mt-3 font-heading text-lg font-bold">Tickets de soporte</h2>
         <p class="mt-2 max-w-2xl text-sm text-texto-secundario">
           Aquí llegarán las incidencias que escriban a soporte@dualab.es y las del enlace «¿No puedes entrar?» del acceso a la app.

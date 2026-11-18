@@ -82,7 +82,7 @@ const nombreDe = (f) => [f.nombre, f.apellidos].filter(Boolean).join(' ') || f.e
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Primer" destacado="contacto" color="text-administraciones"
+      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Primer" destacado="contacto" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
                        subtitulo="Los formularios que llegan desde dualab.es. Ábrelos para leerlos y ver si ya están en captaciones." />
 
@@ -102,7 +102,7 @@ const nombreDe = (f) => [f.nombre, f.apellidos].filter(Boolean).join(' ') || f.e
       <ul v-else class="space-y-2" :class="cargando && 'opacity-60'" :aria-busy="cargando">
         <li v-for="f in items" :key="f.id">
           <RouterLink :to="{ name: 'formulario-web', params: { id: f.id }, query: route.query }"
-                      class="flex flex-col gap-2 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-administraciones/40 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
+                      class="flex flex-col gap-2 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-rol/40 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
                       :class="f.estado === 'nuevo' ? 'border-alumnos/40' : 'border-borde'">
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="flex min-w-0 items-center gap-2">
@@ -111,7 +111,7 @@ const nombreDe = (f) => [f.nombre, f.apellidos].filter(Boolean).join(' ') || f.e
               </span>
               <span class="mt-0.5 min-w-0 truncate text-sm text-texto-secundario">{{ f.email }}</span>
               <span class="mt-2 flex flex-wrap gap-1.5">
-                <span class="rounded-full bg-administraciones/10 px-2.5 py-0.5 text-xs font-bold text-administraciones-dark">{{ f.formulario_nombre }}</span>
+                <span class="rounded-full bg-rol/10 px-2.5 py-0.5 text-xs font-bold text-rol-fuerte">{{ f.formulario_nombre }}</span>
                 <span v-if="f.accion_nombre" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-texto-secundario">{{ f.accion_nombre }}</span>
                 <span v-if="f.captacion" class="rounded-full bg-centros/10 px-2.5 py-0.5 text-xs font-bold text-centros">{{ textoCaptacion(f.captacion) }}</span>
               </span>

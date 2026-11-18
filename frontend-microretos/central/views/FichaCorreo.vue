@@ -93,7 +93,7 @@ const volver = computed(() => ({ name: 'correo', query: route.query }))
             <p class="text-texto-secundario">{{ fechaHora(c.fecha) }}</p>
             <p v-if="c.contacto" class="pt-1">
               <RouterLink :to="{ name: 'formulario-web', params: { id: c.contacto.id } }"
-                          class="inline-flex items-center gap-1.5 rounded-full bg-administraciones/10 px-3 py-1 text-xs font-bold text-administraciones-dark hover:bg-administraciones/20">
+                          class="inline-flex items-center gap-1.5 rounded-full bg-rol/10 px-3 py-1 text-xs font-bold text-rol-fuerte hover:bg-rol/20">
                 Nos escribió por el formulario de {{ c.contacto.tipo_nombre.toLowerCase() }} · {{ fechaHora(c.contacto.fecha) }}
               </RouterLink>
             </p>

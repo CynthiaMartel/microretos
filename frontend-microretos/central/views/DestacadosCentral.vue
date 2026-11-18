@@ -80,7 +80,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Alumnado" destacado="destacado" color="text-administraciones"
+      <CabeceraSeccion antetitulo="DuaLab Central" titulo="Alumnado" destacado="destacado" color="text-rol"
                        subtitulo="Elige, por alias, al alumnado más destacado de los encuentros creativos para las prácticas. Después pide al docente quién es cada alias." />
 
       <!-- Filtros -->
@@ -91,12 +91,12 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
         <div class="flex flex-wrap gap-2">
           <button type="button" @click="soloValorados = !soloValorados" :aria-pressed="soloValorados"
                   class="inline-flex min-h-9 items-center rounded-full border px-4 text-sm font-semibold transition-colors"
-                  :class="soloValorados ? 'border-administraciones bg-administraciones text-white' : 'border-borde bg-white hover:bg-gray-50'">
+                  :class="soloValorados ? 'border-rol-fuerte bg-rol-fuerte text-white' : 'border-borde bg-white hover:bg-gray-50'">
             Valorados por la empresa
           </button>
           <button type="button" @click="soloDestacados = !soloDestacados" :aria-pressed="soloDestacados"
                   class="inline-flex min-h-9 items-center rounded-full border px-4 text-sm font-semibold transition-colors"
-                  :class="soloDestacados ? 'border-administraciones bg-administraciones text-white' : 'border-borde bg-white hover:bg-gray-50'">
+                  :class="soloDestacados ? 'border-rol-fuerte bg-rol-fuerte text-white' : 'border-borde bg-white hover:bg-gray-50'">
             Con destacados
           </button>
         </div>
@@ -145,7 +145,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
               </div>
               <p v-if="g.entrega?.descripcion" class="mt-1 line-clamp-3 break-words text-xs text-texto-secundario">{{ g.entrega.descripcion }}</p>
               <a v-if="g.entrega?.url" :href="g.entrega.url" target="_blank" rel="noopener noreferrer nofollow"
-                 class="mt-1 inline-flex min-h-9 items-center text-xs font-semibold text-administraciones-dark underline">Ver entregable</a>
+                 class="mt-1 inline-flex min-h-9 items-center text-xs font-semibold text-rol-fuerte underline">Ver entregable</a>
               <ul class="mt-2 flex flex-wrap gap-1.5" :aria-label="`Alumnado de ${g.nombre}`">
                 <li v-for="m in g.miembros" :key="m.id" class="min-w-0 max-w-full">
                   <button type="button" @click="alternar(m)" :aria-pressed="m.destacado" :disabled="guardando.has(m.id)"
