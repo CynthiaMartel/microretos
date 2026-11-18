@@ -17,7 +17,12 @@ const LOGO = new URL('./icono-dualab.png', import.meta.url).pathname
 const HERRAMIENTAS = {
   comercial: { color: '#509928', letra: 'C', destino: 'comercial/public', pwa: true, barra: 'comercial/icono-barra.png' },
   central: { color: '#17283E', letra: 'DC', destino: 'central/public', pwa: true, barra: 'central/icono-barra.png' },
-  nexo: { color: '#FF8920', letra: 'N', destino: 'nexo/public', pwa: true },
+  // Nexo es la puerta a todas: degradado con los cuatro colores de colectivo (decisión de Cynthia,
+  // 2026-11-18; antes naranja, que se confundía con alumnado). `color` = el de la letra de la pastilla.
+  nexo: {
+    color: '#3072AA', letra: 'N', destino: 'nexo/public', pwa: true, barra: 'nexo/icono-barra.png',
+    degradado: ['#3072AA', '#19A7A8', '#509928', '#FF8920'],
+  },
   // Misma build que la web pública: el router cambia el favicon al entrar en /gestion-web
   'gestion-web': {
     color: '#19A7A8', letra: 'W', destino: '../FRONTOFFICE/dualab_proyecto/frontend/public/gestion-web-icono', sinIco: true,
@@ -55,8 +60,11 @@ function pastilla(lado, letra, color) {
 // redondeado: esquinas propias (favicon, PWA «any»); sin redondear cuando el sistema recorta
 // (apple-touch-icon, maskable). zona: fracción útil del lienzo (maskable: solo el 80 % central).
 async function icono(h, lado, { conLetra, redondeado, zona = 1 }) {
-  const fondo = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}">
-    <rect width="${lado}" height="${lado}" rx="${redondeado ? lado * 0.22 : 0}" fill="${h.color}"/></svg>`)
+  // Fondo liso o, si la herramienta lo tiene, degradado en diagonal
+  const paradas = (h.degradado ?? []).map((c, i, a) => `<stop offset="${i / (a.length - 1)}" stop-color="${c}"/>`).join('')
+  const defs = h.degradado ? `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">${paradas}</linearGradient></defs>` : ''
+  const fondo = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}">${defs}
+    <rect width="${lado}" height="${lado}" rx="${redondeado ? lado * 0.22 : 0}" fill="${h.degradado ? 'url(#g)' : h.color}"/></svg>`)
   const util = Math.round(lado * zona)
   const borde = Math.round((lado - util) / 2)
   // Con letra, el logo sube un poco a la izquierda para dejar sitio a la pastilla
