@@ -19,6 +19,9 @@ const router = createRouter({
     { path: '/primer-contacto/formularios/:id(\\d+)', name: 'formulario-web', component: () => import('./views/FichaFormulario.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
     { path: '/primer-contacto/correo', name: 'correo', component: () => import('./views/BandejaCorreo.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
     { path: '/primer-contacto/correo/:id(\\d+)', name: 'correo-ficha', component: () => import('./views/FichaCorreo.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/solicitudes-reto', name: 'solicitudes-reto', component: () => import('./views/BandejaSolicitudesReto.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/respuestas-solicitudes', name: 'respuestas-solicitudes', component: () => import('./views/RespuestasSolicitudes.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
+    { path: '/primer-contacto/solicitudes-reto/:id(\\d+)', name: 'solicitud-reto-ficha', component: () => import('./views/FichaSolicitudReto.vue'), meta: { requiresAuth: true, espacio: 'primer-contacto' } },
 
     // ── Espacio «Red DuaLab» ──
     { path: '/red', name: 'red-inicio', component: () => import('./views/InicioRed.vue'), meta: { requiresAuth: true, espacio: 'red' } },
@@ -31,6 +34,9 @@ const router = createRouter({
     // ── Espacio «Seguimiento de prácticas» ──
     { path: '/practicas', name: 'practicas-inicio', component: () => import('./views/InicioPracticas.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
     { path: '/practicas/agenda', name: 'agenda', component: () => import('./views/AgendaCentral.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
+    { path: '/practicas/planes', name: 'planes', component: () => import('./views/PlanesCentral.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
+    // Misma pantalla que en la app; al guardar o cancelar vuelve a 'planes' (esta lista)
+    { path: '/practicas/planes/:uuid/cronograma', name: 'plan-cronograma', component: () => import('../src/views/CronogramaPlan.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
     { path: '/practicas/destacados', name: 'destacados', component: () => import('./views/DestacadosCentral.vue'), meta: { requiresAuth: true, espacio: 'practicas' } },
 
     { path: '/mi-usuario', name: 'mi-usuario', component: () => import('../src/views/MiUsuario.vue'), meta: { requiresAuth: true, sinPanel: true } },

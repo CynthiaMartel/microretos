@@ -20,10 +20,12 @@ export const ICONOS = {
   "destacados": "M11.48 3.5a.56.56 0 011.04 0l2.13 5.11 5.52.44c.5.04.7.66.32.98l-4.2 3.6 1.28 5.38a.56.56 0 01-.84.61L12 16.73l-4.73 2.89a.56.56 0 01-.84-.61l1.28-5.38-4.2-3.6a.56.56 0 01.32-.98l5.52-.44 2.13-5.11z",
   "base-datos": "M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zm0 0v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
   "usuarios": "M17 20h5v-2a3 3 0 00-5.4-1.8M17 20H7m10 0v-2c0-.7-.1-1.3-.4-1.8M7 20H2v-2a3 3 0 015.4-1.8M7 20v-2c0-.7.1-1.3.4-1.8m0 0a5 5 0 019.2 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+  "planes": "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01",
   "papelera": "M19 7l-.9 12.1A2 2 0 0116.1 21H7.9a2 2 0 01-2-1.9L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
   "soporte": "M18.4 5.6A9 9 0 105.6 18.4 9 9 0 0018.4 5.6zM15 9a3 3 0 00-6 0c0 2 3 2 3 4m0 3h.01",
   "usuario": "M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-4 3.6-7 8-7s8 3 8 7",
   "correo": "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
+  "solicitudes": "M9.66 17h4.68M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m3.34-5.66l-.7-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.75-.99-2.38l-.54-.55z",
   "formularios": "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
 }
 
@@ -31,7 +33,7 @@ export const ESPACIOS = [
   {
     clave: 'primer-contacto',
     nombre: 'Primer contacto',
-    texto: 'Los formularios de dualab.es y el correo de info@: leerlos, responderlos y ver si ya están en captaciones.',
+    texto: 'Los formularios de dualab.es, el correo de info@ y las solicitudes de retos que enviamos al profesorado.',
     color: 'espacio-contacto',
     roles: [ROLE_ATENCION_CLIENTE, ROLE_SUPERADMIN],
     quien: 'Atención al cliente o superadmin',
@@ -41,6 +43,8 @@ export const ESPACIOS = [
       { titulo: 'Primer contacto', items: [
         { key: 'formularios', label: 'Formularios de la web', ruta: { name: 'primer-contacto' }, nombres: ['primer-contacto', 'formulario-web'], contador: 'formularios', icono: ICONOS.formularios },
         { key: 'correo', label: 'Correo (info@)', ruta: { name: 'correo' }, nombres: ['correo', 'correo-ficha'], contador: 'correo', icono: ICONOS.correo },
+        { key: 'solicitudes-reto', label: 'Solicitudes de retos', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha'], contador: 'solicitudes', icono: ICONOS.solicitudes },
+        { key: 'respuestas-solicitudes', label: 'Respuestas de solicitudes', ruta: { name: 'respuestas-solicitudes' }, nombres: ['respuestas-solicitudes'], contador: 'respuestas', icono: ICONOS.correo },
       ] },
     ],
   },
@@ -78,6 +82,7 @@ export const ESPACIOS = [
     grupos: [
       { titulo: 'Seguimiento de prácticas', items: [
         { key: 'practicas-inicio', label: 'Inicio', ruta: { name: 'practicas-inicio' }, nombres: ['practicas-inicio'], icono: ICONOS.inicio },
+        { key: 'planes', label: 'Planes de proyecto', ruta: { name: 'planes' }, nombres: ['planes', 'plan-cronograma'], icono: ICONOS.planes },
         { key: 'agenda', label: 'Agenda de prácticas', ruta: { name: 'agenda' }, nombres: ['agenda'], icono: ICONOS.agenda },
         { key: 'destacados', label: 'Alumnado destacado', ruta: { name: 'destacados' }, nombres: ['destacados'], icono: ICONOS.destacados },
       ] },

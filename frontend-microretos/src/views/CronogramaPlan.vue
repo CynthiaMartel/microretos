@@ -98,7 +98,7 @@ async function guardar() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-10 pt-5 sm:px-6">
-      <CabeceraSeccion antetitulo="Plan de proyecto" titulo="Cronograma del" destacado="plan" color="text-centros"
+      <CabeceraSeccion antetitulo="Plan de proyecto" titulo="Cronograma del" destacado="plan" color="text-rol"
                        :volver="{ name: 'planes' }"
                        :subtitulo="plan ? plan.titulo : 'Fechas, hitos y alumnado del plan en la empresa.'" />
 

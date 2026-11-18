@@ -22,6 +22,7 @@ const resumen = computed(() => {
 })
 
 const SECCIONES = [
+  { ruta: { name: 'planes' }, titulo: 'Planes de proyecto', texto: 'Todos los planes: valídalos y créales el cronograma para que aparezcan en la agenda.' },
   { ruta: { name: 'agenda' }, titulo: 'Agenda de prácticas', texto: 'El avance del alumnado en las empresas de todos los centros: hitos, fase de cada grupo, retrasos y horas.' },
   { ruta: { name: 'destacados' }, titulo: 'Alumnado destacado', texto: 'Elige por alias al alumnado más destacado de los encuentros creativos, con la valoración de la empresa, y crea su plan.' },
 ]
@@ -54,7 +55,7 @@ const SECCIONES = [
 
       <section aria-labelledby="secciones-practicas">
         <h2 id="secciones-practicas" class="mb-3 font-heading text-lg font-bold">Secciones</h2>
-        <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <ul class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           <li v-for="s in SECCIONES" :key="s.titulo">
             <RouterLink :to="s.ruta" class="flex h-full flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition hover:border-rol/40 sm:p-5">
               <span class="font-heading text-base font-bold">{{ s.titulo }}</span>
