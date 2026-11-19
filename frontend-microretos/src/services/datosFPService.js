@@ -11,6 +11,9 @@ export const getCiclosDeFamilia = (familia, centro = null) =>
 
 export const getModulosDeCiclo = (cicloId) => api.get(`/ciclos/${cicloId}/modulos`);
 
+// Centros educativos dados de alta (con sus ciclos): [{ id, nombre, … }]
+export const getCentros = () => api.get('/centros');
+
 // RA de un módulo con sus CE: { ra: [{ id, orden, descripcion, criterios: [{ id, orden, descripcion }] }] }
 export const getRaCeModulo = (moduloId) => api.get(`/modulos/${moduloId}/ra-ce`);
 

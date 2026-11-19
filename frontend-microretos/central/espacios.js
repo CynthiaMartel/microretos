@@ -8,10 +8,10 @@
 //     El correo sale desde info@ por la web; Gestión web ya no atiende formularios ni correo.
 //   · Red DuaLab: captaciones, empresas y centros adheridos (base de datos), usuarios, papelera y soporte.
 //   · Seguimiento de prácticas: agenda de prácticas y alumnado destacado.
-import { ROLE_SUPERADMIN, ROLE_ATENCION_CLIENTE } from '../src/stores/auth.js'
+import { ROLE_SUPERADMIN, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB } from '../src/stores/auth.js'
 
 // Roles que pueden entrar en Central (en algún espacio)
-export const ROLES_CENTRAL = [ROLE_SUPERADMIN, ROLE_ATENCION_CLIENTE]
+export const ROLES_CENTRAL = [ROLE_SUPERADMIN, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB]
 
 export const ICONOS = {
   "inicio": "M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9z",
@@ -26,57 +26,51 @@ export const ICONOS = {
   "usuario": "M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-4 3.6-7 8-7s8 3 8 7",
   "correo": "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
   "solicitudes": "M9.66 17h4.68M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m3.34-5.66l-.7-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.75-.99-2.38l-.54-.55z",
+  "historial": "M12 8v4l3 3M3.05 11a9 9 0 11.5 4M3 4v5h5",
   "formularios": "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
 }
 
+// Dos espacios, uno por persona (decisión de Cynthia, 2026-11-18): Red DuaLab para quien lleva los
+// contactos (formularios, correo, captaciones, soporte) y Seguimiento de prácticas para quien lleva el
+// alumnado en las empresas. El superadmin entra en los dos. `roles` en un item: solo esos roles lo ven.
+const SOLO_SUPERADMIN = [ROLE_SUPERADMIN]
 export const ESPACIOS = [
-  {
-    clave: 'primer-contacto',
-    nombre: 'Primer contacto',
-    texto: 'Los formularios de dualab.es, el correo de info@ y las solicitudes de retos que enviamos al profesorado.',
-    color: 'espacio-contacto',
-    roles: [ROLE_ATENCION_CLIENTE, ROLE_SUPERADMIN],
-    quien: 'Atención al cliente o superadmin',
-    ruta: { name: 'primer-contacto' },
-    icono: ICONOS.correo,
-    grupos: [
-      { titulo: 'Primer contacto', items: [
-        { key: 'formularios', label: 'Formularios de la web', ruta: { name: 'primer-contacto' }, nombres: ['primer-contacto', 'formulario-web'], contador: 'formularios', icono: ICONOS.formularios },
-        { key: 'correo', label: 'Correo (info@)', ruta: { name: 'correo' }, nombres: ['correo', 'correo-ficha'], contador: 'correo', icono: ICONOS.correo },
-        { key: 'solicitudes-reto', label: 'Solicitudes de retos', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha'], contador: 'solicitudes', icono: ICONOS.solicitudes },
-        { key: 'respuestas-solicitudes', label: 'Respuestas de solicitudes', ruta: { name: 'respuestas-solicitudes' }, nombres: ['respuestas-solicitudes'], contador: 'respuestas', icono: ICONOS.correo },
-      ] },
-    ],
-  },
   {
     clave: 'red',
     nombre: 'Red DuaLab',
-    texto: 'Captaciones por validar, empresas y centros adheridos, usuarios, papelera y soporte de cuentas.',
+    texto: 'Formularios de dualab.es, correo de info@, solicitudes de retos al profesorado, captaciones por validar y soporte.',
     color: 'espacio-red',
-    roles: [ROLE_SUPERADMIN],
-    quien: 'Superadmin',
+    roles: [ROLE_RED_DUALAB, ROLE_ADMIN_CENTRAL_DUALAB, ROLE_SUPERADMIN],
+    quien: 'Red DuaLab, Admin Central DuaLab o superadmin',
     ruta: { name: 'red-inicio' },
-    icono: 'M17 20h5v-2a3 3 0 00-5.4-1.8M17 20H7m10 0v-2c0-.7-.1-1.3-.4-1.8M7 20H2v-2a3 3 0 015.4-1.8M7 20v-2c0-.7.1-1.3.4-1.8m0 0a5 5 0 019.2 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    icono: ICONOS.usuarios,
     grupos: [
       { titulo: 'Red DuaLab', items: [
         { key: 'red-inicio', label: 'Inicio', ruta: { name: 'red-inicio' }, nombres: ['red-inicio'], icono: ICONOS.inicio },
         { key: 'captaciones', label: 'Captaciones', ruta: { name: 'captaciones' }, nombres: ['captaciones'], contador: 'captaciones', icono: ICONOS.captaciones },
         { key: 'soporte', label: 'Soporte', ruta: { name: 'soporte' }, nombres: ['soporte'], proximamente: true, icono: ICONOS.soporte },
       ] },
+      { titulo: 'Primer contacto', items: [
+        { key: 'formularios', label: 'Formularios de la web', ruta: { name: 'primer-contacto' }, nombres: ['primer-contacto', 'formulario-web'], contador: 'formularios', icono: ICONOS.formularios },
+        { key: 'correo', label: 'Correo (info@)', ruta: { name: 'correo' }, nombres: ['correo', 'correo-ficha'], contador: 'correo', icono: ICONOS.correo },
+        { key: 'solicitudes-reto', label: 'Solicitudes de retos', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha'], contador: 'solicitudes', icono: ICONOS.solicitudes },
+        { key: 'respuestas-solicitudes', label: 'Respuestas de solicitudes', ruta: { name: 'respuestas-solicitudes' }, nombres: ['respuestas-solicitudes'], contador: 'respuestas', icono: ICONOS.correo },
+      ] },
       { titulo: 'Datos', items: [
-        { key: 'base-datos', label: 'Base de datos', ruta: { name: 'base-datos' }, nombres: ['base-datos'], icono: ICONOS['base-datos'] },
-        { key: 'usuarios', label: 'Usuarios', ruta: { name: 'usuarios' }, nombres: ['usuarios'], icono: ICONOS.usuarios },
-        { key: 'papelera', label: 'Papelera', ruta: { name: 'papelera' }, nombres: ['papelera'], icono: ICONOS.papelera },
+        { key: 'base-datos', label: 'Base de datos', ruta: { name: 'base-datos' }, nombres: ['base-datos'], icono: ICONOS['base-datos'], roles: SOLO_SUPERADMIN, avisoSuperadmin: true },
+        { key: 'usuarios', label: 'Usuarios', ruta: { name: 'usuarios' }, nombres: ['usuarios'], icono: ICONOS.usuarios, roles: [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB] },
+        { key: 'historial', label: 'Historial', ruta: { name: 'historial' }, nombres: ['historial'], icono: ICONOS.historial, roles: [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB] },
+        { key: 'papelera', label: 'Papelera', ruta: { name: 'papelera' }, nombres: ['papelera'], icono: ICONOS.papelera, roles: SOLO_SUPERADMIN, avisoSuperadmin: true },
       ] },
     ],
   },
   {
     clave: 'practicas',
     nombre: 'Seguimiento de prácticas',
-    texto: 'El avance del alumnado en las empresas y la selección del alumnado destacado para las prácticas.',
+    texto: 'El avance del alumnado en las empresas: planes de proyecto, agenda de prácticas y alumnado destacado.',
     color: 'espacio-practicas',
-    roles: [ROLE_SUPERADMIN],
-    quien: 'Superadmin',
+    roles: [ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB, ROLE_SUPERADMIN],
+    quien: 'Gestión de prácticas o superadmin',
     ruta: { name: 'practicas-inicio' },
     icono: ICONOS.agenda,
     grupos: [
@@ -91,6 +85,13 @@ export const ESPACIOS = [
 ]
 
 export const espacioDe = (clave) => ESPACIOS.find(e => e.clave === clave) ?? null
+
+/** ¿Puede este rol ver el item del panel? (sin `roles`, todos los del espacio) */
+export const puedeVerItem = (rol, item) => !item.roles || item.roles.includes(Number(rol))
+
+// Secciones solo de superadmin que Admin Central DuaLab ve con candado: al pulsarlas sale el aviso para
+// iniciar sesión como superadmin (AvisoSoloSuperadmin.vue), en vez de esconderlas
+export const conCandado = (rol, item) => !!item.avisoSuperadmin && Number(rol) === ROLE_ADMIN_CENTRAL_DUALAB && !puedeVerItem(rol, item)
 
 /** ¿Puede este rol entrar en el espacio? Sin espacio (selector, Mi usuario): cualquier rol de Central. */
 export const puedeEntrar = (rol, clave) => {

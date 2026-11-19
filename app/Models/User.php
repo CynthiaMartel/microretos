@@ -22,9 +22,18 @@ class User extends Authenticatable
     const ROLE_ADMIN      = 4;
     // Capta empresas reales en entrevista (app comercial.dualab.es): sin centro ni acceso a la app de docentes
     const ROLE_COMERCIAL  = 5;
-    // Atiende los formularios y el correo de info@ en DuaLab Central («Primer contacto»): sin centro
-    // ni acceso a la app de docentes ni a los otros espacios de Central
-    const ROLE_ATENCION_CLIENTE = 6;
+    // Roles de DuaLab Central, con el nombre del espacio que abren (Cynthia, 19-nov):
+    // red_dualab: el espacio «Red DuaLab» — formularios y correo de info@, solicitudes de retos,
+    // captaciones y soporte (Base de datos, Usuarios y Papelera siguen siendo solo del superadmin).
+    // Antes se llamaba «atención al cliente»; el número no cambia. Sin centro ni app de docentes.
+    const ROLE_RED_DUALAB = 6;
+    // gestion_practicas: el espacio «Seguimiento de prácticas» — ve los encuentros y planes de todos
+    // los centros, marca destacados y crea, valida y fecha los planes de proyecto (no las propuestas
+    // del taller). En la app de docentes solo entra en las rutas de prácticas (EnsureIsDocente).
+    const ROLE_GESTION_PRACTICAS = 7;
+    // admin_central_dualab: los dos espacios anteriores (Red DuaLab y Seguimiento de prácticas) y Usuarios
+    // (cualquier cuenta menos superadmin). Base de datos y Papelera, información sensible, solo del superadmin.
+    const ROLE_ADMIN_CENTRAL_DUALAB = 8;
 
     // role, is_blocked y email_verified_at quedan fuera a propósito: son campos
     // sensibles y solo se asignan de forma explícita (ver AdminUserController).
@@ -83,12 +92,44 @@ class User extends Authenticatable
     public function isDocente(): bool    { return $this->role === self::ROLE_DOCENTE; }
     public function isEmpresa(): bool    { return $this->role === self::ROLE_EMPRESA; }
     public function isComercial(): bool  { return $this->role === self::ROLE_COMERCIAL; }
-    public function isAtencionCliente(): bool { return $this->role === self::ROLE_ATENCION_CLIENTE; }
+    public function isRedDualab(): bool { return $this->role === self::ROLE_RED_DUALAB; }
+    public function isGestionPracticas(): bool { return $this->role === self::ROLE_GESTION_PRACTICAS; }
+    public function isAdminCentralDualab(): bool { return $this->role === self::ROLE_ADMIN_CENTRAL_DUALAB; }
+
+    /**
+     * Trabaja en el espacio «Red DuaLab» de Central (sin el superadmin, que lo ve todo por su cuenta).
+     * Las comprobaciones de acceso usan esto, no el rol suelto: central_dualab tiene los dos espacios.
+     */
+    public function trabajaEnRedDualab(): bool
+    {
+        return $this->isRedDualab() || $this->isAdminCentralDualab();
+    }
+
+    /** Trabaja en el espacio «Seguimiento de prácticas» (sin el superadmin). */
+    public function trabajaEnPracticas(): bool
+    {
+        return $this->isGestionPracticas() || $this->isAdminCentralDualab();
+    }
+
+    /**
+     * Gestiona las cuentas de todos los centros (Central → Usuarios). El admin de centro solo las del suyo;
+     * crear superadmins y tocar sus cuentas sigue siendo solo del superadmin (requests y checkScope).
+     */
+    public function gestionaTodosLosUsuarios(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdminCentralDualab();
+    }
+
+    /** Crea planes de cualquier centro a nombre del docente de la propuesta (DuaLab). */
+    public function gestionaTodosLosPlanes(): bool
+    {
+        return $this->isSuperAdmin() || $this->trabajaEnPracticas();
+    }
 
     /** Roles sin centro ni empresa: trabajan para DuaLab (app comercial, Central). */
     public function esPersonalDualab(): bool
     {
-        return in_array($this->role, [self::ROLE_COMERCIAL, self::ROLE_ATENCION_CLIENTE], true);
+        return in_array($this->role, [self::ROLE_COMERCIAL, self::ROLE_RED_DUALAB, self::ROLE_GESTION_PRACTICAS, self::ROLE_ADMIN_CENTRAL_DUALAB], true);
     }
 
     public function roleName(): string
@@ -99,7 +140,9 @@ class User extends Authenticatable
             self::ROLE_ADMIN      => 'Administrador',
             self::ROLE_SUPERADMIN => 'Superadministrador',
             self::ROLE_COMERCIAL  => 'Comercial',
-            self::ROLE_ATENCION_CLIENTE => 'Atención al cliente',
+            self::ROLE_RED_DUALAB => 'Red DuaLab',
+            self::ROLE_GESTION_PRACTICAS => 'Gestión de prácticas',
+            self::ROLE_ADMIN_CENTRAL_DUALAB => 'Admin Central DuaLab',
             default               => 'Desconocido',
         };
     }

@@ -58,14 +58,21 @@ const esEnviado = computed(() => c.value?.carpeta === 'enviados')
 const variosDestinatarios = computed(() => c.value && ((c.value.para?.length ?? 0) + (c.value.cc?.length ?? 0)) > 1)
 const adjuntos = computed(() => (c.value?.adjuntos ?? []).filter(a => !a.en_linea))
 const tamano = b => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
-const volver = computed(() => ({ name: 'correo', query: route.query }))
+// Se vuelve a donde se abrió: el Correo de info@, «Respuestas de solicitudes» o la ficha de una solicitud
+const volver = computed(() => {
+  const { desde, solicitud, ...query } = route.query
+  if (desde === 'respuestas') return { name: 'respuestas-solicitudes', query }
+  if (desde === 'solicitud' && /^\d+$/.test(String(solicitud))) return { name: 'solicitud-reto-ficha', params: { id: solicitud } }
+  return { name: 'correo', query: route.query }
+})
+const volverLabel = computed(() => ({ respuestas: 'Respuestas', solicitud: 'Solicitud' })[route.query.desde] ?? 'Correo')
 </script>
 
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <CabeceraSeccion antetitulo="Correo" :titulo="c ? (c.asunto || '(Sin asunto)') : 'Correo'" :halos="false"
-                       :volver="volver" volver-label="Correo" />
+                       :volver="volver" :volver-label="volverLabel" />
 
       <p v-if="error" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">{{ error }}</p>
       <p v-else-if="!c" class="py-10 text-center text-sm text-texto-secundario" role="status">Cargando…</p>

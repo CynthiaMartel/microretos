@@ -2,7 +2,7 @@
 <script setup>
 import { ref, unref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
-import { useRouter, onBeforeRouteLeave } from 'vue-router';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { getFamilias, getCiclosDeFamilia, getModulosDeCiclo } from '../services/datosFPService.js';
 import { getEmpresas, getFamiliasDeEmpresa, crearEmpresa, actualizarEmpresa, actualizarDiagnosticoEmpresa, actualizarInteresEmpresa, getCatalogoEmpresas, guardarEmpresaFicticiaIA, descartarEmpresaFicticiaIA, verPropuestaFicticiaIA, usarEmpresaCatalogo } from '../services/empresaService.js';
 import { getDemos, getDemoDeFamilia, getMicroretosDemoDeFamilia } from '../services/demoService.js';
@@ -20,8 +20,10 @@ import { SECTORES_EMPRESA } from '../config/sectoresEmpresa.js';
 import { TAMANOS_EMPRESA } from '../config/tamanosEmpresa.js';
 import { PREGUNTA, OPCIONES_CONSECUENCIAS, OPCIONES_LIMITACIONES } from '../config/preguntasDiagnostico.js';
 import { queryRedirect } from '../utils/redirectLogin.js';
+import { getDatosGenerador, getSolicitudesParaGenerador } from '../services/solicitudRetoService.js';
 
 const authStore = useAuthStore();
+const route = useRoute();
 const router = useRouter();
 const showLogin = ref(false);
 
@@ -160,6 +162,9 @@ const seleccion = ref({
   cantidadMicroretos: 3, 
   // Paso 3, opcional: qué tipo de propuesta quiere trabajar el docente con su alumnado.
   enfoqueReto: '',
+  // Paso 3, opcionales: tareas reales que hará el alumnado en la empresa y entregable que espera el docente
+  tareasPracticas: '',
+  entregableDocente: '',
 });
 
 const modulosSeleccionados = ref([]);
@@ -429,7 +434,9 @@ const CHAR_LIMITS = {
   loQueNoQuieren:     limiteDe(PREGUNTA.loQueNoQuieren.max),
   otraConsecuencia:   { max: 300,  warn: 255 },
   expectativasAlumno: limiteDe(PREGUNTA.expectativasAlumno.max),
-  enfoqueReto:        { max: 500,  warn: 425 },
+  enfoqueReto:        { max: 1000, warn: 850 },
+  tareasPracticas:    { max: 1000, warn: 850 },
+  entregableDocente:  { max: 800,  warn: 680 },
 };
 // Reactivo en template: Vue rastrea seleccion.value al renderizar
 const charInfo = (field) => {
@@ -846,49 +853,55 @@ watch(centroFiltro, (newVal, oldVal) => {
 
 // --- FUNCIÓN LIMPIAR FORMULARIO (BOTÓN ROJO) ---
 const limpiarFormulario = () => {
-  if(confirm("¿Estás seguro de que quieres vaciar el formulario y empezar de cero?")) {
-    pasoActual.value = 1;
-    pasoMaxBloqueado.value = 0;
-    // Vaciar reinicia también el historial: solo queda el aviso de que se ha vaciado.
-    historialAvisos.value = [];
-    avisosVistos.value = 0;
-    registrarAviso('Formulario vaciado', 'Se ha vaciado el formulario y se han desbloqueado todos los pasos: puedes empezar de nuevo.');
-    buscadorEmpresa.value = '';
-    // Docente/admin: el centro está fijado a su cuenta y no se vacía; superadmin sí lo pierde
-    centroFiltro.value = centroFijadoPorRol.value ? authStore.userCentroNombre : '';
-    empresaDetalle.value = null;
-    microretosGenerados.value = [];
-    crmActualizado.value = false;
-    diagnosticoRecuperado.value = false;
-    editandoDiagnostico.value = false;
-    avisoEmpresaReal.value = false;
-    verDiagnostico.value = false;
-    panelFicticiaIA.value = false; // al desmontarse, el componente descarta su propuesta
-    if (borradorIA.value) descartarBorradorIA();
-    panelCatalogo.value = false;
-    avisoCatalogo.value = '';
-    todosGuardados.value = false;
-    esModoDemo.value = false;
-    mostrarSelectorDemo.value = false;
-    esInfoSimulada.value = false;
-    cargandoSimulacion.value = false;
-    modulosSeleccionados.value = [];
-    modoModulosManual.value = false;
-    mostrarDropdownSector.value = false;
-    filtroTipoEmpresa.value = '';
-    filtroFamiliaEmpresa.value = '';
-    paginaEmpresas.value = 1;
+  if (confirm("¿Estás seguro de que quieres vaciar el formulario y empezar de cero?")) vaciarGenerador();
+};
 
-    seleccion.value = {
-      empresaId: '', empresaNombre: '', empresaCentro: '', empresaSector: '',
-      empresaUbicacion: '', empresaTamano: '', empresaWeb: '',
-      diaANormal: '', friccionArea: '', friccionProblema: '', restricciones: [],
-      otraLimitacion: '', loQueNoQuieren: '', consecuencias: [], otraConsecuencia: '', expectativasAlumno: '',
-      familia: '', cicloId: '', cursoSeleccionado: 2, nivelGrupo: 'Medio', cantidadMicroretos: 3,
-      enfoqueReto: ''
-    };
-    window.scrollTo({top: 0, behavior: 'smooth'});
-  }
+// Lo que hace «Vaciar»; también al pasar a otra petición de una solicitud del profesorado
+const vaciarGenerador = () => {
+  pasoActual.value = 1;
+  pasoMaxBloqueado.value = 0;
+  // Con una solicitud abierta, el paso 3 se vuelve a rellenar al llegar a él
+  paso3SolicitudAplicado = false;
+  avisosSolicitud.value = [];
+  // Vaciar reinicia también el historial: solo queda el aviso de que se ha vaciado.
+  historialAvisos.value = [];
+  avisosVistos.value = 0;
+  registrarAviso('Formulario vaciado', 'Se ha vaciado el formulario y se han desbloqueado todos los pasos: puedes empezar de nuevo.');
+  buscadorEmpresa.value = '';
+  // Docente/admin: el centro está fijado a su cuenta y no se vacía; superadmin sí lo pierde
+  centroFiltro.value = centroFijadoPorRol.value ? authStore.userCentroNombre : '';
+  empresaDetalle.value = null;
+  microretosGenerados.value = [];
+  crmActualizado.value = false;
+  diagnosticoRecuperado.value = false;
+  editandoDiagnostico.value = false;
+  avisoEmpresaReal.value = false;
+  verDiagnostico.value = false;
+  panelFicticiaIA.value = false; // al desmontarse, el componente descarta su propuesta
+  if (borradorIA.value) descartarBorradorIA();
+  panelCatalogo.value = false;
+  avisoCatalogo.value = '';
+  todosGuardados.value = false;
+  esModoDemo.value = false;
+  mostrarSelectorDemo.value = false;
+  esInfoSimulada.value = false;
+  cargandoSimulacion.value = false;
+  modulosSeleccionados.value = [];
+  modoModulosManual.value = false;
+  mostrarDropdownSector.value = false;
+  filtroTipoEmpresa.value = '';
+  filtroFamiliaEmpresa.value = '';
+  paginaEmpresas.value = 1;
+
+  seleccion.value = {
+    empresaId: '', empresaNombre: '', empresaCentro: '', empresaSector: '',
+    empresaUbicacion: '', empresaTamano: '', empresaWeb: '',
+    diaANormal: '', friccionArea: '', friccionProblema: '', restricciones: [],
+    otraLimitacion: '', loQueNoQuieren: '', consecuencias: [], otraConsecuencia: '', expectativasAlumno: '',
+    familia: '', cicloId: '', cursoSeleccionado: 2, nivelGrupo: 'Medio', cantidadMicroretos: 3,
+    enfoqueReto: '', tareasPracticas: '', entregableDocente: ''
+  };
+  window.scrollTo({top: 0, behavior: 'smooth'});
 };
 
 // --- FUNCIÓN PARA CARGAR DATOS DEMO DESDE API ---
@@ -1056,6 +1069,138 @@ const onLoginSuccess = async () => {
   }
 };
 
+// --- SOLICITUD DE RETOS DE UN DOCENTE (?solicitud=ID, desde DuaLab Central) ---
+// Solo superadmin. La empresa asignada en Central se preselecciona al abrir; el paso 3 (familia,
+// ciclo, curso, módulos, RA/CE, nivel y el borrador del enfoque) se rellena al llegar a él, cuando
+// las familias de la empresa ya están cargadas. Todo queda editable y nada se genera solo. Los
+// retos que se guardan quedan enlazados a la solicitud y van a la recámara (ver guardarTodos).
+const solicitudActiva = ref(null);
+const avisosSolicitud = ref([]);
+let paso3SolicitudAplicado = false;
+
+// Espera a que un valor que carga un watch asíncrono esté listo (con tope, por si la API falla)
+const esperarA = (condicion, ms = 8000) => new Promise((resolve) => {
+  if (condicion()) return resolve(true);
+  const parar = watch(condicion, (v) => { if (v) { parar(); clearTimeout(t); resolve(true); } });
+  const t = setTimeout(() => { parar(); resolve(false); }, ms);
+});
+
+const cargarSolicitud = async (id, bloque = 0) => {
+  if (!authStore.isSuperAdmin || !/^\d+$/.test(String(id))) return;
+  try {
+    const { data } = await getDatosGenerador(id, bloque);
+    solicitudActiva.value = data.data;
+    paso3SolicitudAplicado = false;
+    avisosSolicitud.value = [];
+  } catch (e) {
+    registrarAviso('Solicitud no disponible', e.response?.data?.error || 'No se ha podido cargar la solicitud del docente.', 'error');
+    return;
+  }
+  if (estaPasoBloqueado(1)) return;
+  const d = solicitudActiva.value;
+  // Paso 1: sin centro no se puede buscar empresa. Se pone el de la empresa elegida en Central, el del
+  // docente o el de la beta; y el filtro de familia de la petición, para que la lista ya encaje y, al
+  // elegir empresa, la familia del paso 3 se preseleccione sola (cargarFamiliasEmpresa).
+  if (!centroFijadoPorRol.value && d.centro_generador && centroFiltro.value !== d.centro_generador) {
+    centroFiltro.value = d.centro_generador;
+    await nextTick();
+  }
+  filtroFamiliaEmpresa.value = familiasParaFiltroEmpresa.value.includes(d.familia) ? d.familia : '';
+  const emp = empresas.value.find(e => e.id === d.empresa_id);
+  if (emp) {
+    seleccionarEmpresa(emp);
+  } else {
+    mostrarDropdownEmpresas.value = true;
+    if (d.familia && !filtroFamiliaEmpresa.value) {
+      avisosSolicitud.value = [`En ${centroFiltro.value || 'este centro'} no hay empresas de ${d.familia}: crea una ficticia con IA o cógela del catálogo DuaLab.`];
+    }
+  }
+};
+
+const aplicarPaso3Solicitud = async () => {
+  const d = solicitudActiva.value;
+  if (!d || paso3SolicitudAplicado || estaPasoBloqueado(3)) return;
+  paso3SolicitudAplicado = true;
+  const avisos = [];
+
+  if (d.nivelGrupo) seleccion.value.nivelGrupo = d.nivelGrupo;
+  if (d.enfoqueReto) seleccion.value.enfoqueReto = d.enfoqueReto;
+  if (d.tareasPracticas) seleccion.value.tareasPracticas = d.tareasPracticas;
+  if (d.entregableDocente) seleccion.value.entregableDocente = d.entregableDocente;
+  if (d.cursoSeleccionado) seleccion.value.cursoSeleccionado = d.cursoSeleccionado === 'ambos_cursos' ? 'ambos_cursos' : Number(d.cursoSeleccionado);
+
+  if (d.familia && familiasEmpresaCargadas.value && !familiasFiltradas.value.includes(d.familia)) {
+    avisos.push(`La empresa elegida no tiene la familia «${d.familia}»: elige otra empresa o añádele la familia en el paso 1.`);
+  } else if (d.familia) {
+    // Al cambiar de familia, su watch vacía la lista de ciclos en el siguiente tick: sin esperarlo,
+    // la espera daría por buena la lista de la familia anterior
+    if (seleccion.value.familia !== d.familia) { seleccion.value.familia = d.familia; await nextTick(); }
+    await esperarA(() => ciclos.value.length > 0);
+    if (d.cicloId && ciclos.value.some(c => c.id === d.cicloId)) {
+      // El watch del ciclo no vacía los módulos antes de cargar los nuevos: se vacían aquí
+      if (seleccion.value.cicloId !== d.cicloId) { modulos.value = []; seleccion.value.cicloId = d.cicloId; }
+      await esperarA(() => modulos.value.length > 0);
+      const ids = (d.moduloIds || []).filter(idM => modulos.value.some(m => m.id === idM));
+      if (ids.length) {
+        modoModulosManual.value = true;
+        if (esAmbosCursos.value) {
+          modulosSeleccionadosCurso1.value = ids.filter(idM => modulos.value.find(m => m.id === idM)?.curso == 1);
+          modulosSeleccionadosCurso2.value = ids.filter(idM => modulos.value.find(m => m.id === idM)?.curso == 2);
+        } else {
+          modulosSeleccionados.value = ids;
+        }
+        await nextTick();
+        seleccionRaCe.value = Object.fromEntries((d.seleccionRaCe || [])
+          .filter(s => ids.includes(s.modulo_id))
+          .map(s => [s.ra_id, { moduloId: s.modulo_id, ceIds: s.ce_ids }]));
+      }
+    } else if (d.cicloId) {
+      avisos.push('El ciclo de la solicitud no aparece para esta empresa y su centro: elígelo a mano.');
+    }
+  }
+
+  avisosSolicitud.value = avisos;
+  registrarAviso('Datos de la solicitud', avisos.length ? 'Hemos rellenado lo que encaja; revisa los avisos de la banda.' : 'El paso 3 se ha rellenado con lo que pidió el docente. Revísalo antes de generar.');
+};
+
+watch(pasoActual, (paso) => { if (paso === 3) aplicarPaso3Solicitud(); });
+
+// --- «SOLICITUDES DEL PROFESORADO» (solo superadmin) ---
+// Desplegable con las solicitudes respondidas y sus peticiones: elegir una rellena el generador como
+// el enlace «Abrir en el generador» de Central (?solicitud=ID&bloque=N).
+const panelSolicitudes = ref(false);
+const solicitudesProfesorado = ref([]);
+const cargandoSolicitudes = ref(false);
+const errorSolicitudes = ref('');
+const CURSO_TEXTO = { 1: '1.º', 2: '2.º', ambos_cursos: '1.º y 2.º' };
+
+const abrirPanelSolicitudes = async () => {
+  panelSolicitudes.value = !panelSolicitudes.value;
+  if (!panelSolicitudes.value) return;
+  cargandoSolicitudes.value = true;
+  errorSolicitudes.value = '';
+  try {
+    solicitudesProfesorado.value = (await getSolicitudesParaGenerador()).data.data;
+  } catch {
+    errorSolicitudes.value = 'No se han podido cargar las solicitudes. Inténtalo de nuevo.';
+  } finally {
+    cargandoSolicitudes.value = false;
+  }
+};
+
+const elegirPeticion = async (solicitudId, bloque) => {
+  // Con pasos ya sellados o retos sin guardar, los datos nuevos no encajarían: se vacía antes
+  if (pasoMaxBloqueado.value > 0 || microretosGenerados.value.some(r => !r._ui_guardado)) {
+    if (!confirm('Para cargar otra petición se vaciará el generador. Guarda antes los retos que quieras conservar. ¿Continuar?')) return;
+    vaciarGenerador();
+  }
+  panelSolicitudes.value = false;
+  await router.replace({ query: { ...route.query, solicitud: solicitudId, bloque } });
+  await cargarSolicitud(solicitudId, bloque);
+  if (pasoActual.value === 3) aplicarPaso3Solicitud();
+  registrarAviso('Solicitud cargada', 'La empresa (si DuaLab la eligió) ya está en el paso 1; el paso 3 se rellena al llegar a él.');
+};
+
 onMounted(async () => {
   // Guarda de seguridad en componente: el router ya redirige antes de montar,
   // pero este check actúa como barrera extra ante manipulaciones del token en memoria.
@@ -1085,6 +1230,7 @@ onMounted(async () => {
       centroFiltro.value = authStore.userCentroNombre;
     }
     await comprobarBorradorRecuperable();
+    if (route.query.solicitud) await cargarSolicitud(route.query.solicitud, Number(route.query.bloque) || 0);
     await nextTick();
     pasoGuia.value = 1;
   }
@@ -1489,7 +1635,7 @@ const guardarTodos = async () => {
       .map(({ _ui_guardado, _ui_guardando, _ui_familia, ...retoLimpio }) => retoLimpio); // Eliminar claves UI; el contexto ya fue snapshotado en cada reto al generarse
 
     if (payload.length > 0) {
-      await guardarMicroretosLote(payload);
+      await guardarMicroretosLote(payload, solicitudActiva.value?.solicitud_id);
       microretosGenerados.value.forEach(r => r._ui_guardado = true);
       todosGuardados.value = true;
     } else {
@@ -1509,7 +1655,9 @@ const guardar = async (index) => {
   try {
     const { _ui_guardado, _ui_guardando, _ui_familia, ...retoLimpio } = reto; // Eliminar claves UI; el contexto ya fue snapshotado en el reto al generarse
 
-    await guardarMicroreto(retoLimpio);
+    // De una solicitud: por el lote, que es el que los enlaza a ella y los deja en la recámara
+    if (solicitudActiva.value) await guardarMicroretosLote([retoLimpio], solicitudActiva.value.solicitud_id);
+    else await guardarMicroreto(retoLimpio);
     reto._ui_guardado = true;
   } catch (e) { 
     console.error("Error al guardar:", e);
@@ -1850,6 +1998,12 @@ watch(modoGuia, async (v) => {
       <CabeceraSeccion titulo="Factoría de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
                        subtitulo="Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial."
                        class="mb-4 md:mb-5">
+        <!-- Superadmin: rellenar el generador con lo que pidió un docente en su solicitud de retos -->
+        <button v-if="authStore.isSuperAdmin" type="button" class="accion-secundaria" :aria-expanded="panelSolicitudes"
+                aria-controls="panel-solicitudes" @click="abrirPanelSolicitudes">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          Solicitudes del profesorado
+        </button>
         <!-- Ayuda: mismo botón y sitio en todas las vistas -->
         <button type="button" ref="refBtnGuia" @click="modoGuia = true; pasoGuia = 1"
                 :class="tourTargetActivo === 'refBtnGuia' ? 'tour-active' : ''"
@@ -1861,6 +2015,41 @@ watch(modoGuia, async (v) => {
           Ayuda
         </button>
       </CabeceraSeccion>
+
+      <!-- Desplegable «Solicitudes del profesorado» (superadmin) -->
+      <section v-if="panelSolicitudes" id="panel-solicitudes" aria-labelledby="titulo-panel-solicitudes"
+               class="mb-5 rounded-[2rem] border border-gray-100 bg-white p-4 shadow-[0_20px_50px_rgb(0,0,0,0.05)] sm:p-6">
+        <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div class="min-w-0">
+            <h2 id="titulo-panel-solicitudes" class="font-heading text-lg font-bold text-azul-noche">Solicitudes del profesorado</h2>
+            <p class="text-xs text-gray-500">Lo que han pedido los docentes en el formulario. Elige una petición y el generador se rellena con ella; revisa y genera.</p>
+          </div>
+          <button type="button" class="accion-icono" aria-label="Cerrar" @click="panelSolicitudes = false">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p v-if="cargandoSolicitudes" class="py-4 text-sm text-gray-500" role="status">Cargando…</p>
+        <p v-else-if="errorSolicitudes" class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{{ errorSolicitudes }}</p>
+        <p v-else-if="!solicitudesProfesorado.length" class="py-4 text-sm text-gray-500">No hay solicitudes respondidas. Cuando un docente envíe el formulario, aparecerá aquí.</p>
+        <ul v-else class="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+          <li v-for="sol in solicitudesProfesorado" :key="sol.id" class="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-3 sm:p-4">
+            <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="min-w-0 break-words font-bold text-azul-noche">{{ sol.docente }}</span>
+              <span class="min-w-0 break-words text-sm text-gray-500">{{ sol.centro }}</span>
+              <span v-if="sol.num_retos" class="rounded-full bg-centros/10 px-2.5 py-0.5 text-xs font-bold text-centros">{{ sol.num_retos }} {{ sol.num_retos === 1 ? 'reto' : 'retos' }}</span>
+            </p>
+            <div class="mt-2 flex flex-col gap-2">
+              <button v-for="b in sol.bloques" :key="b.indice" type="button"
+                      class="flex w-full flex-col items-start rounded-xl border-2 px-3 py-2 text-left text-sm transition-colors"
+                      :class="solicitudActiva?.solicitud_id === sol.id && solicitudActiva?.bloque === b.indice ? 'border-centros bg-centros/5' : 'border-gray-200 bg-white hover:border-centros/50'"
+                      @click="elegirPeticion(sol.id, b.indice)">
+                <span class="font-semibold text-azul-noche break-words">{{ sol.bloques.length > 1 ? `Petición ${b.indice + 1} · ` : '' }}{{ b.ciclo }} · {{ CURSO_TEXTO[b.curso] || b.curso }}</span>
+                <span class="text-xs text-gray-500 break-words">{{ b.familia }}<template v-if="b.modulos.length"> · {{ b.modulos.map(nombreModuloVisible).join(' · ') }}</template></span>
+              </button>
+            </div>
+          </li>
+        </ul>
+      </section>
 
       <div class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
@@ -1886,6 +2075,27 @@ watch(modoGuia, async (v) => {
       </div>
 
       <main class="min-h-[400px]">
+        <div v-if="solicitudActiva" class="mb-6 rounded-2xl border border-alumnos/30 bg-alumnos/5 px-4 py-3 sm:px-5" role="status">
+          <p class="text-sm font-bold text-azul-noche break-words">
+            Solicitud de {{ solicitudActiva.docente }} · {{ solicitudActiva.centro }}<template v-if="solicitudActiva.total_bloques > 1"> · petición {{ solicitudActiva.bloque + 1 }} de {{ solicitudActiva.total_bloques }}</template>
+          </p>
+          <p class="mt-0.5 text-xs text-gray-600">
+            {{ seleccion.empresaId ? 'La empresa viene de la solicitud; puedes cambiarla.' : 'Elige la empresa en el paso 1.' }}
+            El paso 3 se rellena con lo que pidió el docente al llegar a él. Los retos que guardes irán a la recámara de la solicitud.
+          </p>
+          <ul v-if="avisosSolicitud.length" class="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold text-alumnos-dark">
+            <li v-for="a in avisosSolicitud" :key="a">{{ a }}</li>
+          </ul>
+          <!-- Un reto por cada petición: se pasa de una a otra sin volver a Central -->
+          <div v-if="solicitudActiva.total_bloques > 1" class="mt-3 flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-gray-600">Peticiones de esta solicitud:</span>
+            <button v-for="n in solicitudActiva.total_bloques" :key="n" type="button"
+                    class="min-h-9 rounded-full border-2 px-4 text-xs font-bold transition-colors"
+                    :class="solicitudActiva.bloque === n - 1 ? 'border-transparent bg-gradient-to-r from-centros to-primary-400 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-centros/50'"
+                    :aria-current="solicitudActiva.bloque === n - 1 ? 'true' : undefined"
+                    @click="solicitudActiva.bloque !== n - 1 && elegirPeticion(solicitudActiva.solicitud_id, n - 1)">Petición {{ n }}</button>
+          </div>
+        </div>
         <transition name="fade" mode="out-in">
           <div v-if="pasoActual === 1" class="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <section class="bg-white rounded-[2.5rem] p-5 md:p-6 border border-gray-100 shadow-[0_20px_50px_rgb(0,0,0,0.05)] relative z-10">
@@ -3076,6 +3286,23 @@ watch(modoGuia, async (v) => {
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
                       <span v-if="charInfo('enfoqueReto').isWarning && !charInfo('enfoqueReto').isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
                       <span class="text-[10px] transition-colors" :class="charInfo('enfoqueReto').isOver ? 'text-red-400 font-bold' : charInfo('enfoqueReto').isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo('enfoqueReto').len }}/{{ CHAR_LIMITS.enfoqueReto.max }}</span>
+                    </div>
+                  </div>
+
+                  <!-- También del docente (opcionales; los rellena la solicitud de retos): la IA los usa para
+                       que el reto practique lo que harán en la empresa y termine en el entregable que espera -->
+                  <div v-for="campo in [
+                    { k: 'tareasPracticas', t: '¿Qué tareas reales harán en la empresa durante las prácticas?', p: 'Ej: registrar la correspondencia que entra y sale y elegir cómo enviar cada documento…' },
+                    { k: 'entregableDocente', t: '¿Qué te gustaría que entregara el alumnado?', p: 'Ej: un libro de registro, un informe corto, una presentación…' },
+                  ]" :key="campo.k" class="mt-4">
+                    <label :for="'gen-' + campo.k" class="label-style !mb-1.5 text-[#1F2937]">
+                      {{ campo.t }} <span class="text-gray-400 normal-case font-medium">(opcional)</span>
+                    </label>
+                    <textarea :id="'gen-' + campo.k" v-model="seleccion[campo.k]" :disabled="esModoDemo" :title="tituloDemo" :maxlength="CHAR_LIMITS[campo.k].max"
+                      rows="2" class="input-style !py-2 text-sm" :placeholder="campo.p"></textarea>
+                    <div class="flex items-center justify-end gap-2 mt-1 h-4">
+                      <span v-if="charInfo(campo.k).isWarning && !charInfo(campo.k).isOver" class="text-amber-400 text-[10px]">Cerca del límite — sé conciso</span>
+                      <span class="text-[10px] transition-colors" :class="charInfo(campo.k).isOver ? 'text-red-400 font-bold' : charInfo(campo.k).isWarning ? 'text-amber-400' : 'text-gray-600'">{{ charInfo(campo.k).len }}/{{ CHAR_LIMITS[campo.k].max }}</span>
                     </div>
                   </div>
                 </div>

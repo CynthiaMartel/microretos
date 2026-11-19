@@ -29,6 +29,9 @@
         <env name="DB_CONNECTION" value="mysql"/>
         <env name="DB_HOST" value="mysql"/>
         <env name="DB_DATABASE" value="testing"/>
+        <!-- Sin conexión con la web en los tests: cada test que la necesita la configura y simula (Http::fake) -->
+        <env name="FRONTOFFICE_API_URL" value=""/>
+        <env name="FRONTOFFICE_CENTRAL_SECRETO" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

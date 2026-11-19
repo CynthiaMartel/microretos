@@ -6,8 +6,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getFormulariosWeb, getCorreos } from '../../src/services/primerContactoService.js'
+import { listarSolicitudes, getRespuestasSolicitudes } from '../../src/services/solicitudRetoService.js'
 import logo from '../../src/assets/logo_colores.png'
-import { ESPACIOS, ICONOS, espacioDe } from '../espacios.js'
+import { ESPACIOS, ICONOS, espacioDe, puedeVerItem, conCandado } from '../espacios.js'
+import { avisoSuperadmin } from '../avisoSuperadmin.js'
+import { useAuthStore } from '../../src/stores/auth.js'
 
 const abierto = defineModel('abierto', { type: Boolean, default: false })
 
@@ -24,13 +27,16 @@ const GRUPO_COMUN = {
     { key: 'usuario', label: 'Mi usuario', ruta: { name: 'mi-usuario' }, nombres: ['mi-usuario'], icono: ICONOS.usuario },
   ],
 }
-const GRUPOS = computed(() => [...(espacio.value?.grupos ?? []), GRUPO_COMUN])
+const auth = useAuthStore()
+const GRUPOS = computed(() => [...(espacio.value?.grupos ?? []), GRUPO_COMUN]
+  .map(g => ({ ...g, items: g.items.filter(i => puedeVerItem(auth.userRole, i) || conCandado(auth.userRole, i)) }))
+  .filter(g => g.items.length))
 const activo = item => !!item.nombres?.includes(route.name)
 
 // «Cambiar de espacio» se despliega con los otros espacios (como en la barra superior)
 const espaciosAbierto = ref(false)
 const otrosEspacios = computed(() => ESPACIOS.filter(e => e.clave !== espacio.value?.clave))
-const PUNTO_ESPACIO = { 'espacio-contacto': 'bg-espacio-contacto', 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
+const PUNTO_ESPACIO = { 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
 function irAEspacio(e) {
   abierto.value = false
   espaciosAbierto.value = false
@@ -40,6 +46,8 @@ function irAEspacio(e) {
 function ir(item) {
   if (item.desplegable) { espaciosAbierto.value = !espaciosAbierto.value; return }
   abierto.value = false
+  // Solo superadmin (Admin Central DuaLab la ve con candado): aviso para iniciar sesión como superadmin
+  if (conCandado(auth.userRole, item)) { avisoSuperadmin.value = { nombre: item.label, destino: item.ruta }; return }
   if (item.externo) window.open(item.externo, '_blank', 'noopener')
   else router.push(item.ruta)
 }
@@ -58,6 +66,14 @@ const CONTADORES = {
   correo: { aria: 'correos sin leer', cargar: async () => {
     const { data } = await getCorreos({ per_page: 1 })
     return data.resumen?.por_estado?.nuevo ?? 0
+  } },
+  solicitudes: { aria: 'solicitudes de retos por generar', cargar: async () => {
+    const { data } = await listarSolicitudes({ per_page: 1 })
+    return data.resumen?.por_trabajar ?? 0
+  } },
+  respuestas: { aria: 'respuestas de docentes sin leer', cargar: async () => {
+    const { data } = await getRespuestasSolicitudes({ estado: 'nuevo', per_page: 1 })
+    return data.meta?.total ?? 0
   } },
 }
 const pendientes = ref({})
@@ -100,6 +116,8 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
             <svg v-if="item.externo" class="h-3.5 w-3.5 shrink-0 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             <span v-if="item.externo" class="sr-only">(se abre en otra pestaña)</span>
             <span v-if="item.proximamente" class="text-[10px] font-bold uppercase tracking-wider text-white/40">Pronto</span>
+            <svg v-if="conCandado(auth.userRole, item)" class="h-3.5 w-3.5 shrink-0 text-white/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <span v-if="conCandado(auth.userRole, item)" class="sr-only">(solo superadmin)</span>
             <svg v-if="item.desplegable" class="h-4 w-4 shrink-0 text-white/50 transition-transform" :class="espaciosAbierto && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
           </button>
           <!-- Otros espacios (submenú) -->

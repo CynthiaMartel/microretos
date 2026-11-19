@@ -1,12 +1,13 @@
 <script setup>
 import BotonVolver from '../components/BotonVolver.vue'
+import AvisoAccionCritica from '../components/AvisoAccionCritica.vue'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api.js'
 
 // ─── Estado ───────────────────────────────────────────────────────────────────
 const cargando    = ref(true)
 const error       = ref('')
-const items       = ref({ empresas: [], microretos: [], ciclos: [], familias: [], centros: [], proyectos: [], sesiones: [] })
+const items       = ref({ empresas: [], microretos: [], ciclos: [], familias: [], centros: [], proyectos: [], sesiones: [], solicitudes: [] })
 const total       = ref(0)
 const filtroActivo = ref('todos')
 
@@ -85,6 +86,14 @@ const TIPOS = {
     bgLight: 'bg-pink-50',
     textColor: 'text-pink-600',
     borderColor: 'border-pink-200',
+  },
+  solicitudes: {
+    label: 'Solicitud de retos',
+    labelPlural: 'Solicitudes de retos',
+    color: '#0d9488',
+    bgLight: 'bg-teal-50',
+    textColor: 'text-teal-700',
+    borderColor: 'border-teal-200',
   },
 }
 
@@ -391,6 +400,13 @@ onMounted(cargarPapelera)
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
             </svg>
+            <!-- Solicitud de retos -->
+            <svg v-else-if="item.tipo === 'solicitudes'"
+                 class="w-4.5 h-4.5" :class="TIPOS[item.tipo]?.textColor"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9.66 17h4.68M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m3.34-5.66l-.7-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.75-.99-2.38l-.54-.55z"/>
+            </svg>
             <!-- Sesión -->
             <svg v-else
                  class="w-4.5 h-4.5" :class="TIPOS[item.tipo]?.textColor"
@@ -504,6 +520,8 @@ onMounted(cargarPapelera)
             {{ errorEliminar }}
           </div>
 
+          <AvisoAccionCritica class="mb-4" texto="Se borra para siempre y no se puede deshacer. Queda en el Historial de Central con tu nombre y la fecha." />
+
           <div class="flex gap-2">
             <button
               @click="cerrarModalEliminar"
@@ -583,6 +601,8 @@ onMounted(cargarPapelera)
           <div v-if="errorVaciar" class="mb-4 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-bold">
             {{ errorVaciar }}
           </div>
+
+          <AvisoAccionCritica class="mb-4" texto="Se borra para siempre y no se puede deshacer. Queda en el Historial de Central con tu nombre y la fecha." />
 
           <div class="flex gap-2">
             <button

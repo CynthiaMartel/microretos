@@ -70,10 +70,13 @@ class Microreto extends Model
         };
     }
 
-    /** Docente/admin: el reto es de su centro (propio o, en legacy sin centro_id, vía la empresa). */
+    /**
+     * Docente/admin: el reto es de su centro (propio o, en legacy sin centro_id, vía la empresa).
+     * Los de la recámara (solicitudes de docentes aún sin cuenta) no son de ningún centro.
+     */
     public function perteneceAlCentroDe(User $user): bool
     {
-        if (!$user->centro_educativo_id) return false;
+        if (!$user->centro_educativo_id || $this->en_recamara) return false;
         if ($this->centro_id) return $this->centro_id === $user->centro_educativo_id;
         return (bool) $this->empresa?->perteneceAlCentroDe($user);
     }
@@ -89,7 +92,7 @@ class Microreto extends Model
         $centroId     = $user->centro_educativo_id;
         $centroNombre = $user->centroEducativo?->nombre;
 
-        return $query->where(function (Builder $q) use ($centroId, $centroNombre) {
+        return $query->where('microretos.en_recamara', false)->where(function (Builder $q) use ($centroId, $centroNombre) {
             $q->where('microretos.centro_id', $centroId)
                 ->orWhere(fn (Builder $legacy) => $legacy->whereNull('microretos.centro_id')
                     ->whereHas('empresa', function ($e) use ($centroId, $centroNombre) {
@@ -113,6 +116,7 @@ class Microreto extends Model
         'es_simulado'        => 'boolean',
         'multimodulo'        => 'boolean',
         'visible_publico'    => 'boolean',
+        'en_recamara'        => 'boolean', // no fillable: la pone el guardado desde una solicitud de retos
     ];
 
     public function demo()
@@ -135,6 +139,18 @@ class Microreto extends Model
     public function cicloFormativo()
     {
         return $this->belongsTo(CicloFormativo::class, 'ciclo_id');
+    }
+
+    /** @return BelongsTo<CentroEducativo, $this> */
+    public function centro(): BelongsTo
+    {
+        return $this->belongsTo(CentroEducativo::class, 'centro_id');
+    }
+
+    /** @return BelongsTo<SolicitudReto, $this> */
+    public function solicitudReto(): BelongsTo
+    {
+        return $this->belongsTo(SolicitudReto::class);
     }
 
     /** @return HasMany<Microproyecto, $this> */

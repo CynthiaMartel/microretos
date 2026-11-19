@@ -3,7 +3,7 @@ import { URL_CENTRAL } from '../utils/urlCentral.js'
 import { useAccesoWorkspace } from '../composables/useAccesoWorkspace.js'
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE } from '../stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB } from '../stores/auth'
 import { URL_APP_COMERCIAL } from '../utils/urlComercial.js'
 import { useLoginForm } from '../composables/useLoginForm.js'
 import { useUIState } from '../composables/useUIState.js'
@@ -42,9 +42,11 @@ const { form, errors, loginError, isLoading, handleLogin } = useLoginForm((data)
     authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
     return
   }
-  // Atención al cliente: su sitio es DuaLab Central («Primer contacto»), con su propia sesión
-  if (role === ROLE_ATENCION_CLIENTE) {
-    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/primer-contacto`))
+  // Personal de DuaLab Central (red_dualab, gestion_practicas, admin_central_dualab): su sitio es Central,
+  // con su propia sesión; cada uno a su espacio (admin_central_dualab, que tiene dos, a elegir espacio)
+  if ([ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB].includes(role)) {
+    const espacio = { [ROLE_RED_DUALAB]: 'red', [ROLE_GESTION_PRACTICAS]: 'practicas' }[role] ?? ''
+    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/${espacio}`))
     return
   }
   router.push(destinoTrasLogin(role)).finally(() => triggerWelcome(role, authStore.userName))

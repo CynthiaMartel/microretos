@@ -28,7 +28,7 @@ class MicroproyectoController extends Controller
         $user  = $request->user();
         // withMin precarga el id del primer encuentro de cada proyecto en la misma consulta
         // (antes formatProyecto lanzaba una consulta por proyecto: N+1).
-        $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto', 'imagenPortada', 'origen:id,uuid,titulo'])
+        $query = Microproyecto::with(['empresa', 'centroEducativo', 'familia', 'cicloFormativo', 'microreto.solicitudReto', 'imagenPortada', 'origen:id,uuid,titulo'])
             ->withMin('encuentros', 'id')
             ->withMin('encuentros', 'fecha')
             ->orderByDesc('updated_at');
@@ -39,6 +39,11 @@ class MicroproyectoController extends Controller
 
         if ($user->isSuperAdmin()) {
             // sin filtro
+        } elseif ($user->trabajaEnPracticas()) {
+            // Gestión de prácticas: todos los planes; las propuestas del taller no se listan
+            if ($request->query('etapa') !== Microproyecto::ETAPA_PLAN) {
+                $query->whereRaw('1 = 0');
+            }
         } elseif ($user->isAdmin()) {
             $query->where('centro_id', $user->centro_educativo_id);
         } else {
@@ -579,6 +584,9 @@ class MicroproyectoController extends Controller
             // Plan de proyecto: propuesta de la que sale y datos propios de las prácticas
             'origen'           => $p->origen_id ? ['uuid' => $p->origen?->uuid, 'titulo' => $p->origen?->titulo] : null,
             'horas_estimadas'  => $p->horas_estimadas,
+            // Reto de una solicitud de docente: la sesión que propuso, como sugerencia al crear el encuentro
+            'sesion_sugerida'  => ($solicitud = $p->microreto?->solicitudReto)?->sesion_fecha
+                ? app(\App\Services\SolicitudRetoService::class)->sesion($solicitud) : null,
             'expectativas_empresa' => $p->expectativas_empresa,
             'titulo'           => $p->titulo,
             'curso'            => $p->curso,

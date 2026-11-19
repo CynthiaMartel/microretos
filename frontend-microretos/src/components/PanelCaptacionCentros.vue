@@ -5,6 +5,7 @@
  * Validar = darlo de alta en DuaLab (centro_educativo) o enlazarlo con el que ya existe;
  * descartar = queda registrado con su motivo. Va junto a PanelCaptacionComercial (empresas).
  */
+import AvisoAccionCritica from './AvisoAccionCritica.vue'
 import { ref, onMounted } from 'vue'
 import Modal from './Modal.vue'
 import {
@@ -222,6 +223,7 @@ async function confirmarDescarte() {
           </li>
           <li v-if="!buscando && !coincidencias.length" class="px-3 py-2 text-xs text-gray-500">No hay centros parecidos en DuaLab.</li>
         </ul>
+        <AvisoAccionCritica />
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="validando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="guardando" @click="confirmarValidar">
@@ -242,6 +244,7 @@ async function confirmarDescarte() {
           <label for="pcc2-motivo" class="label-style">Motivo <span class="normal-case tracking-normal">(opcional)</span></label>
           <textarea id="pcc2-motivo" v-model="motivo" rows="3" maxlength="500" class="input-style" placeholder="Ej.: duplicado de una solicitud anterior" />
         </div>
+        <AvisoAccionCritica />
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="descartando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="guardando" @click="confirmarDescarte">{{ guardando ? 'Descartando…' : 'Descartar' }}</button>

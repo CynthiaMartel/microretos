@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { versionarIconos } from './pwa/versionarIconos.mjs'
+import { versionarCabeceras } from './pwa/versionarCabeceras.mjs'
 
 // App comercial (comercial.dualab.es): un build aparte que comparte
 // src/ (api.js, servicios, store de auth, estilos, componentes) con la app principal.
@@ -95,6 +96,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       versionJson(),
       versionarIconos(),
+      versionarCabeceras(),
       pwa(),
     ],
     define: {

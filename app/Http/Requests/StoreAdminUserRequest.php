@@ -26,10 +26,11 @@ class StoreAdminUserRequest extends FormRequest
             return $rules;
         }
 
-        // Superadmin: puede crear docente (2), empresa (3), admin de centro (4), comercial (5) o
-        // atención al cliente (6)
+        // Superadmin y admin_central_dualab: docente (2), empresa (3), admin de centro (4), comercial (5) y los
+        // roles de Central: red_dualab (6), gestion_practicas (7) y admin_central_dualab (8). Otro superadmin (1),
+        // solo el superadmin.
         return $rules + [
-            'role'                => 'required|in:2,3,4,5,6',
+            'role'                => 'required|in:' . ($this->user()->isSuperAdmin() ? '1,' : '') . '2,3,4,5,6,7,8',
             'centro_educativo_id' => 'nullable|exists:centro_educativo,id',
             'empresa_id'          => 'nullable|exists:empresas,id',
         ];

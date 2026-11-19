@@ -49,7 +49,7 @@ class PlanProyectoService
         ));
         $plan->origen_id = $origen->id;
         // Si lo crea DuaLab (superadmin), el plan queda a nombre del docente de la propuesta para que lo vea
-        $plan->user_id = $autor->isSuperAdmin() ? ($origen->user_id ?? $autor->id) : $autor->id;
+        $plan->user_id = $autor->gestionaTodosLosPlanes() ? ($origen->user_id ?? $autor->id) : $autor->id;
 
         return $this->guardar($plan);
     }
@@ -58,7 +58,7 @@ class PlanProyectoService
     {
         $reto = Microreto::findOrFail($datos['microreto_id']);
 
-        if (!$autor->isSuperAdmin() && !$reto->perteneceAlCentroDe($autor)) {
+        if (!$autor->gestionaTodosLosPlanes() && !$reto->perteneceAlCentroDe($autor)) {
             throw new AuthorizationException('Ese reto no es de tu centro.');
         }
 
@@ -66,7 +66,7 @@ class PlanProyectoService
             ['microreto_id' => $reto->id, 'empresa_id' => $reto->empresa_id],
             $this->datosPropios($datos, 'Plan de proyecto: ' . $reto->titulo),
         ));
-        $plan->centro_id = $autor->isSuperAdmin() ? $reto->centro_id : $autor->centro_educativo_id;
+        $plan->centro_id = $autor->gestionaTodosLosPlanes() ? $reto->centro_id : $autor->centro_educativo_id;
         $plan->user_id = $autor->id;
 
         return $this->guardar($plan);

@@ -34,7 +34,7 @@ const { form, errors, loginError, isLoading, handleLogin } = useLoginForm(async 
 
 const error = computed(() => errorRol.value || loginError.value || (route.query.motivo === 'rol' ? NO_ES_DE_CENTRAL : ''))
 const sesionCaducada = computed(() => route.query.motivo === 'caducada' && !error.value)
-// Hay sesión de atención al cliente y se ha pulsado un espacio de superadmin
+// Hay sesión de una cuenta que no abre el espacio pulsado
 const otraCuenta = computed(() => route.query.motivo === 'espacio' && !error.value)
 
 const entrar = () => {
@@ -104,8 +104,8 @@ const entrar = () => {
     </form>
 
     <p class="mt-6 text-sm text-gray-500">
-      <template v-if="espacio?.clave === 'primer-contacto'">Cuenta de atención al cliente o de superadmin, la que te dio DuaLab.</template>
-      <template v-else>Es la misma cuenta de superadmin que usas en la app DuaLab.</template>
+      <template v-if="espacio">Cuenta de {{ espacio.quien }}: la que te dio DuaLab.</template>
+      <template v-else>Tu cuenta de DuaLab Central: Red DuaLab, Gestión de prácticas, Admin Central DuaLab o superadmin.</template>
     </p>
   </AccesoLayout>
 </template>

@@ -243,6 +243,13 @@ const router = createRouter({
       name: 'valoracion-empresa',
       component: ValoracionEmpresa
     },
+    {
+      // Vista pública: el docente cuenta qué quiere trabajar para que DuaLab le prepare los retos
+      // (enlace con token que caduca, enviado desde DuaLab Central); con el aviso, ve sus retos
+      path: '/solicitud-reto/:token([A-Za-z0-9]{64})',
+      name: 'solicitud-reto',
+      component: () => import('../views/SolicitudRetoDocente.vue')
+    },
     // ── Compatibilidad: enlaces antiguos con el prefijo /startup-day ──────────
     { path: '/startup-day', redirect: '/proyectos' },
     { path: '/startup-day/crear', redirect: '/proyectos/crear' },

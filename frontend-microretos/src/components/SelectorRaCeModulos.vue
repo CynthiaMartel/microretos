@@ -11,6 +11,9 @@ const props = defineProps({
   maxRa:      { type: Number, default: 8 },      // = GenerarMicroretoRequest::MAX_RA_SELECCIONADOS
   maxCe:      { type: Number, default: 12 },     // = GenerarMicroretoRequest::MAX_CE_SELECCIONADOS
   disabled:   { type: Boolean, default: false },
+  // Título y ayuda: los del generador por defecto; el formulario de solicitud de retos pone los suyos
+  titulo:     { type: String, default: 'Fijar RA y CE (Opcional)' },
+  ayuda:      { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -107,8 +110,9 @@ const toggleRaExpandido = (raId) => {
   <div class="mt-5 pt-5 border-t border-gray-200">
     <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
       <div>
-        <p class="label-style !mb-1 !ml-0">Fijar RA y CE (Opcional)</p>
-        <p class="text-xs text-gray-500 leading-relaxed max-w-xl">
+        <p class="label-style !mb-1 !ml-0">{{ titulo }}</p>
+        <p v-if="ayuda" class="text-xs text-gray-500 leading-relaxed max-w-xl">{{ ayuda }}</p>
+        <p v-else class="text-xs text-gray-500 leading-relaxed max-w-xl">
           Marca los RA/CE que el reto debe trabajar <strong>sí o sí</strong>: serán los mismos en todas las variantes.
           En los módulos donde no marques nada, la IA elegirá los RA/CE (distintos en cada variante).
         </p>

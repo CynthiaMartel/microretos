@@ -11,7 +11,8 @@ const props = defineProps({
   // nuevo | responder | responder_todos | reenviar
   modo: { type: String, default: 'nuevo' },
   original: { type: Object, default: null },
-  // Respuesta a un formulario de la web: { id, email, nombre, asunto }
+  // Respuesta a un formulario de la web: { id, email, nombre, asunto }. Sin id: correo nuevo con
+  // destinatario y asunto ya puestos (p. ej. escribir al docente de una solicitud de retos)
   contacto: { type: Object, default: null },
   remitente: { type: String, default: 'info@dualab.es' },
 })
@@ -33,7 +34,7 @@ const errores = ref({})
 const errorGeneral = ref('')
 const errorAdjuntos = ref('')
 
-const titulo = computed(() => TITULOS[props.contacto ? 'formulario' : props.modo])
+const titulo = computed(() => TITULOS[props.contacto?.id ? 'formulario' : props.modo])
 const adjuntosOriginal = computed(() => (props.modo === 'reenviar'
   ? (props.original?.adjuntos ?? []).filter(a => a.disponible && !a.en_linea) : []))
 // Errores de para.0, cc.3… se muestran en su campo
@@ -127,7 +128,7 @@ async function enviar() {
   const datos = new FormData()
   datos.append('tipo', props.contacto ? 'nuevo' : (props.modo === 'responder_todos' ? 'responder' : props.modo))
   if (props.original && props.modo !== 'nuevo' && !props.contacto) datos.append('correo_id', props.original.id)
-  if (props.contacto) datos.append('contacto_id', props.contacto.id)
+  if (props.contacto?.id) datos.append('contacto_id', props.contacto.id)
   for (const campo of ['para', 'cc', 'cco']) lista(form[campo]).forEach(e => datos.append(`${campo}[]`, e))
   datos.append('asunto', form.asunto)
   datos.append('texto', form.texto)

@@ -124,7 +124,8 @@ class Encuentro extends Model
     // (con cualquier nivel de permiso). Admin ve todo su centro; superadmin, todo.
     public function scopeVisiblesPara($query, \App\Models\User $user)
     {
-        if ($user->isSuperAdmin()) {
+        // Gestión de prácticas ve los encuentros de todos los centros (elige alumnado y sigue planes)
+        if ($user->isSuperAdmin() || $user->trabajaEnPracticas()) {
             return $query;
         }
 
@@ -152,6 +153,10 @@ class Encuentro extends Model
         if ($user->isSuperAdmin()) {
             return true;
         }
+        // Gestión de prácticas solo edita los cronogramas de los planes, no los encuentros del taller
+        if ($user->trabajaEnPracticas()) {
+            return $this->tipo === self::TIPO_PLAN;
+        }
         if ($user->isAdmin() && $user->centro_educativo_id) {
             return (int) $this->centro_educativo_id === (int) $user->centro_educativo_id;
         }
@@ -170,6 +175,10 @@ class Encuentro extends Model
     {
         if ($user->isSuperAdmin()) {
             return $query;
+        }
+
+        if ($user->trabajaEnPracticas()) {
+            return $query->where('tipo', self::TIPO_PLAN);
         }
 
         if ($user->isAdmin() && $user->centro_educativo_id) {

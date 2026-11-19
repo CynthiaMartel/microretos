@@ -10,6 +10,7 @@ use App\Models\Familia;
 use App\Models\CentroEducativo;
 use App\Models\Microproyecto;
 use App\Models\Encuentro;
+use App\Models\SolicitudReto;
 
 class PapeleraController extends Controller
 {
@@ -23,6 +24,8 @@ class PapeleraController extends Controller
         'centros'     => CentroEducativo::class,
         'proyectos'   => Microproyecto::class,
         'sesiones'    => Encuentro::class,
+        // Al borrarla del todo, sus retos y encuentros se quedan sin solicitud (FK nullOnDelete)
+        'solicitudes' => SolicitudReto::class,
     ];
 
     /**
@@ -68,6 +71,7 @@ class PapeleraController extends Controller
         }
 
         $item->restore();
+        app(\App\Services\ActividadCentralService::class)->registrar(request()->user(), 'papelera', 'restaurar', 'Restauró de la papelera: ' . $this->extraerNombre($item, $tipo) . '.', $item, true);
 
         return response()->json([
             'message' => 'Elemento restaurado correctamente',
@@ -91,8 +95,10 @@ class PapeleraController extends Controller
             return response()->json(['error' => 'Elemento no encontrado en la papelera'], 404);
         }
 
+        $nombre = $this->extraerNombre($item, $tipo);
         $this->limpiarRelaciones($item, $tipo);
         $item->forceDelete();
+        app(\App\Services\ActividadCentralService::class)->registrar(request()->user(), 'papelera', 'borrar_definitivo', "Borró definitivamente: {$nombre}.", null, true);
 
         return response()->json(['message' => 'Elemento eliminado permanentemente']);
     }
@@ -124,6 +130,8 @@ class PapeleraController extends Controller
                 $totalEliminados++;
             }
         }
+
+        app(\App\Services\ActividadCentralService::class)->registrar($request->user(), 'papelera', 'vaciar', "Vació la papelera" . ($tipoFiltro ? " ({$tipoFiltro})" : '') . ": {$totalEliminados} elementos borrados definitivamente.", null, true);
 
         return response()->json([
             'message'    => 'Papelera vaciada correctamente',
@@ -165,6 +173,7 @@ class PapeleraController extends Controller
             'centros'    => $item->nombre            ?? "Centro #{$item->id}",
             'proyectos'  => $item->titulo            ?? "Proyecto #{$item->id}",
             'sesiones'   => $item->microreto_titulo  ?? "Sesión #{$item->id}",
+            'solicitudes' => "Solicitud de {$item->nombre_docente} · {$item->centro_nombre}",
             default      => "#{$item->id}",
         };
     }

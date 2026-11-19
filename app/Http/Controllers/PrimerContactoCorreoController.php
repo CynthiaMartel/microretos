@@ -7,6 +7,7 @@ use App\Http\Requests\EnviarCorreoWebRequest;
 use App\Http\Requests\ListarCorreosWebRequest;
 use App\Http\Requests\UpdateEstadoCorreoWebRequest;
 use App\Services\FrontofficeBandejaService;
+use App\Services\SolicitudRetoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,6 +31,9 @@ class PrimerContactoCorreoController extends Controller
             if (array_key_exists('adjuntos', $f)) {
                 $f['adjuntos'] = $f['adjuntos'] ? 1 : null;
             }
+            // Los de las solicitudes de retos van aparte («Respuestas de solicitudes»): aquí no se repiten
+            $origen = app(SolicitudRetoService::class)->origenCorreos();
+            $f += ['excluir_asunto' => $origen['asunto'], 'excluir_de' => $origen['de']];
             $r = $this->web->listarCorreos($f + ['per_page' => 25], $this->usuario($request));
 
             return response()->json([

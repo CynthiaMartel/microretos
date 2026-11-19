@@ -8,7 +8,7 @@ import SidePanel from './components/SidePanel.vue'
 import AppCredit from './components/AppCredit.vue'
 import ComoFuncionaModal from './components/ComoFuncionaModal.vue'
 import LoginModal from './components/LoginModal.vue'
-import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE } from './stores/auth'
+import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB } from './stores/auth'
 import { URL_APP_COMERCIAL } from './utils/urlComercial.js'
 import AvisoCaptacionPendiente from './components/AvisoCaptacionPendiente.vue'
 import AvisoSinConexion from './components/AvisoSinConexion.vue'
@@ -42,6 +42,7 @@ const isPublicRetoRoute = computed(() =>
   route.path.startsWith('/reto/') ||
   route.path.startsWith('/startup/landing/') ||
   route.path.startsWith('/valoracion/') ||
+  route.path.startsWith('/solicitud-reto/') ||
   route.path.startsWith('/proyecto/equipo/') ||
   // Workspace de un grupo visto por el docente (solo lectura): a pantalla completa como el del
   // alumnado; se abre en otra pestaña y su aviso lleva al Detalle del grupo
@@ -83,9 +84,11 @@ const onLoginSuccess = (data) => {
     authStore.logout().finally(() => window.location.assign(URL_APP_COMERCIAL))
     return
   }
-  // Atención al cliente: su sitio es DuaLab Central («Primer contacto»), con su propia sesión
-  if (role === ROLE_ATENCION_CLIENTE) {
-    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/primer-contacto`))
+  // Personal de DuaLab Central (red_dualab, gestion_practicas, admin_central_dualab): su sitio es Central,
+  // con su propia sesión; cada uno a su espacio (admin_central_dualab, que tiene dos, a elegir espacio)
+  if ([ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB].includes(role)) {
+    const espacio = { [ROLE_RED_DUALAB]: 'red', [ROLE_GESTION_PRACTICAS]: 'practicas' }[role] ?? ''
+    authStore.logout().finally(() => window.location.assign(`${URL_CENTRAL}/${espacio}`))
     return
   }
   const destino = destinoTrasLogin.value || rolHome(role)

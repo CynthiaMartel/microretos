@@ -10,8 +10,13 @@ export const ROLE_EMPRESA    = 3
 export const ROLE_ADMIN      = 4
 // Comercial: solo usa la app comercial (comercial.dualab.es), ninguna ruta de esta app
 export const ROLE_COMERCIAL  = 5
-// Atención al cliente: solo DuaLab Central → «Primer contacto» (formularios y correo de info@)
-export const ROLE_ATENCION_CLIENTE = 6
+// Roles de DuaLab Central, con el nombre del espacio que abren (= User::ROLE_* del backend):
+// red_dualab: solo el espacio «Red DuaLab» (Primer contacto, captaciones, soporte). Antes «atención al cliente».
+export const ROLE_RED_DUALAB = 6
+// gestion_practicas: solo «Seguimiento de prácticas» (planes, agenda, destacados)
+export const ROLE_GESTION_PRACTICAS = 7
+// admin_central_dualab: los dos espacios anteriores y Usuarios (sin superadmins); Base de datos y Papelera, solo superadmin
+export const ROLE_ADMIN_CENTRAL_DUALAB = 8
 
 // Rutas permitidas por rol (nombre de ruta de Vue Router).
 // 'mis-grupos'/'mis-grupos-detalle': se llamaron 'mis-grupos'/'mis-grupos-detalle' una temporada;
@@ -41,7 +46,9 @@ export const ROLE_ROUTES = {
   [ROLE_EMPRESA]:    ['biblioteca', 'detalle-microreto',
                       'startup-day', 'startup-day-detalle', 'mi-usuario'],
   [ROLE_COMERCIAL]:  [],
-  [ROLE_ATENCION_CLIENTE]: [],
+  [ROLE_RED_DUALAB]: [],
+  [ROLE_GESTION_PRACTICAS]: [],
+  [ROLE_ADMIN_CENTRAL_DUALAB]: [],
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -120,7 +127,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isDocente    = computed(() => userRole.value === ROLE_DOCENTE)
   const isEmpresa    = computed(() => userRole.value === ROLE_EMPRESA)
   const isComercial  = computed(() => userRole.value === ROLE_COMERCIAL)
-  const isAtencionCliente = computed(() => userRole.value === ROLE_ATENCION_CLIENTE)
+  const isRedDualab = computed(() => userRole.value === ROLE_RED_DUALAB)
+  const isGestionPracticas = computed(() => userRole.value === ROLE_GESTION_PRACTICAS)
+  const isAdminCentralDualab = computed(() => userRole.value === ROLE_ADMIN_CENTRAL_DUALAB)
 
   const roleLabel = computed(() => {
     if (userRole.value === ROLE_DOCENTE)    return 'Docente'
@@ -128,7 +137,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (userRole.value === ROLE_ADMIN)      return 'Administrador'
     if (userRole.value === ROLE_SUPERADMIN) return 'Superadministrador'
     if (userRole.value === ROLE_COMERCIAL)  return 'Comercial'
-    if (userRole.value === ROLE_ATENCION_CLIENTE) return 'Atención al cliente'
+    if (userRole.value === ROLE_RED_DUALAB) return 'Red DuaLab'
+    if (userRole.value === ROLE_GESTION_PRACTICAS) return 'Gestión de prácticas'
+    if (userRole.value === ROLE_ADMIN_CENTRAL_DUALAB) return 'Admin Central DuaLab'
     return ''
   })
 
@@ -204,7 +215,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     isInitialized, isAuthenticated, userId, userRole, userName, userCentroId, userCentroNombre, userCentroImg,
     tieneModulos, imparte, minutosRestantes, recordado,
-    isSuperAdmin, isAdmin, isDocente, isEmpresa, isComercial, isAtencionCliente, roleLabel,
+    isSuperAdmin, isAdmin, isDocente, isEmpresa, isComercial, isRedDualab, isGestionPracticas, isAdminCentralDualab, roleLabel,
     init, login, logout, ping, updateName, updateCentroImg, canAccess,
   }
 })

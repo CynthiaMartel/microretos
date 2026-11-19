@@ -83,7 +83,7 @@ const nombreDe = (f) => [f.nombre, f.apellidos].filter(Boolean).join(' ') || f.e
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <CabeceraSeccion antetitulo="DuaLab Central" titulo="Primer" destacado="contacto" color="text-rol"
-                       :volver="{ name: 'inicio' }" volver-label="Espacios"
+                       :volver="{ name: 'red-inicio' }" volver-label="Red DuaLab"
                        subtitulo="Los formularios que llegan desde dualab.es. Ábrelos para leerlos y ver si ya están en captaciones." />
 
       <FiltrosPanel v-model:busqueda="buscar" placeholder="Buscar por nombre o email…"

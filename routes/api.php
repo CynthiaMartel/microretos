@@ -38,6 +38,10 @@ use App\Http\Controllers\PrimerContactoCorreoController;
 use App\Http\Controllers\PlanProyectoController;
 use App\Http\Controllers\AgendaPracticasController;
 use App\Http\Controllers\RegistroHorasController;
+use App\Http\Controllers\ActividadCentralController;
+use App\Http\Controllers\SolicitudRetoController;
+use App\Http\Controllers\SolicitudRetoCorreoController;
+use App\Http\Controllers\SolicitudRetoPublicaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +64,16 @@ Route::middleware('throttle:formulario-empresa')->prefix('public/formulario-empr
         Route::put('/empresa',  [FormularioEmpresaController::class, 'guardarEmpresa']);
         Route::put('/',         [FormularioEmpresaController::class, 'guardar']);
         Route::post('/firma',   [FormularioEmpresaController::class, 'firmar'])->middleware('throttle:10,1,formulario-firma');
+    });
+
+// Solicitud de retos que DuaLab envía al docente (app DuaLab, /solicitud-reto/{token}): sin
+// sesión, el token es la credencial (SolicitudRetoService). Con el enlace del aviso, sus retos.
+Route::middleware('throttle:solicitud-reto')->prefix('public/solicitud-reto/{token}')
+    ->where(['token' => '[A-Za-z0-9]{64}'])->group(function () {
+        Route::get('/',        [SolicitudRetoPublicaController::class, 'show']);
+        Route::put('/',        [SolicitudRetoPublicaController::class, 'guardar']);
+        Route::post('/enviar', [SolicitudRetoPublicaController::class, 'enviar'])->middleware('throttle:10,1,solicitud-reto-enviar');
+        Route::get('/retos',   [SolicitudRetoPublicaController::class, 'retos']);
     });
 
 // Acceso público por token temporal (QR para alumnado — ficha del microreto)
@@ -491,13 +505,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── DuaLab Central → Alumnado destacado para prácticas (P3b, solo superadmin) ──────
-    Route::middleware(['superadmin', 'throttle:60,1,central-destacados'])->prefix('central/destacados')->group(function () {
+    Route::middleware(['practicas', 'throttle:60,1,central-destacados'])->prefix('central/destacados')->group(function () {
         Route::get('/',                    [DestacadoCentralController::class, 'index']);
         Route::put('/miembros/{id}',       [DestacadoCentralController::class, 'marcar'])->whereNumber('id');
     });
 
     // ── DuaLab Central → Primer contacto: formularios y correo de la web por su API firmada
-    //    (atención al cliente y superadmin) ──
+    //    (red_dualab, central_dualab y superadmin) ──
     Route::middleware(['primer.contacto', 'throttle:60,1,central-primer-contacto'])->prefix('central/primer-contacto')->group(function () {
         Route::get('/formularios',         [PrimerContactoController::class, 'index']);
         Route::get('/formularios/{id}',    [PrimerContactoController::class, 'show'])->whereNumber('id');
@@ -513,8 +527,39 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/correo/{correo}/adjuntos/{adjunto}', [PrimerContactoCorreoController::class, 'adjunto'])->whereNumber(['correo', 'adjunto']);
     });
 
-    // ── Revisión de lo captado por comerciales (solo superadmin) ─────────────────────
-    Route::middleware(['superadmin', 'throttle:60,1,captacion-admin'])->prefix('captacion')->group(function () {
+    // ── DuaLab Central → Historial: qué se hizo, quién y cuándo (superadmin y admin_central_dualab) ──
+    Route::middleware(['admin.central', 'throttle:60,1,central-historial'])
+        ->get('/central/historial', [ActividadCentralController::class, 'index']);
+
+    // ── DuaLab Central → Primer contacto → Solicitudes de retos de docentes (red_dualab, central_dualab
+    //    y superadmin; los datos para el generador, solo superadmin, que es quien genera) ──
+    Route::middleware(['primer.contacto', 'throttle:60,1,central-solicitudes-reto'])->prefix('central/solicitudes-reto')->group(function () {
+        Route::get('/',                [SolicitudRetoController::class, 'index']);
+        // Respuestas de los docentes en info@ (por la referencia del asunto); específica antes de /{id}
+        Route::get('/correos',         [SolicitudRetoCorreoController::class, 'index']);
+        Route::get('/para-generador',  [SolicitudRetoController::class, 'paraGenerador'])->middleware('admin.central');
+        Route::get('/{id}',            [SolicitudRetoController::class, 'show'])->whereNumber('id');
+        Route::get('/{id}/correos',    [SolicitudRetoCorreoController::class, 'deSolicitud'])->whereNumber('id');
+        Route::patch('/{id}',          [SolicitudRetoController::class, 'update'])->whereNumber('id');
+        // Gestión de las peticiones (superadmin y admin_central_dualab): empresa, generar y publicar retos
+        Route::middleware('admin.central')->group(function () {
+            Route::get('/{id}/generador',   [SolicitudRetoController::class, 'generador'])->whereNumber('id');
+            Route::get('/{id}/generacion',  [SolicitudRetoController::class, 'generacion'])->whereNumber('id');
+            Route::get('/{id}/empresas',    [SolicitudRetoController::class, 'empresas'])->whereNumber('id');
+            Route::post('/{id}/publicar',   [SolicitudRetoController::class, 'publicar'])->whereNumber('id');
+            // A la papelera; restaurarla o borrarla del todo es de la Papelera, solo superadmin
+            Route::delete('/{id}',          [SolicitudRetoController::class, 'destroy'])->whereNumber('id');
+        });
+        // Envían correo: cupo propio
+        Route::middleware('throttle:20,1,central-solicitudes-reto-correo')->group(function () {
+            Route::post('/',               [SolicitudRetoController::class, 'store']);
+            Route::post('/{id}/reenviar',  [SolicitudRetoController::class, 'reenviar'])->whereNumber('id');
+            Route::post('/{id}/avisar',    [SolicitudRetoController::class, 'avisar'])->whereNumber('id');
+        });
+    });
+
+    // ── Revisión de lo captado por comerciales (Central → Red DuaLab: red_dualab, central_dualab y superadmin) ──
+    Route::middleware(['red.dualab', 'throttle:60,1,captacion-admin'])->prefix('captacion')->group(function () {
         Route::get('/resumen',                          [CaptacionAdminController::class, 'resumen']);
         Route::get('/empresas',                         [CaptacionAdminController::class, 'empresas']);
         Route::put('/empresas/{id}/validar',            [CaptacionAdminController::class, 'validar'])->whereNumber('id');
@@ -532,7 +577,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Gestión de usuarios (solo admin) ─────────────────────────────
-    Route::middleware('admin')->prefix('admin/usuarios')->group(function () {
+    // Superadmin, admin_central_dualab (todas las cuentas menos superadmin) y admin de centro (las de su centro)
+    Route::middleware('usuarios')->prefix('admin/usuarios')->group(function () {
         Route::get('/',                       [AdminUserController::class, 'index']);
         Route::post('/',                      [AdminUserController::class, 'store']);
         Route::get('/papelera',               [AdminUserController::class, 'papelera']);

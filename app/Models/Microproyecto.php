@@ -133,7 +133,7 @@ class Microproyecto extends Model
     // colaborador) a alguno de sus encuentros. Admin ve todo su centro; superadmin, todo.
     public function esVisiblePara(\App\Models\User $user): bool
     {
-        if ($user->isSuperAdmin()) {
+        if ($user->isSuperAdmin() || $user->trabajaEnPracticas()) {
             return true;
         }
 
@@ -154,6 +154,11 @@ class Microproyecto extends Model
     {
         if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        // Gestión de prácticas: los planes de proyecto sí (validar, cronograma); las propuestas del taller no
+        if ($user->trabajaEnPracticas()) {
+            return $this->esPlan();
         }
 
         if ($user->isAdmin()) {

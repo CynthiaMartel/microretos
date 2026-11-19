@@ -40,7 +40,7 @@ class PrimerContactoCentralTest extends TestCase
         ]);
         $this->dualab  = $crear('DuaLab', User::ROLE_SUPERADMIN);
         $this->docente = $crear('Ana', User::ROLE_DOCENTE);
-        $this->atencion = $crear('Laura', User::ROLE_ATENCION_CLIENTE);
+        $this->atencion = $crear('Laura', User::ROLE_RED_DUALAB);
     }
 
     private function formulario(int $id, array $extra = []): array
@@ -99,9 +99,9 @@ class PrimerContactoCentralTest extends TestCase
 
         Sanctum::actingAs($this->atencion);
         $this->getJson('/api/central/primer-contacto/formularios')->assertOk();
-        // Atención al cliente no entra en los otros espacios de Central
+        // Red DuaLab lleva Red DuaLab (captaciones incluidas), no Seguimiento de prácticas
         $this->getJson('/api/central/destacados')->assertForbidden();
-        $this->getJson('/api/captacion/resumen')->assertForbidden();
+        $this->getJson('/api/captacion/resumen')->assertOk();
         Http::assertSent(fn (PeticionHttp $p) => $p->header('X-DuaLab-Usuario')[0] === 'Laura');
     }
 

@@ -79,6 +79,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         $this->captacion->validar($captacion, $request->validated('centro_ids'), $user, $request->validated('empresa_existente_id'));
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'validar_empresa', "Validó la empresa captada «{$captacion->nombre_comercial}» y la llevó a la base de datos.", $captacion, true);
 
         return new EmpresaCaptacionResource($captacion->refresh()->load(self::CON));
     }
@@ -90,6 +91,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         $this->captacion->descartar($captacion, $user, $request->validated('motivo'));
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'descartar_empresa', "Descartó la empresa captada «{$captacion->nombre_comercial}».", $captacion, true);
 
         return new EmpresaCaptacionResource($captacion->refresh()->load(self::CON));
     }
@@ -129,6 +131,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         $this->centros->validar($captacion, $user, $request->validated('centro_existente_id'));
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'validar_centro', "Validó el centro captado «{$captacion->centro_nombre}».", $captacion, true);
 
         return new CentroCaptacionResource($captacion->refresh()->load(self::CON_CENTRO));
     }
@@ -140,6 +143,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         $this->centros->descartar($captacion, $user, $request->validated('motivo'));
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'descartar_centro', "Descartó el centro captado «{$captacion->centro_nombre}».", $captacion, true);
 
         return new CentroCaptacionResource($captacion->refresh()->load(self::CON_CENTRO));
     }
@@ -188,6 +192,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user    = $request->user();
         $creados = $this->borradores->publicar($borrador, $request->validated('centro_ids'), $user);
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'publicar_reto', "Publicó el reto en borrador «" . data_get($borrador->datos, 'titulo', 'sin título') . "» en {$creados->count()} centro(s).", $borrador, true);
 
         return response()->json([
             'message'    => $creados->count() === 1 ? 'Reto publicado.' : "Reto publicado en {$creados->count()} centros.",
@@ -202,6 +207,7 @@ class CaptacionAdminController extends Controller
         /** @var User $user  ruta bajo auth:sanctum */
         $user = $request->user();
         $this->borradores->descartar($borrador, $user);
+        app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'descartar_reto', "Descartó el reto en borrador «" . data_get($borrador->datos, 'titulo', 'sin título') . "».", $borrador, true);
 
         return response()->json(['message' => 'Reto descartado.']);
     }

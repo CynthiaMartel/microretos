@@ -17,8 +17,9 @@ class UpdateAdminUserRequest extends FormRequest
     {
         $targetUser = $this->route('user');
 
-        // Admin de centro solo puede mantener el rol docente; superadmin puede asignar 2, 3, 4, 5 o 6
-        $rolesPermitidos = $this->user()->isAdmin() ? '2' : '2,3,4,5,6';
+        // Admin de centro solo puede mantener el rol docente; superadmin puede asignar 2 a 8. Nunca 1: un
+        // superadmin solo se crea dándolo de alta (y las cuentas de superadmin no se editan, checkScope)
+        $rolesPermitidos = $this->user()->isAdmin() ? '2' : '2,3,4,5,6,7,8';
 
         $rules = [
             'name'  => 'required|string|max:255',
@@ -26,7 +27,7 @@ class UpdateAdminUserRequest extends FormRequest
             'role'  => 'required|in:' . $rolesPermitidos,
         ];
 
-        if ($this->user()->isSuperAdmin()) {
+        if ($this->user()->gestionaTodosLosUsuarios()) {
             $rules['centro_educativo_id'] = 'nullable|exists:centro_educativo,id';
             $rules['empresa_id']          = 'nullable|exists:empresas,id';
         }

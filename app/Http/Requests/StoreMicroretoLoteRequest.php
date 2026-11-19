@@ -18,6 +18,8 @@ class StoreMicroretoLoteRequest extends FormRequest
     {
         return [
             'microretos'                        => 'required|array|max:50',
+            // Retos generados desde una solicitud de docente (solo superadmin, lo comprueba el controller)
+            'solicitud_reto_id'                 => 'sometimes|nullable|integer|exists:solicitudes_reto,id,deleted_at,NULL',
             'microretos.*.demo_id'              => 'nullable|integer|exists:demos,id',
             'microretos.*.empresa_id'           => 'nullable|integer|exists:empresas,id',
             'microretos.*.empresa_nombre'       => 'nullable|string|max:255',

@@ -27,7 +27,7 @@ class GenerarRetosComercialRequest extends FormRequest
             'nivelGrupo'        => 'required|in:Bajo,Medio,Alto',
             // Demostración: pocos retos, que la IA responda rápido delante del cliente
             'cantidad'          => 'required|integer|min:1|max:3',
-            'enfoqueReto'       => 'sometimes|nullable|string|max:500',
+            'enfoqueReto'       => 'sometimes|nullable|string|max:1000',
         ];
     }
 }

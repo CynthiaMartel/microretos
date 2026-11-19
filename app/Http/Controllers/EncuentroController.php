@@ -78,6 +78,12 @@ class EncuentroController extends Controller
         $encuentro = new Encuentro($validated);
         // Etapa: no es fillable (no la decide el cliente). De momento solo se crean encuentros creativos.
         $encuentro->tipo = Encuentro::TIPO_CREATIVO;
+        // Propuesta de un reto de una solicitud de docente: el encuentro cierra la solicitud
+        // (fase «con encuentro» en Central). Se deduce de la propuesta, nunca lo manda el cliente.
+        if (!empty($validated['microproyecto_id'])) {
+            $encuentro->solicitud_reto_id = Microproyecto::with('microreto:id,solicitud_reto_id')
+                ->find($validated['microproyecto_id'])?->microreto?->solicitud_reto_id;
+        }
         $encuentro->fecha_fin = $encuentro->fechaFinSugerida(Carbon::parse($validated['fecha']))?->toDateString();
         $encuentro->save();
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);

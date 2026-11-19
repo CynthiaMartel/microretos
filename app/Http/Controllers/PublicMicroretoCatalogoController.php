@@ -98,6 +98,8 @@ class PublicMicroretoCatalogoController extends Controller
         });
         // La relación empresa incluye la papelera (biblioteca del centro); en público, no
         $query->whereHas('empresa', fn ($q) => $q->withoutTrashed());
+        // Los de la recámara (solicitudes de docentes aún sin cuenta) solo los ve DuaLab
+        $query->where('en_recamara', false);
     }
 
     // Eager load constreñido al mismo criterio (completado + visible_publico), el más

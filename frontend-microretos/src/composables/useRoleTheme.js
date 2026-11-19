@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_ATENCION_CLIENTE, useAuthStore } from '../stores/auth.js'
+import { ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_DOCENTE, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB, useAuthStore } from '../stores/auth.js'
 
 // Color de marca por rol de quien ha iniciado sesión — mismo criterio que el
 // frontoffice (ver logo_colores.png): docente/centro=azul, empresa=verde,
@@ -98,8 +98,10 @@ const THEME_BY_ROLE = {
 // Sin sesión todavía (Home antes de login) o rol desconocido: azul de marca genérico.
 // Comercial: verde de empresas, que es con quien trabaja (app comercial.dualab.es)
 THEME_BY_ROLE[ROLE_COMERCIAL] = THEME_BY_ROLE[ROLE_EMPRESA]
-// Atención al cliente: trabaja en DuaLab Central, con el turquesa del superadmin
-THEME_BY_ROLE[ROLE_ATENCION_CLIENTE] = THEME_BY_ROLE[ROLE_SUPERADMIN]
+// Roles de Central (red_dualab, gestion_practicas, admin_central_dualab): con el turquesa del superadmin
+THEME_BY_ROLE[ROLE_RED_DUALAB] = THEME_BY_ROLE[ROLE_SUPERADMIN]
+THEME_BY_ROLE[ROLE_GESTION_PRACTICAS] = THEME_BY_ROLE[ROLE_SUPERADMIN]
+THEME_BY_ROLE[ROLE_ADMIN_CENTRAL_DUALAB] = THEME_BY_ROLE[ROLE_SUPERADMIN]
 
 const DEFAULT_THEME = {
   key: 'primary',
@@ -156,9 +158,10 @@ const TEMA_ESPACIO_RED = {
   border15: 'border-espacio-red/15',
   border20: 'border-espacio-red/20',
   ring: 'ring-espacio-red-fuerte',
-  hex: '#8A6400',
-  hexDark: '#E8B84A',
-  hexSoft: 'rgba(201,151,28,0.15)',
+  // Coral rojizo, como Primer contacto (que ahora va dentro de Red DuaLab): style.css --color-espacio-red*
+  hex: '#C2413A',
+  hexDark: '#FF9A93',
+  hexSoft: 'rgba(242,102,94,0.15)',
 }
 const TEMA_ESPACIO_PRACTICAS = {
   key: 'espacio-practicas',

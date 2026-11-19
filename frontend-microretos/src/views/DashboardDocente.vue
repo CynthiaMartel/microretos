@@ -116,11 +116,27 @@ function seleccionarProyecto(p) {
   if (p.ciclo_nombre) form.value.ciclo_formativo = p.ciclo_nombre
   // Curso del encuentro = el de la propuesta (1º, 2º o ambos), ya marcado en el formulario
   if (nivelCurso(p.curso)) form.value.curso   = CURSO_ENCUENTRO[nivelCurso(p.curso)]
+  aplicarSesionSugerida(p.sesion_sugerida)
   mostrarBuscadorProy.value    = false
+}
+
+// Reto de una solicitud de docente: la fecha y el horario que propuso se sugieren aquí (el
+// encuentro guarda la fecha; el horario va a las notas). Todo se puede cambiar.
+const sesionSugerida = ref(null)
+const textoHorario = (s) => s?.hora_inicio ? `${s.hora_inicio}${s.hora_fin ? '–' + s.hora_fin : ''}${s.duracion ? ` (${s.duracion})` : ''}` : ''
+function aplicarSesionSugerida(s) {
+  sesionSugerida.value = s || null
+  if (!s?.fecha) return
+  if (s.fecha >= new Date().toISOString().slice(0, 10)) form.value.fecha = s.fecha
+  const horario = textoHorario(s)
+  if (horario && !form.value.notas.includes(horario)) {
+    form.value.notas = [`Sesión propuesta por el docente: ${horario}.`, form.value.notas].filter(Boolean).join('\n')
+  }
 }
 
 function limpiarProyecto() {
   proyectoSeleccionado.value   = null
+  sesionSugerida.value         = null
   form.value.microproyecto_id  = null
   form.value.planificacion_sesiones = []
   form.value.ciclo_formativo   = ''
@@ -998,6 +1014,9 @@ function formatFecha(isoDate) {
             <div ref="refCampoFecha" :class="{ 'tour-active': tourTargetActivo === 'refCampoFecha' }" class="min-w-0 rounded-xl transition-all">
               <label for="enc-fecha" class="field-label">Fecha de trabajo <span class="text-red-600" aria-hidden="true">*</span></label>
               <input id="enc-fecha" v-model="form.fecha" type="date" class="field-input" :disabled="!proyectoAsociado" required />
+              <p v-if="sesionSugerida?.fecha" class="mt-1.5 rounded-lg bg-alumnos/10 px-2.5 py-1.5 text-xs font-semibold text-alumnos-dark">
+                El docente propuso el {{ new Date(sesionSugerida.fecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) }}<template v-if="sesionSugerida.hora_inicio">, {{ textoHorario(sesionSugerida) }}</template>.
+              </p>
               <p v-if="!proyectoAsociado" class="mt-1.5 text-xs font-medium text-amber-800">
                 Asocia primero una propuesta para poder establecer la fecha de trabajo.
               </p>

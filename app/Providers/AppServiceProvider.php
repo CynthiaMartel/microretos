@@ -100,6 +100,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->route('token') ?? $request->ip());
         });
 
+        // Solicitud de retos enviada al docente (pública, por token): guarda al pasar de paso
+        RateLimiter::for('solicitud-reto', function (Request $request) {
+            return Limit::perMinute(60)->by('solicitud-reto|' . ($request->route('token') ?? $request->ip()));
+        });
+
         // Formulario de soporte (público, envía 2 emails por petición): 3/min y 10/hora por IP
         RateLimiter::for('soporte', function (Request $request) {
             return [

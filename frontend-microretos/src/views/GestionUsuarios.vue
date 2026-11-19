@@ -12,6 +12,9 @@ import TituloResultados from '../components/TituloResultados.vue'
 import { usePaginacion } from '../composables/usePaginacion.js'
 
 const authStore = useAuthStore()
+// Gestiona las cuentas de todos los centros (elige tipo, centro y empresa): superadmin y Admin Central
+// DuaLab. Crear superadmins y asociar centro desde el menú siguen siendo solo del superadmin.
+const gestionaTodos = computed(() => authStore.isSuperAdmin || authStore.isAdminCentralDualab)
 
 // ── Estado principal ────────────────────────────────────────────────
 const usuarios    = ref([])
@@ -101,7 +104,7 @@ async function abrirModalEditar(usuario) {
   msgEditar.value        = ''
   modalEditar.value      = true
 
-  if (authStore.isSuperAdmin) {
+  if (gestionaTodos.value) {
     await Promise.all([
       centros.value.length === 0 ? api.get('/centros').then(r => { centros.value = r.data }) : Promise.resolve(),
       empresasList.value.length === 0 ? api.get('/empresas').then(r => { empresasList.value = r.data }) : Promise.resolve(),
@@ -113,11 +116,11 @@ async function guardarEdicion() {
   formEditarErrors.value = {}
   msgEditar.value        = ''
 
-  if (authStore.isSuperAdmin && ['2', '4'].includes(formEditar.value.role) && !formEditar.value.centro_educativo_id) {
+  if (gestionaTodos.value && ['2', '4'].includes(formEditar.value.role) && !formEditar.value.centro_educativo_id) {
     formEditarErrors.value.centro_educativo_id = 'Debes asignar un centro educativo.'
     return
   }
-  if (authStore.isSuperAdmin && formEditar.value.role === '3' && !formEditar.value.empresa_id) {
+  if (gestionaTodos.value && formEditar.value.role === '3' && !formEditar.value.empresa_id) {
     formEditarErrors.value.empresa_id = 'Debes asignar una empresa.'
     return
   }
@@ -145,10 +148,10 @@ async function guardarEdicion() {
       payload.password_confirmation = formEditar.value.password_confirmation
       payload.confirm_password_change = true
     }
-    if (authStore.isSuperAdmin && ['2', '4'].includes(formEditar.value.role)) {
+    if (gestionaTodos.value && ['2', '4'].includes(formEditar.value.role)) {
       payload.centro_educativo_id = formEditar.value.centro_educativo_id
     }
-    if (authStore.isSuperAdmin && formEditar.value.role === '3') {
+    if (gestionaTodos.value && formEditar.value.role === '3') {
       payload.empresa_id = formEditar.value.empresa_id
     }
     const { data } = await api.patch(`/admin/usuarios/${usuarioEditando.value.id}`, payload)
@@ -250,7 +253,9 @@ const TIPOS = [
   { val: 4, label: 'Admins de centro', punto: 'bg-administraciones' },
   { val: 3, label: 'Empresas',         punto: 'bg-empresas' },
   { val: 5, label: 'Comerciales',      punto: 'bg-empresas-dark' },
-  { val: 6, label: 'Atención al cliente', punto: 'bg-alumnos' },
+  { val: 6, label: 'Red DuaLab',       punto: 'bg-espacio-red' },
+  { val: 7, label: 'Gestión de prácticas', punto: 'bg-espacio-practicas' },
+  { val: 8, label: 'Admin Central DuaLab', punto: 'bg-azul-noche' },
   { val: 1, label: 'Superadmin',       punto: 'bg-azul-noche' },
 ]
 const conteoTipos = computed(() => {
@@ -435,11 +440,11 @@ async function crearUsuario() {
   formErrors.value = {}
   msgCrear.value   = ''
 
-  if (authStore.isSuperAdmin && ['2', '4'].includes(form.value.role) && !form.value.centro_educativo_id) {
+  if (gestionaTodos.value && ['2', '4'].includes(form.value.role) && !form.value.centro_educativo_id) {
     formErrors.value.centro_educativo_id = 'Debes asignar un centro educativo antes de crear la cuenta.'
     return
   }
-  if (authStore.isSuperAdmin && form.value.role === '3' && !form.value.empresa_id) {
+  if (gestionaTodos.value && form.value.role === '3' && !form.value.empresa_id) {
     formErrors.value.empresa_id = 'Debes asignar una empresa antes de crear la cuenta.'
     return
   }
@@ -479,7 +484,7 @@ async function abrirModalCrear() {
   formErrors.value = {}
   msgCrear.value = ''
   modalCrear.value = true
-  if (authStore.isSuperAdmin) {
+  if (gestionaTodos.value) {
     const [, ] = await Promise.all([
       centros.value.length === 0 ? api.get('/centros').then(r => { centros.value = r.data }) : Promise.resolve(),
       empresasList.value.length === 0 ? api.get('/empresas').then(r => { empresasList.value = r.data }) : Promise.resolve(),
@@ -695,7 +700,9 @@ const ROLE_COLORS = {
   3: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas',        avatar: 'bg-empresas/10 text-empresas-dark',            label: 'Empresa' },
   4: { bg: 'bg-administraciones/10 text-administraciones-dark',  punto: 'bg-administraciones', avatar: 'bg-administraciones/10 text-administraciones-dark', label: 'Admin de centro' },
   5: { bg: 'bg-empresas/10 text-empresas-dark',                  punto: 'bg-empresas-dark',   avatar: 'bg-empresas/10 text-empresas-dark',              label: 'Comercial' },
-  6: { bg: 'bg-alumnos/10 text-alumnos-dark',                    punto: 'bg-alumnos',         avatar: 'bg-alumnos/10 text-alumnos-dark',                label: 'Atención al cliente' },
+  6: { bg: 'bg-espacio-red/10 text-espacio-red-fuerte',          punto: 'bg-espacio-red',     avatar: 'bg-espacio-red/10 text-espacio-red-fuerte',      label: 'Red DuaLab' },
+  7: { bg: 'bg-espacio-practicas/10 text-espacio-practicas-fuerte', punto: 'bg-espacio-practicas', avatar: 'bg-espacio-practicas/10 text-espacio-practicas-fuerte', label: 'Gestión de prácticas' },
+  8: { bg: 'bg-azul-noche/10 text-azul-noche',                   punto: 'bg-azul-noche',      avatar: 'bg-azul-noche/10 text-azul-noche',               label: 'Admin Central DuaLab' },
 }
 function roleChip(role) {
   return ROLE_COLORS[role] ?? { bg: 'bg-gray-100 text-azul-noche', punto: 'bg-azul-noche', avatar: 'bg-gray-100 text-azul-noche', label: 'Superadmin' }
@@ -765,7 +772,7 @@ onMounted(async () => {
           </button>
         </template>
         <!-- Slot condicional: sin filtro de centro (admin de centro) no queda una fila vacía -->
-        <template v-if="authStore.isSuperAdmin && centrosDisponibles.length > 1" #default>
+        <template v-if="gestionaTodos && centrosDisponibles.length > 1" #default>
           <FiltroSelect v-model="filtroCentro" label="Centro educativo" todos="Todos los centros" :opciones="centrosDisponibles" />
         </template>
       </FiltrosPanel>
@@ -1058,12 +1065,12 @@ onMounted(async () => {
               <div>
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Correo electrónico</label>
                 <!-- Docente/Admin sin centro aún -->
-                <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role) && !activeEmailDomain"
+                <div v-if="gestionaTodos && ['2','4'].includes(form.role) && !activeEmailDomain"
                   class="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-600">
                   Selecciona un centro educativo para generar el correo
                 </div>
                 <!-- Empresa sin empresa asignada aún -->
-                <div v-else-if="authStore.isSuperAdmin && form.role === '3' && !activeEmailDomain"
+                <div v-else-if="gestionaTodos && form.role === '3' && !activeEmailDomain"
                   class="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-600">
                   Selecciona una empresa para generar el correo
                 </div>
@@ -1125,7 +1132,7 @@ onMounted(async () => {
               </div>
 
               <!-- Tipo de cuenta (solo visible para superadmin; admin de centro siempre crea docentes) -->
-              <div v-if="authStore.isSuperAdmin">
+              <div v-if="gestionaTodos">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex flex-wrap gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
@@ -1158,15 +1165,45 @@ onMounted(async () => {
                     </svg>
                     Comercial
                   </button>
-                  <!-- Atención al cliente: formularios y correo de info@ en DuaLab Central («Primer contacto»); sin centro ni empresa -->
+                  <!-- Red DuaLab (antes «atención al cliente»): espacio Red DuaLab de Central, sin Datos; sin centro ni empresa -->
                   <button type="button" @click="form.role = '6'; form.centro_educativo_id = null; form.empresa_id = null"
-                    :class="form.role === '6' ? 'bg-alumnos/10 border-alumnos/40 text-alumnos-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    :class="form.role === '6' ? 'bg-espacio-red/10 border-espacio-red/40 text-espacio-red-fuerte' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
                     class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
-                    <span class="truncate">Atención al cliente</span>
+                    <span class="truncate">Red DuaLab</span>
+                  </button>
+                  <!-- Gestión de prácticas: DuaLab Central → Seguimiento de prácticas; sin centro ni empresa -->
+                  <button type="button" @click="form.role = '7'; form.centro_educativo_id = null; form.empresa_id = null"
+                    :class="form.role === '7' ? 'bg-espacio-practicas/10 border-espacio-practicas/40 text-espacio-practicas-fuerte' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="truncate">Gestión de prácticas</span>
+                  </button>
+                  <!-- Admin Central DuaLab: Red DuaLab, Seguimiento de prácticas y Usuarios (sin superadmins); sin Base de datos ni Papelera; sin centro ni empresa -->
+                  <button type="button" @click="form.role = '8'; form.centro_educativo_id = null; form.empresa_id = null"
+                    :class="form.role === '8' ? 'bg-azul-noche/10 border-azul-noche/40 text-azul-noche' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z"/>
+                    </svg>
+                    <span class="truncate">Admin Central DuaLab</span>
+                  </button>
+                  <!-- Superadmin: solo al crear (no se puede ascender a nadie editándolo) y solo lo ve un superadmin -->
+                  <button v-if="authStore.isSuperAdmin" type="button" @click="form.role = '1'; form.centro_educativo_id = null; form.empresa_id = null"
+                    :class="form.role === '1' ? 'bg-gray-100 border-azul-noche/50 text-azul-noche' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span class="truncate">Superadmin</span>
                   </button>
                 </div>
 
@@ -1185,11 +1222,14 @@ onMounted(async () => {
                   </label>
                 </div>
 
+                <p v-if="form.role === '1'" class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+                  Un superadmin lo ve y lo puede todo, también Base de datos, Usuarios y Papelera. La cuenta se crea ya activa y después no se puede editar, bloquear ni borrar desde aquí.
+                </p>
                 <p v-if="formErrors.role" class="text-xs text-red-500 mt-1">{{ formErrors.role }}</p>
               </div>
 
               <!-- Centro educativo (requerido para docente/admin) -->
-              <div v-if="authStore.isSuperAdmin && ['2','4'].includes(form.role)">
+              <div v-if="gestionaTodos && ['2','4'].includes(form.role)">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Centro educativo
                   <span class="text-red-400 ml-0.5">*</span>
@@ -1206,7 +1246,7 @@ onMounted(async () => {
               </div>
 
               <!-- Empresa (requerida para role empresa) -->
-              <div v-if="authStore.isSuperAdmin && form.role === '3'">
+              <div v-if="gestionaTodos && form.role === '3'">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Empresa
                   <span class="text-red-400 ml-0.5">*</span>
@@ -1531,7 +1571,7 @@ onMounted(async () => {
               </div>
 
               <!-- Tipo de cuenta (solo visible para superadmin) -->
-              <div v-if="authStore.isSuperAdmin">
+              <div v-if="gestionaTodos">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tipo de cuenta</label>
                 <div class="flex flex-wrap gap-3">
                   <!-- Docente: activo si role es 2 (docente) o 4 (admin de centro) -->
@@ -1564,15 +1604,35 @@ onMounted(async () => {
                     </svg>
                     Comercial
                   </button>
-                  <!-- Atención al cliente: formularios y correo de info@ en DuaLab Central («Primer contacto»); sin centro ni empresa -->
+                  <!-- Red DuaLab (antes «atención al cliente»): espacio Red DuaLab de Central, sin Datos; sin centro ni empresa -->
                   <button type="button" @click="formEditar.role = '6'; formEditar.centro_educativo_id = null; formEditar.empresa_id = null"
-                    :class="formEditar.role === '6' ? 'bg-alumnos/10 border-alumnos/40 text-alumnos-dark' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    :class="formEditar.role === '6' ? 'bg-espacio-red/10 border-espacio-red/40 text-espacio-red-fuerte' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
                     class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
-                    <span class="truncate">Atención al cliente</span>
+                    <span class="truncate">Red DuaLab</span>
+                  </button>
+                  <!-- Gestión de prácticas: DuaLab Central → Seguimiento de prácticas; sin centro ni empresa -->
+                  <button type="button" @click="formEditar.role = '7'; formEditar.centro_educativo_id = null; formEditar.empresa_id = null"
+                    :class="formEditar.role === '7' ? 'bg-espacio-practicas/10 border-espacio-practicas/40 text-espacio-practicas-fuerte' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="truncate">Gestión de prácticas</span>
+                  </button>
+                  <!-- Admin Central DuaLab: Red DuaLab, Seguimiento de prácticas y Usuarios (sin superadmins); sin Base de datos ni Papelera; sin centro ni empresa -->
+                  <button type="button" @click="formEditar.role = '8'; formEditar.centro_educativo_id = null; formEditar.empresa_id = null"
+                    :class="formEditar.role === '8' ? 'bg-azul-noche/10 border-azul-noche/40 text-azul-noche' : 'bg-gray-50 border-gray-200 text-texto-secundario hover:text-azul-noche'"
+                    class="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border px-3 text-sm font-semibold transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z"/>
+                    </svg>
+                    <span class="truncate">Admin Central DuaLab</span>
                   </button>
                 </div>
 
@@ -1593,7 +1653,7 @@ onMounted(async () => {
               </div>
 
               <!-- Centro educativo (visible para cualquier docente) -->
-              <div v-if="authStore.isSuperAdmin && ['2','4'].includes(formEditar.role)">
+              <div v-if="gestionaTodos && ['2','4'].includes(formEditar.role)">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Centro educativo
                   <span class="text-red-400 ml-0.5">*</span>
@@ -1610,7 +1670,7 @@ onMounted(async () => {
               </div>
 
               <!-- Empresa (requerida para role empresa) -->
-              <div v-if="authStore.isSuperAdmin && formEditar.role === '3'">
+              <div v-if="gestionaTodos && formEditar.role === '3'">
                 <label class="block text-[11px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
                   Empresa
                   <span class="text-red-400 ml-0.5">*</span>

@@ -95,10 +95,11 @@
   --color-espacio-contacto-fuerte: #C2413A;
   --color-espacio-contacto-claro: #FF9A93;
   --color-espacio-contacto-panel: #3A1F2B;
-  --color-espacio-red: #C9971C;
-  --color-espacio-red-fuerte: #8A6400;
-  --color-espacio-red-claro: #E8B84A;
-  --color-espacio-red-panel: #2E2410;
+  /* Red DuaLab (con Primer contacto dentro): el coral rojizo de Primer contacto, no el dorado (Cynthia, 18-nov) */
+  --color-espacio-red: #F2665E;
+  --color-espacio-red-fuerte: #C2413A;
+  --color-espacio-red-claro: #FF9A93;
+  --color-espacio-red-panel: #3A1F2B;
   --color-espacio-practicas: #8E6FD8;
   --color-espacio-practicas-fuerte: #6B4BB8;
   --color-espacio-practicas-claro: #BBA6F5;

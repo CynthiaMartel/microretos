@@ -10,35 +10,35 @@ import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getAgendaPracticas } from '../../src/services/agendaService.js'
 import { getFormulariosWeb } from '../../src/services/primerContactoService.js'
 import { ESPACIOS, puedeEntrar } from '../espacios.js'
+import iconoCentral from '../icono-barra.png'
 
 const router = useRouter()
 const auth = useAuthStore()
 
 // Pendientes de cada espacio, solo de los que puede abrir la sesión actual (null mientras carga o
 // sin sesión; un fallo no bloquea el selector)
-const pendientes = ref({ 'primer-contacto': null, red: null, practicas: null })
+const pendientes = ref({ red: null, practicas: null })
 const puede = (clave) => auth.isAuthenticated && puedeEntrar(auth.userRole, clave)
-onMounted(() => {
-  if (puede('primer-contacto')) {
-    getFormulariosWeb({ per_page: 1 })
-      .then(({ data }) => { pendientes.value['primer-contacto'] = data.resumen?.por_estado?.nuevo ?? 0 })
-      .catch(() => { pendientes.value['primer-contacto'] = 0 })
-  }
+onMounted(async () => {
   if (puede('red')) {
-    getResumenCaptacion()
-      .then(({ data }) => { pendientes.value.red = (data.empresas_pendientes ?? 0) + (data.centros_pendientes ?? 0) + (data.retos_pendientes ?? 0) })
-      .catch(() => { pendientes.value.red = 0 })
+    // Lo que entra (formularios nuevos) y lo que hay que validar (captaciones)
+    const [f, c] = await Promise.allSettled([getFormulariosWeb({ per_page: 1 }), getResumenCaptacion()])
+    const nuevos = f.status === 'fulfilled' ? (f.value.data.resumen?.por_estado?.nuevo ?? 0) : 0
+    const d = c.status === 'fulfilled' ? c.value.data : {}
+    const validar = (d.empresas_pendientes ?? 0) + (d.centros_pendientes ?? 0) + (d.retos_pendientes ?? 0)
+    pendientes.value.red = { n: nuevos + validar, texto: `${nuevos} formularios nuevos · ${validar} por validar` }
   }
   if (puede('practicas')) {
     getAgendaPracticas()
-      .then(({ data }) => { pendientes.value.practicas = data.reduce((n, c) => n + c.grupos.filter(g => g.estado === 'retrasado').length, 0) })
-      .catch(() => { pendientes.value.practicas = 0 })
+      .then(({ data }) => {
+        const n = data.reduce((m, c) => m + c.grupos.filter(g => g.estado === 'retrasado').length, 0)
+        pendientes.value.practicas = { n, texto: `${n} ${n === 1 ? 'grupo retrasado' : 'grupos retrasados'}` }
+      })
+      .catch(() => { pendientes.value.practicas = { n: 0, texto: '0 grupos retrasados' } })
   }
 })
-const TEXTO_PENDIENTE = { 'primer-contacto': 'formularios nuevos', red: 'por validar', practicas: 'grupos retrasados' }
 
 const COLORES = {
-  'espacio-contacto':  { icono: 'bg-espacio-contacto/10 text-espacio-contacto-fuerte', boton: 'bg-espacio-contacto-fuerte hover:bg-espacio-contacto-fuerte/90', franja: 'bg-espacio-contacto', texto: 'text-espacio-contacto-fuerte' },
   'espacio-red':       { icono: 'bg-espacio-red/10 text-espacio-red-fuerte', boton: 'bg-espacio-red-fuerte hover:bg-espacio-red-fuerte/90', franja: 'bg-espacio-red', texto: 'text-espacio-red-fuerte' },
   'espacio-practicas': { icono: 'bg-espacio-practicas/10 text-espacio-practicas-fuerte', boton: 'bg-espacio-practicas-fuerte hover:bg-espacio-practicas-fuerte/90', franja: 'bg-espacio-practicas', texto: 'text-espacio-practicas-fuerte' },
 }
@@ -53,6 +53,8 @@ function abrir(e) {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl px-4 pb-10 pt-8 sm:px-6">
       <header class="text-center">
+        <!-- El icono de la app (el de la barra y de la PWA), encima del nombre -->
+        <img :src="iconoCentral" alt="" class="mx-auto mb-3 h-16 w-16 rounded-[22%] shadow-lg ring-1 ring-black/5 sm:h-20 sm:w-20" />
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-administraciones-dark">DuaLab Central</p>
         <h1 class="mt-2 font-heading text-3xl font-bold sm:text-4xl">
           <template v-if="auth.isAuthenticated">Hola, <span class="text-administraciones-dark">{{ auth.userName?.split(' ')[0] }}</span></template>
@@ -60,11 +62,11 @@ function abrir(e) {
         </h1>
         <p class="mx-auto mt-2 max-w-xl text-sm text-texto-secundario sm:text-base">
           <template v-if="auth.isAuthenticated">Elige el espacio en el que vas a trabajar. Puedes cambiar de espacio cuando quieras desde la barra superior.</template>
-          <template v-else>Cada espacio pide su cuenta al entrar: atención al cliente para Primer contacto y superadmin para todo.</template>
+          <template v-else>Cada espacio pide su cuenta al entrar: Red DuaLab para Red DuaLab, Gestión de prácticas para el seguimiento, y Admin Central DuaLab o superadmin para los dos.</template>
         </p>
       </header>
 
-      <ul class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3 sm:gap-5">
+      <ul class="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-2 sm:gap-5">
         <li v-for="e in ESPACIOS" :key="e.clave" class="relative flex flex-col overflow-hidden rounded-2xl border border-borde bg-white p-5 shadow-sm sm:p-6">
           <span class="absolute inset-x-0 top-0 h-1.5" :class="COLORES[e.color].franja" aria-hidden="true" />
           <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" :class="COLORES[e.color].icono" aria-hidden="true">
@@ -79,7 +81,7 @@ function abrir(e) {
           <p v-if="puede(e.clave)" class="mt-3 text-sm font-semibold" aria-live="polite">
             <span v-if="pendientes[e.clave] === null" class="inline-block h-4 w-24 animate-pulse rounded bg-gray-200 align-middle" aria-label="Cargando" />
             <template v-else>
-              <span :class="pendientes[e.clave] ? COLORES[e.color].texto : 'text-texto-secundario'">{{ pendientes[e.clave] }} {{ TEXTO_PENDIENTE[e.clave] }}</span>
+              <span :class="pendientes[e.clave].n ? COLORES[e.color].texto : 'text-texto-secundario'">{{ pendientes[e.clave].texto }}</span>
             </template>
           </p>
           <button type="button" @click="abrir(e)"

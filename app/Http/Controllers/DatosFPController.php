@@ -55,7 +55,8 @@ class DatosFPController extends Controller
             $query->delCentroDe($user);
         } elseif ($user->isEmpresa()) {
             $query->whereKey($user->empresa_id);
-        } elseif (!$user->isSuperAdmin()) {
+        } elseif (!$user->gestionaTodosLosUsuarios()) {
+            // Ninguna; superadmin y admin_central_dualab las ven todas (en Usuarios asignan empresa a una cuenta)
             $query->whereRaw('0 = 1');
         }
 

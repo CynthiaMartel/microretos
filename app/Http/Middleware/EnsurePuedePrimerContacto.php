@@ -7,8 +7,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * DuaLab Central → «Primer contacto» (formularios y correo de info@): atención al cliente y superadmin.
- * Los otros espacios de Central (Red DuaLab, Seguimiento de prácticas) siguen con 'superadmin'.
+ * DuaLab Central → «Red DuaLab» (formularios y correo de info@, captaciones): roles red_dualab y
+ * central_dualab, y superadmin. Alias 'primer.contacto' y 'red.dualab'. Base de datos, Usuarios y Papelera siguen con
+ * 'superadmin'; Seguimiento de prácticas, con 'practicas'.
  */
 class EnsurePuedePrimerContacto
 {
@@ -16,8 +17,8 @@ class EnsurePuedePrimerContacto
     {
         $user = $request->user();
 
-        if (!$user || !($user->isAtencionCliente() || $user->isSuperAdmin())) {
-            return response()->json(['success' => false, 'message' => 'Acceso restringido a atención al cliente.'], 403);
+        if (!$user || !($user->trabajaEnRedDualab() || $user->isSuperAdmin())) {
+            return response()->json(['success' => false, 'message' => 'Acceso restringido a Red DuaLab.'], 403);
         }
 
         return $next($request);

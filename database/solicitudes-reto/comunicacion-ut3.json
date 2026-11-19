@@ -1,0 +1,22 @@
+{
+  "_nota": "Solicitud recibida por correo (noviembre de 2026). Se carga con: php artisan solicitudes-reto:importar database/solicitudes-reto/comunicacion-ut3.json --nombre=… --email=… --centro=… [--commit]. Sin datos personales: van como opciones. Un bloque por cada petición para el generador.",
+  "bloques": [
+    {
+      "familia": "Administración y Gestión",
+      "ciclo": "Gestión Administrativa",
+      "curso": "1",
+      "modulos": ["Comunicación empresarial y atención al cliente"],
+      "ra_ce": [
+        { "modulo": "Comunicación empresarial y atención al cliente", "ra": 3, "ce": ["i", "b", "c", "j"] }
+      ],
+      "tipo_propuesta": "Un reto muy básico y guiado, con tareas concretas y cortas, sobre lo que harán en la empresa durante las prácticas: registrar la correspondencia y la paquetería que entra y sale, recibirla, clasificarla y repartirla, elegir el envío más adecuado para cada documento y cuidar la protección de datos"
+    }
+  ],
+  "nivel": "Bajo",
+  "punto_temario": "primera_vez",
+  "unidad": "UT3",
+  "sesion": { "fecha": "2026-11-25", "hora_inicio": "12:10", "hora_fin": "14:00" },
+  "tareas_empresa": "Registrar la entrada y salida de correspondencia y paquetería, en papel o en soporte informático. Identificar los canales de transmisión (correo postal, correo electrónico, mensajes, etc.) y recibir, clasificar y repartir lo que llega. Elegir el soporte y el servicio de envío más adecuados según rapidez, seguridad y confidencialidad. Aplicar la normativa de protección de datos y de conservación de documentos.",
+  "entregable": null,
+  "observaciones": "Están terminando la UT3 y se examinan el martes antes de la sesión. La sesión con el código QR se prepara el martes y se hace el miércoles 25 de 12:10 a 14:00. Los tres que mejor lo hagan serían candidatos para ir a la empresa (lo decide DuaLab)."
+}

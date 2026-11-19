@@ -8,6 +8,7 @@ import { useAuthStore } from '../src/stores/auth.js'
 import AppCredit from '../src/components/AppCredit.vue'
 import AvisoNuevaVersion from '../src/components/AvisoNuevaVersion.vue'
 import PanelLateralCentral from './components/PanelLateralCentral.vue'
+import AvisoSoloSuperadmin from './components/AvisoSoloSuperadmin.vue'
 import { ESPACIOS, espacioDe } from './espacios.js'
 import { forzarTemaRol } from '../src/composables/useRoleTheme.js'
 // Icono de la herramienta, igual que su favicon (pwa/iconos-herramientas.mjs --barra)
@@ -49,7 +50,7 @@ const cerrarMenuEsc   = (e) => { if (e.key === 'Escape') { menuAbierto.value = f
 const espaciosAbierto = ref(false)
 const espaciosRef = ref(null)
 // Clases literales (Tailwind no genera clases compuestas al vuelo)
-const PUNTO_ESPACIO = { 'espacio-contacto': 'bg-espacio-contacto', 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
+const PUNTO_ESPACIO = { 'espacio-red': 'bg-espacio-red', 'espacio-practicas': 'bg-espacio-practicas' }
 function irAEspacio(e) {
   espaciosAbierto.value = false
   router.push(e ? e.ruta : { name: 'inicio' })
@@ -179,6 +180,7 @@ const salir = async () => {
     </main>
     <AppCredit />
     <AvisoNuevaVersion :router="router" />
+    <AvisoSoloSuperadmin />
   </div>
 </template>
 

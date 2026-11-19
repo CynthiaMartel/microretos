@@ -7,6 +7,7 @@
  *  2. Retos que el comercial generó delante de la empresa (borradores): con la empresa ya
  *     validada, se publican en sus centros o se descartan. Hasta entonces no salen en ninguna biblioteca.
  */
+import AvisoAccionCritica from './AvisoAccionCritica.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Modal from './Modal.vue'
 import {
@@ -394,6 +395,7 @@ async function descartar() {
           </li>
           <li v-if="!centrosFiltrados.length" class="px-3 py-4 text-sm text-gray-500">No hay centros con ese nombre.</li>
         </ul>
+        <AvisoAccionCritica />
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="empresaColocando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="!seleccionCentros.length || guardandoCentros" @click="guardarCentros">
@@ -414,6 +416,7 @@ async function descartar() {
           <label for="pcc-motivo" class="label-style">Motivo <span class="normal-case tracking-normal">(opcional)</span></label>
           <textarea id="pcc-motivo" v-model="motivoDescarte" rows="3" maxlength="500" class="input-style" placeholder="Ej.: duplicada de una empresa que ya está en Base de datos" />
         </div>
+        <AvisoAccionCritica />
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="empresaDescartando = null">Cancelar</button>
           <button type="button" class="btn-paso" :disabled="descartando" @click="confirmarDescarte">{{ descartando ? 'Descartando…' : 'Descartar' }}</button>
@@ -499,6 +502,7 @@ async function descartar() {
             </p>
           </div>
         </div>
+        <div class="px-4 pt-4 sm:px-8"><AvisoAccionCritica texto="Publicar crea el reto en la biblioteca de cada centro elegido; descartarlo lo deja fuera. Queda en el Historial de Central con tu nombre y la fecha." /></div>
         <div class="fila-pasos border-t border-gray-100 p-4 sm:px-8">
           <button type="button" class="btn-paso-atras" :disabled="publicando" @click="descartar">Descartar</button>
           <button type="button" class="btn-paso" :disabled="publicando || !centrosPublicar.length" @click="publicar">
