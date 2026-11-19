@@ -40,6 +40,15 @@ const GRUPOS = [
         icono: 'M8 10h8M8 14h5M21 12c0 4.4-4 8-9 8a9.8 9.8 0 01-4-.8L3 20l1.3-3.9A7.6 7.6 0 013 12c0-4.4 4-8 9-8s9 3.6 9 8z' },
     ],
   },
+  // Sin título: separada con una raya de los grupos de entrevistas
+  {
+    key: 'papelera',
+    items: [
+      { key: 'papelera', label: 'Papelera', ruta: { name: 'papelera' },
+        activa: () => route.name === 'papelera',
+        icono: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
+    ],
+  },
   {
     titulo: 'Mi cuenta',
     items: [
@@ -70,8 +79,9 @@ watch(() => route.fullPath, () => { abierto.value = false })
          class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-white/10 bg-[#1A2E14] shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
          :class="abierto ? 'translate-x-0' : '-translate-x-full'">
     <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-3">
-      <template v-for="grupo in GRUPOS" :key="grupo.titulo">
-        <p class="nav-grupo">{{ grupo.titulo }}</p>
+      <template v-for="grupo in GRUPOS" :key="grupo.key ?? grupo.titulo">
+        <p v-if="grupo.titulo" class="nav-grupo">{{ grupo.titulo }}</p>
+        <hr v-else class="mx-3 my-3 border-white/15" />
         <div class="space-y-0.5">
           <button v-for="item in grupo.items" :key="item.key" type="button" class="nav-item w-full text-left"
                   :class="[item.activa() ? 'nav-item--activo' : 'nav-item--idle', `nav-item--${COLOR_GRUPO[grupo.titulo] ?? 'empresas'}`]"

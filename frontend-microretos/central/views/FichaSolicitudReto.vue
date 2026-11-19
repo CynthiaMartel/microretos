@@ -10,11 +10,12 @@ import RedactarCorreo from '../components/RedactarCorreo.vue'
 import { cambiarEstadoCorreo } from '../../src/services/primerContactoService.js'
 import VistaPreviaSolicitud from '../components/VistaPreviaSolicitud.vue'
 import GenerarRetosPeticion from '../components/GenerarRetosPeticion.vue'
+import ElegirEmpresaPeticion from '../components/ElegirEmpresaPeticion.vue'
 import AvisoAccionCritica from '../../src/components/AvisoAccionCritica.vue'
 import { getCentros } from '../../src/services/datosFPService.js'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
 import {
-  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, getCorreosSolicitud, getEmpresasPeticion, publicarRetosSolicitud,
+  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, getCorreosSolicitud, publicarRetosSolicitud,
   NIVELES, PUNTOS_TEMARIO,
 } from '../../src/services/solicitudRetoService.js'
 import { FASES_SOLICITUD, fechaHora, textoSesion, faltaEncuentro, urlApp } from '../primerContacto.js'
@@ -44,7 +45,6 @@ async function cargar() {
 onMounted(async () => {
   await cargar()
   cargarCorreos()
-  if (gestiona.value && s.value?.bloques?.length) cargarEmpresasPeticiones()
   if (gestiona.value) cargarCentros()
 })
 
@@ -84,15 +84,9 @@ async function copiar() {
 }
 
 // ── Empresa de cada petición y notas ────────────────────────────────────────
-// Solo se ofrecen las empresas con la familia de la petición (primero las del centro con el que se
-// abrirá el generador): así, al abrirlo, la familia del paso 3 ya encaja con la empresa.
-const empresasPorPeticion = ref({})   // { índice: [{ id, nombre, sector, es_simulada, centro }] }
+// El buscador (ElegirEmpresaPeticion) empieza con las empresas de la familia de la petición, que son las
+// que encajan con sus RA/CE; también deja buscar en todas, por sector, familia, centro y tipo.
 const empresaElegida = ref({})        // { índice: empresa_id | '' }
-async function cargarEmpresasPeticiones() {
-  const listas = await Promise.all(s.value.bloques.map(b =>
-    getEmpresasPeticion(s.value.id, b.indice).then(r => r.data.data).catch(() => [])))
-  empresasPorPeticion.value = Object.fromEntries(s.value.bloques.map((b, i) => [b.indice, listas[i]]))
-}
 const guardarEmpresa = (b) => guardar(
   { bloque: b.indice, empresa_id: empresaElegida.value[b.indice] || null },
   empresaElegida.value[b.indice] ? `Empresa guardada para la petición ${b.indice + 1}.` : 'Empresa quitada.')
@@ -139,7 +133,7 @@ async function quitarCorreo(c) {
   try {
     await cambiarEstadoCorreo(c.id, 'archivado')
     correos.value = correos.value.filter(x => x.id !== c.id)
-    aviso.value = 'Correo quitado de la lista. Sigue en info@: lo recuperas en «Respuestas de solicitudes» → Archivados.'
+    aviso.value = 'Correo quitado de la lista. Sigue en info@: lo recuperas en «Correos de solicitudes» → Archivados.'
   } catch (e) {
     aviso.value = e.response?.data?.error || 'No se ha podido quitar el correo. Inténtalo de nuevo.'
   } finally {
@@ -274,25 +268,16 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                   </div>
                 </dl>
 
-                <!-- Empresa de esta petición: solo las de su familia -->
+                <!-- Empresa de esta petición: buscador con filtros, empieza por su familia -->
                 <div class="mt-4 rounded-xl bg-[#F8FAFC] p-3 sm:p-4">
                   <template v-if="gestiona">
-                    <label :for="'sol-empresa-' + b.indice" class="field-label">Empresa para esta petición</label>
-                    <div class="flex flex-col gap-2 sm:flex-row">
-                      <select :id="'sol-empresa-' + b.indice" v-model="empresaElegida[b.indice]" class="field-input min-w-0 flex-1">
-                        <option value="">Sin elegir: la elijo en el generador</option>
-                        <option v-if="b.empresa && !(empresasPorPeticion[b.indice] || []).some(e => e.id === b.empresa.id)" :value="b.empresa.id">{{ b.empresa.nombre }}</option>
-                        <option v-for="e in empresasPorPeticion[b.indice] || []" :key="e.id" :value="e.id">
-                          {{ e.nombre }} · {{ e.centro }}{{ e.es_simulada ? ' · ficticia' : '' }}
-                        </option>
-                      </select>
+                    <p class="field-label">Empresa para esta petición</p>
+                    <ElegirEmpresaPeticion v-model="empresaElegida[b.indice]" :solicitud-id="s.id" :bloque="b" />
+                    <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+                      <span class="min-w-0 flex-1 text-xs text-texto-secundario">Al guardarla, «Generar retos aquí» y el generador la usan con su diagnóstico.</span>
                       <button type="button" class="accion-secundaria" :disabled="guardando || (empresaElegida[b.indice] || null) === (b.empresa?.id ?? null)"
-                              @click="guardarEmpresa(b)">Guardar</button>
+                              @click="guardarEmpresa(b)">Guardar empresa</button>
                     </div>
-                    <p class="mt-1.5 text-xs text-texto-secundario">
-                      <template v-if="empresasPorPeticion[b.indice] && !empresasPorPeticion[b.indice].length">No hay empresas de {{ b.familia }}: créala en el generador (ficticia con IA o del catálogo).</template>
-                      <template v-else>Solo empresas de {{ b.familia }}. Al abrir el generador quedará elegida, con su centro y la familia ya puestos.</template>
-                    </p>
                   </template>
                   <p v-else class="text-sm"><span class="font-semibold">Empresa:</span> {{ b.empresa?.nombre || 'la elige Admin Central DuaLab o el superadmin al generar los retos' }}</p>
                 </div>

@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'practicas' => \App\Http\Middleware\EnsurePuedeGestionarPracticas::class,
             'usuarios' => \App\Http\Middleware\EnsurePuedeGestionarUsuarios::class,
             'admin.central' => \App\Http\Middleware\EnsureEsAdminCentral::class,
+            'rol'           => \App\Http\Middleware\EnsureTieneRol::class,
             'firma.frontoffice' => \App\Http\Middleware\VerificarFirmaFrontoffice::class,
         ]);
     })

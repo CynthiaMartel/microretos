@@ -31,6 +31,12 @@ export const getBorradoresCaptada = (id) => api.get(`/comercial/empresas/${id}/b
 
 export const firmarEmpresaCaptada = (id, payload) => api.post(`/comercial/empresas/${id}/firma`, payload)
 
+// Papelera: solo entrevistas en curso; moverlas pide la contraseña (la comprueba el backend).
+// Borrarlas del todo es de la Papelera de Central (superadmin).
+export const borrarEmpresaCaptada = (id, password) => api.delete(`/comercial/empresas/${id}`, { data: { password } })
+export const getPapeleraCaptadas = () => api.get('/comercial/papelera')
+export const restaurarEmpresaCaptada = (id) => api.patch(`/comercial/papelera/${id}/restaurar`)
+
 // Entrevista a centros educativos (sin firma: aceptación de protección de datos y cesiones)
 export const getTextosLegalesCentros = () => api.get('/comercial/centros/textos-legales')
 export const getMisCentros = () => api.get('/comercial/centros')

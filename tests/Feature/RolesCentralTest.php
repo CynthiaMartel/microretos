@@ -46,6 +46,54 @@ class RolesCentralTest extends TestCase
         }
     }
 
+    public function test_red_dualab_consulta_empresas_y_centros_sin_editar(): void
+    {
+        $centro = DB::table('centro_educativo')->insertGetId(['nombre' => 'IES Consulta', 'municipio' => 'Las Palmas']);
+        $otro = DB::table('centro_educativo')->insertGetId(['nombre' => 'IES Otro']);
+        $propia = DB::table('empresas')->insertGetId(['nombre_comercial' => 'Hotel Faro', 'sector' => 'Hostelería', 'centro_id' => $centro, 'centro_educativo' => 'IES Consulta']);
+        $captada = DB::table('empresas')->insertGetId(['nombre_comercial' => 'Taller Norte', 'sector' => 'Automoción', 'centro_id' => $otro]);
+        DB::table('centro_empresa')->insert(['centro_id' => $centro, 'empresa_id' => $captada]);
+        $this->usuario(User::ROLE_DOCENTE, 'profe@test.local', $centro);
+
+        Sanctum::actingAs($this->usuario(User::ROLE_RED_DUALAB, 'red@test.local'));
+        // Las del centro: la suya y la captada que se colocó allí, con sus centros
+        $this->getJson("/api/central/empresas?centro_id={$centro}")->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.1.nombre', 'Taller Norte')
+            ->assertJsonPath('data.1.centros', ['IES Otro', 'IES Consulta']);
+        $this->getJson('/api/central/empresas?buscar=hostel')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/central/centros?buscar=consulta')->assertOk()
+            ->assertJsonPath('data.0.empresas', 2)->assertJsonPath('data.0.docentes', 1)
+            ->assertJsonPath('data.0.municipio', 'Las Palmas');
+        // Solo lectura: ni editar ni borrar
+        $this->putJson("/api/empresas/{$propia}", ['nombre_comercial' => 'X'])->assertForbidden();
+        $this->deleteJson("/api/empresas/{$propia}")->assertForbidden();
+
+        // Seguimiento de prácticas no entra
+        Sanctum::actingAs($this->usuario(User::ROLE_GESTION_PRACTICAS, 'practicas@test.local'));
+        $this->getJson('/api/central/empresas')->assertForbidden();
+        $this->getJson('/api/central/centros')->assertForbidden();
+    }
+
+    public function test_lecturas_compartidas_solo_para_los_roles_de_la_ruta(): void
+    {
+        $esperado = [
+            // rol => [GET /empresas, GET /microretos]
+            User::ROLE_DOCENTE              => [200, 200],
+            User::ROLE_EMPRESA              => [200, 200],
+            User::ROLE_SUPERADMIN           => [200, 200],
+            User::ROLE_ADMIN_CENTRAL_DUALAB => [200, 403], // Usuarios de Central: asignar empresa a una cuenta
+            User::ROLE_RED_DUALAB           => [403, 403],
+            User::ROLE_GESTION_PRACTICAS    => [403, 403],
+            User::ROLE_COMERCIAL            => [403, 403],
+        ];
+        foreach ($esperado as $rol => [$empresas, $microretos]) {
+            Sanctum::actingAs($this->usuario($rol, "lectura{$rol}@test.local"));
+            $this->getJson('/api/empresas')->assertStatus($empresas);
+            $this->getJson('/api/microretos')->assertStatus($microretos);
+        }
+    }
+
     public function test_admin_central_gestiona_usuarios_pero_no_superadmins(): void
     {
         $super = $this->usuario(User::ROLE_SUPERADMIN, 'super@test.local');

@@ -27,7 +27,9 @@ export const ICONOS = {
   "correo": "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
   "solicitudes": "M9.66 17h4.68M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m3.34-5.66l-.7-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.75-.99-2.38l-.54-.55z",
   "historial": "M12 8v4l3 3M3.05 11a9 9 0 11.5 4M3 4v5h5",
-  "formularios": "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+  "formularios": "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
+  "empresas": "M3 21h18M5 21V7l7-4v18M19 21V11l-7-4M9 9h.01M9 12h.01M9 15h.01M9 18h.01",
+  "centros": "M12 3L2 8l10 5 10-5-10-5zM6 10.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5M22 8v6"
 }
 
 // Dos espacios, uno por persona (decisión de Cynthia, 2026-11-18): Red DuaLab para quien lleva los
@@ -44,17 +46,25 @@ export const ESPACIOS = [
     quien: 'Red DuaLab, Admin Central DuaLab o superadmin',
     ruta: { name: 'red-inicio' },
     icono: ICONOS.usuarios,
+    // Orden del panel (Cynthia, 2026-11-19): Inicio · Contactos · Soporte · Datos (+ Central, común).
+    // `detalle`: segunda línea pequeña bajo el nombre del item · `separadorAntes`: línea encima del item.
     grupos: [
-      { titulo: 'Red DuaLab', items: [
+      // Primer grupo sin título: el nombre del espacio va en la cabecera del panel (PanelLateralCentral)
+      { titulo: '', items: [
         { key: 'red-inicio', label: 'Inicio', ruta: { name: 'red-inicio' }, nombres: ['red-inicio'], icono: ICONOS.inicio },
-        { key: 'captaciones', label: 'Captaciones', ruta: { name: 'captaciones' }, nombres: ['captaciones'], contador: 'captaciones', icono: ICONOS.captaciones },
-        { key: 'soporte', label: 'Soporte', ruta: { name: 'soporte' }, nombres: ['soporte'], proximamente: true, icono: ICONOS.soporte },
       ] },
-      { titulo: 'Primer contacto', items: [
+      { titulo: 'Contactos', items: [
         { key: 'formularios', label: 'Formularios de la web', ruta: { name: 'primer-contacto' }, nombres: ['primer-contacto', 'formulario-web'], contador: 'formularios', icono: ICONOS.formularios },
         { key: 'correo', label: 'Correo (info@)', ruta: { name: 'correo' }, nombres: ['correo', 'correo-ficha'], contador: 'correo', icono: ICONOS.correo },
-        { key: 'solicitudes-reto', label: 'Solicitudes de retos', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha'], contador: 'solicitudes', icono: ICONOS.solicitudes },
-        { key: 'respuestas-solicitudes', label: 'Respuestas de solicitudes', ruta: { name: 'respuestas-solicitudes' }, nombres: ['respuestas-solicitudes'], contador: 'respuestas', icono: ICONOS.correo },
+        { key: 'captaciones', label: 'Captaciones', separadorAntes: true, detalle: 'App comercial · empresas y centros', ruta: { name: 'captaciones' }, nombres: ['captaciones'], contador: 'captaciones', icono: ICONOS.captaciones },
+        // «Correos de solicitudes» (respuestas-solicitudes) se abre desde la cabecera de Solicitudes de retos
+        { key: 'solicitudes-reto', label: 'Solicitudes de retos', detalle: 'Docentes solicitantes', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha', 'respuestas-solicitudes'], contador: 'solicitudes', icono: ICONOS.solicitudes },
+        // Consulta de solo lectura (editar es de Base de datos): una pantalla para elegir Empresas o Centros
+        { key: 'empresas-centros', label: 'Empresas y centros', detalle: 'Solo consulta', separadorAntes: true, ruta: { name: 'empresas-centros' }, nombres: ['empresas-centros', 'empresas-central', 'centros-central'], icono: ICONOS.empresas },
+      ] },
+      { titulo: 'Soporte', items: [
+        { key: 'soporte', label: 'Tickets', ruta: { name: 'soporte' }, nombres: ['soporte'], proximamente: true, icono: ICONOS.soporte },
+        { key: 'soporte-correo', label: 'Correo (soporte@)', ruta: { name: 'soporte-correo' }, nombres: ['soporte-correo'], proximamente: true, icono: ICONOS.correo },
       ] },
       { titulo: 'Datos', items: [
         { key: 'base-datos', label: 'Base de datos', ruta: { name: 'base-datos' }, nombres: ['base-datos'], icono: ICONOS['base-datos'], roles: SOLO_SUPERADMIN, avisoSuperadmin: true },
@@ -74,7 +84,7 @@ export const ESPACIOS = [
     ruta: { name: 'practicas-inicio' },
     icono: ICONOS.agenda,
     grupos: [
-      { titulo: 'Seguimiento de prácticas', items: [
+      { titulo: '', items: [
         { key: 'practicas-inicio', label: 'Inicio', ruta: { name: 'practicas-inicio' }, nombres: ['practicas-inicio'], icono: ICONOS.inicio },
         { key: 'planes', label: 'Planes de proyecto', ruta: { name: 'planes' }, nombres: ['planes', 'plan-cronograma'], icono: ICONOS.planes },
         { key: 'agenda', label: 'Agenda de prácticas', ruta: { name: 'agenda' }, nombres: ['agenda'], icono: ICONOS.agenda },

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListarBorradoresCaptacionRequest;
 use App\Http\Requests\DescartarCaptacionRequest;
 use App\Http\Requests\ValidarCentroCaptacionRequest;
 use App\Http\Requests\PublicarBorradorRequest;
@@ -158,11 +159,17 @@ class CaptacionAdminController extends Controller
             ->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre, 'municipio' => $c->municipio])->values()]);
     }
 
-    /** GET /captacion/borradores — retos de comerciales pendientes de validar */
-    public function borradores(): AnonymousResourceCollection
+    /**
+     * GET /captacion/borradores — retos de comerciales pendientes de validar; con en_curso=1, los de
+     * empresas que la comercial aún está entrevistando (captación en borrador)
+     */
+    public function borradores(ListarBorradoresCaptacionRequest $request): AnonymousResourceCollection
     {
+        $estados = $request->boolean('en_curso')
+            ? [EmpresaCaptacion::ESTADO_BORRADOR]
+            : [EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION, EmpresaCaptacion::ESTADO_VALIDADA];
         $borradores = MicroretoBorrador::where('estado', MicroretoBorrador::ESTADO_PENDIENTE)
-            ->whereHas('captacion', fn ($q) => $q->whereIn('estado', [EmpresaCaptacion::ESTADO_PENDIENTE_VALIDACION, EmpresaCaptacion::ESTADO_VALIDADA]))
+            ->whereHas('captacion', fn ($q) => $q->whereIn('estado', $estados))
             ->with(['captacion:id,nombre_comercial,estado,empresa_id', 'creadoPor:id,name'])
             ->latest()
             ->take(self::MAX_LISTADO)
@@ -210,6 +217,41 @@ class CaptacionAdminController extends Controller
         app(\App\Services\ActividadCentralService::class)->registrar($user, 'captaciones', 'descartar_reto', "Descartó el reto en borrador «" . data_get($borrador->datos, 'titulo', 'sin título') . "».", $borrador, true);
 
         return response()->json(['message' => 'Reto descartado.']);
+    }
+
+    // ── A la papelera (superadmin y Admin Central DuaLab). Restaurar o borrar del todo es de la Papelera;
+    //    una empresa captada con firma nunca se borra del todo (evidencia legal). Lo ya validado no se
+    //    toca: la empresa o el centro creados en Base de datos siguen allí. ──
+
+    /** DELETE /captacion/empresas/{id} — la captación y, con ella, sus retos en borrador */
+    public function eliminarEmpresa(Request $request, int $id): JsonResponse
+    {
+        $captacion = EmpresaCaptacion::findOrFail($id);
+        $captacion->delete();
+        app(\App\Services\ActividadCentralService::class)->registrar($request->user(), 'captaciones', 'papelera_empresa', "Movió a la papelera la empresa captada «{$captacion->nombre_comercial}».", $captacion, true);
+
+        return response()->json(['message' => "«{$captacion->nombre_comercial}» está en la papelera."]);
+    }
+
+    /** DELETE /captacion/centros/{id} */
+    public function eliminarCentro(Request $request, int $id): JsonResponse
+    {
+        $captacion = CentroCaptacion::findOrFail($id);
+        $captacion->delete();
+        app(\App\Services\ActividadCentralService::class)->registrar($request->user(), 'captaciones', 'papelera_centro', "Movió a la papelera el centro captado «{$captacion->centro_nombre}».", $captacion, true);
+
+        return response()->json(['message' => "«{$captacion->centro_nombre}» está en la papelera."]);
+    }
+
+    /** DELETE /captacion/borradores/{uuid}/papelera (descartar, en cambio, lo deja registrado como descartado) */
+    public function eliminarBorrador(Request $request, string $uuid): JsonResponse
+    {
+        $borrador = MicroretoBorrador::where('uuid', $uuid)->firstOrFail();
+        $titulo = data_get($borrador->datos, 'titulo', 'sin título');
+        $borrador->delete();
+        app(\App\Services\ActividadCentralService::class)->registrar($request->user(), 'captaciones', 'papelera_reto', "Movió a la papelera el reto en borrador «{$titulo}».", $borrador, true);
+
+        return response()->json(['message' => 'Reto en la papelera.']);
     }
 
     /** GET /captacion/firmas/{uuid}/imagen — PNG de la firma (disco privado, nunca público) */

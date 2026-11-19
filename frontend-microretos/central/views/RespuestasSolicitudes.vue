@@ -1,4 +1,4 @@
-<!-- Primer contacto → «Respuestas de solicitudes»: los correos de info@ del profesorado con solicitudes
+<!-- Solicitudes de retos → «Correos de solicitudes» (botón de su cabecera): los correos de info@ del profesorado con solicitudes
      de retos, aparte del resto del buzón (el Correo de info@ ya no los muestra). Entran los que llevan la
      referencia en el asunto («Ref. SR-12») y los que llegan de un docente con una solicitud abierta;
      cada uno enlaza a su solicitud. Abrir uno es el Correo de info@ de siempre
@@ -64,8 +64,8 @@ const estadoCorreo = (e) => ({ ...ESTADOS_FORMULARIO[e], texto: e === 'nuevo' ? 
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Primer contacto" titulo="Respuestas de" destacado="solicitudes" color="text-rol"
-                       :volver="{ name: 'inicio' }" volver-label="Espacios"
+      <CabeceraSeccion antetitulo="Solicitudes de retos" titulo="Correos de" destacado="solicitudes" color="text-rol"
+                       :volver="{ name: 'solicitudes-reto' }" volver-label="Solicitudes de retos"
                        subtitulo="Lo que escribe a info@ el profesorado con solicitudes de retos: respuestas a nuestros correos y correos nuevos. Aquí y no en el Correo de info@." />
 
       <FiltrosPanel :resultados="meta?.total ?? null" :unidad="['respuesta', 'respuestas']"

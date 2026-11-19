@@ -299,23 +299,26 @@ class SolicitudRetoService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function empresasParaPeticion(SolicitudReto $solicitud, int $indice): Collection
+    public function empresasParaPeticion(SolicitudReto $solicitud, int $indice, bool $todas = false): Collection
     {
+        // Por defecto, las de la familia de la petición; con $todas, cualquier familia (el buscador de la
+        // ficha filtra después por familia, sector y tipo, como el del generador)
         $familiaId = $this->bloques($solicitud)[$indice]['familiaId'] ?? null;
-        if (!$familiaId) return collect();
+        if (!$familiaId && !$todas) return collect();
         $centro = $solicitud->centro_id
             ? CentroEducativo::whereKey($solicitud->centro_id)->value('nombre')
             : config('solicitudes_reto.centro_generador');
 
-        return Empresa::with('centroEducativo:id,nombre', 'centrosAsignados:id,nombre')
-            ->whereHas('familias', fn ($q) => $q->where('familias.id', $familiaId))
-            ->orderBy('nombre_comercial')->limit(200)
+        return Empresa::with('centroEducativo:id,nombre', 'centrosAsignados:id,nombre', 'familias:familias.id,familias.nombre')
+            ->when(!$todas, fn ($q) => $q->whereHas('familias', fn ($f) => $f->where('familias.id', $familiaId)))
+            ->orderBy('nombre_comercial')->limit($todas ? 500 : 200)
             ->get(['id', 'nombre_comercial', 'sector', 'es_simulada', 'centro_id', 'centro_educativo'])
             ->map(fn (Empresa $e) => [
                 'id'          => $e->id,
                 'nombre'      => $e->nombre_comercial,
                 'sector'      => $e->sector,
                 'es_simulada' => (bool) $e->es_simulada,
+                'familias'    => $e->familias->pluck('nombre')->values(),
                 'centro'      => $this->centroDeEmpresa($e),
             ])
             // Sin centro (plantillas del catálogo) el generador no puede usarla sin copiarla antes

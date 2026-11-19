@@ -485,12 +485,12 @@ function youtubeId(url) {
               <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Vídeos</p>
               <div class="space-y-3">
                 <div v-for="v in proyecto.recursos.videos" :key="v.url">
-                  <!-- Embed YouTube -->
+                  <!-- Embed YouTube (dominio sin cookies hasta que se reproduce) -->
                   <template v-if="youtubeId(v.url)">
                     <p v-if="v.label" class="text-xs font-bold text-gray-600 mb-1.5">{{ v.label }}</p>
                     <div class="rounded-xl overflow-hidden border border-gray-100 aspect-video">
                       <iframe
-                        :src="`https://www.youtube.com/embed/${youtubeId(v.url)}`"
+                        :src="`https://www.youtube-nocookie.com/embed/${youtubeId(v.url)}`"
                         class="w-full h-full"
                         frameborder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

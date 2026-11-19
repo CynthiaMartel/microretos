@@ -6,10 +6,12 @@
  * descartar = queda registrado con su motivo. Va junto a PanelCaptacionComercial (empresas).
  */
 import AvisoAccionCritica from './AvisoAccionCritica.vue'
-import { ref, onMounted } from 'vue'
+import MoverPapeleraModal from './MoverPapeleraModal.vue'
+import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../stores/auth.js'
+import { ref, computed, onMounted } from 'vue'
 import Modal from './Modal.vue'
 import {
-  getCentrosCaptados, validarCentroCaptado, descartarCentroCaptado, getCoincidenciasCentro,
+  getCentrosCaptados, validarCentroCaptado, descartarCentroCaptado, getCoincidenciasCentro, eliminarCentroCaptado,
 } from '../services/captacionService.js'
 
 const emit = defineEmits(['cambio'])
@@ -49,6 +51,31 @@ async function cargar() {
   }
 }
 onMounted(cargar)
+
+// ── Mover a la papelera (superadmin y Admin Central DuaLab) ──────────────────
+const auth = useAuthStore()
+const puedeBorrar = computed(() => [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB].includes(auth.userRole))
+const aBorrar = ref(null)
+const borrando = ref(false)
+function pedirBorrar(c) {
+  aBorrar.value = { id: c.id, titulo: 'Borrar centro captado', nombre: c.centro_nombre,
+    texto: c.estado === 'validada' ? 'El centro ya dado de alta en DuaLab no se toca.' : '' }
+}
+async function confirmarBorrar() {
+  borrando.value = true
+  try {
+    const { data } = await eliminarCentroCaptado(aBorrar.value.id)
+    aviso.value = data.message
+    aBorrar.value = null
+    await cargar()
+    emit('cambio')
+  } catch (e) {
+    error.value = mensajeError(e, 'No se ha podido mover a la papelera.')
+    aBorrar.value = null
+  } finally {
+    borrando.value = false
+  }
+}
 
 function cambiarEstado(key) {
   estado.value = key
@@ -184,12 +211,17 @@ async function confirmarDescarte() {
           <span class="font-semibold text-azul-noche">Motivo:</span> {{ c.motivo_descarte }}
         </p>
 
-        <div v-if="c.estado === 'pendiente_validacion'" class="mt-auto flex flex-wrap gap-2">
-          <button type="button" class="accion-principal" @click="abrirValidar(c)">Validar y dar de alta</button>
-          <button type="button" class="accion-secundaria" @click="abrirDescartar(c)">Descartar</button>
+        <div v-if="c.estado === 'pendiente_validacion' || puedeBorrar" class="mt-auto flex flex-wrap gap-2">
+          <template v-if="c.estado === 'pendiente_validacion'">
+            <button type="button" class="accion-principal" @click="abrirValidar(c)">Validar y dar de alta</button>
+            <button type="button" class="accion-secundaria" @click="abrirDescartar(c)">Descartar</button>
+          </template>
+          <button v-if="puedeBorrar" type="button" class="accion-secundaria !text-red-700" @click="pedirBorrar(c)">Borrar</button>
         </div>
       </li>
     </ul>
+
+    <MoverPapeleraModal :item="aBorrar" :ocupado="borrando" @cerrar="aBorrar = null" @confirmar="confirmarBorrar" />
 
     <!-- Modal: validar -->
     <Modal :visible="!!validando" max-width="max-w-lg" @cerrar="validando = null">

@@ -32,4 +32,18 @@ class EmpresaCaptacionPolicy
             ? Response::allow()
             : Response::deny('La entrevista ya está firmada: sus datos no se pueden cambiar. Ponte en contacto con DUALAB para cualquier corrección.');
     }
+
+    // A la papelera: solo las entrevistas en curso. Lo firmado es evidencia legal y solo lo
+    // gestiona DuaLab (Central → Captaciones).
+    public function borrar(User $user, EmpresaCaptacion $captacion): Response
+    {
+        $ver = $this->ver($user, $captacion);
+        if ($ver->denied()) {
+            return $ver;
+        }
+
+        return $captacion->esBorrador()
+            ? Response::allow()
+            : Response::deny('Solo se pueden borrar las entrevistas en curso. Las firmadas las gestiona DuaLab.');
+    }
 }

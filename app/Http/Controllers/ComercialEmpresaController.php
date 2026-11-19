@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BorrarEntrevistaComercialRequest;
 use App\Http\Requests\FirmarEmpresaComercialRequest;
 use App\Http\Requests\GenerarRetosComercialRequest;
 use App\Http\Requests\StoreEmpresaComercialRequest;
@@ -190,6 +191,52 @@ class ComercialEmpresaController extends Controller
     public function textosLegales(): JsonResponse
     {
         return response()->json($this->captacion->textosVigentes());
+    }
+
+    /** GET /comercial/papelera — sus entrevistas en la papelera, las últimas borradas primero */
+    public function papelera(Request $request): AnonymousResourceCollection
+    {
+        /** @var User $user  ruta bajo auth:sanctum */
+        $user  = $request->user();
+        $query = EmpresaCaptacion::onlyTrashed()
+            ->where('origen_id', CaptacionOrigen::ENTREVISTA)
+            ->latest('deleted_at')
+            ->take(self::MAX_LISTADO);
+        if (!$user->isSuperAdmin()) {
+            $query->where('creada_por_user_id', $user->id);
+        }
+
+        return EmpresaCaptacionResource::collection($query->get());
+    }
+
+    /**
+     * DELETE /comercial/empresas/{id} — una entrevista en curso a la papelera (soft delete). Sus
+     * retos en borrador se quedan colgando de ella; el enlace del correo deja de funcionar
+     * mientras esté en la papelera. Borrarla del todo es de la Papelera de Central (superadmin).
+     */
+    public function destroy(BorrarEntrevistaComercialRequest $request, int $id): JsonResponse
+    {
+        $captacion = EmpresaCaptacion::findOrFail($id);
+        if ($denegado = $this->denegado('borrar', $captacion, $request)) return $denegado;
+
+        $captacion->delete();
+        Log::info('Entrevista comercial movida a la papelera.', [
+            'empresa_captacion_id' => $captacion->id,
+            'user_id'              => $request->user()?->id,
+        ]);
+
+        return response()->json(['message' => 'Entrevista movida a la papelera']);
+    }
+
+    /** PATCH /comercial/papelera/{id}/restaurar */
+    public function restaurar(Request $request, int $id): EmpresaCaptacionResource|JsonResponse
+    {
+        $captacion = EmpresaCaptacion::onlyTrashed()->where('origen_id', CaptacionOrigen::ENTREVISTA)->findOrFail($id);
+        if ($denegado = $this->denegado('ver', $captacion, $request)) return $denegado;
+
+        $captacion->restore();
+
+        return new EmpresaCaptacionResource($captacion);
     }
 
     /** POST /comercial/empresas/{id}/firma */

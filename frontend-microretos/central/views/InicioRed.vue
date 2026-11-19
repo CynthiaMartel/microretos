@@ -40,6 +40,7 @@ const SECCIONES = [
   { ruta: { name: 'primer-contacto' }, titulo: 'Formularios de la web', texto: 'Lo que llega desde dualab.es: leerlo, responder desde info@ y ver si ya está en captaciones.' },
   { ruta: { name: 'correo' }, titulo: 'Correo (info@)', texto: 'El buzón de info@dualab.es: leer, responder y reenviar sin abrir el webmail.' },
   { ruta: { name: 'captaciones' }, titulo: 'Captaciones', texto: 'Empresas y centros que llegan de la app comercial y del formulario de la web: validarlos o descartarlos y publicar sus retos.' },
+  { ruta: { name: 'empresas-centros' }, titulo: 'Empresas y centros', texto: 'Consulta las empresas, los centros a los que están asociadas y los centros con sus ciclos. Solo lectura.' },
   { ruta: { name: 'base-datos' }, titulo: 'Base de datos', texto: 'Centros, familias, ciclos, currículo y empresas de todos los centros.', soloSuperadmin: true },
   { ruta: { name: 'usuarios' }, titulo: 'Usuarios', texto: 'Cuentas de docentes, empresas, admin de centro, comerciales y personal de DuaLab: alta, activación y bloqueo.', soloSuperadmin: true },
   { ruta: { name: 'papelera' }, titulo: 'Papelera', texto: 'Lo eliminado de la base de datos: restaurarlo o borrarlo del todo.', soloSuperadmin: true },

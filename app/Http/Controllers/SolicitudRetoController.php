@@ -175,7 +175,10 @@ class SolicitudRetoController extends Controller
     {
         $solicitud = SolicitudReto::findOrFail($id);
 
-        return response()->json(['data' => $this->solicitudes->empresasParaPeticion($solicitud, (int) ($request->validated()['bloque'] ?? 0))]);
+        $datos = $request->validated();
+
+        return response()->json(['data' => $this->solicitudes->empresasParaPeticion(
+            $solicitud, (int) ($datos['bloque'] ?? 0), (bool) ($datos['todas'] ?? false))]);
     }
 
     /**

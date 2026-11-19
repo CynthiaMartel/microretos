@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class CentroCaptacion extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'centro_captaciones';
 
     public const ESTADO_PENDIENTE_VALIDACION = 'pendiente_validacion';

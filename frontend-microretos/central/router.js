@@ -27,7 +27,11 @@ const router = createRouter({
     // ── Espacio «Red DuaLab» ──
     { path: '/red', name: 'red-inicio', component: () => import('./views/InicioRed.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/captaciones', name: 'captaciones', component: () => import('./views/CaptacionesCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/empresas-centros', name: 'empresas-centros', component: () => import('./views/EmpresasCentrosCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/empresas', name: 'empresas-central', component: () => import('./views/EmpresasCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/centros', name: 'centros-central', component: () => import('./views/CentrosCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/soporte', name: 'soporte', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/soporte/correo', name: 'soporte-correo', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     // avisoSuperadmin: Admin Central DuaLab que entra por la URL ve el aviso para iniciar sesión como superadmin
     { path: '/red/base-datos', name: 'base-datos', component: () => import('../src/views/BaseDatosDashboard.vue'), meta: { requiresAuth: true, espacio: 'red', roles: [ROLE_SUPERADMIN], avisoSuperadmin: 'Base de datos' } },
     { path: '/red/historial', name: 'historial', component: () => import('./views/HistorialCentral.vue'), meta: { requiresAuth: true, espacio: 'red', roles: [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB] } },

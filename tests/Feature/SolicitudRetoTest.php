@@ -419,7 +419,11 @@ class SolicitudRetoTest extends TestCase
         Sanctum::actingAs($this->superadmin);
         // Para la petición de Informática solo se ofrecen empresas de esa familia
         $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/empresas?bloque=1")->assertOk()
-            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.nombre', 'Redes Atlántico')->assertJsonPath('data.0.centro', 'DuaLab');
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.nombre', 'Redes Atlántico')->assertJsonPath('data.0.centro', 'DuaLab')
+            ->assertJsonPath('data.0.familias', ['Informática y Comunicaciones']);
+        // Con todas=1 (buscador «Todas las familias») también salen las de otras familias
+        $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/empresas?bloque=1&todas=1")->assertOk()
+            ->assertJsonCount(2, 'data');
 
         // Sin empresa: el generador se abre con el centro de la beta y la familia de la petición
         $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/generador?bloque=1")->assertOk()

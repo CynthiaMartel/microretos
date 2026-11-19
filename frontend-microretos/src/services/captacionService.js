@@ -24,7 +24,8 @@ export const validarCentroCaptado = (id, centroExistenteId = null) => api.put(`/
 export const descartarCentroCaptado = (id, motivo) => api.post(`/captacion/centros/${id}/descartar`, { motivo: motivo || null })
 export const getCoincidenciasCentro = (id, q = '') => api.get(`/captacion/centros/${id}/coincidencias`, { params: q ? { q } : {} })
 
-export const getBorradoresPendientes = () => api.get('/captacion/borradores')
+// enCurso: retos de empresas que la comercial aún está entrevistando
+export const getBorradoresPendientes = (enCurso = false) => api.get('/captacion/borradores', { params: enCurso ? { en_curso: 1 } : {} })
 export const getBorradorCaptacion = (uuid) => api.get(`/captacion/borradores/${uuid}`)
 export const publicarBorrador = (uuid, centroIds) => api.post(`/captacion/borradores/${uuid}/publicar`, { centro_ids: centroIds })
 export const descartarBorrador = (uuid) => api.delete(`/captacion/borradores/${uuid}`)
@@ -34,3 +35,8 @@ export const getImagenFirma = (uuid) => api.get(`/captacion/firmas/${uuid}/image
 
 // Centros para colocar la empresa: [{ id, nombre, img, ciclos }]
 export const getCentrosCaptacion = () => api.get('/centros')
+
+// A la papelera (superadmin y Admin Central DuaLab; restaurar o borrar del todo, en la Papelera)
+export const eliminarEmpresaCaptada = (id) => api.delete(`/captacion/empresas/${id}`)
+export const eliminarCentroCaptado = (id) => api.delete(`/captacion/centros/${id}`)
+export const eliminarBorrador = (uuid) => api.delete(`/captacion/borradores/${uuid}/papelera`)

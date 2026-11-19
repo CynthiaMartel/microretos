@@ -1,8 +1,16 @@
 /* Tipografía de marca — Manual de marca e imagen DUALAB V2.0 (A3PRO
    Marketing, sept. 2026): Montserrat para titulares, Inter para texto de
    lectura e interfaz. Debe ir antes que cualquier otra regla, incluido el
-   @import de Tailwind, o el navegador la ignora. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700&display=swap');
+   @import de Tailwind, o el navegador la ignora.
+   Servidas desde nuestro dominio (@fontsource), no desde Google Fonts: así no
+   se envía la IP del visitante a Google sin consentimiento (RGPD). Solo el
+   subconjunto latino, que ya incluye tildes y ñ. */
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/montserrat/latin-600.css";
+@import "@fontsource/montserrat/latin-700.css";
 @import "tailwindcss";
 
 /* ---------------------------------------------------

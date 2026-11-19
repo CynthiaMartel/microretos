@@ -81,7 +81,8 @@ class CaptacionEmpresaService
         // Alta sin conexión que se reenvía al sincronizar: si la primera petición llegó pero la
         // respuesta se perdió, se devuelve la captación ya creada en vez de duplicarla
         if (!empty($validated['clienteUuid'])) {
-            $existente = EmpresaCaptacion::where('cliente_uuid', $validated['clienteUuid'])
+            // withTrashed: cliente_uuid es único también para las que están en la papelera
+            $existente = EmpresaCaptacion::withTrashed()->where('cliente_uuid', $validated['clienteUuid'])
                 ->where('creada_por_user_id', $comercial->id)->first();
             if ($existente) return $existente;
         }

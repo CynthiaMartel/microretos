@@ -104,7 +104,7 @@ function enviado() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Primer contacto" titulo="Correo" :destacado="resumen?.buzon?.email || 'info@'" color="text-rol"
+      <CabeceraSeccion antetitulo="Contactos" titulo="Correo" :destacado="resumen?.buzon?.email || 'info@'" color="text-rol"
                        :volver="{ name: 'red-inicio' }" volver-label="Red DuaLab"
                        subtitulo="El buzón de info@dualab.es: leer, responder y reenviar sin abrir el webmail.">
         <button type="button" class="accion-principal" @click="redactando = true">

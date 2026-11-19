@@ -16,6 +16,8 @@ const router = createRouter({
     // Entrevista guardada en la tablet sin conexión (offline/entrevistasLocales.js)
     { path: '/entrevista/local/:clave', name: 'entrevista-local', component: () => import('./views/Entrevista.vue'), props: true, meta: { requiresAuth: true } },
     { path: '/entrevista/:id(\\d+)', name: 'entrevista', component: () => import('./views/Entrevista.vue'), props: true, meta: { requiresAuth: true } },
+    // Entrevistas en curso borradas: solo se restauran (borrar del todo es de Central)
+    { path: '/papelera', name: 'papelera', component: () => import('./views/PapeleraEntrevistas.vue'), meta: { requiresAuth: true } },
     // Entrevista a centros educativos (mismos datos que el formulario de centros de la web)
     // seccion: 'centros' → la app toma el azul de centros (App.vue); el resto, el verde de empresas
     { path: '/centros', name: 'mis-centros', component: () => import('./views/MisCentros.vue'), meta: { requiresAuth: true, seccion: 'centros' } },

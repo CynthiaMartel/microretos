@@ -17,6 +17,9 @@
     "iconos:herramientas": "node pwa/iconos-herramientas.mjs"
   },
   "dependencies": {
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
     "@heroicons/vue": "^2.2.0",
     "axios": "^1.13.5",
     "dompurify": "^3.2.6",

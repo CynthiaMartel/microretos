@@ -63,6 +63,8 @@ class EmpresaCaptacionResource extends JsonResource
             'datos_incompletos'    => \App\Services\CaptacionEmpresaService::datosIncompletos($this->resource),
             'firmada_at'           => $this->firmada_at?->toIso8601String(),
             'created_at'           => $this->created_at?->toIso8601String(),
+            // En la papelera (app comercial → Papelera)
+            'eliminada_at'         => $this->deleted_at?->toIso8601String(),
             'comercial'            => $this->whenLoaded('creadaPor', fn () => $this->creadaPor?->name),
             'revisada_at'          => $this->revisada_at?->toIso8601String(),
             'motivo_descarte'      => $this->motivo_descarte,

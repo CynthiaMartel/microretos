@@ -26,7 +26,7 @@ export const publicarRetosSolicitud = (id, payload) => api.post(`/central/solici
 // Superadmin y Admin Central DuaLab: una petición (bloque) con los nombres del estado del generador
 export const getDatosGenerador = (id, bloque = 0) => api.get(`/central/solicitudes-reto/${id}/generador`, { params: { bloque } });
 // Superadmin y Admin Central DuaLab: empresas con la familia de una petición (para elegir la de cada una)
-export const getEmpresasPeticion = (id, bloque) => api.get(`/central/solicitudes-reto/${id}/empresas`, { params: { bloque } });
+export const getEmpresasPeticion = (id, bloque, todas = false) => api.get(`/central/solicitudes-reto/${id}/empresas`, { params: { bloque, ...(todas && { todas: 1 }) } });
 // Superadmin y Admin Central DuaLab: solicitudes respondidas con sus peticiones (desplegable del generador)
 export const getSolicitudesParaGenerador = () => api.get('/central/solicitudes-reto/para-generador');
 

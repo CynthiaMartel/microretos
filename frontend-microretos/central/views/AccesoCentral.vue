@@ -53,7 +53,7 @@ const entrar = () => {
     <h1 class="break-words text-[1.75rem] font-black leading-tight tracking-tight text-acceso-tinta sm:text-4xl xl:text-[2.6rem]">
       {{ espacio?.nombre ?? 'DuaLab Central' }}
     </h1>
-    <p class="mt-2 text-base text-acceso-texto sm:text-lg lg:text-base xl:text-lg">{{ espacio?.texto ?? 'Primer contacto, Red DuaLab y Seguimiento de prácticas.' }}</p>
+    <p class="mt-2 text-base text-acceso-texto sm:text-lg lg:text-base xl:text-lg">{{ espacio?.texto ?? 'Red DuaLab y Seguimiento de prácticas.' }}</p>
 
     <div v-if="otraCuenta" role="status" class="mt-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
       <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>

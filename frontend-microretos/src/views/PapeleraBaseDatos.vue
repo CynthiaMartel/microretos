@@ -7,7 +7,7 @@ import api from '../api.js'
 // ─── Estado ───────────────────────────────────────────────────────────────────
 const cargando    = ref(true)
 const error       = ref('')
-const items       = ref({ empresas: [], microretos: [], ciclos: [], familias: [], centros: [], proyectos: [], sesiones: [], solicitudes: [] })
+const items       = ref({ empresas: [], microretos: [], ciclos: [], familias: [], centros: [], proyectos: [], sesiones: [], solicitudes: [], captaciones_empresa: [], captaciones_centro: [], retos_borrador: [] })
 const total       = ref(0)
 const filtroActivo = ref('todos')
 
@@ -94,6 +94,31 @@ const TIPOS = {
     bgLight: 'bg-teal-50',
     textColor: 'text-teal-700',
     borderColor: 'border-teal-200',
+  },
+  // Central → Captaciones (una empresa captada con firma no se puede borrar del todo: evidencia legal)
+  captaciones_empresa: {
+    label: 'Empresa captada',
+    labelPlural: 'Empresas captadas',
+    color: '#d97706',
+    bgLight: 'bg-amber-50',
+    textColor: 'text-amber-700',
+    borderColor: 'border-amber-200',
+  },
+  captaciones_centro: {
+    label: 'Centro captado',
+    labelPlural: 'Centros captados',
+    color: '#ea580c',
+    bgLight: 'bg-orange-50',
+    textColor: 'text-orange-700',
+    borderColor: 'border-orange-200',
+  },
+  retos_borrador: {
+    label: 'Reto en borrador',
+    labelPlural: 'Retos en borrador',
+    color: '#ca8a04',
+    bgLight: 'bg-yellow-50',
+    textColor: 'text-yellow-700',
+    borderColor: 'border-yellow-200',
   },
 }
 
@@ -406,6 +431,12 @@ onMounted(cargarPapelera)
                  fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M9.66 17h4.68M12 3v1m6.36 1.64l-.7.7M21 12h-1M4 12H3m3.34-5.66l-.7-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.75-.99-2.38l-.54-.55z"/>
+            </svg>
+            <!-- Captaciones (empresa, centro o reto en borrador) -->
+            <svg v-else-if="item.tipo?.startsWith('captaciones_') || item.tipo === 'retos_borrador'"
+                 class="w-4.5 h-4.5" :class="TIPOS[item.tipo]?.textColor"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <!-- Sesión -->
             <svg v-else

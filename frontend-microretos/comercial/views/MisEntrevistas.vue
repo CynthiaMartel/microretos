@@ -5,7 +5,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BannerComercial from '../components/BannerComercial.vue'
-import { getMisEmpresas } from '../../src/services/comercialService.js'
+import BorrarEntrevistaModal from '../components/BorrarEntrevistaModal.vue'
+import { getMisEmpresas, restaurarEmpresaCaptada } from '../../src/services/comercialService.js'
 import {
   pendientes, sincronizando, sincronizar, ultimaSincronizacion, pendienteDeEmpresa,
 } from '../offline/entrevistasLocales.js'
@@ -64,6 +65,28 @@ const alCambiarRed = () => { enLinea.value = navigator.onLine }
 onMounted(() => { window.addEventListener('online', alCambiarRed); window.addEventListener('offline', alCambiarRed) })
 onUnmounted(() => { window.removeEventListener('online', alCambiarRed); window.removeEventListener('offline', alCambiarRed) })
 
+// Papelera: solo las entrevistas en curso del servidor (las de la tablet aún no están en DuaLab)
+const aBorrar = ref(null)
+const aviso   = ref(null) // { id, nombre } de la última borrada, para «Deshacer»
+let avisoTimer = null
+function onBorrada({ id, nombre }) {
+  aBorrar.value = null
+  empresas.value = empresas.value.filter(e => e.id !== id)
+  aviso.value = { id, nombre }
+  clearTimeout(avisoTimer)
+  avisoTimer = setTimeout(() => { aviso.value = null }, 8000)
+}
+async function deshacer() {
+  const { id } = aviso.value
+  aviso.value = null
+  try {
+    await restaurarEmpresaCaptada(id)
+  } finally {
+    cargar()
+  }
+}
+onUnmounted(() => clearTimeout(avisoTimer))
+
 const fecha = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 const nueva = () => router.push({ name: 'entrevista-nueva' })
 </script>
@@ -117,19 +140,20 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
         <button v-if="g.key === 'tablet' && enLinea" type="button" class="accion-secundaria w-fit" :disabled="sincronizando" @click="sincronizar">
           {{ sincronizando ? 'Enviando…' : 'Enviar ahora' }}
         </button>
+        <RouterLink v-if="g.key === 'curso'" :to="{ name: 'papelera' }" class="accion-secundaria w-fit">Papelera</RouterLink>
       </div>
       <p v-if="g.key === 'tablet'" class="text-sm text-texto-secundario">
         Están cifradas en esta tablet y se envían solas a DuaLab cuando hay conexión. No borres los datos del navegador ni desinstales la app hasta que se envíen.
       </p>
       <ul class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <li v-for="e in g.lista" :key="e._local ?? e.id">
+        <li v-for="e in g.lista" :key="e._local ?? e.id" class="relative">
           <RouterLink :to="rutaDe(e)"
                       class="tarjeta flex h-full flex-col gap-3 transition hover:border-rol-fuerte/40 hover:shadow-md">
             <div class="flex items-start gap-3">
               <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-empresas/10 font-heading text-lg font-bold text-empresas-dark" aria-hidden="true">
                 {{ (e.nombre_comercial || e.email_general || '?').charAt(0).toUpperCase() }}
               </span>
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0 flex-1" :class="{ 'pr-10': g.key === 'curso' }">
                 <!-- Enviada por correo y aún sin rellenar: solo se sabe su email -->
                 <p class="break-words font-heading text-base font-bold">{{ e.nombre_comercial || e.email_general || 'Empresa sin nombre' }}</p>
                 <p class="truncate text-sm text-texto-secundario">{{ [e.sector, e.municipio].filter(Boolean).join(' · ') || (e.nombre_comercial ? 'Sin sector' : 'Pendiente de que la empresa rellene sus datos') }}</p>
@@ -154,9 +178,27 @@ const nueva = () => router.push({ name: 'entrevista-nueva' })
               <span class="shrink-0 font-semibold text-rol-fuerte">{{ e.estado === 'borrador' || e._error ? 'Continuar' : 'Ver' }} →</span>
             </div>
           </RouterLink>
+          <!-- Fuera del enlace (un botón dentro de <a> no es válido); siempre visible, también en táctil -->
+          <button v-if="g.key === 'curso' && enLinea" type="button" class="accion-icono absolute right-3 top-3"
+                  :aria-label="`Borrar la entrevista de ${e.nombre_comercial || e.email_general || 'empresa sin nombre'}`"
+                  title="Mover a la papelera" @click="aBorrar = e">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
         </li>
       </ul>
     </section>
     </template>
+
+    <BorrarEntrevistaModal :visible="!!aBorrar" :empresa="aBorrar" @borrada="onBorrada" @cerrar="aBorrar = null" />
+
+    <!-- Aviso tras borrar, con «Deshacer» (§6: feedback de cada acción) -->
+    <div v-if="aviso" role="status"
+         class="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-lg flex-wrap items-center justify-between gap-3 rounded-2xl bg-azul-noche px-4 py-3 text-sm text-white shadow-xl">
+      <span class="min-w-0 break-words">«{{ aviso.nombre }}» se ha movido a la papelera.</span>
+      <div class="flex shrink-0 gap-2">
+        <button type="button" class="h-9 rounded-full bg-white/15 px-4 font-semibold hover:bg-white/25" @click="deshacer">Deshacer</button>
+        <RouterLink :to="{ name: 'papelera' }" class="inline-flex h-9 items-center rounded-full px-3 font-semibold text-white/80 hover:text-white">Ver papelera</RouterLink>
+      </div>
+    </div>
   </div>
 </template>

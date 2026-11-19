@@ -1136,7 +1136,7 @@ const irA = (ruta) => router.push(ruta)
 
 <style>
 /* Fuente manuscrita para la nota "Ideas de hoy…" de la bienvenida (como idea_dashboard.png) */
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap');
+@import "@fontsource/caveat/latin-600.css";
 </style>
 
 <style scoped>

@@ -6,7 +6,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getFormulariosWeb, getCorreos } from '../../src/services/primerContactoService.js'
-import { listarSolicitudes, getRespuestasSolicitudes } from '../../src/services/solicitudRetoService.js'
+import { listarSolicitudes } from '../../src/services/solicitudRetoService.js'
 import logo from '../../src/assets/logo_colores.png'
 import { ESPACIOS, ICONOS, espacioDe, puedeVerItem, conCandado } from '../espacios.js'
 import { avisoSuperadmin } from '../avisoSuperadmin.js'
@@ -71,10 +71,6 @@ const CONTADORES = {
     const { data } = await listarSolicitudes({ per_page: 1 })
     return data.resumen?.por_trabajar ?? 0
   } },
-  respuestas: { aria: 'respuestas de docentes sin leer', cargar: async () => {
-    const { data } = await getRespuestasSolicitudes({ estado: 'nuevo', per_page: 1 })
-    return data.meta?.total ?? 0
-  } },
 }
 const pendientes = ref({})
 const ultima = {}
@@ -100,10 +96,16 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
          class="panel-lateral fixed left-0 top-16 z-40 flex h-[calc(100dvh-6.5rem)] w-72 max-w-[85vw] flex-col border-r border-white/10 bg-[var(--color-panel,#17283E)] shadow-[6px_0_32px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-in-out lg:translate-x-0"
          :class="abierto ? 'translate-x-0' : '-translate-x-full'">
     <nav class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-3">
-      <template v-for="grupo in GRUPOS" :key="grupo.titulo">
-        <p class="nav-grupo">{{ grupo.titulo }}</p>
+      <!-- Cabecera del espacio: distinta de los títulos de sección (CONTACTOS, SOPORTE…) para que no parezca uno más -->
+      <div v-if="espacio" class="mb-2 flex items-center gap-2.5 border-b border-white/10 px-3 pb-3 pt-1">
+        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="PUNTO_ESPACIO[espacio.color]" aria-hidden="true" />
+        <p class="min-w-0 truncate font-heading text-base font-bold text-white">{{ espacio.nombre }}</p>
+      </div>
+      <template v-for="(grupo, g) in GRUPOS" :key="grupo.titulo || g">
+        <p v-if="grupo.titulo" class="nav-grupo">{{ grupo.titulo }}</p>
         <div class="space-y-0.5">
           <template v-for="item in grupo.items" :key="item.key">
+          <div v-if="item.separadorAntes" class="mx-3 my-1.5 border-t border-white/10" role="separator" />
           <button type="button" class="nav-item w-full text-left"
                   :class="activo(item) ? 'nav-item--activo' : 'nav-item--idle'"
                   :aria-current="activo(item) ? 'page' : undefined"
@@ -111,7 +113,10 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path :d="item.icono" />
             </svg>
-            <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate">{{ item.label }}</span>
+              <span v-if="item.detalle" class="block whitespace-normal break-words text-[11px] font-semibold leading-tight opacity-60">{{ item.detalle }}</span>
+            </span>
             <span v-if="item.contador && pendientes[item.contador]" class="nav-badge" :aria-label="`${pendientes[item.contador]} ${CONTADORES[item.contador].aria}`">{{ textoPendientes(item.contador) }}</span>
             <svg v-if="item.externo" class="h-3.5 w-3.5 shrink-0 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             <span v-if="item.externo" class="sr-only">(se abre en otra pestaña)</span>

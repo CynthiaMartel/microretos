@@ -1,4 +1,4 @@
-<!-- Primer contacto → «Solicitudes de retos»: DuaLab envía a un docente un enlace para que cuente qué
+<!-- Contactos → «Solicitudes de retos»: DuaLab envía a un docente un enlace para que cuente qué
      quiere trabajar, y aquí se siguen hasta tener retos y encuentro. El enlace sale por correo y
      además se puede copiar para pasarlo por otro canal. Backend: SolicitudRetoController. -->
 <script setup>
@@ -10,7 +10,7 @@ import FiltroSegmentado from '../../src/components/FiltroSegmentado.vue'
 import VistaPreviaSolicitud from '../components/VistaPreviaSolicitud.vue'
 import EliminarSolicitudModal from '../components/EliminarSolicitudModal.vue'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
-import { listarSolicitudes, crearSolicitud } from '../../src/services/solicitudRetoService.js'
+import { listarSolicitudes, crearSolicitud, getRespuestasSolicitudes } from '../../src/services/solicitudRetoService.js'
 import { FASES_SOLICITUD, fechaHora, textoSesion, faltaEncuentro } from '../primerContacto.js'
 
 const route = useRoute()
@@ -54,6 +54,19 @@ function sincronizarUrl() {
     ...(pagina.value > 1 && { page: pagina.value }),
   } })
 }
+
+// Correos del profesorado sin leer (info@, «Correos de solicitudes»): el total va en el botón de la
+// cabecera y, por solicitud, en un chip de su tarjeta. Si la web no responde, no se muestran.
+const correosNuevos = ref({ total: 0, porSolicitud: {} })
+async function cargarCorreosNuevos() {
+  try {
+    const { data } = await getRespuestasSolicitudes({ estado: 'nuevo', per_page: 50 })
+    const porSolicitud = {}
+    for (const c of data.data ?? []) if (c.solicitud?.id) porSolicitud[c.solicitud.id] = (porSolicitud[c.solicitud.id] ?? 0) + 1
+    correosNuevos.value = { total: data.meta?.total ?? 0, porSolicitud }
+  } catch { /* no es crítico */ }
+}
+onMounted(cargarCorreosNuevos)
 
 let espera
 watch(buscar, () => { clearTimeout(espera); espera = setTimeout(() => { pagina.value = 1; sincronizarUrl(); cargar() }, 350) })
@@ -157,9 +170,14 @@ async function copiar() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Primer contacto" titulo="Solicitudes de" destacado="retos" color="text-rol"
+      <CabeceraSeccion antetitulo="Contactos" titulo="Solicitudes de" destacado="retos" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
                        subtitulo="Envía a un docente el formulario para que cuente qué quiere trabajar; con sus respuestas generamos los retos.">
+        <RouterLink :to="{ name: 'respuestas-solicitudes' }" class="accion-secundaria">
+          Correos de solicitudes
+          <span v-if="correosNuevos.total" class="ml-1.5 rounded-full bg-[#FF8920] px-1.5 text-xs font-extrabold text-azul-noche"
+                :aria-label="`${correosNuevos.total} sin leer`">{{ correosNuevos.total > 99 ? '99+' : correosNuevos.total }}</span>
+        </RouterLink>
         <button type="button" class="accion-secundaria" @click="datosVistaPrevia = {}; viendoComoDocente = true">Ver cómo lo ve el docente</button>
         <button type="button" class="accion-principal" @click="abrirNueva">Enviar solicitud</button>
       </CabeceraSeccion>
@@ -193,7 +211,11 @@ async function copiar() {
                 <span v-if="s.empresa" class="min-w-0 truncate rounded-full bg-empresas/10 px-2.5 py-0.5 text-xs font-bold text-empresas-dark">{{ s.empresa.nombre }}</span>
               </span>
             </span>
-            <span class="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-center">
+            <span class="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-center">
+              <span v-if="correosNuevos.porSolicitud[s.id]" class="inline-flex items-center gap-1 rounded-full bg-[#FF8920]/15 px-2.5 py-0.5 text-xs font-bold text-[#B45309]">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                {{ correosNuevos.porSolicitud[s.id] }} {{ correosNuevos.porSolicitud[s.id] === 1 ? 'correo nuevo' : 'correos nuevos' }}
+              </span>
               <span class="rounded-full px-2.5 py-0.5 text-xs font-bold" :class="FASES_SOLICITUD[s.fase]?.clases">{{ FASES_SOLICITUD[s.fase]?.texto ?? s.fase }}</span>
               <span class="text-xs text-texto-secundario">{{ fechaHora(s.respondido_at || s.created_at) }}</span>
             </span>

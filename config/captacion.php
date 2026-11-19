@@ -45,7 +45,7 @@ return [
                 . "5. Legislación aplicable. Estas condiciones se rigen por la legislación española.",
         ],
         'info_rgpd' => [
-            'version' => '0.3-borrador',
+            'version' => '0.4-borrador',
             'titulo'  => 'Información sobre protección de datos',
             'texto'   => "Responsable: [SOCIEDAD TITULAR DE DUALAB, CIF Y DOMICILIO], que opera bajo la marca "
                 . "Grupo Óptima.\n\n"
@@ -56,7 +56,13 @@ return [
                 . "(2) el consentimiento, que puede retirarse en cualquier momento.\n\n"
                 . "Destinatarios: Inicia Lab SL [CIF], para la formación de IniciaLab; los centros "
                 . "educativos participantes, solo los datos de la empresa y del reto; y, si se marca la "
-                . "casilla opcional, Vía Óptima SL [CIF]. No se transfieren datos fuera de la UE.\n\n"
+                . "casilla opcional, Vía Óptima SL [CIF].\n\n"
+                . "Transferencias internacionales: el dictado por voz de la entrevista se transcribe y las "
+                . "sugerencias y retos en borrador se generan con el servicio de inteligencia artificial de "
+                . "OpenAI, en Estados Unidos, como encargado del tratamiento. Esto supone una transferencia "
+                . "internacional de datos, amparada en [GARANTÍA: cláusulas contractuales tipo del contrato "
+                . "de encargo con OpenAI, pendiente de confirmar]. El audio no se conserva una vez "
+                . "transcrito.\n\n"
                 . "Conservación: mientras dure la colaboración y, después, durante los plazos legales. "
                 . "La firma y los consentimientos se guardan como prueba.\n\n"
                 . "Derechos: acceso, rectificación, supresión, oposición, limitación y portabilidad en "

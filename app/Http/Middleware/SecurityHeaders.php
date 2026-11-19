@@ -38,6 +38,10 @@ class SecurityHeaders
         // Política de permisos: desactiva APIs sensibles que la app no necesita
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
 
+        // No revelar la versión de PHP (la añade PHP por su cuenta, fuera de la respuesta de Laravel)
+        header_remove('X-Powered-By');
+        $response->headers->remove('X-Powered-By');
+
         return $response;
     }
 }
