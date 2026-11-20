@@ -38,7 +38,7 @@ return [
     'dias_validez_retos' => 90,
 
     'privacidad' => [
-        'version' => '0.1-borrador',
+        'version' => '0.2-borrador',
         'titulo'  => 'Información sobre protección de datos',
         'texto'   => "Responsable: [SOCIEDAD TITULAR DE DUALAB, CIF Y DOMICILIO], que opera bajo la marca "
             . "Grupo Óptima.\n\n"
@@ -47,6 +47,11 @@ return [
             . "contigo para enviártelos. No escribas datos personales de tu alumnado.\n\n"
             . "Datos: tu nombre, tu email y el centro educativo.\n\n"
             . "Base jurídica: tu interés en recibir los retos, que has pedido a nuestro equipo.\n\n"
+            . "Transferencias internacionales: para preparar los retos usamos el servicio de inteligencia "
+            . "artificial de OpenAI, en Estados Unidos, como encargado del tratamiento, con lo que nos "
+            . "cuentas de la sesión (sin tu nombre, tu email ni tu centro). Esa transferencia está "
+            . "amparada en [GARANTÍA: cláusulas contractuales tipo del contrato de encargo con OpenAI, "
+            . "pendiente de confirmar].\n\n"
             . "Conservación: mientras preparamos los retos y, si tu centro se une a DuaLab, mientras "
             . "dure la colaboración. Si no sigue adelante, la solicitud se descarta.\n\n"
             . "Derechos: acceso, rectificación, supresión, oposición, limitación y portabilidad en "
