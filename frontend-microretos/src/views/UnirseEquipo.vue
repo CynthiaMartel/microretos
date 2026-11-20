@@ -1,10 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import EtapaRecorrido from '../components/EtapaRecorrido.vue'
 
+const route    = useRoute()
 const router   = useRouter()
+// ?recordar=0: viene del login de la app (posible dispositivo compartido), no se guarda el grupo
+const recordar = route.query.recordar !== '0'
 const codigo   = ref('')
 const cargando = ref(false)
 const error    = ref('')
@@ -16,6 +19,14 @@ const isLoaded  = ref(false)
 
 onMounted(() => {
   setTimeout(() => { isLoaded.value = true }, 60)
+
+  // ?codigo=XXX-000: llega desde «Retomar workspace» o el login con el código de la clase
+  const desdeQuery = String(route.query.codigo || '').toUpperCase()
+  if (/^[A-Z]{3}-\d{3}$/.test(desdeQuery)) {
+    codigo.value = desdeQuery
+    unirse()
+    return
+  }
 
   // Si el alumno ya tiene un equipo guardado en localStorage, mostrar acceso rápido
   const tokenGuardado = localStorage.getItem('dualab_equipo_token')
@@ -78,20 +89,22 @@ async function unirse() {
   }
 }
 
+function guardarEquipo(token, nombre, titulo) {
+  if (!recordar) return
+  localStorage.setItem('dualab_equipo_token', token)
+  localStorage.setItem('dualab_equipo_nombre', nombre)
+  localStorage.setItem('dualab_proyecto_titulo', titulo)
+  localStorage.setItem('dualab_equipo_etapa', resultado.value.etapa || 'taller')
+}
+
 function accederAlWorkspace() {
   const { token, nombre_equipo, proyecto_titulo } = resultado.value
-  localStorage.setItem('dualab_equipo_token', token)
-  localStorage.setItem('dualab_equipo_nombre', nombre_equipo)
-  localStorage.setItem('dualab_proyecto_titulo', proyecto_titulo)
-  localStorage.setItem('dualab_equipo_etapa', resultado.value.etapa || 'taller')
+  guardarEquipo(token, nombre_equipo, proyecto_titulo)
   router.push({ name: 'equipo-workspace', params: { token } })
 }
 
 function seleccionarEquipo(equipo) {
-  localStorage.setItem('dualab_equipo_token', equipo.token)
-  localStorage.setItem('dualab_equipo_nombre', equipo.nombre)
-  localStorage.setItem('dualab_proyecto_titulo', resultado.value.proyecto_titulo)
-  localStorage.setItem('dualab_equipo_etapa', resultado.value.etapa || 'taller')
+  guardarEquipo(equipo.token, equipo.nombre, resultado.value.proyecto_titulo)
   router.push({ name: 'equipo-workspace', params: { token: equipo.token } })
 }
 

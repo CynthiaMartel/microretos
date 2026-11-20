@@ -1119,7 +1119,7 @@ function formatFecha(isoDate) {
                          class="absolute bottom-full right-0 z-30 mb-1 w-[min(18rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white p-1.5 shadow-lg">
                       <!-- Atajo: proyectar en clase el QR y el código (pantalla de acceso) -->
                       <button v-if="s.codigo_clase && s.microproyecto_uuid" type="button" role="menuitem"
-                              @click="menuLlave = null; router.push({ name: 'pantalla-acceso', params: { uuid: s.microproyecto_uuid } })"
+                              @click="menuLlave = null; router.push({ name: 'pantalla-acceso', params: { uuid: s.microproyecto_uuid }, query: { encuentro: s.id } })"
                               class="flex w-full items-center gap-2 rounded-lg bg-rol/5 px-2.5 py-2 text-left text-sm font-semibold text-rol-fuerte hover:bg-rol/10">
                         <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         Proyectar pantalla de acceso
@@ -1651,7 +1651,7 @@ function formatFecha(isoDate) {
                 Ver detalle de grupos
               </button>
               <button v-if="encuentroAbierto.codigo_clase && encuentroAbierto.microproyecto_uuid"
-                      @click="router.push({ name: 'pantalla-acceso', params: { uuid: encuentroAbierto.microproyecto_uuid } }); cerrarEncuentro()"
+                      @click="router.push({ name: 'pantalla-acceso', params: { uuid: encuentroAbierto.microproyecto_uuid }, query: { encuentro: encuentroAbierto.id } }); cerrarEncuentro()"
                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-rol/30
                              bg-white text-rol-fuerte text-xs font-bold uppercase tracking-widest
                              hover:bg-rol/5 transition-all">

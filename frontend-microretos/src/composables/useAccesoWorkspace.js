@@ -2,12 +2,18 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api.js'
 
-// Acceso del alumnado a su workspace con el código de su grupo (XXX-000), sin cuenta. Lo usan
+// Acceso del alumnado a su workspace con el código de su grupo (XXX-000), sin cuenta; con el
+// código de la clase lleva a «Unirse» para elegir grupo. Lo usan
 // «Retomar workspace» (/workspace-proyecto), que recuerda el grupo en el dispositivo, y el login de
 // la app (desplegable «¿Eres alumnado?»), que NO lo recuerda: en un dispositivo compartido otra
 // persona podría entrar en un workspace que no es el suyo, así que allí siempre se pide el código.
 const CLAVES = ['dualab_equipo_token', 'dualab_equipo_nombre', 'dualab_proyecto_titulo', 'dualab_equipo_etapa']
 const leer = (k) => { try { return localStorage.getItem(k) } catch { return null } }
+
+// 403 = código de clase que existe pero aún sin grupos: «Unirse» explica qué falta
+async function esCodigoClase(codigo) {
+  try { await api.get(`/clase/${codigo}`); return true } catch (e) { return e.response?.status === 403 }
+}
 
 export function useAccesoWorkspace({ recordar = true } = {}) {
   const router   = useRouter()
@@ -49,6 +55,12 @@ export function useAccesoWorkspace({ recordar = true } = {}) {
       }
       router.push({ name: 'equipo-workspace', params: { token: res.data.token } })
     } catch (e) {
+      // No es de un grupo: si es el código de la clase, a «Unirse» con el código ya puesto para
+      // elegir grupo (sin recordar el grupo si venimos del login)
+      if (e.response?.status === 404 && await esCodigoClase(codigo.value)) {
+        router.push({ name: 'unirse-equipo', query: { codigo: codigo.value, ...(recordar ? {} : { recordar: '0' }) } })
+        return
+      }
       error.value = e.response?.data?.error || 'No se encontró ese código. Comprueba que lo has escrito bien.'
     } finally {
       cargando.value = false

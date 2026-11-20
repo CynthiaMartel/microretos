@@ -13,6 +13,7 @@ const cargando = ref(true)
 const error     = ref('')
 const proyectoTitulo = ref('')
 const equipos   = ref([])
+const clases    = ref([])
 const canvases  = ref({})
 
 const baseUrl = import.meta.env.VITE_APP_BASE_URL || window.location.origin
@@ -45,7 +46,12 @@ async function cargar() {
   try {
     const res = await api.get(`/startup/proyectos/${route.params.uuid}/pantalla-acceso`)
     proyectoTitulo.value = res.data.proyecto_titulo
-    equipos.value = res.data.equipos
+    // ?encuentro=ID (desde la tarjeta de un encuentro): solo ese encuentro, para que el código
+    // de la clase y los grupos proyectados sean los mismos que enseña la tarjeta
+    const encuentroId = Number(route.query.encuentro) || null
+    const delEncuentro = (x) => !encuentroId || x.encuentro_id === encuentroId
+    clases.value  = (res.data.clases || []).filter(delEncuentro)
+    equipos.value = res.data.equipos.filter(delEncuentro)
   } catch (e) {
     error.value = e.response?.status === 404
       ? 'Proyecto no encontrado o sin equipos creados todavía.'
@@ -83,10 +89,22 @@ onMounted(cargar)
       </div>
 
       <template v-else>
+        <!-- Código de la clase: el mismo que enseñan las tarjetas de encuentro -->
+        <div v-if="clases.length" class="mb-6 flex flex-wrap gap-3">
+          <div v-for="c in clases" :key="c.encuentro_id"
+               class="min-w-0 rounded-2xl border border-white/10 bg-white/5 px-5 py-3">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+              Código de la clase<template v-if="clases.length > 1 && c.grupo"> {{ c.grupo }}</template>
+            </p>
+            <p class="font-heading text-3xl font-black tracking-[0.2em] text-white sm:text-4xl">{{ c.codigo_clase }}</p>
+          </div>
+        </div>
+
         <p class="text-sm text-gray-400 mb-6">
-          Cada alumno/a escanea el código QR de su equipo con el móvil, o entra en
+          La primera vez, entra en
           <strong class="text-white">{{ baseUrlSinProtocolo }}/unirse</strong>
-          y escribe el código de su equipo.
+          con el código de la clase y elige tu equipo. También puedes escanear el QR de tu equipo
+          o escribir su código, que sirve además para volver otro día.
         </p>
 
         <div v-if="!equipos.length" class="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-10 text-center text-gray-400">

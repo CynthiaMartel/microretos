@@ -47,7 +47,7 @@ async function copiar(codigo) {
   try { await navigator.clipboard.writeText(codigo); aviso.value = `Código ${codigo} copiado` } catch { aviso.value = `Código: ${codigo}` }
   setTimeout(() => { aviso.value = '' }, 2500)
 }
-const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: e.microproyecto_uuid } })
+const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: e.microproyecto_uuid }, query: { encuentro: e.id } })
 </script>
 
 <template>
@@ -86,7 +86,7 @@ const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: 
         </p>
         <div class="mt-3 flex items-center gap-2 rounded-xl bg-alumnos/5 px-3 py-2">
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-semibold text-alumnos-dark">Código de acceso</p>
+            <p class="text-xs font-semibold text-alumnos-dark">Código de la clase</p>
             <p class="font-heading text-xl font-bold tracking-[0.15em] text-azul-noche">{{ e.codigo_clase }}</p>
           </div>
           <button type="button" @click="copiar(e.codigo_clase)" :aria-label="`Copiar el código ${e.codigo_clase}`" title="Copiar el código"

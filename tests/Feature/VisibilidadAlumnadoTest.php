@@ -176,7 +176,8 @@ class VisibilidadAlumnadoTest extends TestCase
 
         $uuid = DB::table('microproyectos')->where('id', $this->encuentro->microproyecto_id)->value('uuid');
         $this->getJson("/api/startup/proyectos/{$uuid}/pantalla-acceso")->assertOk()
-            ->assertJsonPath('equipos.0.token', $this->equipo->token);
+            ->assertJsonPath('equipos.0.token', $this->equipo->token)
+            ->assertJsonPath('equipos.0.encuentro_id', $this->encuentro->id);
         // El token ya no se envía nunca al docente: ve el workspace del grupo por id, en solo lectura
         $this->getJson("/api/encuentros/{$this->encuentro->id}/workspace")->assertOk()
             ->assertJsonMissingPath('equipos.0.token');

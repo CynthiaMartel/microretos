@@ -68,7 +68,7 @@ watch([busqueda, filtroClase, () => cursoStore.curso], () => { limite.value = PA
 const visibles = computed(() => filtrados.value.slice(0, limite.value))
 
 const fecha = (f) => { const d = new Date(dia(f) + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) }
-const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: e.microproyecto_uuid } })
+const proyectar = (e) => router.push({ name: 'pantalla-acceso', params: { uuid: e.microproyecto_uuid }, query: { encuentro: e.id } })
 const aviso = ref('')
 async function copiar(codigo) {
   try { await navigator.clipboard.writeText(codigo); aviso.value = `Código ${codigo} copiado` } catch { aviso.value = `Código: ${codigo}` }
@@ -127,7 +127,7 @@ async function copiar(codigo) {
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <span class="rounded-lg bg-alumnos/5 px-2.5 py-1 font-heading text-base font-bold tracking-[0.12em] text-azul-noche" :title="`Código de acceso ${e.codigo_clase}`">{{ e.codigo_clase }}</span>
+              <span class="rounded-lg bg-alumnos/5 px-2.5 py-1 font-heading text-base font-bold tracking-[0.12em] text-azul-noche" :title="`Código de la clase ${e.codigo_clase}`">{{ e.codigo_clase }}</span>
               <button type="button" @click="copiar(e.codigo_clase)" :aria-label="`Copiar el código ${e.codigo_clase}`" title="Copiar el código"
                       class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-white text-texto-secundario hover:text-azul-noche">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>

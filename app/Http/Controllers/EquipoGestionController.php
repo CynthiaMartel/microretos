@@ -230,13 +230,22 @@ class EquipoGestionController extends Controller
 
         $equipos = $proyecto->equipos()->whereHas('encuentro', fn($q) => $q->editablesPara($user))->get()->map(fn($e) => [
             'id'            => $e->id,
+            'encuentro_id'  => $e->encuentro_id,
             'nombre'        => $e->nombre,
             'codigo_acceso' => $e->codigo_acceso,
             'token'         => $e->token,
         ]);
 
+        // Código de la clase (el que enseñan las tarjetas de encuentro): con él se entra la
+        // primera vez en /unirse y se elige grupo; el de cada grupo sirve también para volver.
+        $clases = $proyecto->encuentros()->editablesPara($user)->whereNotNull('codigo_clase')
+            ->get(['encuentros.id', 'encuentros.grupo', 'encuentros.codigo_clase'])
+            ->map(fn($e) => ['encuentro_id' => $e->id, 'grupo' => $e->grupo, 'codigo_clase' => $e->codigo_clase])
+            ->values();
+
         return response()->json([
             'proyecto_titulo' => $proyecto->titulo,
+            'clases'          => $clases,
             'equipos'         => $equipos,
         ]);
     }
