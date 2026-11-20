@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Equipo;
+use App\Support\AliasGenerator;
 
 /**
  * Arma el contexto textual del diagnóstico final IA de un equipo (ver
@@ -40,7 +41,8 @@ class DiagnosticoFinalService
 
         $ctx .= "\n=== EQUIPO ===\n";
         $ctx .= "Nombre del equipo: {$equipo->nombre}\n";
-        // Protección de datos: a la IA solo le llegan alias, nunca nombres reales
+        // Protección de datos: los alias llevan el nombre de pila; al final seudonimizar() los
+        // cambia por «Integrante N» y a la IA no le llega ninguno
         $miembros = $equipo->miembros->map(fn($m) => $m->alias . ($m->rol ? " ({$m->rol})" : ''))->implode(', ');
         $ctx .= 'Participantes: ' . ($miembros ?: 'sin registrar') . "\n";
 
@@ -128,7 +130,84 @@ class DiagnosticoFinalService
             }
         }
 
+        return self::seudonimizar($ctx, $equipo);
+    }
+
+    /**
+     * Alias de cada miembro → «Integrante N» (N por orden de alta en el equipo).
+     *
+     * @return array<string, string>
+     */
+    public static function seudonimos(Equipo $equipo): array
+    {
+        $mapa = [];
+        foreach ($equipo->miembros->values() as $i => $m) {
+            if (filled($m->alias)) {
+                $mapa[(string) $m->alias] = 'Integrante ' . ($i + 1);
+            }
+        }
+
+        return $mapa;
+    }
+
+    /**
+     * Quita del contexto los alias del alumnado antes de enviarlo a OpenAI: el alias completo
+     * y, en los textos libres, el nombre de pila suelto («Daniel hizo…»). Si dos miembros
+     * comparten nombre de pila, el nombre suelto pasa a «un integrante». Se saltan los
+     * nombres de menos de 3 letras y el de relleno («Alumno»), que se confundirían con texto.
+     */
+    private static function seudonimizar(string $ctx, Equipo $equipo): string
+    {
+        $mapa = self::seudonimos($equipo);
+        $ctx  = strtr($ctx, $mapa); // strtr prueba antes los alias más largos
+
+        $porNombre = [];
+        foreach ($mapa as $alias => $etiqueta) {
+            $nombre = AliasGenerator::nombreDeAlias($alias);
+            if ($nombre !== null && mb_strlen($nombre) >= 3 && $nombre !== AliasGenerator::NOMBRE_POR_DEFECTO) {
+                $porNombre[$nombre][] = $etiqueta;
+            }
+        }
+        foreach ($porNombre as $nombre => $etiquetas) {
+            $sustituto = count($etiquetas) === 1 ? $etiquetas[0] : 'un integrante';
+            $ctx = (string) preg_replace('/(?<!\p{L})' . preg_quote($nombre, '/') . '(?!\p{L})/u', $sustituto, $ctx);
+        }
+
         return $ctx;
+    }
+
+    /**
+     * Devuelve los alias a la respuesta de la IA: cada «Integrante N» (o «integrante N»)
+     * vuelve a ser el alias de ese miembro, en todos los textos del diagnóstico.
+     *
+     * @param  array<array-key, mixed>  $diagnostico
+     * @return array<array-key, mixed>
+     */
+    public static function restaurarAlias(array $diagnostico, Equipo $equipo): array
+    {
+        $porNumero = [];
+        foreach (self::seudonimos($equipo) as $alias => $etiqueta) {
+            $porNumero[(int) substr($etiqueta, strlen('Integrante '))] = $alias;
+        }
+
+        // «el/al/del integrante 2» → «Daniel…/a Daniel…/de Daniel…»: con nombre no va artículo
+        $sinArticulo = ['el' => '', 'al' => 'a ', 'del' => 'de '];
+
+        array_walk_recursive($diagnostico, function (&$valor) use ($porNumero, $sinArticulo) {
+            if (is_string($valor)) {
+                $valor = (string) preg_replace_callback('/(?<!\p{L})(?:(el|al|del) )?integrante (\d+)(?!\d)/iu',
+                    function ($m) use ($porNumero, $sinArticulo) {
+                        $alias = $porNumero[(int) $m[2]] ?? null;
+                        if ($alias === null) return $m[0];
+                        $articulo = mb_strtolower($m[1]);
+                        $prefijo  = $sinArticulo[$articulo] ?? '';
+                        // Respeta la mayúscula de inicio de frase («Del integrante…» → «De …»)
+                        return ($m[1] !== '' && $m[1] !== $articulo ? ucfirst($prefijo) : $prefijo) . $alias;
+                    }, $valor);
+            }
+        });
+
+        return $diagnostico;
     }
 
     // Aplana el contenido libre de una fase (equipo_fases.datos) a texto legible para el

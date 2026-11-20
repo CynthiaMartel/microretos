@@ -4,6 +4,8 @@ namespace App\Console\Commands\Concerns;
 
 use App\Support\AliasGenerator;
 use Carbon\Carbon;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -192,10 +194,20 @@ trait AlumnadoFicticio
         $listas = [];
         foreach ($filas as $f) {
             [$letra, $curso] = $this->letraYCurso($f->grupo, $f->curso, $f->curso_proyecto);
-            $listas[$this->claveClase($centroId, $f->ciclo_id, $letra, $curso, $f->fecha)][] = (string) $f->alias;
+            $listas[$this->claveClase($centroId, $f->ciclo_id, $letra, $curso, $f->fecha)][] = $this->aliasEnClaro($f->alias);
         }
 
         return array_map(fn ($l) => array_values(array_unique($l)), $listas);
+    }
+
+    /** equipo_miembros.alias va cifrado (cast 'encrypted'); acepta también filas aún sin cifrar */
+    private function aliasEnClaro(?string $valor): string
+    {
+        try {
+            return Crypt::decryptString((string) $valor);
+        } catch (DecryptException) {
+            return (string) $valor;
+        }
     }
 
     /**

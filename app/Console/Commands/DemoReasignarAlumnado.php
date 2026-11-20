@@ -59,7 +59,8 @@ class DemoReasignarAlumnado extends Command
         $equipos = DB::table('equipos')->whereIn('encuentro_id', $encuentros->pluck('id'))
             ->select('id', 'encuentro_id', 'numero_equipo', 'diagnostico_final')->orderBy('numero_equipo')->orderBy('id')->get();
         $miembros = DB::table('equipo_miembros')->whereIn('equipo_id', $equipos->pluck('id'))
-            ->select('id', 'equipo_id', 'alias', 'rol')->orderBy('id')->get()->groupBy('equipo_id');
+            ->select('id', 'equipo_id', 'alias', 'rol')->orderBy('id')->get()
+            ->each(fn ($m) => $m->alias = $this->descifrar($m->alias))->groupBy('equipo_id');
         $equiposPorEncuentro = $equipos->groupBy('encuentro_id');
 
         // ── Clase de cada encuentro y nº de alumnos que necesita ──────────────
@@ -113,7 +114,8 @@ class DemoReasignarAlumnado extends Command
 
         $updFases = [];
         foreach (DB::table('equipo_fases')->whereIn('equipo_id', $equipoIds)->whereNotNull('datos')->select('id', 'equipo_id', 'numero_fase', 'datos')->get() as $f) {
-            $json = (string) $f->datos;
+            $original = $this->descifrar($f->datos); // cifrado con el cast 'encrypted:array'
+            $json = $original;
             if ((int) $f->numero_fase === 0) {
                 // Objetos, no arrays asociativos: así un {} vacío sigue siendo {} al recodificar
                 $datos = json_decode($json);
@@ -131,16 +133,16 @@ class DemoReasignarAlumnado extends Command
                 }
             }
             $texto = $this->reemplazarEnJson($json, $reemplazos[$f->equipo_id] ?? []) ?? $json;
-            if ($texto !== (string) $f->datos) {
-                $updFases[$f->id] = $texto;
+            if ($texto !== $original) {
+                $updFases[$f->id] = Crypt::encryptString($texto);
             }
         }
 
         $updDiagnosticos = [];
         foreach ($equipos as $q) {
-            $nuevo = $this->reemplazarEnJson($q->diagnostico_final, $reemplazos[$q->id] ?? []);
+            $nuevo = $this->reemplazarEnJson($this->descifrar($q->diagnostico_final), $reemplazos[$q->id] ?? []);
             if ($nuevo !== null) {
-                $updDiagnosticos[$q->id] = $nuevo;
+                $updDiagnosticos[$q->id] = Crypt::encryptString($nuevo);
             }
         }
 
@@ -172,7 +174,7 @@ class DemoReasignarAlumnado extends Command
 
         DB::transaction(function () use ($aliasNuevo, $updTareas, $updReflexiones, $updRespuestas, $updFases, $updDiagnosticos, $updEncuentros) {
             foreach ($aliasNuevo as $id => $alias) {
-                DB::table('equipo_miembros')->where('id', $id)->update(['alias' => $alias]);
+                DB::table('equipo_miembros')->where('id', $id)->update(['alias' => Crypt::encryptString($alias)]);
             }
             foreach ($updTareas as $id => $v) {
                 DB::table('equipo_tareas')->where('id', $id)->update(['responsable' => $v]);

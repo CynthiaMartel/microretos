@@ -17,6 +17,8 @@ class EquipoMiembro extends Model
     // destacado_en / destacado_por_id (selección para prácticas, P3b) no son fillable: solo los
     // cambia el superadmin desde DuaLab Central (DestacadoCentralController)
     protected $casts = [
+        // Lleva el nombre de pila real: cifrado en BD (no se filtra ni ordena por él en SQL)
+        'alias'         => 'encrypted',
         'fortalezas'    => 'array',
         'puntos_mejora' => 'array',
         'destacado_en'  => 'datetime',

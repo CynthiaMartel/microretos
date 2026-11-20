@@ -21,7 +21,7 @@ class Equipo extends Model
         'fase_actual'             => 'integer',
         'numero_equipo'           => 'integer',
         'ia_desbloqueada'         => 'boolean',
-        'diagnostico_final'       => 'array',
+        'diagnostico_final'       => 'encrypted:array', // nombra a los integrantes por su alias
         'diagnostico_generado_en' => 'datetime',
         // El equipo confirmó sus alias en F0: desde ahí no se pueden cambiar (el docente
         // los usa para su correspondencia alias → alumno/a). Antes bloqueaba el nombre real.

@@ -17,7 +17,8 @@ class EquipoFase extends Model
     ];
 
     protected $casts = [
-        'datos'                    => 'array',
+        // Cifrado: F0 guarda los alias del grupo y el resto de fases, su trabajo
+        'datos'                    => 'encrypted:array',
         'completada'               => 'boolean',
         'validado_docente'         => 'boolean',
         'fecha_completada'         => 'datetime',
