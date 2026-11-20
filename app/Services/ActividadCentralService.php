@@ -13,7 +13,12 @@ use Illuminate\Support\Str;
  */
 class ActividadCentralService
 {
-    public function registrar(?User $usuario, string $seccion, string $accion, string $descripcion, ?object $entidad = null, bool $critica = false): void
+    /**
+     * $entidadTipo / $entidadId: cuando lo afectado no es un modelo de aquí (p. ej. un envío de correo,
+     * que vive en la web: 'correo_envio' + su id), para abrir su detalle desde el historial.
+     */
+    public function registrar(?User $usuario, string $seccion, string $accion, string $descripcion, ?object $entidad = null, bool $critica = false,
+        ?string $entidadTipo = null, ?int $entidadId = null): void
     {
         $registro = new ActividadCentral();
         $registro->forceFill([
@@ -23,8 +28,8 @@ class ActividadCentralService
             'seccion'        => $seccion,
             'accion'         => $accion,
             'descripcion'    => Str::limit($descripcion, 495),
-            'entidad_tipo'   => $entidad ? Str::snake(class_basename($entidad)) : null,
-            'entidad_id'     => $entidad?->id ?? null,
+            'entidad_tipo'   => $entidad ? Str::snake(class_basename($entidad)) : $entidadTipo,
+            'entidad_id'     => $entidad?->id ?? $entidadId,
             'critica'        => $critica,
         ])->save();
     }

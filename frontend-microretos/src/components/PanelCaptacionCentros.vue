@@ -267,7 +267,7 @@ async function confirmarDescarte() {
 
     <!-- Modal: descartar -->
     <Modal :visible="!!descartando" max-width="max-w-lg" @cerrar="descartando = null">
-      <div v-if="descartando" class="flex flex-col gap-4 p-6 sm:p-8">
+      <div v-if="descartando" class="flex max-h-[90dvh] min-h-0 flex-col gap-4 overflow-y-auto p-6 sm:p-8">
         <div class="pr-10">
           <h2 class="font-heading text-xl font-bold text-azul-noche">Descartar centro</h2>
           <p class="mt-1 break-words text-sm text-texto-secundario">«{{ descartando.centro_nombre }}» no se dará de alta. Queda registrado en «Descartados».</p>

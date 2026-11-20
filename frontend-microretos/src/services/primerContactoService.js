@@ -10,6 +10,10 @@ export const cambiarEstadoFormularioWeb = (id, estado) => api.patch(`/central/pr
 export const getCorreos = (params = {}) => api.get('/central/primer-contacto/correo', { params });
 export const getCorreo = (id) => api.get(`/central/primer-contacto/correo/${id}`);
 export const cambiarEstadoCorreo = (id, estado) => api.patch(`/central/primer-contacto/correo/${id}`, { estado });
+// Papelera del correo (Red DuaLab → Papelera, solo superadmin): solo la copia de la web; el original sigue en el webmail
+export const getPapeleraCorreo = () => api.get('/central/primer-contacto/correo/papelera');
+export const borrarCorreo = (id) => api.delete(`/central/primer-contacto/correo/${id}`);
+export const vaciarPapeleraCorreo = () => api.delete('/central/primer-contacto/correo/papelera');
 export const descargarAdjuntoCorreo = (correoId, adjuntoId) =>
   api.get(`/central/primer-contacto/correo/${correoId}/adjuntos/${adjuntoId}`, { responseType: 'blob' });
 // FormData: puede llevar adjuntos

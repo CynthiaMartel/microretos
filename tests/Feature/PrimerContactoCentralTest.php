@@ -195,6 +195,34 @@ class PrimerContactoCentralTest extends TestCase
                 '/api/integraciones/central/formularios/7', '', 'DuaLab', '{"estado":"archivado"}']), self::SECRETO), $p->header('X-DuaLab-Firma')[0]));
     }
 
+    public function test_papelera_del_correo_solo_superadmin_y_en_el_historial(): void
+    {
+        Http::fake([
+            'web.test/*/correo/papelera' => Http::response(['eliminados' => 3]),
+            'web.test/*/correo/5' => fn (PeticionHttp $p) => $p->method() === 'DELETE' ? Http::response(null, 204) : Http::response(['id' => 5, 'estado' => 'papelera', 'asunto' => 'Hola']),
+            'web.test/*/correo/6' => Http::response(['message' => 'no'], 422),
+            'web.test/*/correo*' => Http::response(['data' => [['id' => 5, 'asunto' => 'Hola', 'de_email' => 'a@b.test', 'texto' => 'no debe salir']], 'meta' => ['total' => 1]]),
+        ]);
+
+        // Red DuaLab la manda a la papelera, pero no la ve ni la vacía
+        Sanctum::actingAs($this->atencion);
+        $this->patchJson('/api/central/primer-contacto/correo/5', ['estado' => 'papelera'])->assertOk();
+        $this->getJson('/api/central/primer-contacto/correo/papelera')->assertForbidden();
+        $this->deleteJson('/api/central/primer-contacto/correo/5')->assertForbidden();
+        $this->deleteJson('/api/central/primer-contacto/correo/papelera')->assertForbidden();
+
+        Sanctum::actingAs($this->dualab);
+        $this->getJson('/api/central/primer-contacto/correo/papelera')->assertOk()
+            ->assertJsonPath('data.0.de', 'a@b.test')->assertJsonMissingPath('data.0.texto');
+        $this->deleteJson('/api/central/primer-contacto/correo/5')->assertNoContent();
+        $this->deleteJson('/api/central/primer-contacto/correo/6')->assertUnprocessable();
+        $this->deleteJson('/api/central/primer-contacto/correo/papelera')->assertOk()->assertJsonPath('eliminados', 3);
+
+        $this->assertSame(1, DB::table('actividad_central')->where('accion', 'correo_papelera')->where('critica', false)->count());
+        $this->assertSame(2, DB::table('actividad_central')->whereIn('accion', ['correo_borrar', 'correo_vaciar'])->where('critica', true)->count());
+        $this->assertSame(0, DB::table('actividad_central')->where('descripcion', 'like', '%a@b.test%')->count());
+    }
+
     public function test_web_caida_o_sin_configurar_da_502(): void
     {
         Http::fake(['web.test/*' => Http::response(['error' => 'x'], 500)]);
@@ -203,5 +231,37 @@ class PrimerContactoCentralTest extends TestCase
 
         config(['frontoffice.central_secreto' => 'corto']);
         $this->getJson('/api/central/primer-contacto/formularios')->assertStatus(502);
+    }
+    public function test_envios_quedan_en_el_historial_y_se_abren_con_su_contenido(): void
+    {
+        Http::fake([
+            'web.test/*/correo/enviar' => Http::response(['id' => 5, 'estado' => 'pendiente'], 202),
+            'web.test/*/correo/envios/5' => Http::response([
+                'id' => 5, 'tipo' => 'nuevo', 'para' => ['empresa@ejemplo.com'], 'cc' => [], 'cco' => [],
+                'asunto' => 'Propuesta', 'texto' => 'Hola', 'estado' => 'enviado', 'adjuntos' => [], 'interno' => 'x',
+            ]),
+            'web.test/*/correo/envios/6' => Http::response(['error' => 'no'], 404),
+        ]);
+        Sanctum::actingAs($this->atencion);
+        $this->postJson('/api/central/primer-contacto/correo/enviar', [
+            'tipo' => 'nuevo', 'para' => ['empresa@ejemplo.com'], 'asunto' => 'Propuesta', 'texto' => 'Hola',
+        ])->assertStatus(202);
+
+        // En el historial: quién y el asunto, sin direcciones; y el envío para abrirlo
+        Sanctum::actingAs($this->dualab);
+        $this->getJson('/api/central/historial?seccion=correo')->assertOk()
+            ->assertJsonPath('data.0.quien', 'Laura')
+            ->assertJsonPath('data.0.envio_id', 5)
+            ->assertJsonPath('data.0.descripcion', 'Envió un correo desde info@: «Propuesta».');
+        $this->assertDatabaseMissing('actividad_central', ['descripcion' => 'empresa@ejemplo.com']);
+
+        $this->getJson('/api/central/historial/envios/5')->assertOk()
+            ->assertJsonPath('para', ['empresa@ejemplo.com'])->assertJsonPath('texto', 'Hola')
+            ->assertJsonMissingPath('interno');
+        $this->getJson('/api/central/historial/envios/6')->assertNotFound();
+
+        // El historial solo lo ven superadmin y Admin Central DuaLab
+        Sanctum::actingAs($this->atencion);
+        $this->getJson('/api/central/historial/envios/5')->assertForbidden();
     }
 }

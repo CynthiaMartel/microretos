@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Marcar un correo de info@ como no leído, leído o archivado desde Central. */
+/** Marcar un correo de info@ como no leído, leído, archivado o en la papelera desde Central. */
 class UpdateEstadoCorreoWebRequest extends FormRequest
 {
     public function authorize(): bool

@@ -77,7 +77,8 @@ const numCiclos = (c) => c.familias.reduce((n, f) => n + f.ciclos.length, 0)
               <p class="text-sm text-texto-secundario">{{ c.municipio || 'Sin municipio' }}</p>
             </div>
           </div>
-          <dl class="mt-4 grid grid-cols-3 gap-2 text-center">
+          <!-- Tres cifras cortas: caben en 3 columnas también a 360px (≈92px cada una) -->
+          <dl class="mt-4 grid grid-cols-3 gap-1.5 text-center sm:gap-2">
             <div class="rounded-xl bg-[#F8FAFC] px-2 py-2"><dt class="text-[11px] font-semibold text-texto-secundario">Ciclos</dt><dd class="font-heading text-lg font-bold">{{ numCiclos(c) }}</dd></div>
             <div class="rounded-xl bg-[#F8FAFC] px-2 py-2"><dt class="text-[11px] font-semibold text-texto-secundario">Empresas</dt><dd class="font-heading text-lg font-bold">{{ c.empresas }}</dd></div>
             <div class="rounded-xl bg-[#F8FAFC] px-2 py-2"><dt class="text-[11px] font-semibold text-texto-secundario">Profesorado</dt><dd class="font-heading text-lg font-bold">{{ c.docentes }}</dd></div>

@@ -67,7 +67,7 @@ function entrar() {
           <p class="mt-2 text-xs text-texto-secundario">Se cerrará tu sesión de Admin Central DuaLab.</p>
           <div class="fila-pasos mt-6">
             <button type="button" class="btn-paso-atras" @click="cerrar">Cancelar</button>
-            <button type="button" class="btn-paso" @click="iniciarSesion">Iniciar sesión como superadmin</button>
+            <button type="button" class="btn-paso" @click="iniciarSesion"><span class="sm:hidden">Iniciar sesión</span><span class="hidden sm:inline">Iniciar sesión como superadmin</span></button>
           </div>
         </template>
 

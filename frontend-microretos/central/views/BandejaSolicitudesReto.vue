@@ -95,6 +95,14 @@ const gestiona = computed(() => [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB].inc
 // ── Menú «⋯» de cada tarjeta (como en las tarjetas de propuestas) ──
 // Uno abierto a la vez; se cierra al pulsar fuera o con Escape (el foco vuelve a su botón).
 const menuAbierto = ref(null)   // id de la solicitud
+// Hacia arriba si no cabe debajo: la última tarjeta lo dejaba bajo la barra inferior (AppCredit, 2.5rem)
+const menuArriba = ref(false)
+function alternarMenu(s, e) {
+  if (menuAbierto.value === s.id) return cerrarMenu()
+  const espacioDebajo = window.innerHeight - e.currentTarget.getBoundingClientRect().bottom
+  menuArriba.value = espacioDebajo < 180
+  menuAbierto.value = s.id
+}
 function cerrarMenu(devolverFoco = false) {
   const id = menuAbierto.value
   menuAbierto.value = null
@@ -172,7 +180,9 @@ async function copiar() {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <CabeceraSeccion antetitulo="Contactos" titulo="Solicitudes de" destacado="retos" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
-                       subtitulo="Envía a un docente el formulario para que cuente qué quiere trabajar; con sus respuestas generamos los retos.">
+                       subtitulo="Envía a un docente el formulario para que cuente qué quiere trabajar; con sus respuestas generamos los retos."
+                       acciones-debajo>
+        <div class="flex flex-wrap gap-2 lg:justify-end">
         <RouterLink :to="{ name: 'respuestas-solicitudes' }" class="accion-secundaria">
           Correos de solicitudes
           <span v-if="correosNuevos.total" class="ml-1.5 rounded-full bg-[#FF8920] px-1.5 text-xs font-extrabold text-azul-noche"
@@ -180,6 +190,7 @@ async function copiar() {
         </RouterLink>
         <button type="button" class="accion-secundaria" @click="datosVistaPrevia = {}; viendoComoDocente = true">Ver cómo lo ve el docente</button>
         <button type="button" class="accion-principal" @click="abrirNueva">Enviar solicitud</button>
+        </div>
       </CabeceraSeccion>
 
       <FiltrosPanel v-model:busqueda="buscar" placeholder="Buscar por docente, email o centro…"
@@ -221,14 +232,14 @@ async function copiar() {
             </span>
           </RouterLink>
           <div v-if="gestiona" data-menu-solicitud class="absolute right-3 top-3 sm:top-1/2 sm:-translate-y-1/2">
-            <button :id="`menu-solicitud-${s.id}`" type="button" @click="menuAbierto = menuAbierto === s.id ? null : s.id"
+            <button :id="`menu-solicitud-${s.id}`" type="button" @click="alternarMenu(s, $event)"
                     :aria-expanded="menuAbierto === s.id" aria-haspopup="menu" :aria-label="`Más acciones de la solicitud de ${s.nombre_docente}`"
                     class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde bg-white text-texto-secundario transition-colors hover:bg-gray-50"
                     :class="{ 'bg-gray-50': menuAbierto === s.id }">
               <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
             </button>
-            <div v-if="menuAbierto === s.id" role="menu"
-                 class="absolute right-0 top-full z-30 mt-1 w-[min(15rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white py-1 shadow-lg">
+            <div v-if="menuAbierto === s.id" role="menu" :class="menuArriba ? 'bottom-full mb-1' : 'top-full mt-1'"
+                 class="absolute right-0 z-30 w-[min(15rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white py-1 shadow-lg">
               <RouterLink role="menuitem" :to="{ name: 'solicitud-reto-ficha', params: { id: s.id }, query: route.query }"
                           class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Abrir la ficha</RouterLink>
               <button type="button" role="menuitem" @click="verComoDocente(s)"

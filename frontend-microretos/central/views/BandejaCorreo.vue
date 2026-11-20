@@ -1,6 +1,8 @@
 <!-- Correo de info@ en DuaLab Central («Primer contacto»): recibidos y enviados. Los correos siguen en la
      web (copia del buzón que sincroniza su programador cada 1–2 min, 4 meses como mucho) y salen desde
-     info@ por la web; Central los trae por la API firmada (PrimerContactoCorreoController). -->
+     info@ por la web; Central los trae por la API firmada (PrimerContactoCorreoController).
+     Cada buzón (BUZONES de primerContacto.js) usa esta misma bandeja: info@ ya; soporte@ cuando la web lo lea.
+     En Recibidos, cada fila tiene el interruptor «Leído» y el menú «⋯» (AccionesCorreo). -->
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -8,8 +10,12 @@ import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import FiltrosPanel from '../../src/components/FiltrosPanel.vue'
 import FiltroSegmentado from '../../src/components/FiltroSegmentado.vue'
 import RedactarCorreo from '../components/RedactarCorreo.vue'
-import { getCorreos, reintentarEnvio, descartarEnvio } from '../../src/services/primerContactoService.js'
-import { fechaHora } from '../primerContacto.js'
+import AccionesCorreo from '../components/AccionesCorreo.vue'
+import { getCorreos, reintentarEnvio, descartarEnvio, cambiarEstadoCorreo } from '../../src/services/primerContactoService.js'
+import { fechaHora, BUZONES } from '../primerContacto.js'
+
+const props = defineProps({ buzon: { type: String, default: 'info' } })
+const config = computed(() => BUZONES[props.buzon] ?? BUZONES.info)
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +42,7 @@ async function cargar() {
   error.value = ''
   try {
     const { data } = await getCorreos({
+      ...(props.buzon !== 'info' && { buzon: props.buzon }),
       carpeta: carpeta.value, estado: carpeta.value === 'recibidos' ? (estado.value || undefined) : undefined,
       buscar: buscar.value.trim() || undefined, page: pagina.value,
     })
@@ -94,6 +101,24 @@ async function accionEnvio(e, accion) {
     aviso.value = err.response?.data?.message || err.response?.data?.error || 'No se ha podido completar la acción.'
   }
 }
+// Interruptor «Leído» y menú «⋯» de cada fila
+const TEXTO_ESTADO = { nuevo: 'Marcado como no leído.', leido: 'Marcado como leído.', archivado: 'Archivado.', papelera: 'Movido a la papelera. El superadmin puede restaurarlo en Red DuaLab → Papelera.' }
+const cambiando = ref(null)
+const menuAbierto = ref(null)   // id del correo con el menú «⋯» abierto
+async function cambiarEstado(c, nuevo) {
+  cambiando.value = c.id
+  aviso.value = ''
+  try {
+    await cambiarEstadoCorreo(c.id, nuevo)
+    aviso.value = c.estado === 'archivado' && nuevo === 'leido' ? 'Sacado del archivo.' : TEXTO_ESTADO[nuevo]
+    await cargar()
+  } catch (e) {
+    aviso.value = e.response?.data?.error || 'No se ha podido guardar el cambio.'
+  } finally {
+    cambiando.value = null
+  }
+}
+
 function enviado() {
   redactando.value = false
   aviso.value = 'Enviando… Aparecerá en Enviados en un par de minutos.'
@@ -104,9 +129,9 @@ function enviado() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Contactos" titulo="Correo" :destacado="resumen?.buzon?.email || 'info@'" color="text-rol"
+      <CabeceraSeccion :antetitulo="config.antetitulo" titulo="Correo" :destacado="resumen?.buzon?.email || config.corto" color="text-rol"
                        :volver="{ name: 'red-inicio' }" volver-label="Red DuaLab"
-                       subtitulo="El buzón de info@dualab.es: leer, responder y reenviar sin abrir el webmail.">
+                       :subtitulo="`El buzón de ${config.email}: leer, responder y reenviar sin abrir el webmail.`">
         <button type="button" class="accion-principal" @click="redactando = true">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
           Redactar
@@ -159,10 +184,10 @@ function enviado() {
       </p>
 
       <ul v-else class="space-y-2" :class="cargando && 'opacity-60'" :aria-busy="cargando">
-        <li v-for="c in items" :key="c.id">
+        <li v-for="c in items" :key="c.id" class="relative" :class="{ 'z-10': menuAbierto === c.id }">
           <RouterLink :to="{ name: 'correo-ficha', params: { id: c.id }, query: route.query }"
                       class="flex flex-col gap-1.5 rounded-2xl border bg-white p-4 shadow-sm transition hover:border-rol/40 sm:flex-row sm:items-center sm:gap-4"
-                      :class="c.estado === 'nuevo' ? 'border-alumnos/40' : 'border-borde'">
+                      :class="[c.estado === 'nuevo' ? 'border-alumnos/40' : 'border-borde', carpeta === 'recibidos' && 'pr-28 sm:pr-48']">
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="flex min-w-0 items-center gap-2">
                 <span v-if="c.estado === 'nuevo'" class="h-2 w-2 shrink-0 rounded-full bg-alumnos" aria-hidden="true" />
@@ -177,6 +202,10 @@ function enviado() {
               {{ fechaHora(c.fecha) }}
             </span>
           </RouterLink>
+          <AccionesCorreo v-if="carpeta === 'recibidos'" :correo="c" :ocupado="cambiando === c.id"
+                          :ficha="{ name: 'correo-ficha', params: { id: c.id }, query: route.query }"
+                          class="absolute right-3 top-3 sm:top-1/2 sm:-translate-y-1/2" @estado="cambiarEstado(c, $event)"
+                          @menu="menuAbierto = $event ? c.id : (menuAbierto === c.id ? null : menuAbierto)" />
         </li>
       </ul>
 
@@ -187,7 +216,7 @@ function enviado() {
       </nav>
     </div>
 
-    <RedactarCorreo :abierto="redactando" modo="nuevo" :remitente="resumen?.buzon?.email || 'info@dualab.es'"
+    <RedactarCorreo :abierto="redactando" modo="nuevo" :remitente="resumen?.buzon?.email || config.email"
                     @cerrar="redactando = false" @enviado="enviado" />
   </div>
 </template>

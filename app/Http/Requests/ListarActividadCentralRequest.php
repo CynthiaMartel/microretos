@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /** GET /central/historial — filtros del historial de Central */
 class ListarActividadCentralRequest extends FormRequest
 {
-    public const SECCIONES = ['captaciones', 'papelera', 'usuarios', 'solicitudes', 'retos'];
+    public const SECCIONES = ['captaciones', 'papelera', 'usuarios', 'solicitudes', 'retos', 'correo'];
 
     public function authorize(): bool
     {

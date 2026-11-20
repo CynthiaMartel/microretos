@@ -3,7 +3,7 @@
      descargan siempre como archivo. -->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import CuerpoCorreo from '../components/CuerpoCorreo.vue'
 import RedactarCorreo from '../components/RedactarCorreo.vue'
@@ -11,6 +11,7 @@ import { getCorreo, cambiarEstadoCorreo, descargarAdjuntoCorreo } from '../../sr
 import { fechaHora } from '../primerContacto.js'
 
 const route = useRoute()
+const router = useRouter()
 const c = ref(null)
 const error = ref('')
 const aviso = ref('')
@@ -33,6 +34,12 @@ async function cambiar(estado, texto) {
   } finally {
     guardando.value = false
   }
+}
+
+// A la papelera y de vuelta a la lista (solo el superadmin la ve y la restaura)
+async function aPapelera() {
+  await cambiar('papelera', 'Movido a la papelera.')
+  if (c.value?.estado === 'papelera') router.push(volver.value)
 }
 
 async function descargar(a) {
@@ -88,6 +95,7 @@ const volverLabel = computed(() => ({ respuestas: 'Respuestas', solicitud: 'Soli
             <button v-if="c.estado !== 'nuevo'" type="button" class="accion-secundaria" :disabled="guardando" @click="cambiar('nuevo', 'Marcado como no leído.')">No leído</button>
             <button v-if="c.estado !== 'archivado'" type="button" class="accion-secundaria" :disabled="guardando" @click="cambiar('archivado', 'Archivado.')">Archivar</button>
             <button v-else type="button" class="accion-secundaria" :disabled="guardando" @click="cambiar('leido', 'Sacado del archivo.')">Sacar del archivo</button>
+            <button v-if="c.estado !== 'papelera'" type="button" class="accion-secundaria !text-red-700" :disabled="guardando" @click="aPapelera">Mover a la papelera</button>
           </template>
           <p v-if="aviso" class="w-full text-sm font-semibold text-texto-secundario" role="status">{{ aviso }}</p>
         </section>
@@ -101,7 +109,8 @@ const volverLabel = computed(() => ({ respuestas: 'Respuestas', solicitud: 'Soli
             <p v-if="c.contacto" class="pt-1">
               <RouterLink :to="{ name: 'formulario-web', params: { id: c.contacto.id } }"
                           class="inline-flex items-center gap-1.5 rounded-full bg-rol/10 px-3 py-1 text-xs font-bold text-rol-fuerte hover:bg-rol/20">
-                Nos escribió por el formulario de {{ c.contacto.tipo_nombre.toLowerCase() }} · {{ fechaHora(c.contacto.fecha) }}
+                <span class="sm:hidden">Formulario de {{ c.contacto.tipo_nombre.toLowerCase() }}</span>
+                <span class="hidden sm:inline">Nos escribió por el formulario de {{ c.contacto.tipo_nombre.toLowerCase() }} · {{ fechaHora(c.contacto.fecha) }}</span>
               </RouterLink>
             </p>
           </header>

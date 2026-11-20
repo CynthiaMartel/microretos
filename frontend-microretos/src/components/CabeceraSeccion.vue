@@ -28,6 +28,8 @@ const props = defineProps({
   // Compatibilidad con usos anteriores: la cabecera ya es siempre así (no hacen nada).
   plano:     { type: Boolean, default: false },
   cinta:     { type: Boolean, default: true },
+  // Muchas acciones (3 o más): bajan bajo el título hasta lg en vez de comerle el ancho en tablet
+  accionesDebajo: { type: Boolean, default: false },
 })
 
 const route = useRoute()
@@ -46,11 +48,11 @@ const antetituloFinal = computed(() =>
       <HalosMarca
                   class="absolute -top-6 right-0 h-[calc(100%+3rem)] w-[62%] opacity-40 [mask-image:linear-gradient(to_right,transparent,black_35%),linear-gradient(to_bottom,black_55%,transparent)] [mask-composite:intersect] [-webkit-mask-image:linear-gradient(to_right,transparent,black_35%),linear-gradient(to_bottom,black_55%,transparent)] [-webkit-mask-composite:source-in]" />
     </div>
-    <div class="relative z-10 flex flex-wrap items-start justify-between gap-3 py-1 sm:flex-nowrap">
-      <div class="min-w-0 flex-1 basis-full sm:basis-0">
+    <div class="relative z-10 flex flex-wrap items-start justify-between gap-3 py-1" :class="accionesDebajo ? 'lg:flex-nowrap' : 'sm:flex-nowrap'">
+      <div class="min-w-0 flex-1 basis-full" :class="accionesDebajo ? 'lg:basis-0' : 'sm:basis-0'">
         <BotonVolver v-if="volver" :fallback="volver" :label="volverLabel" class="-mt-1 mb-2" />
         <p v-if="antetituloFinal" class="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-texto-secundario">{{ antetituloFinal }}</p>
-        <h1 class="font-heading text-2xl font-bold tracking-tight text-azul-noche sm:text-4xl">
+        <h1 class="break-words font-heading text-2xl font-bold tracking-tight text-azul-noche sm:text-4xl">
           {{ titulo }} <span v-if="destacado" :class="color">{{ destacado }}</span>
         </h1>
         <p v-if="subtitulo" class="mt-2 max-w-2xl text-sm text-texto-secundario sm:text-base">{{ subtitulo }}</p>

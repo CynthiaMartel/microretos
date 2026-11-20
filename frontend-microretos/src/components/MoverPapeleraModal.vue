@@ -13,7 +13,7 @@ defineEmits(['cerrar', 'confirmar'])
 
 <template>
   <Modal :visible="!!item" max-width="max-w-lg" @cerrar="$emit('cerrar')">
-    <div v-if="item" class="flex flex-col gap-4 p-6 sm:p-8">
+    <div v-if="item" class="flex max-h-[90dvh] min-h-0 flex-col gap-4 overflow-y-auto p-6 sm:p-8">
       <div class="pr-10">
         <h2 class="font-heading text-xl font-bold text-azul-noche">{{ item.titulo }}</h2>
         <p class="mt-1 break-words text-sm text-texto-secundario">
@@ -23,7 +23,7 @@ defineEmits(['cerrar', 'confirmar'])
       <AvisoAccionCritica />
       <div class="fila-pasos">
         <button type="button" class="btn-paso-atras" :disabled="ocupado" @click="$emit('cerrar')">Cancelar</button>
-        <button type="button" class="btn-paso" :disabled="ocupado" @click="$emit('confirmar')">{{ ocupado ? 'Moviendo…' : 'Mover a la papelera' }}</button>
+        <button type="button" class="btn-paso" :disabled="ocupado" @click="$emit('confirmar')"><template v-if="ocupado">Moviendo…</template><template v-else><span class="sm:hidden">Mover</span><span class="hidden sm:inline">Mover a la papelera</span></template></button>
       </div>
     </div>
   </Modal>

@@ -178,7 +178,7 @@ const salir = async () => {
     <main :class="conPanel ? 'lg:pl-72' : ''" class="relative pb-12">
       <RouterView :key="route.path" />
     </main>
-    <AppCredit />
+    <AppCredit :lema="false" />
     <AvisoNuevaVersion :router="router" />
     <AvisoSoloSuperadmin />
   </div>

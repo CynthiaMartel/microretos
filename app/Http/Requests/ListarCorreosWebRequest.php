@@ -8,7 +8,8 @@ use Illuminate\Validation\Rule;
 /** Filtros del Correo de info@ en Central («Primer contacto»); los mismos que admite la API de la web. */
 class ListarCorreosWebRequest extends FormRequest
 {
-    public const ESTADOS = ['nuevo', 'leido', 'archivado'];
+    // papelera: fuera de la bandeja; se restaura o se borra del todo en Red DuaLab → Papelera (superadmin)
+    public const ESTADOS = ['nuevo', 'leido', 'archivado', 'papelera'];
 
     public function authorize(): bool
     {

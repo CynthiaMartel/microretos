@@ -5,13 +5,17 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
+import BandejaCorreo from './BandejaCorreo.vue'
+import { BUZONES } from '../primerContacto.js'
 
 const route = useRoute()
 const esCorreo = computed(() => route.name === 'soporte-correo')
 </script>
 
 <template>
-  <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
+  <!-- El correo de soporte@ será la misma bandeja que info@ en cuanto la web lea el buzón -->
+  <BandejaCorreo v-if="esCorreo && BUZONES.soporte.disponible" buzon="soporte" />
+  <div v-else class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-6 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <CabeceraSeccion antetitulo="Soporte" :titulo="esCorreo ? 'Correo de soporte@' : 'Tickets'" color="text-rol"
                        subtitulo="Incidencias de las personas que usan la app DuaLab." />

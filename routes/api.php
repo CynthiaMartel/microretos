@@ -531,6 +531,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/correo/enviar',                     [PrimerContactoCorreoController::class, 'enviar'])->middleware('throttle:20,1,central-correo-enviar');
         Route::post('/correo/envios/{id}/reintentar',     [PrimerContactoCorreoController::class, 'reintentar'])->whereNumber('id');
         Route::delete('/correo/envios/{id}',              [PrimerContactoCorreoController::class, 'descartar'])->whereNumber('id');
+        // Papelera del correo: la ve y la borra del todo solo el superadmin (como Red DuaLab → Papelera)
+        Route::middleware('superadmin')->group(function () {
+            Route::get('/correo/papelera',                [PrimerContactoCorreoController::class, 'papelera']);
+            Route::delete('/correo/papelera',             [PrimerContactoCorreoController::class, 'vaciarPapelera']);
+            Route::delete('/correo/{id}',                 [PrimerContactoCorreoController::class, 'destroy'])->whereNumber('id');
+        });
         Route::get('/correo',                             [PrimerContactoCorreoController::class, 'index']);
         Route::get('/correo/{id}',                        [PrimerContactoCorreoController::class, 'show'])->whereNumber('id');
         Route::patch('/correo/{id}',                      [PrimerContactoCorreoController::class, 'update'])->whereNumber('id');
@@ -538,8 +544,10 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── DuaLab Central → Historial: qué se hizo, quién y cuándo (superadmin y admin_central_dualab) ──
-    Route::middleware(['admin.central', 'throttle:60,1,central-historial'])
-        ->get('/central/historial', [ActividadCentralController::class, 'index']);
+    Route::middleware(['admin.central', 'throttle:60,1,central-historial'])->group(function () {
+        Route::get('/central/historial', [ActividadCentralController::class, 'index']);
+        Route::get('/central/historial/envios/{id}', [ActividadCentralController::class, 'envio'])->whereNumber('id');
+    });
 
     // ── DuaLab Central → Red DuaLab → Empresas y Centros: consulta de solo lectura (editar es de Base de datos) ──
     Route::middleware(['primer.contacto', 'throttle:60,1,central-consulta'])->prefix('central')->group(function () {

@@ -177,9 +177,12 @@ const ESTADO_CRONO = { en_curso: 'En curso', por_empezar: 'Por empezar', termina
                 <!-- Rejilla de meses -->
                 <span v-for="m in meses" :key="m.clave" class="absolute inset-y-0 border-l border-gray-100" :style="{ left: m.izq + '%' }" aria-hidden="true" />
                 <!-- Barra del plan -->
-                <button type="button" @click="irAPlan(c)" class="absolute top-1/2 h-3 -translate-y-1/2 rounded-full opacity-90 transition-opacity hover:opacity-100"
-                        :style="{ ...barra(c), background: colorPlan(c) + '33', boxShadow: `inset 0 0 0 1.5px ${colorPlan(c)}` }"
-                        :aria-label="`${c.plan.titulo}: del ${fecha(c.fecha)} al ${fecha(c.fecha_fin)}`" />
+                <!-- Zona táctil de 36px; la barra visible sigue siendo de 12px -->
+                <button type="button" @click="irAPlan(c)" class="group absolute top-1/2 flex h-9 -translate-y-1/2 items-center"
+                        :style="barra(c)" :aria-label="`${c.plan.titulo}: del ${fecha(c.fecha)} al ${fecha(c.fecha_fin)}`">
+                  <span class="h-3 w-full rounded-full opacity-90 transition-opacity group-hover:opacity-100" aria-hidden="true"
+                        :style="{ background: colorPlan(c) + '33', boxShadow: `inset 0 0 0 1.5px ${colorPlan(c)}` }" />
+                </button>
                 <!-- Hitos -->
                 <span v-for="h in c.hitos" :key="h.numero"
                       class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[3px] ring-2 ring-white"

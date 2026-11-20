@@ -66,7 +66,7 @@ const TIPOS = [{ v: '', t: 'Todas' }, { v: 'simulada', t: 'Ficticias' }, { v: 'r
       <span class="font-semibold">Elegida:</span>
       <template v-if="elegida && actual">
         <span class="min-w-0 break-words font-bold text-azul-noche">{{ actual.nombre }}</span>
-        <button type="button" class="rounded-full border border-borde bg-white px-3 py-1 text-xs font-semibold text-texto-secundario hover:bg-gray-50" @click="elegida = ''">Quitar</button>
+        <button type="button" class="inline-flex min-h-9 items-center rounded-full border border-borde bg-white px-3 text-xs font-semibold text-texto-secundario hover:bg-gray-50" @click="elegida = ''">Quitar</button>
       </template>
       <span v-else class="text-texto-secundario">ninguna</span>
     </div>

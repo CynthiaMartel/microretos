@@ -1,5 +1,6 @@
 <!-- Red DuaLab → Historial: qué se ha hecho en Central, quién y cuándo (validar o descartar empresas,
-     papelera, cuentas, solicitudes, retos generados y publicados). Las acciones críticas van marcadas.
+     papelera, cuentas, solicitudes, retos generados y publicados, correos enviados desde info@, que se
+     abren con «Ver correo»). Las acciones críticas van marcadas.
      Solo lectura. Superadmin y Admin Central DuaLab. Backend: ActividadCentralController. -->
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
@@ -7,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import FiltrosPanel from '../../src/components/FiltrosPanel.vue'
 import FiltroSegmentado from '../../src/components/FiltroSegmentado.vue'
+import EnvioCorreoModal from '../components/EnvioCorreoModal.vue'
 import { getHistorial, SECCIONES_HISTORIAL } from '../../src/services/historialCentralService.js'
 import { fechaHora } from '../primerContacto.js'
 
@@ -19,6 +21,7 @@ const buscar = ref(route.query.buscar ?? '')
 const pagina = ref(Number(route.query.page) || 1)
 
 const items = ref([])
+const envioAbierto = ref(null) // id del envío de correo con el detalle abierto
 const meta = ref(null)
 const cargando = ref(true)
 const error = ref('')
@@ -68,7 +71,7 @@ function limpiar() { seccion.value = ''; criticas.value = false; buscar.value = 
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       <CabeceraSeccion antetitulo="Red DuaLab" titulo="Historial de" destacado="actividad" color="text-rol"
                        :volver="{ name: 'red-inicio' }" volver-label="Red DuaLab"
-                       subtitulo="Qué se ha hecho en Central, quién lo hizo y cuándo. Las acciones críticas, como validar empresas, publicar retos o borrar, van marcadas." />
+                       subtitulo="Qué se ha hecho en Central, quién lo hizo y cuándo. Las acciones críticas, como validar empresas, publicar retos o borrar, van marcadas. Los correos enviados se abren con «Ver correo»." />
 
       <FiltrosPanel v-model:busqueda="buscar" placeholder="Buscar por persona o por lo que se hizo…"
                     :resultados="meta?.total ?? null" :unidad="['acción', 'acciones']"
@@ -100,9 +103,12 @@ function limpiar() { seccion.value = ''; criticas.value = false; buscar.value = 
             <span v-if="h.critica" class="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-700">Crítica</span>
             <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-texto-secundario">{{ textoSeccion(h.seccion) }}</span>
             <time class="text-xs text-texto-secundario" :datetime="h.fecha">{{ fechaHora(h.fecha) }}</time>
+            <button v-if="h.envio_id" type="button" class="accion-secundaria !min-h-9 !px-4 !text-xs" @click="envioAbierto = h.envio_id">Ver correo</button>
           </div>
         </li>
       </ol>
+
+      <EnvioCorreoModal :envio-id="envioAbierto" @cerrar="envioAbierto = null" />
 
       <nav v-if="meta && meta.last_page > 1" class="flex flex-wrap items-center justify-center gap-2" aria-label="Páginas">
         <button type="button" class="accion-secundaria" :disabled="pagina <= 1 || cargando" @click="irAPagina(pagina - 1)">Anterior</button>

@@ -5,6 +5,9 @@ import { _bt, _bv } from '../utils/tokens.js'
 import { useCredits } from '../composables/useCredits.js'
 import ModalTaller from './ModalTaller.vue'
 
+// Central lo oculta (lema=false): en el pie queda solo «Acerca de»
+const props = defineProps({ lema: { type: Boolean, default: true } })
+
 const _x = (s) =>
   decodeURIComponent(
     atob(s).split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
@@ -53,13 +56,13 @@ onMounted(_xv)
                    bg-[#0f1720]/90 backdrop-blur-sm border-t border-white/8
                    flex items-center justify-between gap-3
                    px-3 sm:px-5 text-[11px] text-white/35 select-none">
-      <span class="min-w-0 truncate">
+      <span v-if="props.lema" class="min-w-0 truncate">
         <span class="sm:hidden">Nacida de las prácticas de empresa {{ _yr }}</span>
         <span class="hidden sm:inline">Aplicación nacida de las prácticas de empresa del curso {{ _yr }}.</span>
       </span>
       <!-- Acerca de: discreto, a juego con el texto del pie -->
       <button @click="abrir"
-        class="foot-btn shrink-0 text-white/45 hover:text-white/80 hover:bg-white/5">
+        class="foot-btn ml-auto shrink-0 text-white/45 hover:text-white/80 hover:bg-white/5">
         <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>

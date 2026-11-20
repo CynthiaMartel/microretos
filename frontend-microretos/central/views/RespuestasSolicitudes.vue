@@ -94,9 +94,9 @@ const estadoCorreo = (e) => ({ ...ESTADOS_FORMULARIO[e], texto: e === 'nuevo' ? 
           </RouterLink>
           <span class="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-center">
             <RouterLink v-if="c.solicitud" :to="{ name: 'solicitud-reto-ficha', params: { id: c.solicitud.id } }"
-                        class="max-w-full truncate rounded-full bg-centros/10 px-3 py-1 text-xs font-bold text-centros hover:bg-centros/20 sm:max-w-[16rem]"
+                        class="inline-flex min-h-9 max-w-full items-center rounded-full bg-centros/10 px-3 text-xs font-bold text-centros hover:bg-centros/20 sm:max-w-[16rem]"
                         :title="`Solicitud de ${c.solicitud.nombre_docente} · ${c.solicitud.centro_nombre}`">
-              Solicitud de {{ c.solicitud.nombre_docente }}
+              <span class="min-w-0 truncate">Solicitud de {{ c.solicitud.nombre_docente }}</span>
             </RouterLink>
             <span v-else class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-texto-secundario">Solicitud no encontrada</span>
             <span class="flex items-center gap-2">

@@ -465,7 +465,7 @@ async function descartar() {
 
     <!-- Modal: descartar -->
     <Modal :visible="!!empresaDescartando" max-width="max-w-lg" @cerrar="empresaDescartando = null">
-      <div v-if="empresaDescartando" class="flex flex-col gap-4 p-6 sm:p-8">
+      <div v-if="empresaDescartando" class="flex max-h-[90dvh] min-h-0 flex-col gap-4 overflow-y-auto p-6 sm:p-8">
         <div class="pr-10">
           <h2 class="font-heading text-xl font-bold text-azul-noche">Descartar empresa</h2>
           <p class="mt-1 break-words text-sm text-texto-secundario">«{{ empresaDescartando.nombre_comercial }}» no pasará a Base de datos y sus retos en borrador no se publicarán. Queda registrada en «Descartadas».</p>

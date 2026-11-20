@@ -84,7 +84,7 @@ async function guardar() {
 
 <template>
   <div class="mt-4 rounded-xl border border-centros/20 bg-centros/5 p-3 sm:p-4">
-    <button type="button" class="flex w-full flex-wrap items-center justify-between gap-2 text-left" :aria-expanded="abierto" @click="abrir">
+    <button type="button" class="flex min-h-10 w-full flex-wrap items-center justify-between gap-2 text-left" :aria-expanded="abierto" @click="abrir">
       <span class="text-sm font-bold text-azul-noche">Generar retos aquí</span>
       <span class="text-xs font-semibold text-centros">{{ abierto ? 'Ocultar' : 'Abrir' }}</span>
     </button>

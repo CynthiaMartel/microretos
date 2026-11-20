@@ -6,10 +6,12 @@ use App\Exceptions\FrontofficeNoDisponible;
 use App\Http\Requests\EnviarCorreoWebRequest;
 use App\Http\Requests\ListarCorreosWebRequest;
 use App\Http\Requests\UpdateEstadoCorreoWebRequest;
+use App\Services\ActividadCentralService;
 use App\Services\FrontofficeBandejaService;
 use App\Services\SolicitudRetoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Http\Response;
 
 /**
@@ -73,7 +75,61 @@ class PrimerContactoCorreoController extends Controller
 
     public function update(UpdateEstadoCorreoWebRequest $request, int $id): JsonResponse
     {
-        return $this->conWeb(fn () => $this->ficha($this->web->cambiarEstadoCorreo($id, $request->validated('estado'), $this->usuario($request))));
+        return $this->conWeb(function () use ($request, $id) {
+            $estado = $request->validated('estado');
+            $c = $this->web->cambiarEstadoCorreo($id, $estado, $this->usuario($request));
+            if ($c !== null && $estado === 'papelera') {
+                // Sin remitente ni asunto en el Historial (datos personales): solo el número
+                app(ActividadCentralService::class)->registrar($request->user(), 'papelera', 'correo_papelera', "Envió a la papelera el correo #{$id} de info@.");
+            }
+
+            return $this->ficha($c);
+        });
+    }
+
+    /**
+     * Red DuaLab → Papelera (superadmin): los correos de info@ en la papelera, también los de las
+     * solicitudes de retos (aquí no se separan). Solo lo que la lista necesita.
+     */
+    public function papelera(Request $request): JsonResponse
+    {
+        return $this->conWeb(function () use ($request) {
+            $r = $this->web->listarCorreos(['estado' => 'papelera', 'per_page' => 100], $this->usuario($request));
+
+            return response()->json(['data' => collect($r['data'] ?? [])->map(fn ($c) => [
+                'id'     => (int) ($c['id'] ?? 0),
+                'asunto' => $this->texto($c['asunto'] ?? null),
+                'de'     => $this->texto($c['de_nombre'] ?? null) ?: $this->texto($c['de_email'] ?? null),
+                'fecha'  => $this->texto($c['fecha'] ?? null),
+            ])->values(), 'total' => (int) ($r['meta']['total'] ?? 0)]);
+        });
+    }
+
+    /** Borrar del todo (superadmin): solo la copia de la web; el original sigue en el webmail. */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        return $this->conWeb(function () use ($request, $id) {
+            $r = $this->web->borrarCorreo($id, $this->usuario($request));
+            if ($r === null) {
+                return response()->json(['error' => 'Ese correo ya no está en la papelera.'], 404);
+            }
+            if ($r->status() === 422) {
+                return response()->json(['error' => 'Solo se borra del todo un correo que está en la papelera.'], 422);
+            }
+            app(ActividadCentralService::class)->registrar($request->user(), 'papelera', 'correo_borrar', "Borró del todo el correo #{$id} de info@.", null, true);
+
+            return response()->json(null, 204);
+        });
+    }
+
+    public function vaciarPapelera(Request $request): JsonResponse
+    {
+        return $this->conWeb(function () use ($request) {
+            $n = $this->web->vaciarPapeleraCorreo($this->usuario($request));
+            app(ActividadCentralService::class)->registrar($request->user(), 'papelera', 'correo_vaciar', "Vació la papelera del correo de info@ ({$n}).", null, true);
+
+            return response()->json(['eliminados' => $n]);
+        });
     }
 
     /** Descarga de un adjunto: siempre como archivo (nunca se abre en el navegador). */
@@ -109,18 +165,38 @@ class PrimerContactoCorreoController extends Controller
                 'contenido' => base64_encode((string) file_get_contents($f->getRealPath())),
             ])->values()->all();
 
-            return $this->reenviar($this->web->enviarCorreo($datos, $this->usuario($request)));
+            $r = $this->web->enviarCorreo($datos, $this->usuario($request));
+            if ($r->successful() && $r->json('id')) {
+                // Solo el asunto: las direcciones y el texto se leen de la web al abrir el detalle
+                $this->historial($request, 'enviar', 'Envió un correo desde info@: «' . Str::limit((string) $datos['asunto'], 120) . '».', (int) $r->json('id'));
+            }
+
+            return $this->reenviar($r);
         });
     }
 
     public function reintentar(Request $request, int $id): JsonResponse
     {
-        return $this->conWeb(fn () => $this->reenviar($this->web->reintentarEnvio($id, $this->usuario($request))));
+        return $this->conWeb(function () use ($request, $id) {
+            $r = $this->web->reintentarEnvio($id, $this->usuario($request));
+            if ($r->successful()) {
+                $this->historial($request, 'reintentar', "Reintentó el envío #{$id} de info@.", $id);
+            }
+
+            return $this->reenviar($r);
+        });
     }
 
     public function descartar(Request $request, int $id): JsonResponse
     {
-        return $this->conWeb(fn () => $this->reenviar($this->web->descartarEnvio($id, $this->usuario($request))));
+        return $this->conWeb(function () use ($request, $id) {
+            $r = $this->web->descartarEnvio($id, $this->usuario($request));
+            if ($r->successful()) {
+                $this->historial($request, 'descartar', "Descartó el envío fallido #{$id} de info@.");
+            }
+
+            return $this->reenviar($r);
+        });
     }
 
     // ── Auxiliares ──────────────────────────────────────────────────────────
@@ -192,6 +268,13 @@ class PrimerContactoCorreoController extends Controller
     private function url($v): ?string
     {
         return is_string($v) && preg_match('#^https?://#i', $v) ? $v : null;
+    }
+
+    /** Historial de Central, sección Correo; con el envío para abrir «qué se envió». */
+    private function historial(Request $request, string $accion, string $descripcion, ?int $envio = null): void
+    {
+        app(ActividadCentralService::class)->registrar($request->user(), 'correo', $accion, $descripcion,
+            entidadTipo: $envio ? 'correo_envio' : null, entidadId: $envio);
     }
 
     private function usuario(Request $request): string

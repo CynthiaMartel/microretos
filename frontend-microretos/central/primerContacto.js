@@ -16,6 +16,14 @@ export const ESTADOS_CAPTACION = {
 export const textoCaptacion = (c) =>
   c ? `Captación de ${c.tipo === 'centro' ? 'centro' : 'empresa'} ${ESTADOS_CAPTACION[c.estado] ?? c.estado}` : ''
 
+// Buzones de correo de Central: misma bandeja (BandejaCorreo :buzon). soporte@ aún no lo lee la web:
+// para activarlo, añadir el buzón en config/correo.php de la web, aceptar `buzon` en ListarCorreosWebRequest
+// y poner disponible: true (SoporteCentral pasa entonces a la bandeja).
+export const BUZONES = {
+  info:    { email: 'info@dualab.es',    corto: 'info@',    antetitulo: 'Contactos', disponible: true },
+  soporte: { email: 'soporte@dualab.es', corto: 'soporte@', antetitulo: 'Soporte',   disponible: false },
+}
+
 export const fechaHora = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)

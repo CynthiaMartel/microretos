@@ -17,6 +17,11 @@ class IntegracionFrontofficeController extends Controller
     /** POST /integraciones/frontoffice/formularios */
     public function recibir(RecibirFormularioWebRequest $request): JsonResponse
     {
+        // Prueba de conexión desde Gestión web: firma correcta, pero no se guarda ninguna captación
+        if ($request->boolean('prueba')) {
+            return response()->json(['recibido' => true, 'prueba' => true]);
+        }
+
         $resultado = $this->formularios->procesar($request->validated());
 
         // 200 también para lo que se ignora (administración, formulario rápido): el webhook no

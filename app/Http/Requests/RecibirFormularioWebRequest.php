@@ -21,6 +21,11 @@ class RecibirFormularioWebRequest extends FormRequest
     /** @return array<string, string> */
     public function rules(): array
     {
+        // «Probar conexión» de Gestión web: solo comprueba que llega firmado; no trae un formulario real
+        if ($this->boolean('prueba')) {
+            return ['prueba' => 'accepted', 'evento' => 'required|string|in:formulario.recibido'];
+        }
+
         return [
             'evento'             => 'required|string|in:formulario.recibido',
             'id'                 => 'required|integer|min:1',

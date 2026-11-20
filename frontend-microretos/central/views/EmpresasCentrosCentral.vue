@@ -50,7 +50,7 @@ const OPCIONES = computed(() => [
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="o.icono" /></svg>
               </span>
               <span class="text-right">
-                <span class="block font-heading text-4xl font-black text-rol-fuerte sm:text-5xl" :aria-label="`${valor(o.total)} ${o.titulo.toLowerCase()}`">{{ valor(o.total) }}</span>
+                <span class="block font-heading text-3xl font-black text-rol-fuerte sm:text-5xl" :aria-label="`${valor(o.total)} ${o.titulo.toLowerCase()}`">{{ valor(o.total) }}</span>
                 <span class="block text-xs font-semibold uppercase tracking-wider text-texto-secundario">en total</span>
               </span>
             </span>

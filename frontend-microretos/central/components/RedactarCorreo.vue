@@ -173,7 +173,7 @@ async function enviar() {
           <div>
             <div class="flex items-end justify-between gap-2">
               <label :for="`${id}-para`" class="field-label">Para</label>
-              <button v-if="!verCopias" type="button" class="mb-1 text-xs font-bold text-rol-fuerte hover:underline" @click="verCopias = true">CC / CCO</button>
+              <button v-if="!verCopias" type="button" class="inline-flex min-h-9 items-center text-xs font-bold text-rol-fuerte hover:underline" @click="verCopias = true">CC / CCO</button>
             </div>
             <input :id="`${id}-para`" v-model="form.para" type="text" inputmode="email" autocomplete="off" class="field-input" :aria-invalid="!!errorDe('para')" />
             <p v-if="errorDe('para')" class="mt-1 text-xs font-semibold text-red-600">{{ errorDe('para') }}</p>
@@ -215,7 +215,7 @@ async function enviar() {
               <li v-for="(f, i) in form.adjuntos" :key="i" class="flex items-center gap-2 rounded-xl bg-[#F8FAFC] px-3 py-1.5 text-sm">
                 <span class="min-w-0 flex-1 truncate">{{ f.name }}</span>
                 <span class="shrink-0 text-xs text-texto-secundario">{{ tamano(f.size) }}</span>
-                <button type="button" class="accion-icono !h-8 !w-8" :aria-label="`Quitar ${f.name}`" @click="form.adjuntos.splice(i, 1); errorAdjuntos = ''">
+                <button type="button" class="accion-icono !h-9 !w-9" :aria-label="`Quitar ${f.name}`" @click="form.adjuntos.splice(i, 1); errorAdjuntos = ''">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </li>

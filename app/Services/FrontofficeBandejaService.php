@@ -73,6 +73,14 @@ class FrontofficeBandejaService
         return $this->pedir('POST', self::RUTA_CORREO.'/enviar', $usuario, cuerpo: $datos, admitir404: true, admitir422: true);
     }
 
+    /** Un envío tal como salió (Historial de Central). null si ya no existe (se guardan 4 meses). */
+    public function verEnvio(int $id, string $usuario): ?array
+    {
+        $r = $this->pedir('GET', self::RUTA_CORREO."/envios/{$id}", $usuario, admitir404: true);
+
+        return $r->status() === 404 ? null : $r->json();
+    }
+
     public function reintentarEnvio(int $id, string $usuario): Response
     {
         return $this->pedir('POST', self::RUTA_CORREO."/envios/{$id}/reintentar", $usuario, admitir404: true, admitir422: true);
@@ -81,6 +89,19 @@ class FrontofficeBandejaService
     public function descartarEnvio(int $id, string $usuario): Response
     {
         return $this->pedir('DELETE', self::RUTA_CORREO."/envios/{$id}", $usuario, admitir404: true, admitir422: true);
+    }
+
+    /** Borra del todo la copia de un correo que ya está en la papelera; null si ya no existe. */
+    public function borrarCorreo(int $id, string $usuario): ?Response
+    {
+        $r = $this->pedir('DELETE', self::RUTA_CORREO."/{$id}", $usuario, admitir404: true, admitir422: true);
+
+        return $r->status() === 404 ? null : $r;
+    }
+
+    public function vaciarPapeleraCorreo(string $usuario): int
+    {
+        return (int) $this->pedir('DELETE', self::RUTA_CORREO.'/papelera', $usuario)->json('eliminados', 0);
     }
 
     private function pedir(string $metodo, string $ruta, string $usuario, array $query = [], array $cuerpo = [], bool $admitir404 = false, bool $admitir422 = false): Response

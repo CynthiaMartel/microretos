@@ -19,6 +19,8 @@ class ActividadCentralResource extends JsonResource
             'accion'      => $this->accion,
             'descripcion' => $this->descripcion,
             'critica'     => $this->critica,
+            // Lo que se puede abrir desde el historial (hoy, un envío de correo de info@)
+            'envio_id'    => $this->entidad_tipo === 'correo_envio' ? (int) $this->entidad_id : null,
             'fecha'       => $this->created_at?->toIso8601String(),
         ];
     }
