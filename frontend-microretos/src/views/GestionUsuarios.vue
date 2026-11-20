@@ -752,10 +752,6 @@ onMounted(async () => {
 
       <CabeceraSeccion titulo="Gestión de" destacado="cuentas" color="text-rol" antetitulo="Administración"
                        subtitulo="Crea, activa, bloquea y elimina cuentas de docentes y empresas." class="mb-5">
-        <button type="button" @click="modalTipos = true" class="accion-secundaria">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Tipos de cuenta
-        </button>
         <button type="button" @click="abrirModalCrear()" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14"/></svg>
           Nueva cuenta
@@ -779,7 +775,7 @@ onMounted(async () => {
       </div>
 
       <!-- Filtros principales: buscador + «Más filtros» · centro (superadmin, si hay varios) -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por nombre, email, centro o empresa…" class="mb-5">
+      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por nombre, email, centro o empresa…" class="mb-3">
         <template #curso>
           <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                   aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
@@ -796,6 +792,15 @@ onMounted(async () => {
           <FiltroSelect v-model="filtroCentro" label="Centro educativo" todos="Todos los centros" :opciones="centrosDisponibles" />
         </template>
       </FiltrosPanel>
+
+      <!-- Qué es cada tipo de cuenta: siempre a mano bajo los filtros (también en el formulario de crear/editar) -->
+      <div class="mb-5">
+        <button type="button" @click="modalTipos = true"
+                class="inline-flex min-h-9 items-center gap-2 rounded-full border border-borde bg-white px-4 text-sm font-semibold text-texto-secundario transition-colors hover:bg-gray-50 hover:text-azul-noche">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          ¿Qué es cada tipo de cuenta?
+        </button>
+      </div>
 
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
