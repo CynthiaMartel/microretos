@@ -94,9 +94,10 @@ return [
         'textos' => [
             'info_rgpd_centro' => [
                 // Versión nueva al cambiar el texto: las aceptaciones guardan la versión que se mostró
-                'version' => '0.2-borrador',
+                'version' => '0.3-borrador',
                 'titulo'  => 'Información sobre protección de datos',
-                'texto'   => "Responsable: Grupo Óptima [CIF], que trata estos datos con la finalidad de atender "
+                'texto'   => "Responsable: [SOCIEDAD TITULAR DE DUALAB, CIF Y DOMICILIO], que opera bajo la marca "
+                    . "Grupo Óptima y trata estos datos con la finalidad de atender "
                     . "la solicitud del centro (alta en DuaLab, información o demo) y, si el centro se une, "
                     . "gestionar su participación en el programa.\n\n"
                     . "Base jurídica: la solicitud del propio centro y, después, la relación de colaboración.\n\n"
@@ -119,7 +120,7 @@ return [
         'dias_validez' => 14,
         // Lo acepta quien responde el formulario (sin firma: la firma sigue siendo en persona)
         'privacidad' => [
-            'version' => '0.2-borrador',
+            'version' => '0.3-borrador',
             'titulo'  => 'Información sobre protección de datos',
             'texto'   => "Responsable: [SOCIEDAD TITULAR DE DUALAB, CIF Y DOMICILIO], que opera bajo la marca "
                 . "Grupo Óptima.\n\n"
@@ -128,6 +129,11 @@ return [
                 . "Formación Profesional. No escribas datos personales de clientes ni de empleados.\n\n"
                 . "Base jurídica: el interés de la empresa en participar, que ha pedido esta información "
                 . "a nuestro equipo comercial.\n\n"
+                . "Transferencias internacionales: a partir de las respuestas se generan sugerencias y "
+                . "retos en borrador con el servicio de inteligencia artificial de OpenAI, en Estados "
+                . "Unidos, como encargado del tratamiento. Esto supone una transferencia internacional de "
+                . "datos, amparada en [GARANTÍA: cláusulas contractuales tipo del contrato de encargo con "
+                . "OpenAI, pendiente de confirmar].\n\n"
                 . "Conservación: mientras se valora la colaboración y, si continúa, mientras dure. "
                 . "Si la empresa no sigue adelante, las respuestas se descartan.\n\n"
                 . "Derechos: acceso, rectificación, supresión, oposición, limitación y portabilidad en "
