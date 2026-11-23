@@ -256,7 +256,7 @@ const resumen = computed(() => {
             class="flex-1 sm:flex-none min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm flex items-center justify-center gap-2"
             :class="!familiaId || !destinoValido || generando ? 'opacity-50 cursor-not-allowed bg-white text-gray-400 border-gray-200' : 'bg-[#1F2937] text-white border-[#1F2937] hover:bg-[#374151]'">
             <svg v-if="generando" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            {{ generando ? 'Generando…' : 'Generar propuesta' }}
+            {{ generando ? 'Generando…' : 'Generar empresa' }}
           </button>
           <button type="button" @click="cerrar" :disabled="generando"
             class="min-h-9 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border bg-white text-gray-500 border-gray-200 hover:bg-gray-50">
@@ -269,7 +269,7 @@ const resumen = computed(() => {
     <!-- 2) Revisar la propuesta y confirmar: guardar, generar otra o descartar -->
     <template v-else>
       <p class="text-xs text-gray-600 leading-relaxed mb-3">
-        Revisa la propuesta. <strong>Todavía no se ha guardado.</strong>
+        Revisa la empresa generada. <strong>Todavía no se ha guardado.</strong>
         Si pulsas «Guardar en la base de datos», se guardará como empresa ficticia de
         <strong>{{ propuesta.destino }}</strong><template v-if="!propuesta.paraCatalogo && seleccionaAlGuardar"> y quedará seleccionada</template>.
         Después podrás retocar su diagnóstico con «Editar empresa» y sus datos con «Modificar datos empresa».

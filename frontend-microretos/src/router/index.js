@@ -39,7 +39,6 @@ const EntrarWorkspace = () => import('../views/EntrarWorkspace.vue')
 const SeccionHub = () => import('../views/SeccionHub.vue')
 const CalendarioDocente = () => import('../views/CalendarioDocente.vue')
 const NotificacionesDocente = () => import('../views/NotificacionesDocente.vue')
-const PropuestasEmpresas = () => import('../views/PropuestasEmpresas.vue')
 const BibliotecaDiagnosticos = () => import('../views/BibliotecaDiagnosticos.vue')
 const AlumnadoListado = () => import('../views/AlumnadoListado.vue')
 
@@ -127,13 +126,9 @@ const router = createRouter({
       component: PapeleraBaseDatos,
       meta: { requiresAuth: true, roles: [SA] }
     },
-    {
-      // Seguimiento del envío de propuestas
-      path: '/empresas/propuestas',
-      name: 'propuestas-empresas',
-      component: PropuestasEmpresas,
-      meta: { requiresAuth: true, roles: [SA, AD, DO] }
-    },
+    // Antes «Propuestas a empresas» (seguimiento del envío para validar). La empresa ya no valida
+    // al inicio (2026-11-23): los enlaces guardados llevan al hub de Empresas.
+    { path: '/empresas/propuestas', redirect: '/seccion/empresas' },
     {
       path: '/empresas',
       name: 'empresas',

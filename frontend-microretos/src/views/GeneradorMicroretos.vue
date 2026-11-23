@@ -1449,7 +1449,11 @@ const CAMPOS_DIAGNOSTICO = ['diaANormal', 'friccionArea', 'friccionProblema', 'r
   'otraLimitacion', 'loQueNoQuieren', 'consecuencias', 'otraConsecuencia', 'expectativasAlumno'];
 
 const empresaEsFicticia = computed(() => !!empresaDetalle.value?.es_simulada);
-const puedeEditarDiagnostico = computed(() => empresaEsFicticia.value || authStore.isSuperAdmin);
+// Mismas reglas que EmpresaPolicy::actualizarDiagnostico: las plantillas del catálogo DUALAB son
+// de solo lectura salvo para superadmin (al docente no le llegan en el listado, pero por si acaso).
+const empresaEsCatalogo = computed(() => !!empresaDetalle.value?.es_catalogo);
+const puedeEditarDiagnostico = computed(() =>
+  authStore.isSuperAdmin || (empresaEsFicticia.value && !empresaEsCatalogo.value));
 // Solo se oculta un diagnóstico COMPLETO (P1, P2 y P2b) ya recogido de una empresa
 // guardada; si falta algo, el formulario sigue a la vista para poder completarlo.
 const diagnosticoOculto = computed(() =>
@@ -1657,14 +1661,27 @@ const guardar = async (index) => {
 
     // De una solicitud: por el lote, que es el que los enlaza a ella y los deja en la recámara
     if (solicitudActiva.value) await guardarMicroretosLote([retoLimpio], solicitudActiva.value.solicitud_id);
-    else await guardarMicroreto(retoLimpio);
+    else {
+      const { data } = await guardarMicroreto(retoLimpio);
+      reto._ui_uuid = data?.reto?.uuid || null; // para «Trabajar este reto»
+    }
     reto._ui_guardado = true;
-  } catch (e) { 
+  } catch (e) {
     console.error("Error al guardar:", e);
     registrarAviso('Error al guardar', 'No se ha podido guardar este reto.', 'error');
-  } finally { 
-    reto._ui_guardando = false; 
+  } finally {
+    reto._ui_guardando = false;
   }
+};
+
+// «Trabajar este reto»: lo guarda en la biblioteca (si no lo estaba) y abre su ajuste.
+// No en la demo ni con una solicitud (esos retos van a la recámara de DuaLab), ni en los
+// guardados con «Guardar todos» (el lote no devuelve los uuid).
+const puedeTrabajar = (reto) => !esModoDemo.value && !solicitudActiva.value && (!reto._ui_guardado || !!reto._ui_uuid);
+const trabajarReto = async (index) => {
+  const reto = microretosGenerados.value[index];
+  if (!reto._ui_guardado) await guardar(index);
+  if (reto._ui_uuid) router.push({ name: 'startup-day-crear', query: { reto: reto._ui_uuid } });
 };
 
 // Computed que indica si hay "contexto de empresa" suficiente
@@ -1995,7 +2012,7 @@ watch(modoGuia, async (v) => {
     <div class="max-w-6xl mx-auto">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Factoría de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
+      <CabeceraSeccion titulo="Generador de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
                        subtitulo="Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial."
                        class="mb-4 md:mb-5">
         <!-- Superadmin: rellenar el generador con lo que pidió un docente en su solicitud de retos -->
@@ -2341,9 +2358,16 @@ watch(modoGuia, async (v) => {
                         <li v-for="p in empresasCatalogo" :key="p.id" class="flex flex-col sm:flex-row sm:items-center gap-2 bg-white rounded-xl border border-gray-100 px-4 py-3">
                           <div class="flex-1 min-w-0">
                             <p class="text-sm font-bold text-[#1F2937] break-words">{{ p.nombre_comercial }}</p>
-                            <p class="text-[11px] text-gray-500 break-words">
-                              {{ p.sector }}<template v-if="p.familias?.length"> · {{ p.familias.map(f => f.nombre).join(', ') }}</template>
+                            <!-- Sector (a qué se dedica) y familias (para qué alumnado sirve) en líneas con
+                                 etiqueta propia: juntos con «·» parecían una misma cosa -->
+                            <p v-if="p.sector" class="mt-0.5 text-[11px] text-gray-500 break-words">
+                              <span class="font-bold uppercase tracking-wide text-gray-400">Sector:</span> {{ p.sector }}
                             </p>
+                            <div v-if="p.familias?.length" class="mt-1 flex flex-wrap items-center gap-1">
+                              <span class="text-[11px] font-bold uppercase tracking-wide text-gray-400">{{ p.familias.length === 1 ? 'Familia:' : 'Familias:' }}</span>
+                              <span v-for="f in p.familias" :key="f.id ?? f.nombre"
+                                class="max-w-full px-2 py-0.5 rounded-full bg-centros/10 text-centros text-[11px] font-bold break-words">{{ f.nombre }}</span>
+                            </div>
                           </div>
                           <button type="button" @click="usarDelCatalogo(p)" :disabled="!!usandoCatalogoId"
                             class="shrink-0 px-4 py-2 rounded-full font-bold text-[11px] tracking-widest uppercase transition-all border shadow-sm"
@@ -2658,6 +2682,15 @@ watch(modoGuia, async (v) => {
                     <div class="min-w-0 border-l-2 border-centros/30 pl-3">
                       <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Tamaño de la empresa</p>
                       <p class="text-sm font-semibold text-[#1F2937]">{{ empresaDetalle.tamano || '—' }}</p>
+                    </div>
+                    <!-- Familias vinculadas (las de la ficha; tras editarla, las recargadas). Sin familias
+                         ya hay un aviso propio encima de la ficha. -->
+                    <div v-if="familiasEmpresaCargadas && familiasFiltradas.length" class="min-w-0 border-l-2 border-centros/30 pl-3 sm:col-span-2">
+                      <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Familias para esta empresa</p>
+                      <div class="flex flex-wrap gap-1.5">
+                        <span v-for="f in familiasFiltradas" :key="f"
+                          class="max-w-full px-2.5 py-1 rounded-full bg-centros/10 text-centros text-xs font-bold break-words">{{ f }}</span>
+                      </div>
                     </div>
                     <div v-if="empresaDetalle.web" class="min-w-0 border-l-2 border-centros/30 pl-3">
                       <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Web</p>
@@ -3209,6 +3242,7 @@ watch(modoGuia, async (v) => {
                       <p class="mt-1 text-[11px] text-gray-500">
                         «Usar solo en este reto» no cambia la empresa.
                         <template v-if="puedeEditarDiagnostico">«Guardar en la empresa» lo usará también en sus próximos retos con esta familia.</template>
+                        <template v-else-if="empresaEsCatalogo">Es una empresa del catálogo de DUALAB: solo DUALAB puede guardarlo en ella.</template>
                         <template v-else>Es una empresa real: solo DUALAB puede guardarlo en ella.</template>
                       </p>
                       <div class="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">
@@ -3269,7 +3303,7 @@ watch(modoGuia, async (v) => {
                   <div class="mt-4">
                     <div class="flex items-center gap-1.5 mb-1.5">
                       <label for="enfoque-reto" class="label-style !mb-0 text-[#1F2937]">
-                        ¿Qué tipo de propuesta quieres trabajar? <span class="text-gray-400 normal-case font-medium">(opcional)</span>
+                        ¿Qué tipo de reto quieres trabajar? <span class="text-gray-400 normal-case font-medium">(opcional)</span>
                       </label>
                       <span class="group/via relative shrink-0" tabindex="0" aria-describedby="tip-enfoque-reto">
                         <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
@@ -3292,12 +3326,24 @@ watch(modoGuia, async (v) => {
                   <!-- También del docente (opcionales; los rellena la solicitud de retos): la IA los usa para
                        que el reto practique lo que harán en la empresa y termine en el entregable que espera -->
                   <div v-for="campo in [
-                    { k: 'tareasPracticas', t: '¿Qué tareas reales harán en la empresa durante las prácticas?', p: 'Ej: registrar la correspondencia que entra y sale y elegir cómo enviar cada documento…' },
-                    { k: 'entregableDocente', t: '¿Qué te gustaría que entregara el alumnado?', p: 'Ej: un libro de registro, un informe corto, una presentación…' },
+                    { k: 'tareasPracticas', t: '¿Qué tareas reales harán en la empresa durante las prácticas?', p: 'Ej: registrar la correspondencia que entra y sale y elegir cómo enviar cada documento…',
+                      tip: 'Si sabes qué hará el alumnado en la empresa durante las prácticas, la IA lo usará para que el reto le haga practicar esas mismas tareas, dentro del problema de la empresa.' },
+                    { k: 'entregableDocente', t: '¿Qué te gustaría que entregara el alumnado?', p: 'Ej: un libro de registro, un informe corto, una presentación…',
+                      tip: 'La IA lo usará para que lo que entregue el alumnado al terminar el reto sea esto o algo equivalente.' },
                   ]" :key="campo.k" class="mt-4">
-                    <label :for="'gen-' + campo.k" class="label-style !mb-1.5 text-[#1F2937]">
-                      {{ campo.t }} <span class="text-gray-400 normal-case font-medium">(opcional)</span>
-                    </label>
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                      <label :for="'gen-' + campo.k" class="label-style !mb-0 min-w-0 text-[#1F2937]">
+                        {{ campo.t }} <span class="text-gray-400 normal-case font-medium">(opcional)</span>
+                      </label>
+                      <span class="group/via relative shrink-0" tabindex="0" :aria-describedby="'tip-' + campo.k">
+                        <span class="relative w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center cursor-help before:absolute before:-inset-2 before:content-['']">
+                          <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <span :id="'tip-' + campo.k" role="tooltip" class="pointer-events-none absolute z-30 top-full mt-2 hidden group-hover/via:block group-focus/via:block w-[min(16rem,calc(100vw-3rem))] rounded-xl bg-[#1a2332] p-3 text-[11px] font-medium normal-case tracking-normal leading-relaxed text-white shadow-2xl right-0">
+                          {{ campo.tip }}
+                        </span>
+                      </span>
+                    </div>
                     <textarea :id="'gen-' + campo.k" v-model="seleccion[campo.k]" :disabled="esModoDemo" :title="tituloDemo" :maxlength="CHAR_LIMITS[campo.k].max"
                       rows="2" class="input-style !py-2 text-sm" :placeholder="campo.p"></textarea>
                     <div class="flex items-center justify-end gap-2 mt-1 h-4">
@@ -3671,6 +3717,10 @@ watch(modoGuia, async (v) => {
                 <span v-else-if="reto._ui_guardado">✓ Guardado</span>
                 <span v-else>Guardar</span>
               </button>
+              <button v-if="puedeTrabajar(reto)" type="button" @click="trabajarReto(index)" :disabled="reto._ui_guardando"
+                class="min-h-[36px] px-4 py-2 rounded-full bg-centros text-white text-[11px] font-black uppercase tracking-widest hover:bg-[#1F2937] transition-colors disabled:opacity-50">
+                Trabajar este reto
+              </button>
             </div>
           </article>
         </div>
@@ -3842,6 +3892,10 @@ watch(modoGuia, async (v) => {
           <span v-if="reto._ui_guardando" class="flex items-center gap-2"><svg class="animate-spin w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2v4a6 6 0 106 6h4a10 10 0 11-10-10z"/></svg> Guardando...</span>
           <span v-else-if="reto._ui_guardado">✓ Publicado en BD</span>
           <span v-else>Guardar esta versión</span>
+        </button>
+        <button v-if="puedeTrabajar(reto)" type="button" @click="trabajarReto(index)" :disabled="reto._ui_guardando"
+          class="min-h-[36px] px-4 sm:px-5 py-2 bg-centros text-white rounded-full font-black text-[11px] uppercase tracking-widest transition-colors hover:bg-[#1F2937] disabled:opacity-50">
+          Trabajar este reto
         </button>
       </div>
 

@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth.js';
 import api from '../api.js';
 import MiniaturaReto from './MiniaturaReto.vue';
 import FamiliaModulos from './FamiliaModulos.vue';
+import ChipDocente from './ChipDocente.vue';
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js';
 
 const props = defineProps({
@@ -95,14 +96,26 @@ const modulos = computed(() => {
 });
 
 const fechaCreacion = computed(() => formatearFecha(props.proyecto.created_at));
+// Al pasar el cursor por «Docente: …»: compartido contigo o, si administras el centro, de tu centro
+const tituloDeQuien = computed(() => {
+  const n = props.proyecto.docente_nombre
+  if (authStore.isSuperAdmin) return `Este reto lo ha ajustado ${n}`
+  if (authStore.isAdmin) return `Este reto lo ha ajustado ${n}, docente de tu centro`
+  return `Este reto ha sido compartido contigo por ${n}`
+});
+// Paso del ajuste del reto (4 pasos; los guardados con el asistente antiguo de 7 se convierten)
+const pasoAjuste = computed(() => {
+  const v = Math.max(Number(props.proyecto.paso_actual) || 1, 1);
+  return v <= 4 ? v : (v <= 6 ? 3 : 4);
+});
 
 function getEtiqueta(p) {
-  // La validan el docente o la empresa; quién lo hizo se ve aparte (sello de la empresa)
+  // La valida el docente; las validadas antes por la empresa llevan su sello aparte
   if (p.estado === 'en_edicion') return 'En edición';
-  if (p.estado === 'archivado')  return 'Archivada';
-  if (p.estado === 'completado') return 'Completada';
-  if (p.estado === 'validado')   return 'Validada';
-  return 'Pendiente de validar';
+  if (p.estado === 'archivado')  return 'Archivado';
+  if (p.estado === 'completado') return 'Completado';
+  if (p.estado === 'validado')   return 'Validado';
+  return 'Sin validar';
 }
 // Franja superior con el color del estado (mismos puntos que el filtro Estado de /proyectos):
 // distingue de un vistazo lo que está en proceso de lo completado.
@@ -147,7 +160,10 @@ const foto = computed(() => props.proyecto.reto_imagen_url || props.proyecto.ima
               <svg v-if="proyecto.estado === 'completado'" class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>
               <span class="truncate">{{ getEtiqueta(proyecto) }}</span>
             </span>
-            <span v-if="proyecto.paso_actual && proyecto.estado !== 'completado'" class="text-xs text-texto-secundario">Paso {{ proyecto.paso_actual }}/8</span>
+            <span v-if="proyecto.paso_actual && proyecto.estado !== 'completado'" class="text-xs text-texto-secundario">Paso {{ pasoAjuste }}/4</span>
+            <!-- No es tuyo: de quién es (compartido contigo o, si administras el centro, de tu centro) -->
+            <ChipDocente v-if="proyecto.docente_nombre && !proyecto.es_mio" :nombre="proyecto.docente_nombre"
+                         :que="proyecto.etapa === 'plan' ? 'Plan' : 'Reto ajustado'" :titulo="tituloDeQuien" />
             <!-- Completados: quién lo validó, en iconos (en «Validado · …» ya lo dice la etiqueta).
                  Colores del logo — empresa en verde, docente (centro) en azul -->
             <template v-if="proyecto.estado === 'completado'">
@@ -186,21 +202,13 @@ const foto = computed(() => props.proyecto.reto_imagen_url || props.proyecto.ima
         <span v-if="fechaCreacion" class="ml-auto shrink-0" title="Fecha de creación">{{ fechaCreacion }}</span>
       </div>
 
-      <!-- Propuesta sin validar: qué falta hacer (la valida el docente o la empresa) -->
+      <!-- Propuesta sin validar: la valida el docente cuando la quiere trabajar -->
       <p v-if="proyecto.estado === 'propuesta'"
-         class="flex items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold leading-snug"
-         :class="proyecto.empresa_no_valida_aun ? 'border-red-200 bg-red-50 text-red-700'
-               : proyecto.enviado_a_empresa_mail ? 'border-centros/30 bg-centros/10 text-centros'
-               : 'border-violet-200 bg-violet-50 text-violet-800'">
+         class="flex items-start gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold leading-snug text-violet-800">
         <svg class="mt-px h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                :d="proyecto.empresa_no_valida_aun ? 'M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-                  : proyecto.enviado_a_empresa_mail ? 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'
-                  : 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <template v-if="proyecto.empresa_no_valida_aun">La empresa propone cambios: revísalos antes de validar</template>
-        <template v-else-if="proyecto.enviado_a_empresa_mail">Enviada a la empresa, sin respuesta todavía (o valídala tú)</template>
-        <template v-else>Valídala tú o envíasela a la empresa</template>
+        Valídalo cuando quieras trabajarlo con tu alumnado
       </p>
     </div>
 
@@ -219,7 +227,7 @@ const foto = computed(() => props.proyecto.reto_imagen_url || props.proyecto.ima
       <button v-else type="button" @click="verFicha"
         class="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full border border-rol-fuerte/30 bg-white text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        {{ proyecto.etapa === 'plan' ? 'Ver plan' : 'Ver propuesta' }}
+        {{ proyecto.etapa === 'plan' ? 'Ver plan' : 'Ver reto ajustado' }}
       </button>
 
       <div ref="raizMenu" class="relative shrink-0">
@@ -232,7 +240,7 @@ const foto = computed(() => props.proyecto.reto_imagen_url || props.proyecto.ima
         <div v-if="menuAbierto" role="menu"
              class="absolute bottom-full right-0 z-30 mb-1 w-[min(15rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white py-1 shadow-lg">
           <button type="button" role="menuitem" @click="cerrarMenu(); verFicha()"
-                  class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">{{ proyecto.etapa === 'plan' ? 'Ver ficha del plan' : 'Ver ficha de la propuesta' }}</button>
+                  class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">{{ proyecto.etapa === 'plan' ? 'Ver ficha del plan' : 'Ver ficha del reto ajustado' }}</button>
           <button type="button" role="menuitem" @click="descargarFicha" :disabled="generandoPDF"
                   class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50 disabled:opacity-50">
             {{ generandoPDF ? 'Generando PDF…' : 'Descargar PDF' }}

@@ -121,7 +121,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
                        subtitulo="Elige, por alias, al alumnado más destacado de los encuentros creativos para las prácticas. Después pide al docente quién es cada alias." />
 
       <!-- Filtros: mismo panel que la Biblioteca de retos -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por propuesta, empresa, centro, docente o alias…"
+      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por reto, empresa, centro, docente o alias…"
                     :resultados="cargando ? null : visibles.length" :unidad="['encuentro', 'encuentros']"
                     :hay-activos="hayFiltros" @limpiar="limpiar">
         <FiltroSegmentado label="Estado" v-model="filtroEstado" :opciones="OPCIONES_ESTADO"
@@ -170,7 +170,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
           </div>
 
           <h3 class="mt-2 line-clamp-2 font-heading text-base font-bold leading-snug text-azul-noche" :title="e.propuesta.titulo">
-            {{ e.propuesta.titulo || 'Sin propuesta' }}
+            {{ e.propuesta.titulo || 'Sin reto' }}
           </h3>
           <p class="mt-1 text-sm leading-snug text-texto-secundario">
             {{ e.centro_educativo || 'Sin centro' }}<template v-if="e.ciclo_formativo"> · {{ e.ciclo_formativo }}</template>

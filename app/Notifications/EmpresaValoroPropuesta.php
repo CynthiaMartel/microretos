@@ -16,14 +16,14 @@ class EmpresaValoroPropuesta extends NotificacionDocente
 
     protected function titulo(): string
     {
-        return 'La empresa ha valorado la propuesta';
+        return 'La empresa ha valorado el reto ajustado';
     }
 
     protected function mensaje(): string
     {
         $proyecto = $this->encuentro->microproyecto;
         $empresa  = $proyecto?->empresa?->nombre_comercial ?? 'La empresa';
-        $titulo   = $proyecto?->titulo ?: 'la propuesta';
+        $titulo   = $proyecto?->titulo ?: 'el reto ajustado';
 
         return "{$empresa} ha valorado «{$titulo}» tras el trabajo de tus grupos. Consulta su valoración en el encuentro.";
     }

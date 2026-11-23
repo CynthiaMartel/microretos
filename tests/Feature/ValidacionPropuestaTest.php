@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Microproyecto;
+use App\Models\Microreto;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -166,5 +167,54 @@ class ValidacionPropuestaTest extends TestCase
         $this->propuesta->refresh();
         $this->assertSame('propuesta', $this->propuesta->estado);
         $this->assertFalse($this->propuesta->docente_validado);
+    }
+
+    public function test_el_docente_valida_directamente_desde_el_borrador(): void
+    {
+        $this->propuesta->update(['estado' => 'en_edicion']);
+        Sanctum::actingAs($this->ana);
+
+        $this->postJson("/api/startup/proyectos/{$this->propuesta->uuid}/validar-docente", ['decision' => 'validar'])->assertOk();
+
+        $this->propuesta->refresh();
+        $this->assertTrue($this->propuesta->docente_validado);
+        $this->assertSame('validado', $this->propuesta->estado);
+    }
+
+    public function test_no_se_valida_una_propuesta_archivada(): void
+    {
+        $this->propuesta->update(['estado' => 'archivado']);
+        Sanctum::actingAs($this->ana);
+
+        $this->postJson("/api/startup/proyectos/{$this->propuesta->uuid}/validar-docente", ['decision' => 'validar'])
+            ->assertUnprocessable();
+        $this->assertSame('archivado', $this->propuesta->fresh()->estado);
+    }
+
+    public function test_crear_solo_con_un_reto_del_propio_centro(): void
+    {
+        $otroCentro = DB::table('centro_educativo')->insertGetId(['nombre' => 'IES B']);
+        $propio = Microreto::forceCreate(['titulo' => 'Reto propio', 'centro_id' => $this->ana->centro_educativo_id]);
+        $ajeno  = Microreto::forceCreate(['titulo' => 'Reto ajeno', 'centro_id' => $otroCentro]);
+        Sanctum::actingAs($this->ana);
+
+        $this->postJson('/api/startup/proyectos', ['titulo' => 'Ajeno', 'microreto_id' => $ajeno->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('microreto_id');
+
+        $this->postJson('/api/startup/proyectos', ['titulo' => '<b>Mío</b>', 'microreto_id' => $propio->id])
+            ->assertCreated()->assertJsonPath('titulo', 'Mío');
+    }
+
+    public function test_solo_se_completa_un_reto_ajustado_validado(): void
+    {
+        Sanctum::actingAs($this->ana);
+        $url = "/api/startup/proyectos/{$this->propuesta->uuid}";
+
+        $this->putJson($url, ['estado' => 'completado'])->assertUnprocessable()->assertJsonValidationErrors('estado');
+        $this->assertSame('propuesta', $this->propuesta->fresh()->estado);
+
+        $this->propuesta->update(['estado' => 'validado', 'docente_validado' => true]);
+        $this->putJson($url, ['estado' => 'completado'])->assertOk();
+        $this->assertSame('completado', $this->propuesta->fresh()->estado);
     }
 }

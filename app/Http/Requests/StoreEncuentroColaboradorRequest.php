@@ -43,7 +43,7 @@ class StoreEncuentroColaboradorRequest extends FormRequest
                 /** @var Encuentro $encuentro */
                 if ($candidato->isDocente()
                     && !app(ModulosDocenteService::class)->comparteConProyecto($candidato, $encuentro->microproyecto)) {
-                    $fail('Solo puedes compartir el encuentro con compañeros que impartan algún módulo de la familia de la propuesta.');
+                    $fail('Solo puedes compartir el encuentro con compañeros que impartan algún módulo de la familia del reto ajustado.');
                 }
             }],
             'puede_editar' => ['nullable', 'boolean'],

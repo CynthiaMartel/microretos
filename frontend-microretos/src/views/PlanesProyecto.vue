@@ -126,7 +126,7 @@ watch(filtroCiclo, () => { filtroModulo.value = ''; filtroCurso.value = '' })
 
 const ESTADOS = [
   { key: 'validado',   label: 'Validados',             punto: 'bg-emerald-500' },
-  { key: 'propuesta',  label: 'Pendientes de validar', punto: 'bg-violet-500' },
+  { key: 'propuesta',  label: 'Sin validar', punto: 'bg-violet-500' },
   { key: 'en_edicion', label: 'En edición',            punto: 'bg-amber-500' },
   { key: 'completado', label: 'Completados',           punto: 'bg-sky-500' },
   { key: 'archivado',  label: 'Archivados',            punto: 'bg-gray-400' },
@@ -422,7 +422,7 @@ function irAPagina(i) {
               {{ hayFiltrosActivos ? 'Sin resultados con estos filtros' : 'Aún no hay planes' }}
             </h3>
             <p class="mx-auto max-w-md text-sm text-texto-secundario">
-              {{ hayFiltrosActivos ? 'Prueba a quitar algún filtro.' : 'Crea el primero a partir de una propuesta completada o de otro reto.' }}
+              {{ hayFiltrosActivos ? 'Prueba a quitar algún filtro.' : 'Crea el primero a partir de un reto ajustado completado o de otro reto.' }}
             </p>
             <div class="mt-5 flex flex-wrap justify-center gap-2">
               <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros" class="accion-secundaria">Quitar filtros</button>

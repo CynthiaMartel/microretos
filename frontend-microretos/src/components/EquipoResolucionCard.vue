@@ -5,11 +5,13 @@
      tenía su propia copia de este bloque, lo que ya había hecho divergir tamaños y estilos
      entre ambas — vive aquí una sola vez para que "cómo se ve" no pueda desincronizarse.
 
-     Todo lo que es mutación (generar/regenerar diagnóstico, evaluar RA/CE) NO vive aquí:
-     se proyecta mediante los slots `acciones-cabecera`, `evaluacion`, `diagnostico-contenido`
-     y `diagnostico-acciones`, que solo MisGruposDetalle.vue rellena. La ficha del proyecto
-     no los usa — sin contenido en el slot, sencillamente no se pinta nada ahí. -->
+     La evaluación del grupo (RA/CE, diagnóstico y nota final) es EvaluacionGrupoPanel.vue: por
+     defecto en solo lectura (ficha del proyecto); MisGruposDetalle.vue lo cambia por uno editable
+     con el slot `evaluacion`. El slot `acciones-cabecera` también lo rellena solo esa vista. -->
 <script setup>
+import IconoFase from './IconoFase.vue'
+import EvaluacionGrupoPanel from './EvaluacionGrupoPanel.vue'
+import { PhotoIcon, FilmIcon, DocumentTextIcon, PaperClipIcon } from '@heroicons/vue/24/outline'
 import MarcaDestacado from './MarcaDestacado.vue'
 import { computed } from 'vue'
 import { FASES_PROYECTO, progresoPonderado } from '../config/fasesProyecto.js'
@@ -30,6 +32,7 @@ const props = defineProps({
   // Resalta un momento la sección de diagnóstico (el padre lo activa al llevar el scroll ahí).
   diagnosticoResaltado: { type: Boolean, default: false },
 })
+
 const emit = defineEmits(['toggle-equipo', 'toggle-fase'])
 
 // Workspace en solo lectura: rol docente/admin (la ficha del proyecto también la ve la empresa)
@@ -110,10 +113,10 @@ function formatDatos(datos) {
 // Icono según mime — idéntico a iconoMime() en EquipoWorkspace.vue, para que el
 // adjunto se vea igual aquí que en el workspace del alumnado.
 function iconoMime(mime) {
-  if (mime?.startsWith('image/')) return '🖼️'
-  if (mime?.startsWith('video/')) return '🎬'
-  if (mime === 'application/pdf') return '📄'
-  return '📎'
+  if (mime?.startsWith('image/')) return PhotoIcon
+  if (mime?.startsWith('video/')) return FilmIcon
+  if (mime === 'application/pdf') return DocumentTextIcon
+  return PaperClipIcon
 }
 
 function formatBytes(bytes) {
@@ -236,7 +239,7 @@ function formatItemFase(item) {
                  : f.estado === 'actual'     ? 'bg-blue-50 ring-2 ring-blue-500 shadow-sm shadow-blue-200 scale-110'
                  :                             'bg-gray-50 border border-dashed border-gray-200'
                  ]">
-              <span :class="f.estado === 'pendiente' ? 'grayscale opacity-40' : ''">{{ f.icono }}</span>
+              <IconoFase :num="f.num" class="h-5 w-5" :class="f.estado === 'pendiente' ? 'opacity-40' : ''" />
               <span v-if="f.estado === 'validada' || f.estado === 'completada'"
                     :class="['absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-white',
                              f.estado === 'validada' ? 'bg-emerald-500' : 'bg-centros']">
@@ -301,7 +304,7 @@ function formatItemFase(item) {
                         expandidoSiempre ? '' : 'hover:bg-gray-50 cursor-pointer']">
             <!-- flex-wrap: en móvil el bloque de estado/acciones baja a su línea (alineado con el texto) -->
             <span :class="['w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0',
-                           FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]">{{ f.icono }}</span>
+                           FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text]"><IconoFase :num="f.num" class="h-4 w-4" /></span>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-bold text-[#1F2937] break-words">
                 <span :class="['inline-block align-middle mr-1 px-1.5 py-px rounded-full text-[9px] font-black uppercase tracking-wide',
@@ -395,7 +398,7 @@ function formatItemFase(item) {
               <p class="text-[10px] font-black uppercase tracking-wider text-orange-600">Entregable adjunto</p>
               <a v-for="p in equipo.archivos_entregable" :key="p.id" :href="p.url" target="_blank" rel="noopener"
                  class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-100 hover:border-orange-300 hover:bg-orange-100/60 transition-colors">
-                <span class="text-xl shrink-0">{{ iconoMime(p.mime) }}</span>
+                <component :is="iconoMime(p.mime)" class="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
                 <div class="flex-1 min-w-0 text-left">
                   <p class="text-sm font-semibold text-orange-700 hover:underline truncate">{{ p.filename }}</p>
                   <p class="text-[10px] text-gray-400">{{ formatBytes(p.size) }}</p>
@@ -451,61 +454,13 @@ function formatItemFase(item) {
         </div>
       </div>
 
-      <!-- Evaluación curricular RA/CE — antes vivía dentro de F4; va justo encima del
-           diagnóstico porque la IA la usa como insumo: primero se evalúa, luego se genera. -->
-      <slot name="evaluacion" :equipo="equipo" />
-
-      <!-- Diagnóstico final IA — solo con las 5 fases completas -->
-      <!-- id + tabindex: destino del scroll/foco desde el botón "Ver diagnóstico" de la
-           cabecera. scroll-mt deja hueco para la TopBar global + topbar sticky de la vista. -->
-      <div v-if="equipo.fases_completas === 5"
-           :id="`diagnostico-equipo-${equipo.id}`"
-           tabindex="-1"
-           :class="['mt-2 pt-4 border-t border-gray-100 space-y-3 scroll-mt-36 rounded-2xl outline-none transition-shadow duration-500',
-                    diagnosticoResaltado ? 'ring-2 ring-emerald-300 ring-offset-4' : '']">
-        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">Diagnóstico final</p>
-
-        <!-- Slot para sustituir la lectura por el formulario de edición (solo gestión docente) -->
-        <slot name="diagnostico-contenido" :equipo="equipo">
-        <div v-if="equipo.diagnostico_final" class="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 space-y-3">
-          <p class="text-sm text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.resumen }}</p>
-
-          <div v-if="equipo.diagnostico_final.fortalezas?.length" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fortalezas</p>
-            <ul class="space-y-1">
-              <li v-for="(f, i) in equipo.diagnostico_final.fortalezas" :key="i"
-                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-emerald-300 pl-2.5">{{ f }}</li>
-            </ul>
-          </div>
-
-          <div v-if="equipo.diagnostico_final.areas_mejora?.length" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-amber-600">Áreas de mejora</p>
-            <ul class="space-y-1">
-              <li v-for="(a, i) in equipo.diagnostico_final.areas_mejora" :key="i"
-                  class="text-xs text-[#1F2937] leading-relaxed border-l-2 border-amber-300 pl-2.5">{{ a }}</li>
-            </ul>
-          </div>
-
-          <div v-if="equipo.diagnostico_final.valoracion_ra_ce" class="space-y-1">
-            <p class="text-[10px] font-black uppercase tracking-wider text-gray-400">Valoración RA/CE</p>
-            <p class="text-xs text-[#1F2937] leading-relaxed">{{ equipo.diagnostico_final.valoracion_ra_ce }}</p>
-          </div>
-
-          <p v-if="equipo.diagnostico_final.conclusion" class="text-xs font-semibold text-[#1F2937] italic">
-            {{ equipo.diagnostico_final.conclusion }}
-          </p>
-
-          <p v-if="equipo.diagnostico_generado_en" class="text-[10px] text-gray-400">
-            Generado por IA el {{ new Date(equipo.diagnostico_generado_en).toLocaleString('es-ES') }}
-            <template v-if="equipo.diagnostico_final.editado_en">
-              · editado por docente el {{ new Date(equipo.diagnostico_final.editado_en).toLocaleString('es-ES') }}
-            </template>
-          </p>
-        </div>
-        <p v-else class="text-xs text-gray-400 italic">Todavía no se ha generado el diagnóstico final de este grupo.</p>
+      <!-- Evaluación del grupo (evaluación curricular, diagnóstico final y nota final): mismo panel
+           y aspecto que el modal «Evaluación del grupo». Por defecto en solo lectura (ficha del reto
+           ajustado); el Detalle de grupos lo sustituye por uno editable con el slot `evaluacion`. -->
+      <div class="mt-2 border-t border-gray-100 pt-4">
+        <slot name="evaluacion" :equipo="equipo">
+          <EvaluacionGrupoPanel :equipo="equipo" :resaltar-diagnostico="diagnosticoResaltado" :con-pdf="false" />
         </slot>
-
-        <slot name="diagnostico-acciones" :equipo="equipo" />
       </div>
 
     </div>

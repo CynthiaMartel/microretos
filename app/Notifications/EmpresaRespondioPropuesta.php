@@ -16,19 +16,19 @@ class EmpresaRespondioPropuesta extends NotificacionDocente
 
     protected function titulo(): string
     {
-        return $this->validada ? 'La empresa ha validado tu propuesta' : 'La empresa pide esperar para validar';
+        return $this->validada ? 'La empresa ha validado tu reto ajustado' : 'La empresa pide esperar para validar';
     }
 
     protected function mensaje(): string
     {
         // La columna es nombre_comercial: con ->nombre el aviso decía siempre «La empresa»
         $empresa = $this->proyecto->empresa->nombre_comercial ?? 'La empresa';
-        $titulo  = $this->proyecto->titulo ?: 'tu propuesta';
+        $titulo  = $this->proyecto->titulo ?: 'tu reto ajustado';
 
         if (!$this->validada) {
             return "{$empresa} ha respondido «no validar aún» a «{$titulo}». Revisa sus comentarios.";
         }
-        return "{$empresa} ha validado «{$titulo}». Ya puedes llevarla al aula en un encuentro.";
+        return "{$empresa} ha validado «{$titulo}». Ya puedes llevarlo al aula en un encuentro.";
     }
 
     protected function ruta(): ?string

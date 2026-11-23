@@ -17,10 +17,8 @@ const auth = useAuthStore()
 // ─── Datos ────────────────────────────────────────────────────────────────────
 const empresas   = ref([])
 const familias   = ref([])
-// proyectos: solo propuesta/validado — usado en el desplegable de "enviar validación".
 // todosProyectos: sin filtrar por estado — usado para mostrar el historial completo de
 // proyectos asociados a cada empresa en su card (borradores, completados, archivados...).
-const proyectos      = ref([])
 const todosProyectos = ref([])
 const cargando   = ref(false)
 const isLoaded   = ref(false)
@@ -80,10 +78,6 @@ const emailOk       = ref(false)
 const emailError    = ref('')
 
 // ─── Formulario validación ────────────────────────────────────────────────────
-const validForm = ref({ remitente: 'info@viaoptima.es', proyecto_uuid: '', mensaje: '' })
-const enviandoValidacion = ref(false)
-const validacionOk       = ref(false)
-const validacionError    = ref('')
 
 // ─── Cargar datos ─────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -118,15 +112,7 @@ function aplicarQueryParams() {
   empresaExpandida.value = empresa
   emailOk.value = false
   emailError.value = ''
-  validacionOk.value = false
-  validacionError.value = ''
   emailForm.value = { remitente: 'info@viaoptima.es', asunto: '', mensaje: '' }
-  validForm.value = {
-    remitente: 'info@viaoptima.es',
-    proyecto_uuid: route.query.proyecto_uuid || '',
-    mensaje: '',
-  }
-  if (route.query.panel === 'validacion') abrirPanel('validacion')
 }
 
 async function cargarDatos() {
@@ -140,7 +126,6 @@ async function cargarDatos() {
     empresas.value  = empRes.data
     familias.value  = famRes.data
     todosProyectos.value = proRes.data
-    proyectos.value = proRes.data.filter(p => p.estado === 'propuesta' || p.estado === 'validado')
   } finally {
     cargando.value = false
   }
@@ -253,10 +238,7 @@ function toggleEmpresa(empresa) {
     proyectosExpandido.value = false
     emailOk.value = false
     emailError.value = ''
-    validacionOk.value = false
-    validacionError.value = ''
     emailForm.value = { remitente: 'info@viaoptima.es', asunto: '', mensaje: '' }
-    validForm.value = { remitente: 'info@viaoptima.es', proyecto_uuid: '', mensaje: '' }
   }
 }
 
@@ -301,26 +283,14 @@ function etiquetaProyecto(p) {
   if (p.estado === 'en_edicion') return 'En edición'
   if (p.estado === 'archivado')  return 'Archivado'
   if (p.estado === 'completado') return 'Completado'
-  if (p.estado === 'validado') {
-    if (p.empresa_validado && p.docente_validado) return 'Validado · Completo'
-    if (p.empresa_validado)  return 'Validado · Empresa'
-    if (p.docente_validado)  return 'Validado · Docente'
-    return 'Validado'
-  }
-  if (p.empresa_no_valida_aun)   return 'No validar aún'
-  if (p.enviado_a_empresa_mail)  return 'Esperando respuesta'
-  return 'Pendiente enviar'
+  if (p.estado === 'validado')   return 'Validado'
+  return 'Sin validar'
 }
 function colorProyecto(p) {
   if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700'
   if (p.estado === 'archivado')  return 'bg-gray-100 border-gray-200 text-gray-400'
   if (p.estado === 'completado') return 'bg-sky-50 border-sky-300 text-sky-700'
-  if (p.estado === 'validado') {
-    if (p.docente_validado && !p.empresa_validado) return 'bg-empresas/10 border-empresas/30 text-empresas-dark'
-    return 'bg-empresas/8 border-empresas/25 text-empresas'
-  }
-  if (p.empresa_no_valida_aun)   return 'bg-red-50 border-red-300 text-red-700'
-  if (p.enviado_a_empresa_mail)  return 'bg-blue-50 border-blue-200 text-blue-700'
+  if (p.estado === 'validado')   return 'bg-empresas/10 border-empresas/30 text-empresas-dark'
   return 'bg-violet-50 border-violet-300 text-violet-700'
 }
 
@@ -344,24 +314,6 @@ async function enviarEmail() {
     emailError.value = e.response?.data?.message || 'Error al enviar el correo.'
   } finally {
     enviandoEmail.value = false
-  }
-}
-
-// ─── Enviar enlace de validación ──────────────────────────────────────────────
-async function enviarValidacionEmail() {
-  enviandoValidacion.value = true
-  validacionError.value = ''
-  validacionOk.value = false
-  try {
-    await api.post(`/empresas/${empresaExpandida.value.id}/enviar-validacion`, validForm.value)
-    validacionOk.value = true
-    validForm.value.proyecto_uuid = ''
-    validForm.value.mensaje = ''
-  } catch (e) {
-    if (e.response?.status === 423) return pedirDesbloqueoDeNuevo('validacion')
-    validacionError.value = e.response?.data?.message || 'Error al enviar el enlace.'
-  } finally {
-    enviandoValidacion.value = false
   }
 }
 
@@ -561,24 +513,6 @@ async function copiarEmail(email) {
               </div>
             </button>
 
-            <button @click="abrirBienvenida('validar')"
-                    class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
-                           bg-gray-50 hover:bg-amber-50 hover:border-amber-200
-                           transition-all duration-200 text-left group">
-              <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200
-                          flex items-center justify-center shrink-0 mt-0.5
-                          group-hover:bg-amber-100 transition-colors">
-                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </div>
-              <div>
-                <p class="font-black text-[#1F2937] text-sm mb-0.5">Enviar validación</p>
-                <p class="text-xs text-gray-500 leading-relaxed">Compartir enlace de propuesta con la empresa.</p>
-              </div>
-            </button>
-
             <button @click="abrirBienvenida('listar')"
                     class="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200
                            bg-gray-50 hover:bg-blue-50 hover:border-blue-200
@@ -654,10 +588,6 @@ async function copiarEmail(email) {
                   <template v-if="modoEjemplo === 'contactar'">
                     Busca la empresa en el listado, despliégala y pulsa
                     <strong>«Enviar email»</strong> para contactarla directamente.
-                  </template>
-                  <template v-else>
-                    Busca la empresa en el listado, despliégala y pulsa
-                    <strong>«Enviar validación»</strong> para compartir el enlace de la propuesta.
                   </template>
                 </p>
               </div>
@@ -749,7 +679,7 @@ async function copiarEmail(email) {
                 <div class="space-y-3">
                   <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</p>
 
-                  <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 items-end">
+                  <div class="grid grid-cols-1 gap-2 items-end">
 
                     <!-- Botón Enviar email -->
                     <div class="flex flex-col items-stretch gap-1">
@@ -774,28 +704,6 @@ async function copiarEmail(email) {
                       </button>
                     </div>
 
-                    <!-- Botón Enviar validación -->
-                    <div class="flex flex-col items-stretch gap-1">
-                      <div v-if="modoEjemplo === 'validar'"
-                           class="flex flex-col items-center gap-0.5 animate-bounce">
-                        <span class="text-[9px] font-black text-amber-600 uppercase tracking-wider">pulsa aquí</span>
-                        <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 20l-8-8h5V4h6v8h5z"/>
-                        </svg>
-                      </div>
-                      <button :class="[
-                        'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-xs font-bold transition-all',
-                        modoEjemplo === 'validar'
-                          ? 'bg-amber-50 border-amber-200 text-amber-700 ring-2 ring-amber-300/60 ring-offset-1'
-                          : 'bg-gray-50 border-gray-200 text-gray-600'
-                      ]">
-                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Enviar validación
-                      </button>
-                    </div>
 
                   </div>
 
@@ -803,10 +711,6 @@ async function copiarEmail(email) {
                     <template v-if="modoEjemplo === 'contactar'">
                       Al pulsar «Enviar email» se abre un formulario para escribir asunto y mensaje.
                       El correo se envía a la dirección registrada de la empresa.
-                    </template>
-                    <template v-else>
-                      Al pulsar «Enviar validación» podrás seleccionar una propuesta publicada
-                      y enviar su enlace a la empresa para que la valide.
                     </template>
                   </p>
                 </div>
@@ -947,7 +851,7 @@ async function copiarEmail(email) {
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar empresas">
                 <option value="nombre">Nombre (A-Z)</option>
                 <option value="estado">Estado de contacto</option>
-                <option value="proyectos">Más propuestas</option>
+                <option value="proyectos">Más retos ajustados</option>
               </select>
             </label>
           </div>
@@ -1023,7 +927,7 @@ async function copiarEmail(email) {
               <!-- Pie: proyectos + «Ver ficha» y «⋯» (mismo esquema que las demás bibliotecas) -->
               <div class="flex items-center gap-2 border-t border-borde pt-3">
                 <span class="min-w-0 flex-1 truncate text-xs text-texto-secundario">
-                  {{ proyectosDeEmpresa(empresa.id).length }} {{ proyectosDeEmpresa(empresa.id).length === 1 ? 'propuesta' : 'propuestas' }}
+                  {{ proyectosDeEmpresa(empresa.id).length }} {{ proyectosDeEmpresa(empresa.id).length === 1 ? 'reto ajustado' : 'retos ajustados' }}
                 </span>
                 <button type="button" @click="abrirFicha(empresa)"
                         class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
@@ -1040,8 +944,6 @@ async function copiarEmail(email) {
                        class="absolute bottom-full right-0 z-30 mb-1 w-[min(15rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white py-1 shadow-lg">
                     <button type="button" role="menuitem" @click="menuEmpresa = null; abrirFicha(empresa, 'email')"
                             class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Enviar email</button>
-                    <button type="button" role="menuitem" @click="menuEmpresa = null; abrirFicha(empresa, 'validacion')"
-                            class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Enviar enlace de validación</button>
                     <button v-if="contactoDe(empresa)" type="button" role="menuitem" @click="menuEmpresa = null; copiarEmail(contactoDe(empresa))"
                             class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Copiar email</button>
                   </div>
@@ -1226,7 +1128,7 @@ async function copiarEmail(email) {
                               <div class="space-y-3">
                                 <p class="text-sm font-semibold text-texto-secundario">Acciones</p>
 
-                                <div class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
+                                <div class="grid grid-cols-1 gap-2">
                                   <button
                                     @click="abrirPanel('email')"
                                     :class="[
@@ -1243,21 +1145,6 @@ async function copiarEmail(email) {
                                     Enviar email
                                   </button>
 
-                                  <button
-                                    @click="abrirPanel('validacion')"
-                                    :class="[
-                                      'flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-sm font-bold transition-all',
-                                      panelActivo === 'validacion'
-                                        ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:text-azul-noche'
-                                    ]"
-                                  >
-                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Enviar validación
-                                  </button>
                                 </div>
 
                                 <!-- Formulario email -->
@@ -1317,76 +1204,12 @@ async function copiarEmail(email) {
                                   </div>
                                 </Transition>
 
-                                <!-- Formulario validación -->
-                                <Transition name="slide-down">
-                                  <div v-if="panelActivo === 'validacion'"
-                                       class="rounded-2xl bg-amber-50 border border-amber-200 p-4 space-y-3">
-                                    <p class="text-sm font-semibold text-amber-800">
-                                      Enviar enlace de validación
-                                    </p>
-                                    <div v-if="validacionOk"
-                                         class="flex items-center gap-2 p-3 rounded-xl bg-amber-100 border border-amber-200">
-                                      <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                      </svg>
-                                      <p class="text-sm font-bold text-amber-800">Enlace enviado correctamente.</p>
-                                    </div>
-                                    <template v-if="!validacionOk">
-                                      <div>
-                                        <label class="block text-xs font-semibold text-texto-secundario mb-1">Remitente (tu email)</label>
-                                        <input v-model="validForm.remitente" type="email"
-                                               class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2
-                                                      text-sm text-azul-noche placeholder-gray-400 shadow-sm
-                                                      focus:outline-none focus:border-amber-400 transition-colors"/>
-                                      </div>
-                                      <div>
-                                        <label class="block text-xs font-semibold text-texto-secundario mb-1">Propuesta a validar</label>
-                                        <select v-model="validForm.proyecto_uuid"
-                                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2
-                                                       text-sm text-azul-noche shadow-sm
-                                                       focus:outline-none focus:border-amber-400 transition-colors">
-                                          <option value="">Selecciona una propuesta publicada...</option>
-                                          <option v-for="p in proyectos" :key="p.uuid" :value="p.uuid">
-                                            {{ p.titulo }}<template v-if="p.empresa_nombre"> · {{ p.empresa_nombre }}</template>
-                                          </option>
-                                        </select>
-                                        <p v-if="proyectos.length === 0" class="text-sm text-texto-secundario mt-1">
-                                          No hay propuestas publicadas. Publícalas en el Taller de Ideas.
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <label class="block text-xs font-semibold text-texto-secundario mb-1">
-                                          Mensaje adicional <span class="normal-case font-normal">(opcional)</span>
-                                        </label>
-                                        <textarea v-model="validForm.mensaje" rows="3"
-                                                  placeholder="Añade contexto o instrucciones adicionales para la empresa..."
-                                                  class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2
-                                                         text-sm text-azul-noche placeholder-gray-400 shadow-sm resize-none
-                                                         focus:outline-none focus:border-amber-400 transition-colors"/>
-                                      </div>
-                                      <p v-if="validacionError" class="text-sm text-red-500 font-medium">{{ validacionError }}</p>
-                                      <button @click="enviarValidacionEmail"
-                                              :disabled="enviandoValidacion || !validForm.proyecto_uuid ||
-                                                         !(empresa.email_contacto || empresa.email_general)"
-                                              class="w-full py-2.5 rounded-full bg-amber-500 text-white text-sm font-black
-                                                     transition-all shadow-sm
-                                                     hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed">
-                                        {{ enviandoValidacion ? 'Enviando...' : 'Enviar enlace de validación' }}
-                                      </button>
-                                      <p v-if="!(empresa.email_contacto || empresa.email_general)"
-                                         class="text-sm text-amber-600 text-center">
-                                        Esta empresa no tiene email registrado.
-                                      </p>
-                                    </template>
-                                  </div>
-                                </Transition>
-
                                 <!-- Proyectos asociados a esta empresa: se ven de entrada hasta
                                      MAX_PROYECTOS_VISIBLES miniaturas; si hay más, una tarjeta
                                      "ver más" destacada (borde discontinuo) las despliega todas. -->
                                 <div v-if="proyectosDeEmpresa(empresa.id).length" class="pt-3 border-t border-borde">
                                   <p class="text-sm font-semibold text-texto-secundario mb-2">
-                                    Propuestas asociadas
+                                    Retos ajustados asociados
                                     <span class="text-gray-300 normal-case font-semibold">
                                       ({{ proyectosDeEmpresa(empresa.id).length }})
                                     </span>

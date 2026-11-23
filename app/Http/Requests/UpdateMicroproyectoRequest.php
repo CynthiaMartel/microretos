@@ -145,12 +145,16 @@ class UpdateMicroproyectoRequest extends FormRequest
             // A 'validado' solo se llega por validarDocente o validarEmpresa. El asistente reenvía
             // siempre el estado actual, así que se acepta 'validado' únicamente si ya lo estaba.
             'estado'               => ['sometimes', 'in:en_edicion,propuesta,validado,completado,archivado', function ($attribute, $value, $fail) {
-                if ($value !== 'validado') {
+                if (!in_array($value, ['validado', 'completado'], true)) {
                     return;
                 }
                 $actual = Microproyecto::where('uuid', $this->route('uuid'))->value('estado');
-                if ($actual !== 'validado') {
-                    $fail('La propuesta solo se valida con la validación del docente o de la empresa.');
+                if ($value === 'validado' && $actual !== 'validado') {
+                    $fail('El reto ajustado solo se valida con la validación del docente.');
+                }
+                // Completado = los grupos han terminado: solo desde un reto ajustado ya validado
+                if ($value === 'completado' && !in_array($actual, ['validado', 'completado'], true)) {
+                    $fail('Solo se puede completar un reto ajustado validado.');
                 }
             }],
             'enviado_a_empresa_mail' => 'sometimes|boolean',

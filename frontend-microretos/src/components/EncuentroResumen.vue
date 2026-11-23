@@ -43,7 +43,7 @@ const ICONOS = {
         <h2 class="min-w-0 flex-1 text-[15px] font-bold text-azul-noche">Resumen del encuentro</h2>
         <button v-if="proyecto" type="button" @click="emit('ver-proyecto')"
                 class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rol-fuerte/30 text-rol-fuerte hover:bg-rol/10"
-                aria-label="Ver la ficha de la propuesta" title="Ver ficha de la propuesta">
+                aria-label="Ver la ficha del reto ajustado" title="Ver ficha del reto ajustado">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         </button>
       </div>
@@ -52,7 +52,7 @@ const ICONOS = {
         <MiniaturaReto :src="proyecto?.imagen_portada_url || ''" class="flex h-14 w-[4.5rem]" />
         <div class="min-w-0 flex-1">
           <p class="line-clamp-2 font-heading text-sm font-bold leading-snug text-azul-noche" :title="proyecto?.titulo">
-            {{ proyecto?.titulo || 'Aún no has asociado propuesta' }}
+            {{ proyecto?.titulo || 'Aún no has asociado un reto ajustado' }}
           </p>
           <div v-if="estado || proyecto?.empresa_nombre" class="mt-1.5 flex flex-wrap gap-1">
             <span v-if="estado" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide"
@@ -75,7 +75,7 @@ const ICONOS = {
         </div>
       </div>
       <p v-if="!proyecto" class="mt-2 text-[13px] leading-snug text-texto-secundario">
-        Asocia en el paso 1 la propuesta que se trabajará: aquí verás el resumen mientras completas el encuentro.
+        Asocia en el paso 1 el reto ajustado que se trabajará: aquí verás el resumen mientras completas el encuentro.
       </p>
 
       <!-- En lg (columna estrecha) la etiqueta va encima del valor; desde xl, en la misma fila -->

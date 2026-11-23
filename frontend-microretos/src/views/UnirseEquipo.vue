@@ -315,7 +315,7 @@ function continuarConEquipoGuardado() {
 
       <!-- Footer -->
       <p class="text-center text-white/20 text-[11px] mt-6">
-        DUALAB Studio · Microproyectos
+        DUALAB Studio · Retos
       </p>
     </div>
   </div>

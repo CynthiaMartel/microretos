@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidaPlanificacionSesiones;
+use App\Models\Encuentro;
 use App\Models\Microproyecto;
 use App\Rules\AliasAlumnado;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 
 class StoreEncuentroRequest extends FormRequest
 {
@@ -62,15 +64,29 @@ class StoreEncuentroRequest extends FormRequest
                 }
 
                 if (!$proyecto->esVisiblePara($user)) {
-                    $fail('No tienes acceso a esta propuesta. Pide al docente propietario que la comparta contigo o crea una nueva.');
+                    $fail('No tienes acceso a este reto ajustado. Pide al docente propietario que lo comparta contigo o crea uno nuevo.');
                     return;
                 }
 
                 if (!in_array($proyecto->estado, ['validado', 'completado'], true)) {
-                    $fail('Solo se pueden llevar al aula propuestas validadas (por el docente o por la empresa). Valida la propuesta antes de crear el encuentro.');
+                    $fail('Solo se pueden llevar al aula retos ajustados validados. Valida el reto ajustado antes de crear el encuentro.');
                 }
             }],
             'fecha'                  => 'required|date',
+            // Opcional: sin ella se usa la sugerida. Puede alargarse, no quedar antes de la sugerida
+            // (mismo criterio que UpdateEncuentroRequest).
+            'fecha_fin'              => ['sometimes', 'nullable', 'date', 'after_or_equal:fecha', function ($attribute, $value, $fail) {
+                if (!$value || !strtotime((string) $this->input('fecha'))) return;
+                $planificacion = $this->input('planificacion_sesiones');
+                if (empty($planificacion)) {
+                    $planificacion = Microproyecto::find($this->input('microproyecto_id'))?->diseno_microproyecto['clases'] ?? null;
+                }
+                $minimo = (new Encuentro(['planificacion_sesiones' => $planificacion]))
+                    ->fechaFinSugerida(Carbon::parse($this->input('fecha')));
+                if ($minimo && Carbon::parse($value)->lt($minimo)) {
+                    $fail("La fecha de fin no puede ser anterior al {$minimo->format('d/m/Y')}, según las sesiones planificadas.");
+                }
+            }],
             'centro_educativo'       => 'nullable|string|max:255',
             'ciclo_formativo'        => 'nullable|string|max:255',
             'curso'                  => 'required|string|max:20',
@@ -93,7 +109,7 @@ class StoreEncuentroRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'microproyecto_id.required' => 'Debes asociar una propuesta al encuentro antes de guardarlo.',
+            'microproyecto_id.required' => 'Debes asociar un reto ajustado al encuentro antes de guardarlo.',
             'curso.required'            => 'Indica el curso del encuentro.',
             'grupo.required'            => 'Indica la clase del encuentro.',
             'num_equipos.required'      => 'Indica el número de grupos del encuentro.',

@@ -409,7 +409,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
           <div v-else class="space-y-6">
             <div v-for="(b, i) in bloques" :key="b.clave">
               <div class="mb-2 ml-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <label :for="`sr-propuesta-${i}`" class="text-xs font-bold uppercase tracking-[0.15em] text-gray-500">¿Qué tipo de propuesta quieres trabajar? *</label>
+                <label :for="`sr-propuesta-${i}`" class="text-xs font-bold uppercase tracking-[0.15em] text-gray-500">¿Qué tipo de reto quieres trabajar? *</label>
                 <span v-if="bloques.length > 1" class="rounded-full bg-centros/10 px-2.5 py-0.5 text-xs font-bold text-centros break-words">{{ i + 1 }}. {{ resumenBloque(b) }}</span>
               </div>
               <p class="mb-2 ml-4 text-xs text-gray-500">Orienta el reto hacia el tipo de trabajo que te interesa con tu alumnado.</p>

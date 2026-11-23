@@ -40,11 +40,15 @@ async function confirmarEliminacion() {
     emit('proyecto-eliminado', { uuid: props.proyecto.uuid, titulo: props.proyecto.titulo })
   } catch (e) {
     if (e.response?.status === 404) {
-      error.value = 'La propuesta no se encontró. Es posible que ya haya sido eliminada.'
+      error.value = props.proyecto?.etapa === 'plan'
+        ? 'No se encontró el plan. Es posible que ya se haya eliminado.'
+        : 'No se encontró el reto ajustado. Es posible que ya se haya eliminado.'
     } else if (e.response?.status === 401) {
       error.value = 'Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.'
     } else {
-      error.value = 'Error al eliminar el proyecto. Inténtalo de nuevo.'
+      error.value = props.proyecto?.etapa === 'plan'
+        ? 'Error al eliminar el plan. Inténtalo de nuevo.'
+        : 'Error al eliminar el reto ajustado. Inténtalo de nuevo.'
     }
   } finally {
     eliminando.value = false
@@ -68,14 +72,14 @@ async function confirmarEliminacion() {
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h2 class="epm-title">Eliminar propuesta/proyecto</h2>
+                <h2 class="epm-title">{{ proyecto?.etapa === 'plan' ? 'Eliminar plan' : 'Eliminar reto ajustado' }}</h2>
                 <p class="epm-sub">Se moverá a la <span class="font-black text-amber-600">papelera</span> y podrá restaurarse desde allí</p>
               </div>
             </div>
 
             <!-- Identificación de la propuesta/proyecto -->
             <div class="mt-5 px-4 py-3 bg-gray-50 rounded-2xl border border-gray-100">
-              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Propuesta/Proyecto a eliminar</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">{{ proyecto?.etapa === 'plan' ? 'Plan a eliminar' : 'Reto ajustado a eliminar' }}</p>
               <p class="font-black text-[#1F2937] text-sm leading-snug">{{ proyecto?.titulo }}</p>
               <div class="flex flex-wrap gap-1.5 mt-2">
                 <span v-if="proyecto?.empresa_nombre"
@@ -88,7 +92,7 @@ async function confirmarEliminacion() {
                 </span>
                 <span v-if="proyecto?.estado"
                   class="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full capitalize">
-                  {{ proyecto.estado }}
+                  {{ ({ en_edicion: 'En edición', propuesta: 'Sin validar', validado: 'Validado', completado: 'Completado', archivado: 'Archivado' })[proyecto.estado] || proyecto.estado }}
                 </span>
               </div>
             </div>
@@ -97,7 +101,7 @@ async function confirmarEliminacion() {
             <Transition name="epm-fase" mode="out-in">
               <div v-if="fase === 1" key="f1" class="mt-5 space-y-3">
 
-                <p class="text-sm font-semibold text-gray-600">Al eliminarla ocurrirá lo siguiente:</p>
+                <p class="text-sm font-semibold text-gray-600">Al eliminarlo ocurrirá lo siguiente:</p>
 
                 <!-- Movido a papelera -->
                 <div class="epm-impact-row epm-impact-warn">
@@ -122,8 +126,8 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-red-700">Dejará de ser visible en el listado de propuestas</p>
-                    <p class="text-xs text-red-500 mt-0.5">El grupo no podrá acceder a ella mientras esté en la papelera.</p>
+                    <p class="font-black text-sm text-red-700">{{ proyecto?.etapa === 'plan' ? 'Dejará de ser visible en el listado de planes' : 'Dejará de ser visible en «Mis retos ajustados»' }}</p>
+                    <p class="text-xs text-red-500 mt-0.5">El grupo no podrá acceder a él mientras esté en la papelera.</p>
                   </div>
                 </div>
 
@@ -137,7 +141,7 @@ async function confirmarEliminacion() {
                   </div>
                   <div class="flex-1">
                     <p class="font-black text-sm text-blue-700">El enlace de validación de empresa se desactivará</p>
-                    <p class="text-xs text-blue-500 mt-0.5">Si todavía está en fase de propuesta, la empresa no podrá validarla mientras esté en la papelera.</p>
+                    <p class="text-xs text-blue-500 mt-0.5">Si se envió antes a la empresa un enlace de validación, dejará de funcionar mientras esté en la papelera.</p>
                   </div>
                 </div>
 
@@ -186,7 +190,7 @@ async function confirmarEliminacion() {
                     El título no coincide. Comprueba mayúsculas, espacios y caracteres especiales.
                   </p>
                   <p v-if="confirmTitulo && tituloValido" class="epm-hint-ok">
-                    Título confirmado. Ya puedes moverla a la papelera.
+                    Título confirmado. Ya puedes moverlo a la papelera.
                   </p>
                 </div>
 

@@ -16,7 +16,7 @@ const props = defineProps({
   // Si se puede saltar a un paso (además de haberlo alcanzado): el wizard exige reto vinculado.
   puedeIr: { type: Function, default: () => true },
   // Nombre accesible del indicador.
-  etiqueta: { type: String, default: 'Pasos del Taller de Ideas' },
+  etiqueta: { type: String, default: 'Pasos del Ajuste del reto' },
   // 'tarjeta' (crear_proyecto.png) · 'linea': círculos unidos por una línea y nombre
   // debajo, sin tarjeta (crear_encuentro.png). En móvil, las dos usan la barra de tramos.
   variante: { type: String, default: 'tarjeta' },

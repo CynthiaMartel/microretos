@@ -56,6 +56,8 @@ class EncuentroResource extends JsonResource
             'codigo_ia'          => $puedeEditar ? $this->codigo_ia : null,
             'microproyecto_uuid' => $this->microproyecto?->uuid,
             'proyecto_titulo'    => $this->microproyecto?->titulo,
+            // Estado del reto ajustado: el docente lo marca como completado desde el encuentro
+            'proyecto_estado'    => $this->microproyecto?->estado,
             'microreto_id'       => $this->microproyecto?->microreto_id,
             'microreto_titulo'   => $this->microproyecto?->microreto?->titulo,
             // Contexto curricular del proyecto (cards de la biblioteca de encuentros)

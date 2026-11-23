@@ -43,8 +43,8 @@ class StorePlanProyectoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'origen_uuid.required_without'  => 'Elige la propuesta que se amplía o el reto del que parte el plan.',
-            'microreto_id.required_without' => 'Elige la propuesta que se amplía o el reto del que parte el plan.',
+            'origen_uuid.required_without'  => 'Elige el reto ajustado que se amplía o el reto del que parte el plan.',
+            'microreto_id.required_without' => 'Elige el reto ajustado que se amplía o el reto del que parte el plan.',
         ];
     }
 }

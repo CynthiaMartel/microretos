@@ -34,7 +34,7 @@ onMounted(async () => {
     propuestas.value = p.data.filter(x => ['validado', 'completado'].includes(x.estado))
     retos.value = r.data
   } catch {
-    error.value = 'No se han podido cargar las propuestas y los retos.'
+    error.value = 'No se han podido cargar los retos ajustados y los retos.'
   } finally {
     cargando.value = false
   }
@@ -94,14 +94,14 @@ async function crear() {
       <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-origen">
         <h2 id="titulo-origen" class="text-lg font-bold">¿De dónde parte el plan?</h2>
         <div class="mt-3 inline-flex flex-wrap gap-1 rounded-full border border-borde bg-white p-1" role="group" aria-label="Origen del plan">
-          <button v-for="o in [{ v: 'propuesta', l: 'Ampliar una propuesta' }, { v: 'reto', l: 'Otro reto' }]" :key="o.v" type="button"
+          <button v-for="o in [{ v: 'propuesta', l: 'Ampliar un reto ajustado' }, { v: 'reto', l: 'Otro reto' }]" :key="o.v" type="button"
                   @click="modo = o.v; buscar = ''" :aria-pressed="modo === o.v"
                   class="inline-flex min-h-9 items-center rounded-full px-4 text-sm font-semibold transition-colors"
                   :class="modo === o.v ? 'bg-rol-fuerte text-white' : 'text-azul-noche hover:bg-gray-50'">{{ o.l }}</button>
         </div>
         <p class="mt-2 text-sm text-texto-secundario">
           {{ modo === 'propuesta'
-            ? 'El plan hereda la empresa, los módulos, los RA y CE y los objetivos de la propuesta del taller, para ampliarlos.'
+            ? 'El plan hereda la empresa, los módulos, los RA y CE y los objetivos del reto ajustado en el taller, para ampliarlos.'
             : 'El plan parte de otro reto de la biblioteca; completarás lo curricular en el asistente.' }}
         </p>
 
@@ -111,9 +111,9 @@ async function crear() {
 
         <p v-if="cargando" class="py-6 text-center text-sm text-texto-secundario" role="status">Cargando…</p>
         <p v-else-if="!lista.length" class="py-6 text-center text-sm text-texto-secundario">
-          {{ modo === 'propuesta' ? 'No hay propuestas validadas o completadas con ese texto.' : 'No hay retos con ese texto.' }}
+          {{ modo === 'propuesta' ? 'No hay retos ajustados validados o completados con ese texto.' : 'No hay retos con ese texto.' }}
         </p>
-        <ul v-else class="mt-3 max-h-80 space-y-1.5 overflow-y-auto" :aria-label="modo === 'propuesta' ? 'Propuestas' : 'Retos'">
+        <ul v-else class="mt-3 max-h-80 space-y-1.5 overflow-y-auto" :aria-label="modo === 'propuesta' ? 'Retos ajustados' : 'Retos'">
           <li v-for="x in lista" :key="x.uuid || x.id"
               class="flex min-w-0 items-stretch rounded-xl border transition-colors"
               :class="esElegido(x) ? 'border-rol-fuerte bg-rol/10' : 'border-borde hover:bg-gray-50'">
@@ -122,15 +122,15 @@ async function crear() {
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold">{{ x.titulo }}</span>
                 <span class="block truncate text-xs text-texto-secundario">
-                  {{ x.empresa_nombre || 'Sin empresa' }}<template v-if="x.estado"> · {{ x.estado === 'completado' ? 'Completada' : 'Validada' }}</template>
+                  {{ x.empresa_nombre || 'Sin empresa' }}<template v-if="x.estado"> · {{ x.estado === 'completado' ? 'Completado' : 'Validado' }}</template>
                 </span>
               </span>
               <span v-if="esElegido(x)" class="shrink-0 text-sm font-bold text-rol-fuerte" aria-hidden="true">✓</span>
             </button>
             <!-- Ver la ficha sin elegirla -->
             <button type="button" @click="verFicha(x)"
-                    :title="modo === 'propuesta' ? 'Ver la ficha de la propuesta' : 'Ver la ficha del reto'"
-                    :aria-label="`${modo === 'propuesta' ? 'Ver la ficha de la propuesta' : 'Ver la ficha del reto'}: ${x.titulo}`"
+                    :title="modo === 'propuesta' ? 'Ver la ficha del reto ajustado' : 'Ver la ficha del reto'"
+                    :aria-label="`${modo === 'propuesta' ? 'Ver la ficha del reto ajustado' : 'Ver la ficha del reto'}: ${x.titulo}`"
                     class="flex w-11 shrink-0 items-center justify-center rounded-r-xl border-l border-borde text-texto-secundario transition-colors hover:bg-rol/10 hover:text-rol-fuerte">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

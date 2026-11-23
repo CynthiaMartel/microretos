@@ -62,7 +62,7 @@ class ValoracionEmpresaController extends Controller
         $valoracion = $this->porToken($token);
 
         if ($valoracion->respondida()) {
-            return response()->json(['message' => 'Esta propuesta ya está valorada. Gracias por vuestra participación.'], 409);
+            return response()->json(['message' => 'Este reto ya está valorado. Gracias por vuestra participación.'], 409);
         }
 
         $this->servicio->responder($valoracion, $request->validated());

@@ -53,9 +53,11 @@ onMounted(async () => {
 const volverAtras = useVolver()
 const volver = () => volverAtras({ name: 'biblioteca' })
 
+// Abre el ajuste del reto con este reto ya elegido (antes iba a «Crear encuentro», que
+// ignoraba el reto y exigía una propuesta validada)
 const trabajarMicroreto = () => {
   const id = reto.value?.uuid || reto.value?.id
-  router.push({ name: 'dashboard-docente', query: { microreto_id: id } })
+  router.push({ name: 'startup-day-crear', query: { reto: id } })
 };
 
 
@@ -748,13 +750,13 @@ async function copiarUrl() {
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <p class="text-xs font-semibold leading-relaxed">
-                  Módulos, RA y CE que la IA considera que más encajan con este reto. Podrás cambiarlos al crear
-                  la propuesta en
+                  Módulos, RA y CE que la IA considera que más encajan con este reto. Podrás cambiarlos en el
+                  ajuste del reto: pulsa
                   <span class="underline underline-offset-2 decoration-amber-400 cursor-pointer hover:text-amber-900"
                         @mouseenter="uiHighlight.setHighlight('generar-proyecto')"
                         @mouseleave="uiHighlight.clearHighlight('generar-proyecto')"
-                        @click="router.push('/proyectos/crear')">2. Taller de Ideas → Generar propuesta</span>
-                  (menú izquierdo).
+                        @click="trabajarMicroreto">«Trabajar este reto»</span>
+                  en esta ficha.
                   Cubre un mínimo de 3 módulos distintos (salvo que se forzaran módulos concretos)<template v-if="reto.curso === 'ambos_cursos'">, incluyendo al menos uno de 1º y uno de 2º</template>.
                 </p>
               </div>

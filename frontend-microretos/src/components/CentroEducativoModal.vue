@@ -461,7 +461,7 @@ function resetear() {
               <ul class="mt-2 text-sm text-amber-700 list-disc list-inside">
                 <li>{{ impacto.afectados.empresas }} empresa(s) asociadas a este centro</li>
                 <li>{{ impacto.afectados.encuentros }} encuentro(s) creados con este centro</li>
-                <li>{{ impacto.afectados.proyectos }} propuesta(s) con este centro asignada(s)</li>
+                <li>{{ impacto.afectados.proyectos }} reto(s) ajustado(s) con este centro asignado</li>
               </ul>
               <div class="mt-4 flex flex-col-reverse sm:flex-row gap-3">
                 <button type="button" @click="cancelarConfirmacionImpacto" class="cce-btn-ghost flex-1">

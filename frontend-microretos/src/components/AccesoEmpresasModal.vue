@@ -17,11 +17,6 @@ const TEXTOS = {
     descripcion: 'Para escribir directamente a una empresa necesitas la contraseña del módulo Empresas.',
     abriendo:    'Abriendo el formulario de email…',
   },
-  validacion: {
-    titulo:      'Enviar validación a la empresa',
-    descripcion: 'Para enviar a la empresa el enlace de una propuesta necesitas la contraseña del módulo Empresas.',
-    abriendo:    'Abriendo el formulario de validación…',
-  },
 }
 const texto = computed(() => TEXTOS[props.motivo] || TEXTOS.email)
 // Mismo acento que el botón y el panel que abre: verde empresas (email), ámbar (validación)

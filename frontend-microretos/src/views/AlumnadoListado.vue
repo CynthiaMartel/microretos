@@ -12,6 +12,8 @@
      de grupo), así que un alumno se identifica por alias + centro + ciclo + curso + clase:
      si el docente reutiliza el mismo alias en otro encuentro de esa clase, se agrupan. -->
 <script setup>
+import IconoFase from '../components/IconoFase.vue'
+import { UserGroupIcon, ArrowTopRightOnSquareIcon, ClipboardDocumentCheckIcon, EyeIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import MarcaDestacado from '../components/MarcaDestacado.vue'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -312,7 +314,7 @@ async function enfocarAlumnoDeRuta() {
 
 // Enlaces a lo que ya existe (no se duplica aquí). «Ver detalle del grupo» abre el grupo del alumno.
 const irAGrupo       = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id }, query: { equipo: p.equipo.id } })
-const irADiagnostico = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id }, query: { equipo: p.equipo.id, ver: 'diagnostico' } })
+const irAEvaluacion  = (p) => router.push({ name: 'mis-grupos-detalle', params: { id: p.encuentro.id }, query: { equipo: p.equipo.id, ver: 'evaluacion' } })
 const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params: { uuid: p.proyecto.uuid } })
 </script>
 
@@ -322,7 +324,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Listado de" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
-                       subtitulo="Cada alumno con las propuestas y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de las propuestas terminadas." />
+                       subtitulo="Cada alumno con los retos ajustados y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de los retos terminados." />
 
       <!-- Filtros principales (FiltrosPanel común) -->
       <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar alumno por alias…">
@@ -346,7 +348,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
         <FiltroSelect label="Ciclo formativo" v-model="filtroCiclo" :opciones="ciclosDisponibles" todos="Todos los ciclos"
           title="Filtra por el ciclo formativo del encuentro." />
         <FiltroSelect v-if="modulosDisponibles.length" label="Módulo" v-model="filtroModulo" :opciones="modulosDisponibles" todos="Todos los módulos"
-          title="Filtra por módulo profesional de la propuesta. Las propuestas de varios módulos aparecen en cada uno." />
+          title="Filtra por módulo profesional del reto ajustado. Los retos ajustados de varios módulos aparecen en cada uno." />
         <FiltroSegmentado v-if="cursosDisponibles.length" label="Nivel" v-model="filtroCurso" :opciones="opcionesNivel" />
         <FiltroSegmentado v-if="clasesDisponibles.length" label="Clase" v-model="filtroClase" :opciones="opcionesClase" />
       </FiltrosPanel>
@@ -371,7 +373,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 
           <!-- Estado del proyecto del alumno (cuenta alumnos) -->
           <div class="border-t border-borde pt-3" role="radiogroup" aria-labelledby="titulo-filtro-estado">
-            <p id="titulo-filtro-estado" class="mb-1.5 text-sm font-semibold text-azul-noche">Estado de la propuesta</p>
+            <p id="titulo-filtro-estado" class="mb-1.5 text-sm font-semibold text-azul-noche">Estado del reto ajustado</p>
             <label v-for="e in ESTADOS" :key="e.value || 'todos'"
                    class="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
               <input type="radio" name="al-filtro-estado" :value="e.value" v-model="filtroEstado" class="h-4 w-4 shrink-0 accent-rol-fuerte" />
@@ -408,12 +410,12 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
 
           <details v-if="proyectosDisponibles.length" class="group mt-3 border-t border-borde pt-3" :open="!!filtroProyecto">
             <summary class="flex cursor-pointer list-none items-center justify-between py-1 text-sm font-semibold text-azul-noche">
-              Propuesta
+              Reto ajustado
               <svg class="h-4 w-4 text-texto-secundario transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </summary>
-            <label for="al-filtro-proyecto" class="sr-only">Propuesta</label>
+            <label for="al-filtro-proyecto" class="sr-only">Reto ajustado</label>
             <select id="al-filtro-proyecto" v-model="filtroProyecto" class="mt-2 h-10 w-full rounded-xl px-3 text-sm">
-              <option value="">Todas las propuestas</option>
+              <option value="">Todos los retos ajustados</option>
               <option v-for="[uuid, titulo] in proyectosDisponibles" :key="uuid" :value="uuid">{{ titulo }}</option>
             </select>
           </details>
@@ -453,8 +455,8 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                       :aria-label="`Quitar filtro ${SEGUIMIENTO[k].label}`">
                 {{ SEGUIMIENTO[k].label }}<span aria-hidden="true">✕</span>
               </button>
-              <button v-if="filtroProyecto" type="button" @click="filtroProyecto = ''" class="chip-filtro max-w-full" aria-label="Quitar filtro de propuesta">
-                <span class="truncate">{{ proyectosDisponibles.find(([u]) => u === filtroProyecto)?.[1] || 'Proyecto' }}</span><span aria-hidden="true">✕</span>
+              <button v-if="filtroProyecto" type="button" @click="filtroProyecto = ''" class="chip-filtro max-w-full" aria-label="Quitar filtro de reto ajustado">
+                <span class="truncate">{{ proyectosDisponibles.find(([u]) => u === filtroProyecto)?.[1] || 'Reto ajustado' }}</span><span aria-hidden="true">✕</span>
               </button>
               <button v-if="hayFechas" type="button" @click="fechaDesde = ''; fechaHasta = ''" class="chip-filtro" aria-label="Quitar filtro de fechas">
                 {{ fechaDesde ? fecha(fechaDesde) : '…' }} – {{ fechaHasta ? fecha(fechaHasta) : '…' }}<span aria-hidden="true">✕</span>
@@ -514,18 +516,18 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 </span>
 
                 <span class="hidden min-w-0 max-w-[16rem] flex-col items-end gap-1 sm:flex">
-                  <span class="max-w-full truncate text-sm font-semibold text-azul-noche">{{ a.reciente.proyecto?.titulo || 'Sin propuesta' }}</span>
+                  <span class="max-w-full truncate text-sm font-semibold text-azul-noche">{{ a.reciente.proyecto?.titulo || 'Sin reto ajustado' }}</span>
                   <span :class="['max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold', estadoBadge(a.reciente).cls]">{{ estadoBadge(a.reciente).label }}</span>
                 </span>
 
-                <span class="hidden w-20 shrink-0 text-center md:block" :title="`${a.participaciones.length} propuesta(s), ${a.completados} completada(s)`">
+                <span class="hidden w-20 shrink-0 text-center md:block" :title="`${a.participaciones.length} reto(s) ajustado(s), ${a.completados} completado(s)`">
                   <span class="block font-heading text-lg font-bold text-azul-noche">{{ a.completados }}/{{ a.participaciones.length }}</span>
                   <span class="block text-xs text-texto-secundario">completados</span>
                 </span>
 
                 <span class="w-14 shrink-0 text-center">
                   <span v-if="a.notaMedia !== null" class="block rounded-full bg-administraciones/10 px-2 py-1 font-heading text-sm font-bold text-administraciones-dark"
-                        :title="a.completados > 1 ? 'Nota media de sus propuestas completadas' : 'Nota final'">{{ formatNota(a.notaMedia) }}</span>
+                        :title="a.completados > 1 ? 'Nota media de sus retos ajustados completados' : 'Nota final'">{{ formatNota(a.notaMedia) }}</span>
                   <span v-else class="block text-sm text-texto-secundario" title="Sin nota final todavía">—</span>
                 </span>
 
@@ -536,7 +538,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
               <!-- Solo icono en filas estrechas; con texto cuando la fila tiene sitio (@container del li) -->
               <button type="button" @click="irAGrupo(a.reciente)"
                       :aria-label="`Ver el detalle del ${nombreGrupo(a.reciente.equipo)} de ${a.alias}`"
-                      :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin propuesta'}`"
+                      :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin reto ajustado'}`"
                       class="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @4xl:w-auto @4xl:px-4">
                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span class="hidden @4xl:inline">Ver detalle del grupo</span>
@@ -550,7 +552,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                                   resaltado?.participacion === p.id ? 'border-rol-fuerte/50 ring-2 ring-rol/30' : 'border-borde']">
                   <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="font-heading font-bold leading-snug text-azul-noche">{{ p.proyecto?.titulo || 'Sin propuesta asociada' }}</p>
+                      <p class="font-heading font-bold leading-snug text-azul-noche">{{ p.proyecto?.titulo || 'Sin reto ajustado asociado' }}</p>
                       <p class="mt-0.5 text-sm text-texto-secundario">
                         Encuentro {{ fecha(p.encuentro.fecha) || 'sin fecha' }}<template v-if="p.encuentro.fecha_fin && p.encuentro.fecha_fin !== p.encuentro.fecha"> → {{ fecha(p.encuentro.fecha_fin) }}</template>
                       </p>
@@ -586,7 +588,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                       <span v-for="f in FASES_PROYECTO" :key="f.num"
                             :title="`${f.label}${p.equipo.fases[f.num]?.fecha_completada ? ' · completada el ' + new Date(p.equipo.fases[f.num].fecha_completada).toLocaleDateString('es-ES') : ''}`"
                             :class="['inline-flex min-w-0 items-center gap-1 justify-self-start rounded-full px-2 py-1 text-xs font-semibold', estadoFase(p, f.num)]">
-                        <span aria-hidden="true">{{ f.icono }}</span>F{{ f.num }}
+                        <IconoFase :num="f.num" class="h-3.5 w-3.5 shrink-0" />F{{ f.num }}
                         <span class="min-w-0 truncate font-medium">{{ f.label }}</span>
                         <span v-if="p.equipo.fases[f.num]?.fecha_completada" class="shrink-0 font-normal opacity-80">· {{ fechaCorta(p.equipo.fases[f.num].fecha_completada) }}</span>
                         <span v-if="p.equipo.fases[f.num]?.nota_docente !== null && p.equipo.fases[f.num]?.nota_docente !== undefined && f.num !== 4"
@@ -610,7 +612,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                     <div class="rounded-xl bg-gray-50 px-3 py-2">
                       <dt class="text-xs font-semibold text-texto-secundario">Reflexión individual</dt>
                       <dd class="mt-1 font-semibold" :class="p.reflexion_individual ? 'text-empresas-dark' : 'text-texto-secundario'">
-                        {{ p.reflexion_individual ? '✓ Entregada' : 'No entregada' }}
+                        <span class="inline-flex items-center gap-1"><CheckIcon v-if="p.reflexion_individual" class="h-4 w-4 shrink-0" aria-hidden="true" />{{ p.reflexion_individual ? 'Entregada' : 'No entregada' }}</span>
                       </dd>
                     </div>
                     <div class="rounded-xl bg-gray-50 px-3 py-2">
@@ -631,22 +633,39 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                     <span v-for="m in p.puntos_mejora" :key="'m' + m" class="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">↗ {{ m }}</span>
                   </div>
 
-                  <!-- Acciones: la principal (trabajo del grupo) en el color del rol; el resto, secundarias -->
-                  <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-borde pt-3">
-                    <button type="button" class="inline-flex h-9 items-center gap-1.5 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90" @click="irAGrupo(p)">
-                      Ver detalle del grupo
-                    </button>
-                    <!-- Workspace del grupo en solo lectura (vista del docente, en otra pestaña): mismo
-                         enlace que en Detalle de grupos y en Seguimiento de grupos -->
-                    <router-link :to="{ name: 'equipo-workspace-docente', params: { equipoId: p.equipo.id } }"
-                                 target="_blank" rel="noopener"
-                                 :aria-label="`Ver en workspace el trabajo del ${nombreGrupo(p.equipo)}, en solo lectura`"
-                                 class="inline-flex h-9 items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 transition-colors hover:bg-violet-100">
-                      <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                      Ver en workspace
-                    </router-link>
-                    <button v-if="p.equipo.tiene_diagnostico" type="button" class="accion" @click="irADiagnostico(p)">Ver diagnóstico</button>
-                    <button v-if="p.proyecto" type="button" class="accion" @click="irAProyecto(p)">Ficha de la propuesta</button>
+                  <!-- Acciones en dos grupos separados por una línea: el trabajo del grupo (detalle y
+                       workspace) y su evaluación (diagnóstico, evaluación RA/CE y ficha del reto ajustado) -->
+                  <div class="mt-3 flex flex-col gap-3 border-t border-borde pt-3 sm:flex-row sm:flex-wrap sm:items-center">
+                    <div role="group" aria-label="Trabajo del grupo" class="flex flex-wrap items-center gap-2">
+                      <button type="button" class="inline-flex h-9 items-center gap-1.5 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90" @click="irAGrupo(p)">
+                        <UserGroupIcon class="h-4 w-4 shrink-0" aria-hidden="true" />
+                        Ver detalle del grupo
+                      </button>
+                      <!-- Workspace del grupo en solo lectura (vista del docente, en otra pestaña): mismo
+                           enlace que en Detalle de grupos y en Seguimiento de grupos -->
+                      <router-link :to="{ name: 'equipo-workspace-docente', params: { equipoId: p.equipo.id } }"
+                                   target="_blank" rel="noopener"
+                                   :aria-label="`Ver en workspace el trabajo del ${nombreGrupo(p.equipo)}, en solo lectura`"
+                                   class="inline-flex h-9 items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 transition-colors hover:bg-violet-100">
+                        <ArrowTopRightOnSquareIcon class="h-4 w-4 shrink-0" aria-hidden="true" />
+                        Ver en workspace
+                      </router-link>
+                    </div>
+                    <span class="h-px w-full bg-borde sm:h-7 sm:w-px" aria-hidden="true" />
+                    <div role="group" aria-label="Evaluación del grupo" class="flex flex-wrap items-center gap-2">
+                      <!-- Evaluación curricular y diagnóstico juntos: abre el detalle del grupo con el modal
+                           «Evaluación del grupo» -->
+                      <button type="button" class="accion gap-1.5" @click="irAEvaluacion(p)">
+                        <ClipboardDocumentCheckIcon class="h-4 w-4 shrink-0" aria-hidden="true" />
+                        Ver evaluación y diagnóstico
+                      </button>
+                      <button v-if="p.proyecto" type="button" @click="irAProyecto(p)"
+                              :aria-label="`Ficha del reto ajustado «${p.proyecto.titulo || ''}»`" title="Ficha del reto ajustado"
+                              class="inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-full border border-rol-fuerte/30 bg-white text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5 sm:w-auto sm:px-4">
+                        <EyeIcon class="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span class="hidden sm:inline" aria-hidden="true">Ficha del reto</span>
+                      </button>
+                    </div>
                   </div>
                 </section>
               </div>

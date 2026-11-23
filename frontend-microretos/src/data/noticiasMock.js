@@ -49,10 +49,10 @@ export const novedadesPlataforma = [
   {
     id: 'plataforma-guia-microproyectos',
     categoria: 'Recurso',
-    titulo: 'Nueva guía de microproyectos disponible',
+    titulo: 'Nueva guía de retos disponible',
     subtitulo: 'Biblioteca de recursos',
     imagen: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=600&q=80',
-    alt: 'Guía microproyectos',
+    alt: 'Guía de retos',
     alturaClase: 'h-32',
   },
 ]

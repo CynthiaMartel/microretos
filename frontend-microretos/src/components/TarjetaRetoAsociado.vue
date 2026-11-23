@@ -18,10 +18,13 @@ defineProps({
   ciclo:       { type: String, default: '' },
   sector:      { type: String, default: '' },
   interes:     { type: String, default: '' },
-  subtitulo:   { type: String, default: 'Reto de la biblioteca al que responde esta propuesta.' },
+  subtitulo:   { type: String, default: 'Reto de la biblioteca del que parte este ajuste.' },
   puedeCambiar: { type: Boolean, default: false },
+  puedeVerFicha: { type: Boolean, default: false },
+  // Título del reto que había antes de «Cambiar reto»: muestra «Restaurar reto anterior»
+  retoAnterior: { type: String, default: '' },
 })
-const emit = defineEmits(['cambiar'])
+const emit = defineEmits(['cambiar', 'ver-ficha', 'restaurar'])
 </script>
 
 <template>
@@ -36,12 +39,25 @@ const emit = defineEmits(['cambiar'])
           <p class="mt-0.5 text-sm text-texto-secundario">{{ subtitulo }}</p>
         </div>
       </div>
-      <button v-if="puedeCambiar" type="button" @click="emit('cambiar')"
-              class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-rol-fuerte/30 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        Cambiar reto
-      </button>
+      <div v-if="puedeVerFicha || puedeCambiar || retoAnterior" class="flex shrink-0 flex-wrap gap-2 self-start">
+        <button v-if="puedeVerFicha" type="button" @click="emit('ver-ficha')"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-borde bg-white px-4 text-sm font-semibold text-azul-noche transition-colors hover:bg-gray-50">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          Ver ficha
+        </button>
+        <button v-if="retoAnterior" type="button" @click="emit('restaurar')" :title="`Volver a «${retoAnterior}»`"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+          Restaurar reto anterior
+        </button>
+        <button v-if="puedeCambiar" type="button" @click="emit('cambiar')"
+                class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-rol-fuerte/30 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Cambiar reto
+        </button>
+      </div>
     </div>
+    <slot name="aviso" />
 
     <div class="flex flex-col gap-4 rounded-xl bg-rol/5 p-3 sm:flex-row sm:items-center sm:p-4">
       <MiniaturaReto :src="imagen" class="h-32 w-full sm:h-28 sm:w-40" />

@@ -94,9 +94,9 @@ class EmpresaContactoController extends Controller
             : "Estimado equipo de {$empresa->nombre_comercial},";
 
         $cuerpo  = "{$nombre}\n\n";
-        $cuerpo .= "Nos ponemos en contacto con vosotros desde DUALAB para compartir el microproyecto ";
+        $cuerpo .= "Nos ponemos en contacto con vosotros desde DUALAB para compartir el trabajo sobre vuestro reto ";
         $cuerpo .= "que nuestro alumnado ha desarrollado en colaboración con vuestra empresa.\n\n";
-        $cuerpo .= "📋 Proyecto: {$proyecto->titulo}\n\n";
+        $cuerpo .= "📋 Reto: {$proyecto->titulo}\n\n";
         $cuerpo .= "Os invitamos a revisar el trabajo del equipo y, si lo consideráis oportuno, ";
         $cuerpo .= "compartir vuestra valoración a través del siguiente enlace:\n\n";
         $cuerpo .= "🔗 {$url}\n\n";
@@ -105,7 +105,7 @@ class EmpresaContactoController extends Controller
             $cuerpo .= $data['mensaje'] . "\n\n";
         }
 
-        $cuerpo .= "El proceso es muy sencillo: accedéis al enlace, revisáis la propuesta del equipo ";
+        $cuerpo .= "El proceso es muy sencillo: accedéis al enlace, revisáis el reto que ha trabajado el equipo ";
         $cuerpo .= "y respondéis unas breves preguntas de valoración.\n\n";
         $cuerpo .= "Muchas gracias por vuestra colaboración.\n\n";
         $cuerpo .= "Un saludo,\nEquipo DUALAB · ViaÓptima";
@@ -113,7 +113,7 @@ class EmpresaContactoController extends Controller
         Mail::raw($cuerpo, function ($mail) use ($empresa, $data, $destinatario, $proyecto) {
             $mail->to($destinatario, $empresa->nombre_comercial)
                  ->replyTo($data['remitente'])
-                 ->subject("Propuesta para vuestra empresa: {$proyecto->titulo}");
+                 ->subject("Reto para vuestra empresa: {$proyecto->titulo}");
         });
 
         // Marcar el proyecto como "enviado a empresa por mail" para mostrar la etiqueta en la miniatura

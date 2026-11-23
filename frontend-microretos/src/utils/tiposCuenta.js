@@ -18,11 +18,11 @@ export const SECCIONES_TIPO_CUENTA = [
     titulo: 'DuaLab App',
     tipos: [
       { val: '2', label: 'Docente', icono: I.docente, activo: 'bg-centros/10 border-centros/40 text-centros',
-        texto: 'Entra en la app DuaLab de su centro: crea propuestas a partir de los retos, prepara los encuentros creativos con su alumnado y sigue el trabajo de los grupos. Necesita un centro educativo.' },
+        texto: 'Entra en la app DuaLab de su centro: trabaja los retos y los ajusta a su clase, prepara los encuentros creativos con su alumnado y sigue el trabajo de los grupos. Necesita un centro educativo.' },
       { val: '4', label: 'Admin docente', icono: I.admin, activo: 'bg-administraciones/10 border-administraciones/40 text-administraciones',
         texto: 'Lo mismo que un docente y, además, gestiona las cuentas de los docentes de su centro. Necesita un centro educativo.' },
       { val: '3', label: 'Empresa', icono: I.empresa, activo: 'bg-empresas/10 border-empresas/40 text-empresas-dark',
-        texto: 'Persona de una empresa colaboradora: consulta los retos y las propuestas de su empresa y las valida. En general solo puede leer. Necesita una empresa asignada.' },
+        texto: 'Persona de una empresa colaboradora: consulta los retos de su empresa y, al final, valora el reto con las soluciones de los grupos. En general solo puede leer. Necesita una empresa asignada.' },
     ],
   },
   {

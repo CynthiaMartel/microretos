@@ -1,4 +1,5 @@
 <script setup>
+import IconoFase from '../components/IconoFase.vue'
 import { ref, computed, onMounted } from 'vue';
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter } from 'vue-router';
@@ -6,7 +7,6 @@ import api from '../api.js';
 import { useMicroproyectoPdfExport } from '../composables/useMicroproyectoPdfExport.js';
 import { useAuthStore } from '../stores/auth.js';
 import ValidarDocenteModal from '../components/ValidarDocenteModal.vue';
-import ModalPropuestaValidacion from '../components/ModalPropuestaValidacion.vue';
 import MicroretoModal from '../components/MicroretoModal.vue';
 import EquiposSeguimiento from '../components/EquiposSeguimiento.vue';
 import { duracionPorFase, FASES_PROYECTO, COLOR_MAP_FASES } from '../config/fasesProyecto.js';
@@ -47,7 +47,6 @@ const proyecto = ref(null);
 const cargando = ref(true);
 const error    = ref(false);
 const isLoaded = ref(false);
-const urlCopiada = ref(false);
 
 // ── Desplegables de secciones largas ────────────────────────────────────────
 const raCeAbierto = ref(false);
@@ -59,41 +58,26 @@ const videos             = ref([]);
 const documentos         = ref([]);
 const modalRecurso       = ref(null);
 const modalBorradorAviso  = ref(false);
-const modalPropuestaAviso = ref(false);
-const vistaModalPropuesta = ref('principal'); // 'principal' | 'envio'
 
 // ── Validación docente ─────────────────────────────────────────────────────
 const modalValidarDocente  = ref(false);
 const validandoDocente     = ref(false);
+const errorValidarDocente  = ref('');
 
 async function validarComoDocente() {
   if (validandoDocente.value) return;
   validandoDocente.value = true;
+  errorValidarDocente.value = '';
   try {
     await api.post(`/startup/proyectos/${proyecto.value.uuid}/validar-docente`, { decision: 'validar' });
     proyecto.value.docente_validado = true;
     proyecto.value.estado = 'validado';
     modalValidarDocente.value = false;
-    modalPropuestaAviso.value = false;
-  } catch { /* no crítico */ } finally {
+  } catch (e) {
+    errorValidarDocente.value = e.response?.data?.error || 'No se pudo validar el reto ajustado. Inténtalo de nuevo.';
+  } finally {
     validandoDocente.value = false;
   }
-}
-
-// ── Modal «Proyecto en propuesta» (ModalPropuestaValidacion) ────────────────
-// Las acciones lanzan el error para que el modal lo muestre.
-function abrirModalPropuesta(vista = 'principal') {
-  vistaModalPropuesta.value = vista;
-  modalPropuestaAviso.value = true;
-}
-async function marcarEnviadoEmpresa() {
-  await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { enviado_a_empresa_mail: true });
-  proyecto.value.enviado_a_empresa_mail = true;
-}
-async function validarDocenteDesdeModal() {
-  await api.post(`/startup/proyectos/${proyecto.value.uuid}/validar-docente`, { decision: 'validar' });
-  proyecto.value.docente_validado = true;
-  proyecto.value.estado = 'validado';
 }
 
 function abrirRecurso(item) {
@@ -116,7 +100,6 @@ onMounted(async () => {
     videos.value         = recRes.data.videos    || [];
     documentos.value     = recRes.data.documentos || [];
     if (proyRes.data.estado === 'en_edicion') modalBorradorAviso.value = true;
-    if (proyRes.data.estado === 'propuesta') abrirModalPropuesta();
   } catch {
     error.value = true;
   } finally {
@@ -133,13 +116,13 @@ function getEstadoBadge(p) {
   if (p.estado === 'en_edicion')
     return { label: 'En edición', cls: 'bg-amber-50 border-amber-200 text-amber-700', dot: 'bg-amber-400' };
   if (p.estado === 'archivado')
-    return { label: 'Archivada', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
+    return { label: 'Archivado', cls: 'bg-gray-100 border-gray-200 text-gray-400', dot: 'bg-gray-400' };
   if (p.estado === 'completado')
-    return { label: 'Completada', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
-  // La validan el docente o la empresa; quién lo hizo se ve en el bloque de validación
+    return { label: 'Completado', cls: 'bg-sky-50 border-sky-300 text-sky-700', dot: 'bg-sky-500' };
+  // La valida el docente (las validadas antes por la empresa lo indican en el bloque de validación)
   if (p.estado === 'validado')
-    return { label: 'Validada', cls: 'bg-centros/10 border-centros/30 text-centros', dot: 'bg-centros' };
-  return { label: 'Pendiente de validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
+    return { label: 'Validado', cls: 'bg-centros/10 border-centros/30 text-centros', dot: 'bg-centros' };
+  return { label: 'Sin validar', cls: 'bg-violet-50 border-violet-300 text-violet-700', dot: 'bg-violet-400' };
 }
 
 // Mantener compat con modal-borrador (que comprueba estado directo)
@@ -150,18 +133,7 @@ function getEstadoKey(p) {
   return (p.estado === 'validado' || p.estado === 'completado') ? 'proyecto' : 'propuesta';
 }
 
-const landingUrl = computed(() => {
-  if (!proyecto.value?.token_empresa) return '';
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const base = isLocal ? window.location.origin : 'https://dualab.es';
-  return `${base}/startup/landing/${proyecto.value.token_empresa}`;
-});
 
-async function copiarUrl() {
-  await navigator.clipboard.writeText(landingUrl.value);
-  urlCopiada.value = true;
-  setTimeout(() => { urlCopiada.value = false; }, 2000);
-}
 
 const { descargarPDF } = useMicroproyectoPdfExport();
 
@@ -183,13 +155,13 @@ const raCeBlocks = computed(() => {
 })
 
 async function archivar() {
-  if (!confirm('¿Archivar esta propuesta?')) return;
+  if (!confirm(esPlan.value ? '¿Archivar este plan?' : '¿Archivar este reto ajustado?')) return;
   await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'archivado' });
   proyecto.value.estado = 'archivado';
 }
 
 async function completar() {
-  if (!confirm('¿Marcar esta propuesta como completada?')) return;
+  if (!confirm(esPlan.value ? '¿Marcar este plan como completado?' : '¿Marcar este reto ajustado como completado?')) return;
   await api.put(`/startup/proyectos/${proyecto.value.uuid}`, { estado: 'completado' });
   proyecto.value.estado = 'completado';
 }
@@ -207,7 +179,7 @@ async function completar() {
     <div class="relative z-10 mx-auto mb-6 max-w-[90rem]">
       <!-- Volver con historial y no push a la lista: la ficha se abre desde varios sitios
            (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) -->
-      <CabeceraSeccion :titulo="esPlan ? 'Ficha del' : 'Ficha de la'" :destacado="esPlan ? 'plan' : 'propuesta'" :color="theme.text"
+      <CabeceraSeccion titulo="Ficha del" :destacado="esPlan ? 'plan' : 'reto ajustado'" :color="theme.text"
                        :volver="esPlan ? { name: 'planes' } : { name: 'startup-day' }"
                        subtitulo="Consulta el detalle completo, el estado de validación y el progreso del grupo." />
     </div>
@@ -226,7 +198,7 @@ async function completar() {
 
       <!-- Error -->
       <div v-else-if="error" class="text-center py-32">
-        <p class="text-gray-400 text-sm mb-4">No se pudo cargar el proyecto.</p>
+        <p class="text-gray-400 text-sm mb-4">No se pudo cargar la ficha.</p>
         <button @click="router.push({ name: 'startup-day' })"
                 class="text-sm font-bold hover:underline" :class="theme.text">← Volver a la lista</button>
       </div>
@@ -239,21 +211,12 @@ async function completar() {
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                  :class="[theme.bg5, theme.border20]">
               <span class="w-2 h-2 rounded-full" :class="theme.bg" />
-              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">Propuesta</span>
+              <span class="text-[10px] font-black uppercase tracking-widest" :class="theme.text">{{ esPlan ? 'Plan de proyecto' : 'Reto ajustado' }}</span>
             </div>
             <!-- Badge estado principal -->
             <span :class="['inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0', getEstadoBadge(proyecto).cls]">
               <span :class="['w-1.5 h-1.5 rounded-full shrink-0', getEstadoBadge(proyecto).dot]" />
               {{ getEstadoBadge(proyecto).label }}
-            </span>
-            <!-- Alerta "empresa no valida aún" -->
-            <span v-if="proyecto.empresa_no_valida_aun && !proyecto.empresa_validado"
-                  class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest
-                         px-2.5 py-1 rounded-full border bg-red-50 border-red-300 text-red-700 shrink-0">
-              <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Empresa contestó: No validar aún
             </span>
           </div>
 
@@ -300,7 +263,7 @@ async function completar() {
                      uppercase tracking-widest shadow-sm
                      hover:text-white transition-all flex items-center gap-1.5"
               :class="[theme.bg5, theme.border, theme.text, theme.bgHover]"
-              title="Ver la ficha del reto original del que deriva esta propuesta"
+              :title="esPlan ? 'Ver la ficha del reto original del que deriva este plan' : 'Ver la ficha del reto original del que deriva este reto ajustado'"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -309,7 +272,7 @@ async function completar() {
               Ver ficha reto original
             </button>
             <button
-              v-if="!authStore.isEmpresa && ['propuesta','validado'].includes(proyecto.estado) && !proyecto.docente_validado"
+              v-if="!authStore.isEmpresa && ['en_edicion','propuesta','validado'].includes(proyecto.estado) && !proyecto.docente_validado"
               @click="modalValidarDocente = true"
               class="px-4 py-2 bg-centros/10 border border-centros/25 rounded-full text-xs font-black
                      uppercase tracking-widest text-centros shadow-sm
@@ -338,7 +301,7 @@ async function completar() {
               class="px-4 py-2 bg-white border border-empresas/30 rounded-full text-xs font-black
                      uppercase tracking-widest text-empresas-dark shadow-sm
                      hover:bg-empresas/10 transition-all flex items-center gap-1.5"
-              title="Ampliar esta propuesta en un plan de proyecto para las prácticas en la empresa"
+              title="Ampliar este reto ajustado en un plan de proyecto para las prácticas en la empresa"
             >
               Ampliar en un plan
             </button>
@@ -348,7 +311,7 @@ async function completar() {
               class="px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-blue-700 shadow-sm
                      hover:bg-blue-100 transition-all flex items-center gap-1.5"
-              title="Llevar esta propuesta al aula en un encuentro"
+              title="Llevar este reto ajustado al aula en un encuentro"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -372,12 +335,12 @@ async function completar() {
               class="px-4 py-2 bg-sky-50 border border-sky-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-sky-700 shadow-sm
                      hover:bg-sky-100 transition-all flex items-center gap-1.5"
-              title="Los grupos han terminado de trabajar esta propuesta"
+              :title="esPlan ? 'El alumnado ha terminado de trabajar este plan' : 'Los grupos han terminado de trabajar este reto ajustado'"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              Marcar completada
+              Marcar completado
             </button>
             <button v-if="!['archivado', 'validado', 'completado'].includes(proyecto.estado) && !authStore.isEmpresa"
                     @click="archivar"
@@ -462,26 +425,11 @@ async function completar() {
 
           </div><!-- /meta-band -->
 
-        <!-- ── Panel de estado de envío / respuesta empresa (si propuesta o validado) ── -->
-        <div v-if="proyecto.estado === 'propuesta' || proyecto.estado === 'validado'" class="mb-6 space-y-3">
+        <!-- ── Validación (docente). La empresa ya no valida al inicio: se conserva el aviso de
+             las que validó antes con el enlace (2026-11-23). ── -->
+        <div v-if="['en_edicion', 'propuesta', 'validado'].includes(proyecto.estado)" class="mb-6 space-y-3">
 
-          <!-- Bloque enlace -->
-          <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Enlace de validación empresa</p>
-            <div class="flex items-center gap-2">
-              <p class="flex-1 text-xs text-gray-400 truncate font-mono bg-gray-50 border border-gray-100
-                         rounded-xl px-3 py-2 min-w-0">{{ landingUrl }}</p>
-              <button @click="copiarUrl"
-                      class="shrink-0 px-3 py-2 rounded-full text-xs font-bold border transition-all"
-                      :class="urlCopiada
-                                  ? [theme.bg5, theme.text, theme.border20]
-                                  : ['bg-white text-gray-500 border-gray-200', paletteExtra[theme.key].hoverBorderText]">
-                {{ urlCopiada ? '¡Copiado!' : 'Copiar' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Estado: Validado por empresa ✅ -->
+          <!-- Validada antes por la empresa (flujo anterior) -->
           <div v-if="proyecto.empresa_validado"
                class="flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-sm
                       bg-empresas/10 border-empresas/30">
@@ -492,83 +440,12 @@ async function completar() {
               </svg>
             </div>
             <div>
-              <p class="text-sm font-black text-empresas-dark">La empresa ha validado la propuesta</p>
+              <p class="text-sm font-black text-empresas-dark">La empresa validó el reto ajustado</p>
               <p class="text-[10px] mt-0.5 text-empresas-dark/70">
                 {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }}
                 respondió con validación positiva.
               </p>
             </div>
-          </div>
-
-          <!-- Estado: Empresa contestó "No validar aún" 🔴 -->
-          <div v-else-if="proyecto.empresa_no_valida_aun"
-               class="flex items-start gap-3 px-4 py-3.5 rounded-2xl
-                      bg-red-50 border border-red-300 shadow-sm">
-            <div class="w-9 h-9 rounded-xl bg-red-100 border border-red-200
-                        flex items-center justify-center shrink-0 mt-0.5">
-              <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-black text-red-700">La empresa propone cambios</p>
-              <p class="text-[10px] text-red-500 mt-0.5">
-                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre }} revisó la propuesta
-                y respondió «No validar aún». Revisa sus comentarios o contacta con la empresa.
-              </p>
-            </div>
-          </div>
-
-          <!-- Estado: Propuesta SÍ enviada por mail, pendiente de respuesta 🔵 -->
-          <div v-else-if="proyecto.enviado_a_empresa_mail"
-               class="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-2xl
-                      bg-blue-50 border border-blue-200 shadow-sm">
-            <div class="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200
-                        flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
-              <p class="text-sm font-black text-blue-700">Enlace enviado a la empresa · Sin respuesta todavía</p>
-              <p class="text-[10px] text-blue-500 mt-0.5 break-words">
-                Esperando que {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} acceda y responda.
-              </p>
-            </div>
-            <button v-if="!authStore.isEmpresa"
-                    @click="abrirModalPropuesta('envio')"
-                    class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
-                           bg-white text-blue-600 border-blue-200 hover:bg-blue-50 transition-all">
-              Reenviar
-            </button>
-          </div>
-
-          <!-- Estado: Propuesta NO enviada por mail aún 🟣 -->
-          <div v-else
-               class="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-2xl
-                      bg-violet-50 border border-violet-300 shadow-sm">
-            <div class="w-9 h-9 rounded-xl bg-white border border-violet-200
-                        flex items-center justify-center shrink-0">
-              <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
-              <p class="text-sm font-black text-violet-700">Pendiente de enviar a la empresa</p>
-              <p class="text-[10px] text-gray-400 mt-0.5">
-                Puedes enviarle el enlace a
-                {{ proyecto.empresa_nombre || proyecto.datos_empresa?.nombre || 'la empresa' }} para que la valide, o validarla tú directamente.
-              </p>
-            </div>
-            <button v-if="!authStore.isEmpresa"
-                    @click="abrirModalPropuesta('envio')"
-                    class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
-                           bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 transition-all">
-              Enviar
-            </button>
           </div>
 
           <!-- Validación docente ✅ -->
@@ -582,8 +459,8 @@ async function completar() {
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-black text-centros">Validada por el docente</p>
-              <p class="text-[10px] text-centros/70 mt-0.5">Lista para llevarla al aula en un encuentro.</p>
+              <p class="text-sm font-black text-centros">Validado por el docente</p>
+              <p class="text-[10px] text-centros/70 mt-0.5">Listo para llevarlo al aula en un encuentro.</p>
             </div>
           </div>
           <!-- Sin validación docente aún -->
@@ -597,8 +474,8 @@ async function completar() {
               </svg>
             </div>
             <div class="flex-1 min-w-0 basis-[calc(100%-3rem)] sm:basis-0">
-              <p class="text-sm font-black text-gray-500">Pendiente de validación docente</p>
-              <p class="text-[10px] text-gray-400 mt-0.5">Puedes validarla tú directamente, sin esperar a la empresa.</p>
+              <p class="text-sm font-black text-gray-500">Sin validar</p>
+              <p class="text-[10px] text-gray-400 mt-0.5">Valídalo cuando hayas revisado módulos, RA/CE y objetivos y quieras trabajarlo con tu alumnado.</p>
             </div>
             <button @click="modalValidarDocente = true"
                     class="shrink-0 ml-12 sm:ml-0 inline-flex min-h-9 items-center px-3 py-2 rounded-full text-xs font-bold border
@@ -753,7 +630,7 @@ async function completar() {
 
         <!-- ═══ Propuesta ═══ -->
         <p v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
-           class="group-header">Propuesta</p>
+           class="group-header">Metodología y fases</p>
         <div v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
              class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Fases — duración siempre visible, no desplegable -->
@@ -794,7 +671,7 @@ async function completar() {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-2">
               <div v-for="f in FASES_PROYECTO" :key="f.num" class="rounded-2xl border p-3 min-w-0" :class="COLOR_MAP_FASES[f.color]">
                 <div class="flex items-center gap-1.5 mb-1">
-                  <span class="text-base leading-none">{{ f.icono }}</span>
+                  <IconoFase :num="f.num" class="h-4 w-4 shrink-0" />
                   <p class="font-black text-xs text-[#1F2937] min-w-0 break-words">{{ f.label }}</p>
                 </div>
                 <p class="text-[9px] font-bold uppercase tracking-wide opacity-70">
@@ -990,7 +867,7 @@ async function completar() {
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
-              Decisión: Validó la propuesta
+              Decisión: Validó el reto ajustado
             </span>
             <span v-else-if="proyecto.empresa_no_valida_aun"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border
@@ -1039,7 +916,7 @@ async function completar() {
                     {{ key === 'reto_comprensible'   ? '¿El reto es comprensible y realista?'
                      : key === 'objetivos_alineados' ? '¿Los objetivos se alinean con la empresa?'
                      : key === 'equipo_adecuado'     ? '¿El perfil del grupo es adecuado?'
-                     : key === 'viabilidad'           ? '¿La propuesta es viable en la empresa?'
+                     : key === 'viabilidad'           ? '¿El reto ajustado es viable en la empresa?'
                      : key.replace(/_/g, ' ') }}
                   </p>
                   <p class="text-base font-black"
@@ -1163,22 +1040,6 @@ async function completar() {
     </div>
   </Transition>
 
-  <!-- ══ MODAL PROYECTO EN PROPUESTA (vía empresa / vía docente) ══════════════ -->
-  <ModalPropuestaValidacion
-    v-if="proyecto"
-    :abierto="modalPropuestaAviso"
-    :vista-inicial="vistaModalPropuesta"
-    :enlace="landingUrl"
-    :empresa="proyecto.empresa_id ? proyecto.datos_empresa : null"
-    :enviado="!!proyecto.enviado_a_empresa_mail"
-    :docente-validado="!!proyecto.docente_validado"
-    :mostrar-editar="!authStore.isEmpresa"
-    :marcar-enviado="marcarEnviadoEmpresa"
-    :validar-docente="validarDocenteDesdeModal"
-    @cerrar="modalPropuestaAviso = false"
-    @editar="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
-    @directorio="modalPropuestaAviso = false; router.push({ name: 'empresas' })" />
-
   <!-- ══ MODAL FICHA RETO ORIGINAL ═══════════════════════════════════════════ -->
   <MicroretoModal :microreto-id="microretoModalId" @close="microretoModalId = null" />
 
@@ -1186,6 +1047,7 @@ async function completar() {
   <ValidarDocenteModal
     :visible="modalValidarDocente"
     :loading="validandoDocente"
+    :error="errorValidarDocente"
     @confirm="validarComoDocente"
     @cancel="modalValidarDocente = false"
   />
@@ -1214,13 +1076,12 @@ async function completar() {
         </div>
 
         <h3 class="text-xl font-black text-azul-noche text-center mb-4">
-          Propuesta en edición
+          {{ esPlan ? 'Plan en edición' : 'Reto ajustado en edición' }}
         </h3>
 
         <p class="text-sm text-gray-600 leading-relaxed text-center">
-          Esta propuesta está marcada como <strong>En edición</strong> porque se guardó así para seguir construyéndola.
-          Cuando esté lista, entra en <strong>Editar</strong> y en el desplegable
-          <strong>Estado de la propuesta</strong> selecciona <strong>Pendiente de validar</strong> para validarla.
+          {{ esPlan ? 'Este plan' : 'Este reto ajustado' }} está marcado como <strong>En edición</strong> porque se guardó así para seguir construyéndolo.
+          Cuando lo hayas revisado, pulsa <strong>Validar</strong> aquí o en el último paso del editor.
         </p>
 
         <div class="flex gap-3 mt-7">

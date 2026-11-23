@@ -6,6 +6,8 @@
      El padre guarda qué está desplegado (para poder abrir un encuentro o un grupo al llegar desde
      un enlace) y muestra el aviso al copiar un código. -->
 <script setup>
+import IconoFase from './IconoFase.vue'
+import { CheckIcon, ChartBarIcon, InformationCircleIcon } from '@heroicons/vue/24/outline'
 import MarcaDestacado from './MarcaDestacado.vue'
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -71,8 +73,9 @@ const titulo = computed(() => e.value.proyecto_titulo || props.equipos[0]?.proye
   || (e.value.grupo && `Clase ${e.value.grupo}`) || 'Sin nombre')
 
 const irADetalle     = (equipo = null) => router.push({ name: 'mis-grupos-detalle', params: { id: e.value.id }, query: equipo ? { equipo: equipo.id } : {} })
-const irADiagnostico = (equipo) => router.push({ name: 'mis-grupos-detalle', params: { id: e.value.id }, query: { equipo: equipo.id, ver: 'diagnostico' } })
-const primerDiagnostico = computed(() => props.equipos.find(x => x.diagnostico_final) || null)
+// Evaluación curricular y diagnóstico van juntos: el detalle del grupo abre el modal «Evaluación del grupo»
+const irAEvaluacion = (equipo) => router.push({ name: 'mis-grupos-detalle', params: { id: e.value.id }, query: { equipo: equipo.id, ver: 'evaluacion' } })
+const irABibliotecaEvaluacion = () => router.push({ name: 'biblioteca-diagnosticos' })
 
 // ── Menú «⋯» ─────────────────────────────────────────────────────────────────
 // Cierre al pulsar fuera o con Escape (un overlay fixed quedaría por debajo del menú)
@@ -112,7 +115,7 @@ function accionMenu(fn) { menu.value = false; fn() }
         <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
           <span v-if="resumen.completados"
                 class="inline-flex items-center gap-1 rounded-full bg-empresas/10 px-2 py-0.5 text-xs font-semibold text-empresas-dark">
-            ✓ {{ resumen.completados }} completado{{ resumen.completados === 1 ? '' : 's' }}
+            <CheckIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{{ resumen.completados }} completado{{ resumen.completados === 1 ? '' : 's' }}
           </span>
           <span v-if="resumen.enCurso"
                 class="inline-flex items-center gap-1 rounded-full bg-centros/10 px-2 py-0.5 text-xs font-semibold text-centros">
@@ -125,7 +128,7 @@ function accionMenu(fn) { menu.value = false; fn() }
           </span>
           <span v-if="resumen.diagnosticos"
                 class="inline-flex items-center gap-1 rounded-full border border-empresas/40 bg-white px-2 py-0.5 text-xs font-semibold text-empresas-dark">
-            📊 {{ resumen.diagnosticos }} diagnóstico{{ resumen.diagnosticos === 1 ? '' : 's' }} disponible{{ resumen.diagnosticos === 1 ? '' : 's' }}
+            <ChartBarIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{{ resumen.diagnosticos }} diagnóstico{{ resumen.diagnosticos === 1 ? '' : 's' }} disponible{{ resumen.diagnosticos === 1 ? '' : 's' }}
           </span>
         </div>
         <!-- Encuentro de un compañero que me ha dado permiso como colaborador -->
@@ -166,8 +169,8 @@ function accionMenu(fn) { menu.value = false; fn() }
                     class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Más información del encuentro</button>
             <button v-if="equipos.length > 1" type="button" role="menuitem" @click="accionMenu(() => emit('desplegar-todo'))"
                     class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Desplegar el resumen de todos</button>
-            <button v-if="primerDiagnostico" type="button" role="menuitem" @click="accionMenu(() => irADiagnostico(primerDiagnostico))"
-                    class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ver diagnósticos ({{ resumen.diagnosticos }})</button>
+            <button v-if="equipos.length" type="button" role="menuitem" @click="accionMenu(irABibliotecaEvaluacion)"
+                    class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Evaluación curricular y diagnósticos</button>
             <template v-if="e.codigo_clase || e.codigo_ia">
               <div class="my-1 border-t border-borde" role="separator" />
               <button v-if="e.codigo_clase" type="button" role="menuitem" @click="accionMenu(() => emit('copiar', e.codigo_clase))"
@@ -209,9 +212,9 @@ function accionMenu(fn) { menu.value = false; fn() }
                 {{ estadoBadge(equipo).label }}
               </span>
               <span v-if="equipo.fases_completas === 5"
-                    :class="['rounded-full px-2 py-0.5 text-xs font-semibold',
+                    :class="['inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
                              equipo.diagnostico_final ? 'border border-empresas/40 bg-white text-empresas-dark' : 'bg-amber-100 text-amber-700']">
-                {{ equipo.diagnostico_final ? '📊 Diagnóstico listo' : 'Diagnóstico pendiente' }}
+                <ChartBarIcon v-if="equipo.diagnostico_final" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{{ equipo.diagnostico_final ? 'Diagnóstico listo' : 'Diagnóstico pendiente' }}
               </span>
             </div>
             <p v-if="equipo.proyecto" class="truncate text-[11px] font-semibold text-texto-secundario">
@@ -240,28 +243,28 @@ function accionMenu(fn) { menu.value = false; fn() }
           <div v-if="equipo.fases_completas === 5"
                class="flex flex-col gap-3 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 sm:flex-row sm:items-center">
             <div class="flex min-w-0 flex-1 items-start gap-3">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-base text-white">📊</span>
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white" aria-hidden="true"><ChartBarIcon class="h-5 w-5" /></span>
               <div class="min-w-0">
-                <p class="text-sm font-black text-emerald-800">Aquí puedes ver el diagnóstico del grupo</p>
+                <p class="text-sm font-black text-emerald-800">Evaluación del grupo</p>
                 <p class="text-[11px] leading-snug text-emerald-700/80">
                   {{ equipo.diagnostico_final
-                      ? 'La IA ya lo ha redactado a partir de lo trabajado. Puedes revisarlo, editarlo o descargarlo en PDF.'
-                      : 'El grupo ha completado las 5 fases. Genera su diagnóstico final con IA a partir de lo trabajado.' }}
+                      ? 'Su evaluación curricular y su diagnóstico final, juntos. Puedes revisarlos, editarlos o descargar el diagnóstico en PDF.'
+                      : 'El grupo ha completado las 5 fases: evalúa sus RA y CE y genera su diagnóstico final con IA.' }}
                 </p>
               </div>
             </div>
-            <button type="button" @click="irADiagnostico(equipo)"
+            <button type="button" @click="irAEvaluacion(equipo)"
                     :class="['inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors',
                              equipo.diagnostico_final
                                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 hover:bg-emerald-600'
                                : 'border border-empresas/40 bg-white text-empresas-dark hover:bg-emerald-50']">
-              {{ equipo.diagnostico_final ? 'Ver diagnóstico' : 'Ir a generar diagnóstico' }} →
+              {{ equipo.diagnostico_final ? 'Ver evaluación y diagnóstico' : 'Evaluar' }} →
             </button>
           </div>
 
           <!-- Deja claro que esto es solo un resumen de estado, no el contenido de las fases -->
           <div class="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
-            <span class="shrink-0 text-sm leading-none">ℹ️</span>
+            <InformationCircleIcon class="h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
             <p class="text-[11px] leading-snug text-blue-700">
               <span class="font-black">Resumen.</span> Haz clic en "Ver detalle del grupo" para ver su trabajo fase a fase.
             </p>
@@ -271,7 +274,7 @@ function accionMenu(fn) { menu.value = false; fn() }
           <div class="flex flex-wrap gap-1.5">
             <div v-for="f in FASES_PROYECTO" :key="f.num" :title="f.label"
                  :class="['flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold', estadoFase(equipo, f.num).cls]">
-              <span class="text-xs leading-none">{{ f.icono }}</span>
+              <IconoFase :num="f.num" class="h-3.5 w-3.5 shrink-0" />
               <span class="uppercase tracking-wider">F{{ f.num }}</span>
               <span class="font-bold normal-case">· {{ estadoFase(equipo, f.num).label }}</span>
             </div>

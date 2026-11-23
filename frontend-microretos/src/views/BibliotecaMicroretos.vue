@@ -498,7 +498,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche" @keydown.esc="menuReto = null">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion plano cinta halos antetitulo="Retos y propuestas" titulo="Explorador de" destacado="Retos" color="text-centros"
+      <CabeceraSeccion plano cinta halos antetitulo="Retos" titulo="Explorador de" destacado="Retos" color="text-centros"
                        :volver="authStore.isEmpresa ? null : '/seccion/retos-proyectos'"
                        subtitulo="Encuentra, filtra y reutiliza los desafíos generados por la Inteligencia Artificial para tus alumnos.">
         <div class="flex flex-wrap items-start gap-2">
@@ -806,6 +806,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   </button>
                   <div v-if="menuReto === reto.id" role="menu"
                        class="absolute bottom-full right-0 z-30 mb-1 w-60 rounded-xl border border-borde bg-white py-1 shadow-lg">
+                    <!-- Abre el ajuste del reto con este reto ya elegido -->
+                    <button v-if="authStore.isAuthenticated && !authStore.isEmpresa" type="button" role="menuitem"
+                            @click="menuReto = null; router.push({ name: 'startup-day-crear', query: { reto: reto.uuid || reto.id } })"
+                            class="block w-full px-4 py-2 text-left text-sm font-semibold text-rol-fuerte hover:bg-gray-50">Trabajar este reto</button>
                     <button type="button" role="menuitem" @click="menuReto = null; descargarPDF(reto)"
                             class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Descargar PDF</button>
                     <template v-if="!authStore.isEmpresa">

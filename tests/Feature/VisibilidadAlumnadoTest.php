@@ -234,4 +234,22 @@ class VisibilidadAlumnadoTest extends TestCase
         $this->getJson("/api/admin/usuarios/{$this->pedro->id}/modulos")->assertForbidden();
         $this->putJson("/api/admin/usuarios/{$this->pedro->id}/modulos", ['modulo_ids' => [$this->m1]])->assertForbidden();
     }
+
+    public function test_retos_ajustados_marcan_cuales_son_del_usuario(): void
+    {
+        $mio = fn () => collect($this->getJson('/api/startup/proyectos')->assertOk()->json())
+            ->firstWhere('id', $this->encuentro->microproyecto_id)['es_mio'] ?? null;
+
+        Sanctum::actingAs($this->ana);
+        $this->assertTrue($mio());
+
+        $this->invitar($this->luis, false);
+        Sanctum::actingAs($this->luis);
+        $this->assertFalse($mio());
+        $deAna = collect($this->getJson('/api/startup/proyectos')->json())->firstWhere('id', $this->encuentro->microproyecto_id);
+        $this->assertSame('Ana', $deAna['docente_nombre']);
+
+        Sanctum::actingAs($this->adminA);
+        $this->assertFalse($mio());
+    }
 }

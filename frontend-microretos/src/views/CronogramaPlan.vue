@@ -105,7 +105,7 @@ async function guardar() {
       <p v-if="cargando" class="py-10 text-center text-sm text-texto-secundario" role="status">Cargando…</p>
       <template v-else-if="plan">
         <p v-if="!planValidado" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="alert">
-          Valida el plan (tú o la empresa) antes de crear su cronograma.
+          Valida el plan antes de crear su cronograma.
         </p>
 
         <!-- Fechas -->
@@ -137,7 +137,7 @@ async function guardar() {
           <p class="mt-0.5 text-sm text-texto-secundario">Elige por alias, de uno o varios encuentros. La ★ marca al alumnado destacado por DuaLab.</p>
           <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <label for="cr-buscar" class="sr-only">Buscar encuentro</label>
-            <input id="cr-buscar" v-model="buscar" type="search" placeholder="Buscar por propuesta o clase" class="field-input min-w-0 sm:w-72" />
+            <input id="cr-buscar" v-model="buscar" type="search" placeholder="Buscar por reto ajustado o clase" class="field-input min-w-0 sm:w-72" />
             <button type="button" @click="soloDestacados = !soloDestacados" :aria-pressed="soloDestacados"
                     class="inline-flex min-h-9 items-center self-start rounded-full border px-4 text-sm font-semibold transition-colors"
                     :class="soloDestacados ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-borde bg-white hover:bg-gray-50'">
@@ -150,7 +150,7 @@ async function guardar() {
           </p>
           <ul v-else class="mt-3 max-h-96 space-y-3 overflow-y-auto">
             <li v-for="e in visibles" :key="e.id" class="rounded-xl border border-borde p-3">
-              <p class="break-words text-sm font-bold">{{ e.proyecto_titulo || 'Sin propuesta' }}</p>
+              <p class="break-words text-sm font-bold">{{ e.proyecto_titulo || 'Sin reto ajustado' }}</p>
               <p class="text-xs text-texto-secundario">{{ e.curso }} · Clase {{ e.grupo }} · {{ e.fecha }}</p>
               <ul class="mt-2 flex flex-wrap gap-1.5">
                 <li v-for="m in e.miembros" :key="m.id" class="min-w-0 max-w-full">

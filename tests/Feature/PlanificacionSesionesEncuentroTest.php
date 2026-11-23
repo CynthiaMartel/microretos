@@ -82,6 +82,24 @@ class PlanificacionSesionesEncuentroTest extends TestCase
         $res->assertJsonPath('fecha_fin', '2026-12-07');
     }
 
+    public function test_la_fecha_fin_elegida_se_guarda_si_no_es_anterior_a_la_sugerida(): void
+    {
+        // Sugerida: 3 sesiones desde el 2 de noviembre → 23 de noviembre
+        $this->crear(['fecha_fin' => '2026-12-14'])->assertCreated()->assertJsonPath('fecha_fin', '2026-12-14');
+
+        $this->crear(['fecha_fin' => '2026-11-16'])
+            ->assertUnprocessable()->assertJsonValidationErrors('fecha_fin');
+    }
+
+    public function test_el_ciclo_del_encuentro_es_el_del_reto_ajustado(): void
+    {
+        $ciclo = DB::table('ciclos_formativos')->insertGetId(['nombre' => 'CFGM Gestión Administrativa', 'siglasGrado' => 'GM', 'familia_id' => null]);
+        DB::table('microproyectos')->where('id', $this->propuestaId)->update(['ciclo_id' => $ciclo]);
+
+        $this->crear(['ciclo_formativo' => 'Otro ciclo cualquiera'])
+            ->assertCreated()->assertJsonPath('ciclo_formativo', 'CFGM Gestión Administrativa');
+    }
+
     public function test_rechaza_sesiones_sin_fase_o_con_fase_fuera_de_rango(): void
     {
         $this->crear(['planificacion_sesiones' => [['fases' => []]]])

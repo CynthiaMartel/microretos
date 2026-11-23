@@ -69,10 +69,16 @@ class EncuentroController extends Controller
             $validated['centro_educativo_id'] = $user->centro_educativo_id;
         }
 
+        $microproyecto = Microproyecto::with('cicloFormativo:id,nombre')->find($validated['microproyecto_id']);
+
         // Sin planificación propia, el encuentro parte del calendario que traía la propuesta
-        if (empty($validated['planificacion_sesiones']) && !empty($validated['microproyecto_id'])) {
-            $validated['planificacion_sesiones'] = Microproyecto::find($validated['microproyecto_id'])
-                ?->diseno_microproyecto['clases'] ?? null;
+        if (empty($validated['planificacion_sesiones']) && $microproyecto) {
+            $validated['planificacion_sesiones'] = $microproyecto->diseno_microproyecto['clases'] ?? null;
+        }
+
+        // El ciclo es el del reto ajustado (de ahí salen módulos y RA/CE): no lo decide el cliente
+        if ($microproyecto?->cicloFormativo) {
+            $validated['ciclo_formativo'] = $microproyecto->cicloFormativo->nombre;
         }
 
         $encuentro = new Encuentro($validated);
@@ -84,7 +90,10 @@ class EncuentroController extends Controller
             $encuentro->solicitud_reto_id = Microproyecto::with('microreto:id,solicitud_reto_id')
                 ->find($validated['microproyecto_id'])?->microreto?->solicitud_reto_id;
         }
-        $encuentro->fecha_fin = $encuentro->fechaFinSugerida(Carbon::parse($validated['fecha']))?->toDateString();
+        // La elegida por el docente (ya validada: no antes de la sugerida) o, si no, la sugerida
+        $encuentro->fecha_fin = !empty($validated['fecha_fin'])
+            ? Carbon::parse($validated['fecha_fin'])->toDateString()
+            : $encuentro->fechaFinSugerida(Carbon::parse($validated['fecha']))?->toDateString();
         $encuentro->save();
         $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
 
@@ -157,9 +166,11 @@ class EncuentroController extends Controller
 
         $proyecto = $encuentro->microproyecto;
 
-        if (!$proyecto || !in_array($proyecto->estado, ['propuesta', 'validado'])) {
+        // Mismo criterio que al crear el encuentro (StoreEncuentroRequest), más 'propuesta' por los
+        // encuentros antiguos: un reto ajustado ya completado se puede volver a llevar al aula.
+        if (!$proyecto || !in_array($proyecto->estado, ['propuesta', 'validado', 'completado'], true)) {
             return response()->json([
-                'error' => 'Este encuentro no tiene ninguna propuesta lista. Asocia una propuesta al encuentro y márcala como Pendiente de validar primero.',
+                'error' => 'Este encuentro no tiene ningún reto ajustado listo. Asocia al encuentro un reto ajustado y valídalo primero.',
             ], 422);
         }
 
@@ -260,7 +271,7 @@ class EncuentroController extends Controller
 
         $proyecto = $encuentro->microproyecto;
         if (!$proyecto) {
-            return response()->json(['error' => 'Este encuentro no tiene ninguna propuesta asociada.'], 422);
+            return response()->json(['error' => 'Este encuentro no tiene ningún reto ajustado asociado.'], 422);
         }
 
         $numEquipos = (int) $request->validated('num_equipos');

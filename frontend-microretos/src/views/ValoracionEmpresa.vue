@@ -22,6 +22,11 @@ const comentarios = ref('')
 const completa = computed(() => global.value >= 1 && PREGUNTAS_VALORACION.every(p => respuestas.value[p.key]))
 const respondida = computed(() => enviada.value || datos.value?.valoracion?.respondida)
 const entregados = computed(() => (datos.value?.grupos || []).filter(g => g.entregada).length)
+// «Sí» o «Quizá» a seguir con un proyecto: se le dice que DuaLab le contactará
+const interesProyecto = computed(() => {
+  const r = enviada.value ? respuestas.value : (datos.value?.valoracion?.respuestas || {})
+  return ['Sí', 'Quizá'].includes(r.interes_plan_practicas)
+})
 
 const fecha = (iso) => iso ? new Date(iso + (iso.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
 
@@ -73,7 +78,7 @@ async function enviar() {
     </header>
 
     <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:py-10">
-      <p v-if="cargando" class="py-16 text-center text-sm text-texto-secundario" role="status">Cargando la propuesta…</p>
+      <p v-if="cargando" class="py-16 text-center text-sm text-texto-secundario" role="status">Cargando el reto…</p>
 
       <div v-else-if="error" class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center" role="alert">
         <p class="font-bold text-amber-900">{{ error }}</p>
@@ -84,11 +89,12 @@ async function enviar() {
         <div v-if="respondida" class="mb-6 rounded-2xl border border-empresas/30 bg-empresas/10 p-5 sm:p-6" role="status">
           <p class="text-lg font-bold text-empresas-dark">¡Gracias por vuestra valoración!</p>
           <p class="mt-1 text-sm text-azul-noche">La hemos hecho llegar al equipo docente. Este enlace ya no admite más respuestas.</p>
+          <p v-if="interesProyecto" class="mt-2 text-sm text-azul-noche">Como os interesa seguir con un proyecto, DuaLab se pondrá en contacto con vosotros para estudiar un plan de proyecto con alumnado en prácticas.</p>
         </div>
 
-        <!-- Propuesta -->
+        <!-- Reto -->
         <section class="rounded-2xl border border-borde bg-white p-5 shadow-sm sm:p-7" aria-labelledby="titulo-propuesta">
-          <p class="text-[10px] font-black uppercase tracking-widest text-empresas">Propuesta trabajada en el aula</p>
+          <p class="text-[10px] font-black uppercase tracking-widest text-empresas">Reto trabajado en el aula</p>
           <h1 id="titulo-propuesta" class="mt-1 break-words font-heading text-2xl font-bold text-azul-noche sm:text-3xl">{{ datos.propuesta.titulo }}</h1>
           <p v-if="datos.propuesta.pregunta_reto" class="mt-2 break-words text-base italic text-rol-fuerte">«{{ datos.propuesta.pregunta_reto }}»</p>
           <dl class="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
@@ -97,7 +103,7 @@ async function enviar() {
             <div v-if="datos.propuesta.ciclo" class="min-w-0"><dt class="text-xs font-bold uppercase tracking-wide text-texto-secundario">Ciclo</dt><dd class="truncate font-semibold">{{ datos.propuesta.ciclo }}</dd></div>
           </dl>
           <p v-if="datos.encuentro.fecha" class="mt-3 text-sm text-texto-secundario">
-            Trabajada en clase desde el {{ fecha(datos.encuentro.fecha) }}<template v-if="datos.encuentro.fecha_fin"> hasta el {{ fecha(datos.encuentro.fecha_fin) }}</template>.
+            Trabajado en clase desde el {{ fecha(datos.encuentro.fecha) }}<template v-if="datos.encuentro.fecha_fin"> hasta el {{ fecha(datos.encuentro.fecha_fin) }}</template>.
           </p>
         </section>
 
@@ -138,8 +144,12 @@ async function enviar() {
         <!-- Formulario de valoración -->
         <form v-if="!respondida" class="mt-6 rounded-2xl border border-borde bg-white p-5 shadow-sm sm:p-7" @submit.prevent="enviar"
               aria-labelledby="titulo-valorar">
-          <h2 id="titulo-valorar" class="text-lg font-bold text-azul-noche">Vuestra valoración de la propuesta</h2>
-          <p class="mt-1 text-sm text-texto-secundario">Valorad la propuesta en su conjunto, a partir de las soluciones de los grupos. Solo se puede enviar una vez.</p>
+          <h2 id="titulo-valorar" class="text-lg font-bold text-azul-noche">Vuestra valoración del reto</h2>
+          <p class="mt-1 text-sm text-texto-secundario">Valorad el reto en su conjunto, a partir de las soluciones de los grupos. Solo se puede enviar una vez.</p>
+          <p class="mt-3 flex items-start gap-2.5 rounded-xl border border-empresas/25 bg-empresas/5 px-3 py-2.5 text-sm text-azul-noche">
+            <svg class="mt-0.5 h-4 w-4 shrink-0 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>A partir de este reto puede nacer un <strong>proyecto en vuestra empresa</strong>: alumnado en prácticas que lo desarrolla con vosotros durante meses. Si os interesa, indicadlo en la última pregunta; DuaLab elige al alumnado más destacado y os contacta.</span>
+          </p>
 
           <fieldset class="mt-5">
             <legend class="text-sm font-semibold text-azul-noche">Valoración global (1 = poco útil, 5 = muy útil)</legend>

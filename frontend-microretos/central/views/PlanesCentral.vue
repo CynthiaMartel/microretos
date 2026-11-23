@@ -39,7 +39,7 @@ const cronogramaDe = (p) => cronogramas.value.find(c => c.microproyecto_uuid ===
 // Estado para Central: en edición (lo completa el docente) · pendiente de validar · validado
 const ESTADOS = {
   en_edicion: { texto: 'En edición', clases: 'bg-gray-100 text-texto-secundario' },
-  propuesta: { texto: 'Pendiente de validar', clases: 'bg-amber-50 text-amber-800' },
+  propuesta: { texto: 'Sin validar', clases: 'bg-amber-50 text-amber-800' },
   validado: { texto: 'Validado', clases: 'bg-emerald-50 text-emerald-800' },
 }
 const estadoDe = (p) => (ESTADOS[p.estado] ? p.estado : 'en_edicion')
@@ -53,7 +53,7 @@ const filtroCentro = ref('')
 const contar = (fn) => planes.value.filter(fn).length
 const OPCIONES_ESTADO = computed(() => [
   { value: '', label: 'Todos' },
-  { value: 'propuesta', label: 'Pendientes', count: contar(p => estadoDe(p) === 'propuesta') },
+  { value: 'propuesta', label: 'Sin validar', count: contar(p => estadoDe(p) === 'propuesta') },
   { value: 'validado', label: 'Validados', count: contar(p => estadoDe(p) === 'validado') },
   { value: 'en_edicion', label: 'En edición', count: contar(p => estadoDe(p) === 'en_edicion') },
 ])

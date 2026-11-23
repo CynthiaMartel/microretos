@@ -3,6 +3,7 @@
      puede cubrir varias fases; la duración de cada fase y la fecha fin estimada se derivan de aquí.
      Antes vivía en el paso 5 del Taller de Ideas (la propuesta); ahora es de cada encuentro. -->
 <script setup>
+import IconoFase from './IconoFase.vue'
 import { computed } from 'vue'
 import { FASES_PROYECTO, COLOR_MAP_FASES, duracionPorFase } from '../config/fasesProyecto.js'
 
@@ -43,7 +44,7 @@ function alternar(i, num) {
     <ul class="flex flex-wrap gap-2" aria-label="Sesiones por fase">
       <li v-for="f in FASES_PROYECTO" :key="f.num"
           class="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1" :class="COLOR_MAP_FASES[f.color]">
-        <span class="shrink-0 text-sm leading-none" aria-hidden="true">{{ f.icono }}</span>
+        <IconoFase :num="f.num" class="h-4 w-4 shrink-0" />
         <span class="min-w-0 truncate text-xs font-bold text-azul-noche">F{{ f.num }} · {{ f.label }}</span>
         <span class="shrink-0 text-xs font-bold">· {{ duracionPorFase(sesiones, f.num) }}</span>
       </li>
@@ -77,7 +78,7 @@ function alternar(i, num) {
                   :class="(s.fases || []).includes(f.num)
                     ? COLOR_MAP_FASES[f.color] + ' border-current'
                     : 'border-transparent bg-gray-50 text-texto-secundario hover:bg-gray-100'">
-            <span class="shrink-0 text-base leading-none" aria-hidden="true">{{ f.icono }}</span>
+            <IconoFase :num="f.num" class="h-5 w-5 shrink-0" />
             <span class="min-w-0 flex-1 text-xs font-bold" :class="(s.fases || []).includes(f.num) ? 'text-azul-noche' : ''">F{{ f.num }} - {{ f.label }}</span>
             <span v-if="(s.fases || []).includes(f.num)" class="shrink-0 text-sm font-bold text-rol-fuerte" aria-hidden="true">✓</span>
           </button>

@@ -33,11 +33,11 @@ const sectionLabels = {
   'empresas':             'Empresas',
   'dashboard-docente':    'Crear encuentro',
   'encuentros-registrados': 'Encuentros',
-  'startup-day':          'Propuestas',
-  'proyectos-terminados': 'Propuestas completadas',
-  'startup-day-crear':    'Taller de Ideas',
-  'startup-day-detalle':  'Propuesta',
-  'startup-day-editar':   'Editar propuesta',
+  'startup-day':          'Mis retos ajustados',
+  'proyectos-terminados': 'Mis retos ajustados completados',
+  'startup-day-crear':    'Ajuste del reto',
+  'startup-day-detalle':  'Reto ajustado',
+  'startup-day-editar':   'Ajuste del reto',
   'gestion-usuarios':     'Usuarios',
 }
 

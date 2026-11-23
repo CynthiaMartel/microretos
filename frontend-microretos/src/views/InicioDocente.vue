@@ -83,7 +83,7 @@ const kpis = computed(() => [
   { key: 'alumnos',    valor: encCurso.value.reduce((s, e) => s + (Number(e.num_alumnos) || 0), 0), label: 'Alumnos participantes',  tile: 'bg-alumnos',          num: 'text-alumnos-dark',          icon: 'alumnos',   ruta: '/seccion/alumnado' },
   { key: 'empresas',   valor: new Set(proCurso.value.map(p => p.empresa_id).filter(Boolean)).size,  label: 'Empresas colaboradoras', tile: 'bg-empresas',         num: 'text-empresas-dark',         icon: 'empresas',  ruta: '/seccion/empresas' },
   // Mismo criterio que /proyectos/terminados: estado 'completado' (solo se llega desde 'validado')
-  { key: 'completados', valor: proCurso.value.filter(p => p.estado === 'completado').length, label: 'Propuestas completadas', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
+  { key: 'completados', valor: proCurso.value.filter(p => p.estado === 'completado').length, label: 'Retos completados', tile: 'bg-administraciones', num: 'text-[#0F7273]', icon: 'proyecto', ruta: '/proyectos' },
   { key: 'encuentros', valor: encCurso.value.length,                                                 label: 'Encuentros realizados',  tile: 'bg-centros',          num: 'text-centros',          icon: 'encuentro', ruta: '/encuentros' },
 ])
 
@@ -103,8 +103,8 @@ const mesIdx = (d) => (d.getMonth() + 4) % 12 // septiembre = 0
 
 const INDICADORES = [
   // corto = texto de la leyenda (las 4 en una sola línea); label = texto completo (tooltip y detalle del mes)
-  { key: 'alumnos',     label: 'Alumnos en propuestas completadas', corto: 'Alumnado',              color: '#FF8920' },
-  { key: 'completados', label: 'Propuestas completadas',           corto: 'Propuestas completadas', color: '#19A7A8' },
+  { key: 'alumnos',     label: 'Alumnos en retos completados', corto: 'Alumnado',              color: '#FF8920' },
+  { key: 'completados', label: 'Retos completados',           corto: 'Retos completados', color: '#19A7A8' },
   { key: 'empresas',    label: 'Empresas colaboradoras',           corto: 'Empresas',              color: '#509928' },
   { key: 'encuentros',  label: 'Encuentros realizados',            corto: 'Encuentros',            color: '#3072AA' },
 ]
@@ -215,13 +215,11 @@ const filtroRuta = (filtro) => ({ path: '/proyectos', query: { filtro } })
 const donut = computed(() => {
   const all = proCurso.value
   const prop = all.filter(p => p.estado === 'propuesta')
-  const revisar   = prop.filter(p => p.empresa_no_valida_aun).length
   const grupos = [
     { label: 'En edición',        color: '#FF8920', ruta: filtroRuta('en_edicion'), valor: all.filter(p => p.estado === 'en_edicion').length },
-    { label: 'Pendiente validar', color: '#3072AA', ruta: filtroRuta('propuesta'),  valor: prop.length,
-      detalle: revisar ? `${revisar} con cambios de la empresa` : '' },
-    { label: 'Validadas',         color: '#509928', ruta: filtroRuta('validado'),   valor: all.filter(p => p.estado === 'validado').length },
-    { label: 'Completadas',       color: '#19A7A8', ruta: '/proyectos',  valor: all.filter(p => p.estado === 'completado').length },
+    { label: 'Sin validar',       color: '#3072AA', ruta: filtroRuta('propuesta'),  valor: prop.length },
+    { label: 'Validados',         color: '#509928', ruta: filtroRuta('validado'),   valor: all.filter(p => p.estado === 'validado').length },
+    { label: 'Completados',       color: '#19A7A8', ruta: '/proyectos',  valor: all.filter(p => p.estado === 'completado').length },
   ]
   const total = grupos.reduce((s, g) => s + g.valor, 0)
   const GAP = grupos.filter(g => g.valor).length > 1 ? 2 : 0 // separador de 2px entre segmentos
@@ -357,12 +355,12 @@ const fechaCorta = (isoStr) => _pf(isoStr).toLocaleDateString('es-ES', { weekday
 // + "Completados", que allí tiene vista propia. Etiquetas y colores = ProyectoCard.vue
 // (getEtiqueta/getColor), con el tema docente (centros) para "Validado".
 const FILTROS_PROY = [
-  { key: 'todos',      label: 'Todas' },
-  { key: 'validado',   label: 'Validadas' },
-  { key: 'propuesta',  label: 'Pendiente validar' },
+  { key: 'todos',      label: 'Todos' },
+  { key: 'completado', label: 'Completados' },
+  { key: 'validado',   label: 'Validados' },
+  { key: 'propuesta',  label: 'Sin validar' },
   { key: 'en_edicion', label: 'En edición' },
-  { key: 'completado', label: 'Completadas' },
-  { key: 'archivado',  label: 'Archivadas' },
+  { key: 'archivado',  label: 'Archivados' },
 ]
 const filtroProy = ref('completado') // por defecto: lo que mejor luce el trabajo hecho
 const conteoProy = (key) => key === 'todos' ? proCurso.value.length : proCurso.value.filter(p => p.estado === key).length
@@ -385,10 +383,10 @@ watch([filtroProy, cursoSel], () => { paginaProy.value = 0 })
 
 function etiquetaProyecto(p) {
   if (p.estado === 'en_edicion') return 'En edición'
-  if (p.estado === 'archivado')  return 'Archivada'
-  if (p.estado === 'completado') return 'Completada'
-  if (p.estado === 'validado')   return 'Validada'
-  return 'Pendiente de validar'
+  if (p.estado === 'archivado')  return 'Archivado'
+  if (p.estado === 'completado') return 'Completado'
+  if (p.estado === 'validado')   return 'Validado'
+  return 'Sin validar'
 }
 function colorProyecto(p) {
   if (p.estado === 'en_edicion') return 'bg-amber-50 border-amber-200 text-amber-700'
@@ -429,15 +427,11 @@ const tareasAuto = computed(() => {
   const now = Date.now()
   const dias = (d) => Math.floor((now - new Date(d).getTime()) / 86_400_000)
   const t = []
-  const revisar = proyectos.value.filter(p => p.estado === 'propuesta' && p.empresa_no_valida_aun)
-  if (revisar.length) t.push({ id: `revisar:${revisar.length}`, texto: `Revisar los cambios que propone${revisar.length > 1 ? 'n' : ''} ${revisar.length} empresa${revisar.length > 1 ? 's' : ''}`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'alta' })
-  // La validan el docente o la empresa: se avisa de las que esperan cualquiera de las dos
-  const validar = proyectos.value.filter(p => p.estado === 'propuesta' && !p.empresa_no_valida_aun)
-  if (validar.length) t.push({ id: `validar:${validar.length}`, texto: `Validar ${validar.length} propuesta${validar.length > 1 ? 's' : ''} pendiente${validar.length > 1 ? 's' : ''}`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'media' })
+  // Sin validar: el docente la valida cuando la quiere trabajar (la empresa ya no valida al inicio)
+  const validar = proyectos.value.filter(p => p.estado === 'propuesta')
+  if (validar.length) t.push({ id: `validar:${validar.length}`, texto: `Validar ${validar.length} reto${validar.length > 1 ? 's' : ''} ajustado${validar.length > 1 ? 's' : ''}`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'media' })
   const estancados = proyectos.value.filter(p => p.estado === 'en_edicion' && p.updated_at && dias(p.updated_at) >= 14)
-  if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} propuesta${estancados.length > 1 ? 's' : ''} parada${estancados.length > 1 ? 's' : ''} hace +14 días`, ruta: '/proyectos?ver=proceso', nivel: 'media' })
-  const sinRespuesta = proyectos.value.filter(p => p.estado === 'propuesta' && p.enviado_a_empresa_mail && !p.empresa_validado && p.updated_at && dias(p.updated_at) >= 10)
-  if (sinRespuesta.length) t.push({ id: `recordar:${sinRespuesta.length}`, texto: `Recordar a ${sinRespuesta.length} empresa${sinRespuesta.length > 1 ? 's' : ''} sin responder (+10 días)`, ruta: '/proyectos?ver=proceso&estado=propuesta', nivel: 'media' })
+  if (estancados.length) t.push({ id: `retomar:${estancados.length}`, texto: `Retomar ${estancados.length} reto${estancados.length > 1 ? 's' : ''} ajustado${estancados.length > 1 ? 's' : ''} parado${estancados.length > 1 ? 's' : ''} hace +14 días`, ruta: '/proyectos?ver=proceso', nivel: 'media' })
   return t
 })
 
@@ -484,9 +478,11 @@ const pendientes = computed(() => tareasAuto.value.filter(t => !autoHecha(t)).le
 // Mismo lenguaje visual que los contadores: icono blanco sobre color sólido de marca.
 // Herramientas: títulos, iconos y colores salen de config/navegacion.js (la misma fuente que el
 // SidePanel y las secciones /seccion/:seccion), para que el panel coincida siempre con el menú.
-const tarjetaNav = (seccion, ruta) => SECCIONES[seccion]?.cards?.find(c => c.ruta === ruta)
+// Busca la tarjeta en las principales y en el bloque secundario (Seguimiento de grupos va aparte)
+const tarjetaNav = (seccion, ruta) => [...(SECCIONES[seccion]?.cards || []), ...(SECCIONES[seccion]?.bloqueSecundario?.cards || [])].find(c => c.ruta === ruta)
 const herramientas = [
-  { grupo: 'Propuestas', items: [tarjetaNav('retos-proyectos', '/proyectos/crear'), tarjetaNav('retos-proyectos', '/proyectos')] },
+  { grupo: 'Retos', items: [tarjetaNav('retos-proyectos', '/proyectos/crear'),
+    tarjetaNav('retos-proyectos', '/proyectos') && { ...tarjetaNav('retos-proyectos', '/proyectos'), titulo: 'Mis retos', aclaracion: '(ajuste curricular)' }] },
   { grupo: 'Encuentros', items: [tarjetaNav('encuentros-grupos', '/encuentros/crear'), tarjetaNav('encuentros-grupos', '/encuentros')] },
   { grupo: 'Grupos',     items: [tarjetaNav('encuentros-grupos', '/encuentros?ver=seguimiento') && { ...tarjetaNav('encuentros-grupos', '/encuentros?ver=seguimiento'), tile: 'bg-alumnos' }] },
 ].map(g => ({ ...g, items: g.items.filter(Boolean) })).filter(g => g.items.length)
@@ -593,7 +589,7 @@ const irA = (ruta) => router.push(ruta)
                 <button @click="irA('/proyectos/crear')"
                         class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-                  Nueva propuesta
+                  Trabajar un reto
                 </button>
                 <button @click="irA('/encuentros/crear')"
                         class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
@@ -705,13 +701,13 @@ const irA = (ruta) => router.push(ruta)
 
               <article class="card @container flex h-full min-w-0 flex-col p-4">
                 <div class="mb-4 flex items-center justify-between gap-3">
-                  <h2 class="card-title">Estado de las propuestas</h2>
+                  <h2 class="card-title">Estado de mis retos</h2>
                   <button class="link shrink-0" @click="irA('/proyectos')">Ver todos</button>
                 </div>
                 <div v-if="cargando" class="h-[200px] animate-pulse rounded-xl bg-gray-100" />
                 <div v-else class="flex flex-1 flex-col items-center justify-center gap-3 @min-[13rem]:flex-row @min-[19rem]:gap-4">
                   <div class="relative h-24 w-24 shrink-0 @min-[16rem]:h-28 @min-[16rem]:w-28 @min-[19rem]:h-36 @min-[19rem]:w-36">
-                    <svg viewBox="0 0 140 140" class="h-full w-full -rotate-90" role="img" :aria-label="`${donut.total} propuestas por estado`">
+                    <svg viewBox="0 0 140 140" class="h-full w-full -rotate-90" role="img" :aria-label="`${donut.total} retos por estado`">
                       <circle cx="70" cy="70" :r="R" fill="none" stroke="#F3F4F6" stroke-width="18" />
                       <circle v-for="s in donut.segmentos.filter(x => x.valor)" :key="s.label" cx="70" cy="70" :r="R" fill="none"
                               :stroke="s.color" :stroke-width="donutHover === s.label ? 24 : 18"
@@ -724,7 +720,7 @@ const irA = (ruta) => router.push(ruta)
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
                       <span class="font-heading text-2xl font-bold">{{ donutHover ? donut.segmentos.find(x => x.label === donutHover).valor : donut.total }}</span>
-                      <span class="max-w-[5.5rem] text-center text-[11px] leading-tight text-gray-500">{{ donutHover || 'propuestas' }}</span>
+                      <span class="max-w-[5.5rem] text-center text-[11px] leading-tight text-gray-500">{{ donutHover || 'retos' }}</span>
                     </div>
                   </div>
                   <!-- Leyenda a un lado (como el PNG) = recorrido del proyecto, en orden; cada paso abre la biblioteca filtrada -->
@@ -749,7 +745,7 @@ const irA = (ruta) => router.push(ruta)
                 </div>
                 <button v-if="!cargando && !donut.total" class="mt-3 w-full rounded-full bg-centros/5 px-3 py-2 text-sm font-semibold text-centros ring-1 ring-centros/15 hover:bg-centros/10"
                         @click="irA('/proyectos/crear')">
-                  Aún no hay propuestas en este curso · Crear propuesta →
+                  Aún no hay retos en este curso · Trabajar un reto →
                 </button>
               </article>
             </div>
@@ -760,7 +756,7 @@ const irA = (ruta) => router.push(ruta)
             <div class="grid h-full grid-cols-1 gap-4 @lg/fila:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
               <article class="card @container flex h-full min-w-0 flex-col p-4">
                 <div class="mb-3 flex items-center justify-between gap-3">
-                  <h2 class="card-title">Propuestas</h2>
+                  <h2 class="card-title">Mis retos <span class="font-normal text-texto-secundario">(ajuste curricular)</span></h2>
                   <button class="link shrink-0" @click="verTodosProyectos">Ver todos</button>
                 </div>
 
@@ -782,8 +778,8 @@ const irA = (ruta) => router.push(ruta)
                 <div class="h-[324px]">
                   <div v-if="cargando" class="space-y-px"><div v-for="n in 5" :key="n" class="my-2 h-12 animate-pulse rounded-lg bg-gray-100" /></div>
                   <div v-else-if="!proyectosFiltrados.length" class="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 px-4 text-center text-sm text-gray-500">
-                    {{ filtroProy === 'todos' ? 'Aún no hay propuestas en este curso.' : 'No hay propuestas con este estado en el curso seleccionado.' }}
-                    <button class="mt-2 inline-flex min-h-9 items-center font-semibold text-centros" @click="irA('/proyectos/crear')">Crear propuesta →</button>
+                    {{ filtroProy === 'todos' ? 'Aún no hay retos en este curso.' : 'No hay retos con este estado en el curso seleccionado.' }}
+                    <button class="mt-2 inline-flex min-h-9 items-center font-semibold text-centros" @click="irA('/proyectos/crear')">Trabajar un reto →</button>
                   </div>
                   <ul v-else class="divide-y divide-gray-100">
                     <li v-for="p in proyectosPagina" :key="p.id" class="h-16">
@@ -807,15 +803,15 @@ const irA = (ruta) => router.push(ruta)
                 <div class="mt-auto flex h-10 items-center justify-between gap-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
                   <div class="flex items-center gap-2">
                     <template v-if="totalPaginasProy > 1">
-                      <button class="cal-nav disabled:opacity-30" aria-label="Propuestas anteriores" :disabled="paginaProyActual === 0" @click="moverPaginaProy(-1)">
+                      <button class="cal-nav disabled:opacity-30" aria-label="Retos anteriores" :disabled="paginaProyActual === 0" @click="moverPaginaProy(-1)">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
                       <span>{{ paginaProyActual + 1 }} / {{ totalPaginasProy }}</span>
-                      <button class="cal-nav disabled:opacity-30" aria-label="Propuestas siguientes" :disabled="paginaProyActual === totalPaginasProy - 1" @click="moverPaginaProy(1)">
+                      <button class="cal-nav disabled:opacity-30" aria-label="Retos siguientes" :disabled="paginaProyActual === totalPaginasProy - 1" @click="moverPaginaProy(1)">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                       </button>
                     </template>
-                    <span v-else-if="proyectosFiltrados.length">{{ proyectosFiltrados.length }} propuesta{{ proyectosFiltrados.length !== 1 ? 's' : '' }}</span>
+                    <span v-else-if="proyectosFiltrados.length">{{ proyectosFiltrados.length }} reto{{ proyectosFiltrados.length !== 1 ? 's' : '' }} ajustado{{ proyectosFiltrados.length !== 1 ? 's' : '' }}</span>
                   </div>
                   <button class="font-semibold text-centros hover:underline" @click="verTodosProyectos">Ver en la biblioteca →</button>
                 </div>
@@ -838,7 +834,7 @@ const irA = (ruta) => router.push(ruta)
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="ICONOS_NAV[h.icon] || ICONOS[h.icon]"/></svg>
                       </span>
                       <span class="flex min-w-0 flex-col gap-0.5">
-                        <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}</span>
+                        <span class="min-w-0 text-xs font-semibold leading-tight">{{ h.titulo }}<span v-if="h.aclaracion" class="block font-normal text-gray-500">{{ h.aclaracion }}</span></span>
                         <!-- En táctil no hay tooltip: la descripción se ve en móvil; desde sm queda en el title -->
                         <span v-if="h.desc" class="line-clamp-2 text-[11px] leading-snug text-gray-500 sm:hidden" aria-hidden="true">{{ h.desc }}</span>
                       </span>
@@ -1010,7 +1006,7 @@ const irA = (ruta) => router.push(ruta)
               <button class="link shrink-0" @click="irA('/empresas')">Ver todas</button>
             </div>
             <div v-if="cargando" class="space-y-3"><div v-for="n in 3" :key="n" class="h-12 animate-pulse rounded-lg bg-gray-100" /></div>
-            <p v-else-if="!empresasTop.length" class="mb-3 py-4 text-center text-sm text-gray-500">Ninguna empresa vinculada a propuestas este curso.</p>
+            <p v-else-if="!empresasTop.length" class="mb-3 py-4 text-center text-sm text-gray-500">Ninguna empresa vinculada a tus retos este curso.</p>
             <ul v-else class="mb-3 divide-y divide-gray-100">
               <li v-for="(e, i) in empresasTop" :key="e.id" class="flex items-center gap-3 py-2">
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-heading text-xs font-bold text-white" :class="AVATAR_COLORES[i % 4]">
@@ -1021,7 +1017,7 @@ const irA = (ruta) => router.push(ruta)
                   <p v-if="e.familia" class="truncate text-xs text-gray-500">{{ e.familia }}</p>
                 </div>
                 <span class="shrink-0 text-right text-xs leading-snug text-gray-500">
-                  {{ e.proyectos }} propuesta{{ e.proyectos > 1 ? 's' : '' }}<br />{{ e.validados }} validada{{ e.validados !== 1 ? 's' : '' }}
+                  {{ e.proyectos }} {{ e.proyectos > 1 ? 'retos' : 'reto' }}<br />{{ e.validados }} validado{{ e.validados !== 1 ? 's' : '' }}
                 </span>
               </li>
             </ul>
@@ -1121,7 +1117,7 @@ const irA = (ruta) => router.push(ruta)
               <li>
                 <button class="recurso !p-1.5" @click="irA('/proyectos/terminados')">
                   <span class="recurso-icon !h-8 !w-8 bg-sky-50 text-sky-700">✓</span>
-                  <span class="min-w-0"><span class="block font-semibold">Propuestas completadas</span><span class="text-xs text-gray-500">Inspiración de otros grupos</span></span>
+                  <span class="min-w-0"><span class="block font-semibold">Retos completados</span><span class="text-xs text-gray-500">Inspiración de otros grupos</span></span>
                 </button>
               </li>
             </ul>

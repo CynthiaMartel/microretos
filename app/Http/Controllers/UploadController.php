@@ -42,7 +42,7 @@ class UploadController extends Controller
         $proyecto = Microproyecto::where('uuid', $request->input('microproyecto_uuid'))->firstOrFail();
 
         if (!$proyecto->esEditablePara($request->user())) {
-            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+            abort(403, 'No autorizado: no tienes acceso de edición a este reto ajustado.');
         }
 
         $cloudName = config('services.cloudinary.cloud_name');
@@ -222,7 +222,7 @@ class UploadController extends Controller
         $proyecto = Microproyecto::where('uuid', $request->input('microproyecto_uuid'))->firstOrFail();
 
         if (!$proyecto->esEditablePara($request->user())) {
-            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+            abort(403, 'No autorizado: no tienes acceso de edición a este reto ajustado.');
         }
 
         $recurso = MicroproyectoRecurso::where('id', $request->input('recurso_id'))
@@ -250,7 +250,7 @@ class UploadController extends Controller
 
         $recurso = MicroproyectoRecurso::where('public_id', $publicId)->with('microproyecto')->first();
         if ($recurso && (!$recurso->microproyecto || !$recurso->microproyecto->esEditablePara($request->user()))) {
-            abort(403, 'No autorizado: no tienes acceso de edición a este microproyecto.');
+            abort(403, 'No autorizado: no tienes acceso de edición a este reto ajustado.');
         }
 
         // Eliminar de BD primero

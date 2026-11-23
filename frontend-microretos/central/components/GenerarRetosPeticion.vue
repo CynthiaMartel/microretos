@@ -123,7 +123,7 @@ async function guardar() {
             </div>
           </div>
           <div v-for="campo in [
-            { k: 'enfoqueReto', t: '¿Qué tipo de propuesta quieres trabajar?', max: 1000 },
+            { k: 'enfoqueReto', t: '¿Qué tipo de reto quieres trabajar?', max: 1000 },
             { k: 'tareasPracticas', t: '¿Qué tareas reales harán en la empresa durante las prácticas?', max: 1000 },
             { k: 'entregableDocente', t: '¿Qué te gustaría que entregara el alumnado?', max: 800 },
           ]" :key="campo.k">

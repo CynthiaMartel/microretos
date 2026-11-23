@@ -150,7 +150,7 @@ watch(() => route.fullPath, () => {
           <button
             v-if="authStore.canAccess('startup-day')"
             @click="irA('/proyectos')"
-            data-tip="Consulta tus propuestas"
+            data-tip="Consulta los retos que los centros trabajan con tu empresa"
             class="nav-item w-full text-left"
             @mouseenter="showTooltip"
             @mouseleave="hideTooltip"
@@ -160,7 +160,7 @@ watch(() => route.fullPath, () => {
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path :d="ICONOS_NAV.capas" />
             </svg>
-            <span>Biblioteca Propuestas</span>
+            <span>Retos en el aula</span>
           </button>
         </div>
 
@@ -280,8 +280,8 @@ watch(() => route.fullPath, () => {
 
 
   <!-- ── Modal de bienvenida por rol ── -->
-  <!-- Misma estructura que el modal «Proyecto en propuesta» (ModalPropuestaValidacion):
-       ModalTaller accesible, cabecera centrada con icono, chip de estado y título con la
+  <!-- Misma estructura que los modales del Taller (ModalTaller):
+       accesible, cabecera centrada con icono, chip de estado y título con la
        palabra clave en el color del rol, y la acción en el pie. -->
   <ModalTaller :abierto="showWelcome" titulo="Te damos la bienvenida a DUALAB"
                ancho="w-[min(28rem,calc(100vw-2rem))]" marca @cerrar="showWelcome = false">

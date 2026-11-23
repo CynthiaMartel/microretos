@@ -28,34 +28,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const roles = [
   { label: 'Docente',          icon: AcademicCapIcon,    bg: 'bg-centros/10',  border: 'border-centros/25',  text: 'text-centros',
-    desc: 'Crea retos y propuestas, organiza encuentros con su alumnado y, en las prácticas, sus planes de proyecto.' },
+    desc: 'Elige o genera retos, los ajusta a su clase y los valida, organiza encuentros con su alumnado y, en las prácticas, sus planes de proyecto.' },
   { label: 'Alumnado / Grupo', icon: UserGroupIcon,      bg: 'bg-alumnos/10',  border: 'border-alumnos/25',  text: 'text-alumnos-dark',
     desc: 'Entra sin cuenta con el código de su grupo y avanza por fases en su workspace: en el aula y, si DuaLab lo selecciona, en las prácticas.' },
   { label: 'Empresa',          icon: BuildingOfficeIcon, bg: 'bg-empresas/10', border: 'border-empresas/25', text: 'text-empresas',
-    desc: 'Aporta la necesidad real, valida y valora la propuesta desde su enlace y acoge al alumnado en prácticas.' },
-  { label: 'Admin',            icon: ShieldCheckIcon,    bg: 'bg-violet-50',   border: 'border-violet-200',  text: 'text-violet-600',
-    desc: 'Gestiona centros, ciclos formativos y usuarios de forma transversal.' },
+    desc: 'Aporta la necesidad real, al final valora desde su enlace el reto con las soluciones de los grupos y acoge en prácticas al alumnado que elige DuaLab.' },
+  { label: 'Gestión DuaLab',   icon: ShieldCheckIcon,    bg: 'bg-violet-50',   border: 'border-violet-200',  text: 'text-violet-600',
+    desc: 'Capta empresas y las conecta con los centros, prepara retos, selecciona al alumnado más destacado para las prácticas, acompaña los planes de proyecto y gestiona centros y usuarios.' },
 ]
 
-// Conceptos clave: mismos textos que las secciones hub (config/navegacion.js), para que
-// el modal y el panel no se desincronicen
-const fasesRetosProyectos = SECCIONES['retos-proyectos'].flujo.fases
-const conceptos = [
-  ...fasesRetosProyectos.map(f => f.concepto).filter(Boolean),
-  ...(SECCIONES['encuentros-grupos'].conceptos ?? []),
-  ...(SECCIONES['planes-proyecto'].conceptos ?? []),
+// Piezas de DUALAB por etapas, con los mismos textos que las secciones hub (config/navegacion.js),
+// para que el modal y el panel no se desincronicen. 1ª etapa en el aula: reto → ajuste → encuentro;
+// 2ª etapa en la empresa: el plan de proyecto.
+const [conceptoReto, conceptoAjuste] = SECCIONES['retos-proyectos'].flujo.fases.map(f => f.concepto)
+const etapas = [
+  { titulo: '1ª etapa · Taller de ideas', lugar: 'en el aula', flujo: true,
+    conceptos: [conceptoReto, conceptoAjuste, ...(SECCIONES['encuentros-grupos'].conceptos ?? [])].filter(Boolean) },
+  { titulo: '2ª etapa · Plan de proyecto', lugar: 'prácticas en la empresa', flujo: false,
+    conceptos: SECCIONES['planes-proyecto'].conceptos ?? [] },
 ]
-// En escritorio, cada columna es más ancha cuanto más texto tiene su concepto, para que las
-// tres cajas queden con una altura parecida y las cortas no se llenen de hueco en blanco.
-// Se acota a 1–2 veces el ancho de la más corta para que ninguna quede estrecha.
-const largoTexto = (c) => c.segmentos.reduce((n, s) => n + (s.t?.length ?? 0), 0)
-const minLargo = Math.min(...conceptos.map(largoTexto))
-const columnasConceptos = conceptos
-  .map(c => `${Math.min(2, largoTexto(c) / minLargo).toFixed(2)}fr`)
-  .join(' ')
-// En tablet (2 columnas), el concepto más largo ocupa toda la columna derecha y los otros
-// dos se apilan a la izquierda: se mantiene el orden de lectura y las alturas se compensan.
-const iConceptoLargo = conceptos.reduce((iMax, c, i) => (largoTexto(c) > largoTexto(conceptos[iMax]) ? i : iMax), 0)
 
 // Recorrido completo: el flujo de la sección Recursos
 const recorrido = SECCIONES.recursos.flujo
@@ -139,7 +130,9 @@ const ir = (destino) => {
               <p class="text-gray-500 text-sm leading-relaxed max-w-3xl">
                 DUALAB es la plataforma que conecta centros educativos de FP con empresas para
                 generar retos de aprendizaje real, alineados con los módulos y resultados de
-                aprendizaje del ciclo.
+                aprendizaje del ciclo. El docente parte de un reto, lo ajusta a su clase y lo valida; con ese
+                reto ajustado organiza el encuentro creativo, donde cada grupo prepara su solución, y al
+                final la empresa valora el reto con las soluciones y dice si le interesaría seguir con un proyecto.
               </p>
 
               <!-- Quién participa -->
@@ -165,17 +158,29 @@ const ir = (destino) => {
                 </div>
               </section>
 
-              <!-- Conceptos clave: reto, propuesta/proyecto, encuentro -->
+              <!-- Las piezas por etapas: la 1ª como flujo (reto → ajuste → encuentro) -->
               <section>
                 <p class="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-3">
                   Las piezas de DUALAB
                 </p>
-                <!-- Móvil: una columna; tablet: dos, con el más largo a la derecha;
-                     escritorio: tres columnas proporcionales al texto -->
-                <div class="grid gap-3 md:grid-cols-2 lg:[grid-template-columns:var(--cols-conceptos)]"
-                     :style="{ '--cols-conceptos': columnasConceptos }">
-                  <ConceptoClave v-for="(c, i) in conceptos" :key="i" :color="c.color" :segmentos="c.segmentos"
-                                 :class="i === iConceptoLargo && 'md:col-start-2 md:row-span-2 md:row-start-1 lg:col-start-auto lg:row-span-1 lg:row-start-auto'" />
+                <div class="space-y-6">
+                  <div v-for="e in etapas" :key="e.titulo">
+                    <p class="mb-2 text-sm font-bold text-azul-noche">
+                      {{ e.titulo }} <span class="font-normal text-gray-500">({{ e.lugar }})</span>
+                    </p>
+                    <!-- Móvil y tablet: en columna con flechas hacia abajo; escritorio: en fila con flechas -->
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+                      <template v-for="(c, i) in e.conceptos" :key="i">
+                        <ConceptoClave :color="c.color" :segmentos="c.segmentos" class="min-w-0 lg:flex-1" />
+                        <span v-if="e.flujo && i < e.conceptos.length - 1" aria-hidden="true"
+                              class="flex shrink-0 items-center justify-center text-centros">
+                          <svg class="h-6 w-6 rotate-90 lg:rotate-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6l6 6-6 6"/>
+                          </svg>
+                        </span>
+                      </template>
+                    </div>
+                  </div>
                 </div>
               </section>
 

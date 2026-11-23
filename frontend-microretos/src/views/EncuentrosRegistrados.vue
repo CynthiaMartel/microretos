@@ -29,6 +29,7 @@ import FiltroSelect from '../components/FiltroSelect.vue'
 import { getEncuentros, getMisGrupos, actualizarEncuentro, crearCodigoAcceso, crearCodigoIa as crearCodigoIaApi,
   getValoracionEmpresa, solicitarValoracionEmpresa, marcarValoracionEnviada } from '../services/encuentroService.js'
 import { PREGUNTAS_VALORACION } from '../services/valoracionEmpresaService.js'
+import { marcarRetoAjustadoCompletado } from '../services/retoAjustadoService.js'
 import PlanificacionSesiones from '../components/PlanificacionSesiones.vue'
 import { useRaCeEncuentro } from '../composables/useRaCeEncuentro.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -493,6 +494,24 @@ async function accionValoracion(llamada) {
     trabajandoValoracion.value = false
   }
 }
+// Completado = el docente confirma que los grupos han terminado (con el primer encuentro que lo
+// confirme; el reto ajustado se puede seguir usando en encuentros nuevos). Es aparte de la valoración.
+const completandoReto = ref(false)
+async function marcarRetoCompletado() {
+  const e = encuentroAbierto.value
+  if (!e?.microproyecto_uuid || !confirm('¿Marcar el reto ajustado como completado? Lo podrás seguir usando en encuentros nuevos.')) return
+  completandoReto.value = true
+  errorValoracion.value = ''
+  try {
+    await marcarRetoAjustadoCompletado(e.microproyecto_uuid)
+    encuentros.value = encuentros.value.map(x => x.microproyecto_uuid === e.microproyecto_uuid ? { ...x, proyecto_estado: 'completado' } : x)
+    encuentroAbierto.value = { ...e, proyecto_estado: 'completado' }
+  } catch (err) {
+    errorValoracion.value = err.response?.data?.message || 'No se pudo marcar como completado.'
+  } finally {
+    completandoReto.value = false
+  }
+}
 const pedirValoracion   = () => accionValoracion(solicitarValoracionEmpresa)
 const marcarEnviadaVal  = () => accionValoracion(marcarValoracionEnviada)
 
@@ -813,7 +832,7 @@ function formatFecha(isoDate) {
       </div>
 
       <!-- ─── Filtros (mismo panel que el explorador de retos) ─────────────── -->
-      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título de la propuesta…">
+      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del reto ajustado…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
@@ -960,7 +979,7 @@ function formatFecha(isoDate) {
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar encuentros">
                 <option value="recientes">Más recientes</option>
                 <option value="antiguos">Más antiguos</option>
-                <option value="titulo">Propuesta (A-Z)</option>
+                <option value="titulo">Reto ajustado (A-Z)</option>
                 <option v-if="ver === 'seguimiento'" value="avance">Más avance</option>
               </select>
             </label>
@@ -994,7 +1013,7 @@ function formatFecha(isoDate) {
               <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </span>
             <h3 class="mt-3 text-lg font-bold text-azul-noche">Aún no hay encuentros</h3>
-            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Crea el primero a partir de una propuesta validada.</p>
+            <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Crea el primero a partir de un reto ajustado validado.</p>
             <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal mt-4">Nuevo encuentro</button>
           </div>
 
@@ -1195,9 +1214,9 @@ function formatFecha(isoDate) {
                       <button v-if="s.es_propietario" type="button" role="menuitem" @click="menuEncuentro = null; abrirCompartir(s)"
                               class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Compartir con otro docente</button>
                       <button v-if="s.microreto_id" type="button" role="menuitem" @click="menuEncuentro = null; abrirMicroretoModal(s.microreto_id)"
-                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del reto</button>
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del reto original</button>
                       <button v-if="s.microproyecto_uuid" type="button" role="menuitem" @click="menuEncuentro = null; abrirProyectoFicha(s.microproyecto_uuid)"
-                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha de la propuesta</button>
+                              class="block w-full px-4 py-2 text-left text-sm text-azul-noche hover:bg-gray-50">Ficha del reto ajustado</button>
                       <button v-if="s.puede_editar" type="button" role="menuitem" @click="menuEncuentro = null; abrirModalEliminar(s)"
                               class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Eliminar encuentro</button>
                     </div>
@@ -1360,6 +1379,17 @@ function formatFecha(isoDate) {
                   {{ valoracion.grupos_con_entrega }} de {{ valoracion.grupos_total }} grupos han entregado su solución (F3).
                 </p>
 
+                <!-- Completar el reto ajustado (aparte de la valoración de la empresa) -->
+                <div v-if="encuentroAbierto.proyecto_estado === 'validado' && valoracion.puede_editar && valoracion.grupos_con_entrega > 0"
+                     class="mt-3 flex flex-col gap-2 rounded-xl border border-borde bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p class="min-w-0 text-sm text-azul-noche">¿Han terminado los grupos? Marca el reto ajustado como completado.</p>
+                  <button type="button" @click="marcarRetoCompletado" :disabled="completandoReto"
+                          class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full bg-sky-700 px-4 text-xs font-bold uppercase text-white disabled:opacity-50">
+                    {{ completandoReto ? 'Guardando…' : 'Marcar completado' }}
+                  </button>
+                </div>
+                <p v-else-if="encuentroAbierto.proyecto_estado === 'completado'" class="mt-2 text-sm font-semibold text-sky-700">✓ Reto ajustado completado</p>
+
                 <!-- Respondida -->
                 <div v-if="valoracion.respondido_en" class="mt-3 space-y-2">
                   <p class="text-sm font-bold text-empresas-dark">
@@ -1378,7 +1408,7 @@ function formatFecha(isoDate) {
                 <template v-else-if="!valoracion.solicitada || valoracion.caducado">
                   <p class="mt-1 text-sm text-texto-secundario">
                     {{ valoracion.caducado ? 'El enlace caducó sin respuesta. Genera uno nuevo para volver a pedirla.'
-                       : 'Cuando tus grupos hayan entregado, pide a la empresa que valore la propuesta terminada.' }}
+                       : 'Cuando tus grupos hayan entregado, pide a la empresa que valore el reto con las soluciones de los grupos.' }}
                   </p>
                   <button v-if="valoracion.puede_editar" type="button" @click="pedirValoracion" :disabled="trabajandoValoracion"
                           class="mt-3 inline-flex min-h-9 items-center rounded-full bg-empresas-dark px-4 text-xs font-bold uppercase text-white disabled:opacity-50">
@@ -1610,7 +1640,7 @@ function formatFecha(isoDate) {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
                            a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                Ficha del reto
+                Ficha del reto original
               </button>
               <button v-if="encuentroAbierto.microproyecto_uuid"
                       @click="abrirProyectoFicha(encuentroAbierto.microproyecto_uuid)"
@@ -1621,7 +1651,7 @@ function formatFecha(isoDate) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
                 </svg>
-                Ficha de la propuesta
+                Ficha del reto ajustado
               </button>
             </div>
             <div v-if="encuentroAbierto.puede_editar" class="flex justify-end">

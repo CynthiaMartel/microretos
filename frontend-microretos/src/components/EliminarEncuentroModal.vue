@@ -135,8 +135,8 @@ async function confirmarEliminacion() {
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="font-black text-sm text-blue-700">Las propuestas vinculadas no se eliminarán</p>
-                    <p class="text-xs text-blue-500 mt-0.5">Las propuestas asociadas a este encuentro permanecen en la biblioteca.</p>
+                    <p class="font-black text-sm text-blue-700">El reto ajustado vinculado no se eliminará</p>
+                    <p class="text-xs text-blue-500 mt-0.5">El reto ajustado asociado a este encuentro se mantiene en «Mis retos ajustados».</p>
                   </div>
                 </div>
 

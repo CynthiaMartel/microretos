@@ -35,11 +35,11 @@ class PlanProyectoService
         $origen = Microproyecto::where('uuid', $datos['origen_uuid'])->firstOrFail();
 
         if (!$origen->esVisiblePara($autor)) {
-            throw new AuthorizationException('No tienes acceso a esa propuesta.');
+            throw new AuthorizationException('No tienes acceso a ese reto ajustado.');
         }
         if ($origen->esPlan() || !in_array($origen->estado, ['validado', 'completado'], true)) {
             throw ValidationException::withMessages([
-                'origen_uuid' => 'El plan se crea a partir de una propuesta del taller ya validada o completada.',
+                'origen_uuid' => 'El plan se crea a partir de un reto ajustado del taller ya validado o completado.',
             ]);
         }
 

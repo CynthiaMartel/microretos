@@ -115,7 +115,7 @@ const haceCuanto = (isoStr) => {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
       <CabeceraSeccion titulo="Notificaciones"
-                       subtitulo="Respuestas de empresas, propuestas que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
+                       subtitulo="Respuestas de empresas, retos ajustados que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
         <button v-if="noLeidas" type="button" @click="leerTodas" class="accion-secundaria">
           <svg aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
           Marcar todas como leídas

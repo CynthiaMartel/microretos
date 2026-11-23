@@ -168,8 +168,8 @@ async function guardar() {
       <h2 class="text-sm font-black uppercase tracking-widest text-[#1F2937]">{{ t.titulo }}</h2>
       <p class="mt-1 text-xs text-gray-500 leading-relaxed">
         Sirven para colaborar: solo los compañeros del centro que compartan familia y algún módulo
-        con una propuesta pueden ser invitados a ver sus encuentros, y al revés.
-        <strong class="font-semibold text-gray-600">No limitan los módulos que {{ t.puede }} usar en {{ t.su }}s propuestas</strong>:
+        con un reto ajustado pueden ser invitados a ver sus encuentros, y al revés.
+        <strong class="font-semibold text-gray-600">No limitan los módulos que {{ t.puede }} usar en {{ t.su }}s retos ajustados</strong>:
         ahí está siempre toda la oferta del centro.
       </p>
     </div>
@@ -180,7 +180,7 @@ async function guardar() {
       <p v-if="editable && cambiados" class="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
         <template v-if="premarcados">
           Aún no {{ t.tiene }} módulos guardados: {{ t.le }} hemos premarcado los <strong>{{ enProyectos.length }}</strong>
-          que {{ propio ? 'usas' : 'usa' }} en {{ t.su }}s propuestas.
+          que {{ propio ? 'usas' : 'usa' }} en {{ t.su }}s retos ajustados.
         </template>
         <template v-else>Hay cambios sin guardar.</template>
         Revísalos y pulsa «Guardar módulos»; hasta entonces no cuentan para colaborar.
@@ -189,7 +189,7 @@ async function guardar() {
         {{ propio ? 'No tienes' : 'Aún no tiene' }} módulos marcados, así que no {{ propio ? 'pueden invitarte' : 'pueden invitarle' }} a colaborar.
         <template v-if="editable">Elígelos abajo.</template>
         <template v-else-if="enProyectos.length">
-          {{ t.sus }} propuestas usan {{ enProyectos.length }} módulo{{ enProyectos.length === 1 ? '' : 's' }} de la oferta del centro.
+          {{ t.sus }} retos ajustados usan {{ enProyectos.length }} módulo{{ enProyectos.length === 1 ? '' : 's' }} de la oferta del centro.
         </template>
       </p>
 
@@ -230,7 +230,7 @@ async function guardar() {
              class="flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
              :class="[theme.bg5, theme.border20]">
           <p class="text-xs text-gray-600">
-            {{ t.sus }} propuestas usan <strong>{{ sinMarcar.length }}</strong> módulo{{ sinMarcar.length === 1 ? '' : 's' }}
+            {{ t.sus }} retos ajustados usan <strong>{{ sinMarcar.length }}</strong> módulo{{ sinMarcar.length === 1 ? '' : 's' }}
             que no {{ t.tiene }} marcado{{ sinMarcar.length === 1 ? '' : 's' }}.
           </p>
           <button type="button" @click="marcarLosDeProyectos" :disabled="guardando"
