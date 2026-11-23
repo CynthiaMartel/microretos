@@ -1,7 +1,8 @@
 <!-- Ficha de una solicitud de retos (Primer contacto). Muestra lo que contó el docente; el superadmin
      elige la empresa y abre el generador con esas respuestas (se genera allí, con revisión humana).
-     Los retos guardados desde el generador aparecen aquí, y «Avisar al docente» es manual: se eligen
-     los retos que se le envían, por si se ha generado más de una vez. -->
+     Los retos guardados desde el generador aparecen aquí. Nada llega al docente solo: «Avisar al
+     docente» le envía un enlace para leerlos (sin cuenta) y «Autorizar a trabajarlos», si tiene
+     cuenta, los pasa a la biblioteca de su centro y le avisa de que ya puede trabajarlos. -->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -15,7 +16,7 @@ import AvisoAccionCritica from '../../src/components/AvisoAccionCritica.vue'
 import { getCentros } from '../../src/services/datosFPService.js'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
 import {
-  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, getCorreosSolicitud, publicarRetosSolicitud,
+  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, autorizarRetosSolicitud, getCorreosSolicitud, publicarRetosSolicitud,
   NIVELES, PUNTOS_TEMARIO,
 } from '../../src/services/solicitudRetoService.js'
 import { FASES_SOLICITUD, fechaHora, textoSesion, faltaEncuentro, urlApp } from '../primerContacto.js'
@@ -112,6 +113,27 @@ async function avisar() {
   }
 }
 
+// «Autorizar a trabajarlos» (acción crítica): solo con cuenta del docente y retos que no estén en otro centro
+const retosParaAutorizar = computed(() => (s.value?.retos ?? [])
+  .filter(r => retosElegidos.value.includes(r.uuid) && !r.autorizado && r.en_recamara))
+const confirmandoAutorizar = ref(false)
+async function autorizar() {
+  const n = retosParaAutorizar.value.length
+  guardando.value = true
+  aviso.value = ''
+  try {
+    s.value = (await autorizarRetosSolicitud(s.value.id, { retos: retosParaAutorizar.value.map(r => r.uuid), mensaje: mensaje.value.trim() || null })).data.data
+    retosElegidos.value = []
+    mensaje.value = ''
+    confirmandoAutorizar.value = false
+    aviso.value = `${n === 1 ? 'Reto autorizado' : `${n} retos autorizados`}: ya ${n === 1 ? 'está' : 'están'} en la biblioteca de ${s.value.cuenta_docente?.centro ?? 'su centro'} y le hemos avisado por correo.`
+  } catch (e) {
+    aviso.value = e.response?.data?.message || 'No se han podido autorizar los retos.'
+  } finally {
+    guardando.value = false
+  }
+}
+
 // ── Correos con el docente (info@, por la referencia del asunto o su email) ──
 const correos = ref([])
 const cargandoCorreos = ref(true)
@@ -196,7 +218,7 @@ const filasBloque = (b) => [
   { e: 'Ciclo', v: b.ciclo },
   { e: 'Curso', v: curso(b.curso) },
   { e: 'Módulos', v: b.modulos.map(m => m.nombre).join(' · ') || 'Los elige DuaLab' },
-  { e: 'Tipo de propuesta', v: b.tipoPropuesta },
+  { e: 'Tipo de reto', v: b.tipoPropuesta },
 ].filter(x => x.v)
 const grupo = computed(() => s.value ? [
   { e: 'Punto del temario', v: [texto(PUNTOS_TEMARIO, r.value.puntoTemario), r.value.unidadTemario].filter(Boolean).join(' · ') },
@@ -319,7 +341,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                 Aún no hay retos. {{ gestiona ? 'Genéralos en la tarjeta de cada petición («Generar retos») y guarda los que te convenzan: aparecerán aquí.' : 'Los genera Admin Central DuaLab o el superadmin.' }}
               </p>
               <template v-else>
-                <p class="mb-3 text-xs text-texto-secundario">Los de la recámara solo los ve DuaLab. Marca los que quieras enviar al docente o publicar en una biblioteca.</p>
+                <p class="mb-3 text-xs text-texto-secundario">Los de la recámara solo los ve DuaLab. Al docente no le llega nada hasta que lo decidas: marca los retos y elige si solo los lee («Avisar al docente») o si además los puede trabajar («Autorizar a trabajarlos»).</p>
                 <ul class="space-y-2">
                   <li v-for="reto in s.retos" :key="reto.uuid">
                     <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-[#F8FAFC] px-3 py-2">
@@ -328,8 +350,8 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                         <span class="block break-words text-sm font-semibold">{{ reto.titulo || 'Reto sin título' }}</span>
                         <span class="block text-xs text-texto-secundario">{{ reto.empresa }} · {{ fechaHora(reto.created_at) }}<template v-if="reto.avisado"> · enviado</template></span>
                         <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold"
-                              :class="reto.en_recamara ? 'bg-gray-200 text-texto-secundario' : 'bg-empresas/15 text-empresas-dark'">
-                          {{ reto.en_recamara ? 'En la recámara' : `En la biblioteca de ${reto.centro}` }}
+                              :class="reto.autorizado ? 'bg-centros/15 text-centros' : reto.en_recamara ? 'bg-gray-200 text-texto-secundario' : 'bg-empresas/15 text-empresas-dark'">
+                          {{ reto.autorizado ? 'Autorizado a trabajarlo' : reto.en_recamara ? (reto.avisado ? 'Solo lectura' : 'En la recámara') : `En la biblioteca de ${reto.centro}` }}
                         </span>
                       </span>
                     </label>
@@ -339,7 +361,32 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                   <label for="sol-mensaje" class="field-label mt-4">Unas líneas para el docente (opcional)</label>
                   <textarea id="sol-mensaje" v-model="mensaje" maxlength="1000" rows="3" class="field-input"></textarea>
                   <button type="button" class="accion-principal mt-3" :disabled="guardando || !retosElegidos.length" @click="avisar">Avisar al docente</button>
-                  <p v-if="s.avisado_at" class="mt-2 text-xs text-texto-secundario">Último aviso: {{ fechaHora(s.avisado_at) }}. Avisar de nuevo le envía un enlace nuevo con los retos que marques.</p>
+                  <p class="mt-2 text-xs text-texto-secundario">Le llega «Tus retos están listos» con un enlace para leerlos, sin cuenta y sin poder trabajarlos.</p>
+                  <p v-if="s.avisado_at" class="mt-1 text-xs text-texto-secundario">Último aviso: {{ fechaHora(s.avisado_at) }}. Avisar de nuevo le envía un enlace nuevo con los retos que marques.</p>
+
+                  <!-- Autorizar a trabajarlos: solo si el docente tiene cuenta (acción crítica, con confirmación) -->
+                  <div v-if="gestiona" class="mt-4 border-t border-borde pt-4">
+                    <p class="text-sm font-bold text-azul-noche">Autorizar a trabajarlos</p>
+                    <template v-if="s.cuenta_docente">
+                      <p class="mt-1 text-xs text-texto-secundario">
+                        {{ s.nombre_docente }} tiene cuenta en DuaLab ({{ s.cuenta_docente.centro }}). Los retos marcados pasan a la biblioteca de su centro, los verán sus docentes y a {{ s.nombre_docente.split(' ')[0] }} le llega un correo para trabajarlos con «Trabajar este reto». El mensaje de arriba también va en este correo.
+                      </p>
+                      <button v-if="!confirmandoAutorizar" type="button" class="accion-secundaria mt-3"
+                              :disabled="guardando || !retosParaAutorizar.length" @click="confirmandoAutorizar = true">
+                        Autorizar a trabajarlos ({{ retosParaAutorizar.length }})
+                      </button>
+                      <div v-else class="mt-3 space-y-3">
+                        <AvisoAccionCritica :texto="`Vas a autorizar ${retosParaAutorizar.length} reto(s): pasan a la biblioteca de «${s.cuenta_docente.centro}» y se envía el correo a ${s.email_docente}. Queda en el Historial de Central con tu nombre y la fecha.`" />
+                        <div class="flex flex-wrap justify-end gap-2">
+                          <button type="button" class="accion-secundaria" :disabled="guardando" @click="confirmandoAutorizar = false">Cancelar</button>
+                          <button type="button" class="accion-principal" :disabled="guardando" @click="autorizar">{{ guardando ? 'Autorizando…' : 'Sí, autorizar' }}</button>
+                        </div>
+                      </div>
+                    </template>
+                    <p v-else class="mt-1 text-xs text-texto-secundario">
+                      No hay ninguna cuenta de DuaLab con {{ s.email_docente }}: de momento solo puede leerlos. Cuando tenga cuenta en su centro, podrás autorizarle desde aquí.
+                    </p>
+                  </div>
                 </template>
 
                 <!-- Publicar en la biblioteca de un centro: acción crítica, con confirmación -->

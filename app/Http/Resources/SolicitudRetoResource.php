@@ -21,6 +21,8 @@ class SolicitudRetoResource extends JsonResource
         $servicio = app(SolicitudRetoService::class);
         $numRetos = $this->microretos_count ?? null;
         $numEncuentros = $this->encuentros_count ?? null;
+        // Solo en la ficha: si el docente tiene cuenta, se le pueden autorizar los retos
+        $cuenta = $this->relationLoaded('microretos') ? $servicio->cuentaDocente($this->resource) : null;
 
         return [
             'id'             => $this->id,
@@ -47,6 +49,10 @@ class SolicitudRetoResource extends JsonResource
             'respuestas'     => $this->when($this->relationLoaded('microretos'), fn () => (object) $servicio->respuestas($this->resource)),
             // Un bloque por cada petición para el generador, con los nombres del currículo
             'bloques'        => $this->when($this->relationLoaded('microretos'), fn () => $servicio->curriculo($this->resource)),
+            'cuenta_docente' => $this->when($this->relationLoaded('microretos'), fn () => $cuenta ? [
+                'centro_id' => $cuenta->centro_educativo_id,
+                'centro'    => $cuenta->centroEducativo?->nombre,
+            ] : null),
             'retos'          => $this->whenLoaded('microretos', fn () => $this->microretos->map(fn ($m) => [
                 'uuid'       => $m->uuid,
                 'titulo'     => $m->titulo,
@@ -55,6 +61,8 @@ class SolicitudRetoResource extends JsonResource
                 // En la recámara (solo DuaLab) o ya publicado en la biblioteca de un centro
                 'en_recamara' => (bool) $m->en_recamara,
                 'centro'     => $m->en_recamara ? null : $m->centro?->nombre,
+                // Publicado en el centro de la cuenta del docente: ya lo puede trabajar
+                'autorizado' => $cuenta !== null && !$m->en_recamara && $m->centro_id === $cuenta->centro_educativo_id,
                 'created_at' => $m->created_at?->toIso8601String(),
             ])->values()),
         ];

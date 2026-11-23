@@ -579,6 +579,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/',               [SolicitudRetoController::class, 'store']);
             Route::post('/{id}/reenviar',  [SolicitudRetoController::class, 'reenviar'])->whereNumber('id');
             Route::post('/{id}/avisar',    [SolicitudRetoController::class, 'avisar'])->whereNumber('id');
+            // Autorizar a trabajarlos: los publica en el centro del docente (gestión de las peticiones)
+            Route::post('/{id}/autorizar', [SolicitudRetoController::class, 'autorizar'])->whereNumber('id')->middleware('admin.central');
         });
     });
 

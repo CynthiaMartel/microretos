@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\SolicitudRetoAutorizadosMail;
 use App\Mail\SolicitudRetoMail;
 use App\Mail\SolicitudRetoRespondidaMail;
 use App\Mail\SolicitudRetoRetosListosMail;
@@ -502,6 +503,62 @@ class SolicitudRetoService
         });
 
         return $retos->count();
+    }
+
+    /**
+     * Cuenta de DuaLab del docente de la solicitud: docente o admin de centro, con su correo, con centro
+     * y sin bloquear. Sin ella solo puede leer los retos (avisar); con ella se le pueden autorizar.
+     */
+    public function cuentaDocente(SolicitudReto $solicitud): ?User
+    {
+        if (blank($solicitud->email_docente)) return null;
+
+        return User::with('centroEducativo:id,nombre')
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($solicitud->email_docente))])
+            ->whereIn('role', [User::ROLE_DOCENTE, User::ROLE_ADMIN])
+            ->whereNotNull('centro_educativo_id')
+            ->where('is_blocked', false)
+            ->first();
+    }
+
+    /**
+     * «Autorizar a trabajarlos»: los retos pasan a la biblioteca del centro de la cuenta del docente
+     * (si estaban en la recámara) y le llega un correo con el enlace a cada uno en la app, donde
+     * puede pulsar «Trabajar este reto». Solo si tiene cuenta (cuentaDocente).
+     *
+     * @param array<int, string> $uuids
+     */
+    public function autorizar(SolicitudReto $solicitud, array $uuids, ?string $mensaje, User $autor): User
+    {
+        if ($solicitud->estado !== SolicitudReto::ESTADO_RESPONDIDA) {
+            throw ValidationException::withMessages(['retos' => 'Solo se puede autorizar en una solicitud que el docente ha enviado.']);
+        }
+        $cuenta = $this->cuentaDocente($solicitud);
+        if (!$cuenta) {
+            throw ValidationException::withMessages(['retos' => 'No hay ninguna cuenta de DuaLab con el correo del docente: de momento solo puede leerlos («Avisar al docente»).']);
+        }
+
+        $retos = $solicitud->microretos()->whereIn('uuid', $uuids)->get(['id', 'uuid', 'titulo', 'en_recamara', 'centro_id']);
+        if ($retos->count() !== count($uuids)) {
+            throw ValidationException::withMessages(['retos' => 'Algún reto no es de esta solicitud o ya no existe.']);
+        }
+        // Uno ya publicado en otro centro no se mueve: lo ven sus docentes y quizá ya lo trabajan
+        if ($retos->contains(fn ($m) => !$m->en_recamara && $m->centro_id !== $cuenta->centro_educativo_id)) {
+            throw ValidationException::withMessages(['retos' => 'Algún reto ya está en la biblioteca de otro centro: desmárcalo.']);
+        }
+
+        DB::transaction(function () use ($retos, $cuenta, $solicitud, $autor, $mensaje) {
+            // centro_id y en_recamara no son fillable: los fija el backend
+            $retos->each(fn ($m) => $m->forceFill(['en_recamara' => false, 'centro_id' => $cuenta->centro_educativo_id])->save());
+            $url = rtrim(config('solicitudes_reto.url_app'), '/');
+            $this->correoInfo->enviar(new SolicitudRetoAutorizadosMail(
+                $solicitud, $autor,
+                $retos->map(fn ($m) => ['titulo' => $m->titulo ?: 'Reto sin título', 'enlace' => "{$url}/retos/{$m->uuid}"])->values()->all(),
+                $mensaje,
+            ), $solicitud->email_docente, $autor->name);
+        });
+
+        return $cuenta;
     }
 
     /**

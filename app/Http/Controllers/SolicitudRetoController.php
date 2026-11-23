@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AvisarSolicitudRetoRequest;
+use App\Http\Requests\AutorizarRetosSolicitudRequest;
 use App\Http\Requests\DatosGeneradorSolicitudRequest;
 use App\Http\Requests\ListarSolicitudesRetoRequest;
 use App\Http\Requests\PublicarRetosSolicitudRequest;
@@ -101,6 +102,21 @@ class SolicitudRetoController extends Controller
         $solicitud = SolicitudReto::findOrFail($id);
         $this->solicitudes->avisar($solicitud, $datos['retos'], $datos['mensaje'] ?? null, $request->user());
         $this->actividad->registrar($request->user(), 'solicitudes', 'avisar_docente', 'Avisó a ' . $solicitud->nombre_docente . ' de que sus retos están listos (' . count($datos['retos']) . ' retos).', $solicitud);
+
+        return new SolicitudRetoResource($this->ficha($id));
+    }
+
+    /**
+     * POST /central/solicitudes-reto/{id}/autorizar — el docente, si tiene cuenta, puede trabajar los
+     * retos elegidos: pasan a la biblioteca de su centro y le llega un correo con el enlace a cada uno.
+     */
+    public function autorizar(AutorizarRetosSolicitudRequest $request, int $id): SolicitudRetoResource
+    {
+        $datos = $request->validated();
+        $solicitud = SolicitudReto::findOrFail($id);
+        $cuenta = $this->solicitudes->autorizar($solicitud, $datos['retos'], $datos['mensaje'] ?? null, $request->user());
+        $this->actividad->registrar($request->user(), 'retos', 'autorizar_retos',
+            'Autorizó a ' . $solicitud->nombre_docente . ' a trabajar ' . count($datos['retos']) . " reto(s): pasan a la biblioteca de «{$cuenta->centroEducativo?->nombre}».", $solicitud, true);
 
         return new SolicitudRetoResource($this->ficha($id));
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\EnviarCorreoInfoJob;
 use App\Mail\SolicitudRetoMail;
 use App\Mail\SolicitudRetoRespondidaMail;
+use App\Mail\SolicitudRetoAutorizadosMail;
 use App\Mail\SolicitudRetoRetosListosMail;
 use App\Models\Microreto;
 use App\Models\SolicitudReto;
@@ -499,12 +500,29 @@ class SolicitudRetoTest extends TestCase
 
         $reto = Microreto::firstOrFail();
         $this->assertTrue($reto->en_recamara);
+        // El contexto de la petición llega entero al reto guardado
+        $this->assertSame($solicitud->id, $reto->solicitud_reto_id);
+        $this->assertSame($this->empresaId, $reto->empresa_id);
+        $this->assertSame('Bajo', $reto->nivel_grupo);
+        $this->assertSame($datos['contexto']['ciclo_id'], $reto->ciclo_id);
+        $this->assertSame($datos['contexto']['modulo'], $reto->modulo);
+
+        // En la recámara, el docente del centro no lo ve ni lo puede ajustar
+        $docente = $this->usuario(User::ROLE_DOCENTE, 'docente@test.local', $this->centroId);
+        Sanctum::actingAs($docente);
+        $this->assertNotContains($reto->uuid, collect($this->getJson('/api/microretos')->assertOk()->json())->pluck('uuid'));
+        $this->postJson('/api/startup/proyectos', ['titulo' => 'Antes de tiempo', 'microreto_id' => $reto->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('microreto_id');
 
         // Publicar en la biblioteca de un centro: sus docentes lo ven
+        Sanctum::actingAs($adminCentral);
         $this->postJson("/api/central/solicitudes-reto/{$solicitud->id}/publicar", ['retos' => [$reto->uuid], 'centro_id' => $this->centroId])->assertOk();
         $this->assertFalse($reto->fresh()->en_recamara);
-        Sanctum::actingAs($this->usuario(User::ROLE_DOCENTE, 'docente@test.local', $this->centroId));
+        Sanctum::actingAs($docente);
         $this->getJson("/api/microretos/{$reto->uuid}")->assertOk();
+        $this->assertContains($reto->uuid, collect($this->getJson('/api/microretos')->assertOk()->json())->pluck('uuid'));
+        // …y puede trabajarlo: «Trabajar este reto» crea su reto ajustado
+        $this->postJson('/api/startup/proyectos', ['titulo' => 'Reto de la recámara', 'microreto_id' => $reto->id])->assertCreated();
 
         // Todo queda en el historial, con quién lo hizo; lo crítico, marcado
         Sanctum::actingAs($adminCentral);
@@ -514,6 +532,46 @@ class SolicitudRetoTest extends TestCase
         $this->assertTrue($historial->contains(fn ($h) => $h['accion'] === 'guardar_retos'));
         Sanctum::actingAs($this->usuario(User::ROLE_RED_DUALAB, 'red2@test.local'));
         $this->getJson('/api/central/historial')->assertForbidden();
+    }
+
+    public function test_autorizar_a_trabajar_solo_si_el_docente_tiene_cuenta(): void
+    {
+        $solicitud = $this->solicitudRespondida();
+        $reto = Microreto::forceCreate(['titulo' => 'Reto listo', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => true]);
+        $adminCentral = $this->usuario(User::ROLE_ADMIN_CENTRAL_DUALAB, 'admincentral@test.local');
+        $url = "/api/central/solicitudes-reto/{$solicitud->id}";
+
+        // Red DuaLab avisa, pero no autoriza
+        Sanctum::actingAs($this->usuario(User::ROLE_RED_DUALAB, 'red@test.local'));
+        $this->postJson("{$url}/autorizar", ['retos' => [$reto->uuid]])->assertForbidden();
+
+        // Sin cuenta con el correo del docente: solo puede leerlos
+        Sanctum::actingAs($adminCentral);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.cuenta_docente', null);
+        $this->postJson("{$url}/autorizar", ['retos' => [$reto->uuid]])->assertUnprocessable()->assertJsonValidationErrors('retos');
+        $this->assertTrue($reto->fresh()->en_recamara);
+        Mail::assertNotQueued(SolicitudRetoAutorizadosMail::class);
+
+        // Con cuenta (el correo, sin importar mayúsculas): pasa a la biblioteca de su centro y le llega el correo
+        $docente = $this->usuario(User::ROLE_DOCENTE, 'Profe@Centro.test', $this->centroId);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.cuenta_docente.centro', 'IES Prueba Solicitudes');
+        $this->postJson("{$url}/autorizar", ['retos' => [$reto->uuid], 'mensaje' => '¡A por ello!'])->assertOk()
+            ->assertJsonPath('data.retos.0.autorizado', true);
+        $this->assertFalse($reto->fresh()->en_recamara);
+        $this->assertSame($this->centroId, $reto->fresh()->centro_id);
+        Mail::assertQueued(SolicitudRetoAutorizadosMail::class, fn ($m) => $m->hasTo('profe@centro.test')
+            && str_ends_with($m->retos[0]['enlace'], "/retos/{$reto->uuid}") && $m->mensaje === '¡A por ello!');
+
+        // Ya lo puede trabajar
+        Sanctum::actingAs($docente);
+        $this->postJson('/api/startup/proyectos', ['titulo' => 'Reto listo', 'microreto_id' => $reto->id])->assertCreated();
+
+        // Uno publicado en otro centro no se mueve
+        $otroCentro = DB::table('centro_educativo')->insertGetId(['nombre' => 'IES Otro']);
+        $ajeno = Microreto::forceCreate(['titulo' => 'De otro centro', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => false, 'centro_id' => $otroCentro]);
+        Sanctum::actingAs($adminCentral);
+        $this->postJson("{$url}/autorizar", ['retos' => [$ajeno->uuid]])->assertUnprocessable();
+        $this->assertSame($otroCentro, $ajeno->fresh()->centro_id);
     }
 
     // ── Ayudantes ────────────────────────────────────────────────────────────
