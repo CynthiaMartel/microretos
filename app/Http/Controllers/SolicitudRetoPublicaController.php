@@ -6,7 +6,6 @@ use App\Http\Requests\EnviarSolicitudRetoRequest;
 use App\Http\Requests\GuardarSolicitudRetoRequest;
 use App\Http\Resources\MicroretoFichaResource;
 use App\Models\SolicitudReto;
-use App\Services\MicroretoFichaService;
 use App\Services\SolicitudRetoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -61,12 +60,7 @@ class SolicitudRetoPublicaController extends Controller
             return response()->json(['error' => 'Todavía estamos preparando tus retos. Te avisaremos por correo.', 'motivo' => 'sin_retos'], 404);
         }
 
-        $retos = $solicitud->microretos()
-            ->with(['empresa.centroEducativo', 'empresa.familias'])
-            ->whereIn('uuid', $solicitud->retos_avisados ?? [])
-            ->get();
-
-        return MicroretoFichaResource::collection(MicroretoFichaService::enriquecerLote($retos));
+        return MicroretoFichaResource::collection($this->solicitudes->fichasRetos($solicitud, $solicitud->retos_avisados ?? []));
     }
 
     /**

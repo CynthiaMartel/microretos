@@ -9,6 +9,8 @@ use App\Http\Requests\ListarSolicitudesRetoRequest;
 use App\Http\Requests\PublicarRetosSolicitudRequest;
 use App\Http\Requests\StoreSolicitudRetoRequest;
 use App\Http\Requests\UpdateSolicitudRetoRequest;
+use App\Http\Requests\VerRetosSolicitudRequest;
+use App\Http\Resources\MicroretoFichaResource;
 use App\Http\Resources\SolicitudRetoResource;
 use App\Models\CentroEducativo;
 use App\Models\SolicitudReto;
@@ -93,6 +95,17 @@ class SolicitudRetoController extends Controller
         $enlace = $this->solicitudes->enviar(SolicitudReto::findOrFail($id), $request->user());
 
         return response()->json(['data' => new SolicitudRetoResource($this->ficha($id)), 'enlace' => $enlace]);
+    }
+
+    /**
+     * GET /central/solicitudes-reto/{id}/retos?retos[]=… — fichas de los retos marcados, para ver en
+     * «Así lo ve el docente» cómo le llegarán antes de avisarle.
+     */
+    public function retos(VerRetosSolicitudRequest $request, int $id): AnonymousResourceCollection
+    {
+        $solicitud = SolicitudReto::findOrFail($id);
+
+        return MicroretoFichaResource::collection($this->solicitudes->fichasRetos($solicitud, $request->validated('retos')));
     }
 
     /** POST /central/solicitudes-reto/{id}/avisar — «tus retos están listos», con los retos elegidos */

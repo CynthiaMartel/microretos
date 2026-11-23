@@ -196,6 +196,28 @@ class SolicitudRetoTest extends TestCase
         $this->assertNotSame($descartado, $elegido);
     }
 
+    public function test_vista_previa_de_los_retos_como_los_vera_el_docente(): void
+    {
+        $solicitud = $this->solicitudRespondida();
+        Sanctum::actingAs($this->superadmin);
+        $this->postJson('/api/guardar-microretos-lote', $this->lote($solicitud->id, 2))->assertCreated();
+        [$primero] = Microreto::orderBy('id')->pluck('uuid')->all();
+        $ajeno = Microreto::forceCreate(['titulo' => 'Reto ajeno'])->uuid;
+
+        // Solo los de la solicitud, con la ficha de la biblioteca; sin avisar a nadie
+        $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/retos?" . http_build_query(['retos' => [$primero, $ajeno]]))
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.uuid', $primero)->assertJsonPath('data.0.titulo', 'Reto 1');
+        $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/retos")
+            ->assertUnprocessable()->assertJsonValidationErrors('retos');
+        Mail::assertNotQueued(SolicitudRetoRetosListosMail::class);
+        $this->assertNull($solicitud->fresh()->avisado_at);
+
+        Sanctum::actingAs($this->usuario(User::ROLE_DOCENTE, 'docente@test.local', $this->centroId));
+        $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/retos?" . http_build_query(['retos' => [$primero]]))
+            ->assertForbidden();
+    }
+
     public function test_la_propuesta_sugiere_la_sesion_y_el_encuentro_cierra_la_solicitud(): void
     {
         $solicitud = $this->solicitudRespondida();

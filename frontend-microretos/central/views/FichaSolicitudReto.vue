@@ -16,7 +16,7 @@ import AvisoAccionCritica from '../../src/components/AvisoAccionCritica.vue'
 import { getCentros } from '../../src/services/datosFPService.js'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
 import {
-  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, autorizarRetosSolicitud, getCorreosSolicitud, publicarRetosSolicitud,
+  getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, getFichasRetosSolicitud, autorizarRetosSolicitud, getCorreosSolicitud, publicarRetosSolicitud,
   NIVELES, PUNTOS_TEMARIO,
 } from '../../src/services/solicitudRetoService.js'
 import { FASES_SOLICITUD, fechaHora, textoSesion, faltaEncuentro, urlApp } from '../primerContacto.js'
@@ -176,6 +176,25 @@ function correoEnviado() {
 }
 
 const viendoComoDocente = ref(false)
+// Con las fichas de los retos marcados, la vista previa enseña cómo le llegarán con el aviso
+const retosVistaPrevia = ref(null)
+const cargandoVistaPrevia = ref(false)
+function verFormulario() {
+  retosVistaPrevia.value = null
+  viendoComoDocente.value = true
+}
+async function verRetosComoDocente() {
+  cargandoVistaPrevia.value = true
+  aviso.value = ''
+  try {
+    retosVistaPrevia.value = (await getFichasRetosSolicitud(s.value.id, retosElegidos.value)).data.data
+    viendoComoDocente.value = true
+  } catch (e) {
+    aviso.value = e.response?.data?.message || 'No se ha podido preparar la vista previa de los retos.'
+  } finally {
+    cargandoVistaPrevia.value = false
+  }
+}
 
 // Cada petición se abre en el generador por separado (?bloque=N)
 // ── Publicar retos de la recámara en la biblioteca de un centro (acción crítica) ──
@@ -252,7 +271,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
             <span v-if="faltaEncuentro(s)" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Falta encuentro · sesión {{ textoSesion(s.sesion) }}</span>
           </div>
           <div class="flex flex-wrap gap-2 sm:ml-auto">
-            <button type="button" class="accion-secundaria" @click="viendoComoDocente = true">Ver cómo lo ve el docente</button>
+            <button type="button" class="accion-secundaria" @click="verFormulario">Ver cómo lo ve el docente</button>
             <button v-if="s.estado === 'pendiente'" type="button" class="accion-secundaria" :disabled="guardando" @click="reenviar">Reenviar enlace</button>
             <button v-if="s.estado !== 'descartada'" type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: true }, 'Solicitud descartada.')">Descartar</button>
             <button v-else type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: false }, 'Solicitud recuperada.')">Recuperar</button>
@@ -360,7 +379,12 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                 <template v-if="s.estado === 'respondida'">
                   <label for="sol-mensaje" class="field-label mt-4">Unas líneas para el docente (opcional)</label>
                   <textarea id="sol-mensaje" v-model="mensaje" maxlength="1000" rows="3" class="field-input"></textarea>
-                  <button type="button" class="accion-principal mt-3" :disabled="guardando || !retosElegidos.length" @click="avisar">Avisar al docente</button>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" class="accion-principal" :disabled="guardando || !retosElegidos.length" @click="avisar">Avisar al docente</button>
+                    <button type="button" class="accion-secundaria" :disabled="cargandoVistaPrevia || !retosElegidos.length" @click="verRetosComoDocente">
+                      {{ cargandoVistaPrevia ? 'Preparando…' : 'Ver cómo los verá' }}
+                    </button>
+                  </div>
                   <p class="mt-2 text-xs text-texto-secundario">Le llega «Tus retos están listos» con un enlace para leerlos, sin cuenta y sin poder trabajarlos.</p>
                   <p v-if="s.avisado_at" class="mt-1 text-xs text-texto-secundario">Último aviso: {{ fechaHora(s.avisado_at) }}. Avisar de nuevo le envía un enlace nuevo con los retos que marques.</p>
 
@@ -462,7 +486,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
       </template>
     </div>
 
-    <VistaPreviaSolicitud v-if="s" :abierto="viendoComoDocente" :datos="{ nombreDocente: s.nombre_docente, centroNombre: s.centro_nombre }"
+    <VistaPreviaSolicitud v-if="s" :abierto="viendoComoDocente" :datos="{ nombreDocente: s.nombre_docente, centroNombre: s.centro_nombre }" :retos="retosVistaPrevia"
                           @cerrar="viendoComoDocente = false" />
     <RedactarCorreo v-if="s" :abierto="escribiendo" modo="nuevo" :contacto="contactoDocente"
                     @cerrar="escribiendo = false" @enviado="correoEnviado" />

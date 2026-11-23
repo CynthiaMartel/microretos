@@ -234,6 +234,22 @@ class SolicitudRetoService
     }
 
     /**
+     * Fichas de retos de la solicitud, como en la biblioteca: las del enlace del aviso y la vista
+     * previa de Central. Los uuid que no son de esta solicitud se ignoran.
+     *
+     * @param array<int, string> $uuids
+     */
+    public function fichasRetos(SolicitudReto $solicitud, array $uuids): Collection
+    {
+        $retos = $solicitud->microretos()
+            ->with(['empresa.centroEducativo', 'empresa.familias'])
+            ->whereIn('uuid', $uuids)
+            ->get();
+
+        return MicroretoFichaService::enriquecerLote($retos);
+    }
+
+    /**
      * Las respuestas con los bloques normalizados. Las solicitudes anteriores a los bloques (noviembre
      * de 2026) guardaban un solo bloque suelto, con `objetivo` en lugar de `tipoPropuesta`.
      *

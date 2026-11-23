@@ -187,6 +187,11 @@ export function forzarTemaRol(clave) {
   temaForzado.value = THEME_BY_KEY[clave] ? clave : null
 }
 
+// Tema fijo por clave, para vistas sin sesión (p. ej. el enlace de la solicitud de retos, en azul de docente)
+export function temaPorClave(clave) {
+  return THEME_BY_KEY[clave] || DEFAULT_THEME
+}
+
 export function useRoleTheme() {
   const authStore = useAuthStore()
   const theme = computed(() => (temaForzado.value && THEME_BY_KEY[temaForzado.value])

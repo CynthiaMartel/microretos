@@ -564,6 +564,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/para-generador',  [SolicitudRetoController::class, 'paraGenerador'])->middleware('admin.central');
         Route::get('/{id}',            [SolicitudRetoController::class, 'show'])->whereNumber('id');
         Route::get('/{id}/correos',    [SolicitudRetoCorreoController::class, 'deSolicitud'])->whereNumber('id');
+        Route::get('/{id}/retos',      [SolicitudRetoController::class, 'retos'])->whereNumber('id');
         Route::patch('/{id}',          [SolicitudRetoController::class, 'update'])->whereNumber('id');
         // Gestión de las peticiones (superadmin y admin_central_dualab): empresa, generar y publicar retos
         Route::middleware('admin.central')->group(function () {

@@ -15,6 +15,8 @@ export const getSolicitud = (id) => api.get(`/central/solicitudes-reto/${id}`);
 export const actualizarSolicitud = (id, payload) => api.patch(`/central/solicitudes-reto/${id}`, payload);
 export const reenviarSolicitud = (id) => api.post(`/central/solicitudes-reto/${id}/reenviar`);
 export const avisarDocente = (id, payload) => api.post(`/central/solicitudes-reto/${id}/avisar`, payload);
+// Fichas de los retos marcados, para la vista previa «Así lo ve el docente»
+export const getFichasRetosSolicitud = (id, retos) => api.get(`/central/solicitudes-reto/${id}/retos`, { params: { retos } });
 // Autorizar a trabajarlos: pasan a la biblioteca del centro del docente (si tiene cuenta) y le llega un correo
 export const autorizarRetosSolicitud = (id, payload) => api.post(`/central/solicitudes-reto/${id}/autorizar`, payload);
 // A la papelera (solo superadmin); se restaura en Red DuaLab → Papelera

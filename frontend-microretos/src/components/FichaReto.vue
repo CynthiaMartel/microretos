@@ -1,0 +1,638 @@
+<!-- Ficha de un reto tal como se ve en la biblioteca (DetalleMicroreto): cabecera, diagnóstico,
+     RA/CE, variantes y guía docente. La usa también el enlace de la solicitud de retos
+     (SolicitudRetoDocente), en solo lectura y sin sesión: ahí no hay «Trabajar este reto». -->
+<script setup>
+import { computed } from 'vue'
+import { formatearFecha } from '../utils/fechas.js'
+import { useUiHighlightStore } from '../stores/uiHighlight.js'
+import AvisoEmpresaBorrada from './AvisoEmpresaBorrada.vue'
+
+const props = defineProps({
+  reto: { type: Object, required: true },
+  // Tema de color (useRoleTheme o temaPorClave)
+  theme: { type: Object, required: true },
+  // Para la animación de entrada de la vista
+  visible: { type: Boolean, default: true },
+  soloLectura: { type: Boolean, default: false },
+})
+const emit = defineEmits(['trabajar'])
+
+const uiHighlight = useUiHighlightStore()
+
+const imagenFondo = computed(() => {
+  if (!props.reto.familia) return null
+  const slugFamilia = props.reto.familia
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+  const baseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/api$/, '')
+  return `${baseUrl}/familias/${slugFamilia}.webp`
+})
+
+// Datos crudos de la empresa (lo que se recogió antes de que la IA los resumiera) —
+// deliberadamente sin datos de contacto: eso lo filtra MicroretoFichaResource en el backend.
+const tieneDatosRecogidos = computed(() => {
+  const e = props.reto.empresa
+  if (!e) return false
+  return !!(e.dia_a_normal || e.friccion_area || e.friccion_problema
+    || e.consecuencias || e.restricciones || e.lo_que_no_quieren || e.expectativas_alumno)
+})
+</script>
+
+<template>
+  <div>
+    <!-- BLOQUE PRINCIPAL -->
+    <div class="bg-white rounded-[2rem] shadow-[0_20px_50px_rgb(0,0,0,0.06)]
+                overflow-hidden border border-gray-100
+                transition-all duration-700 delay-100 ease-out"
+         :class="visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
+
+      <!-- ── Cabecera ── -->
+      <div class="relative bg-gray-50 border-b border-gray-100 overflow-hidden">
+      
+        <div class="absolute inset-0 z-0 pointer-events-none">
+          <div class="absolute inset-0 bg-gradient-to-r from-gray-50 via-gray-50/95 to-transparent z-10"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-gray-50 via-transparent to-transparent z-10"></div>
+        
+          <img
+            v-if="imagenFondo"
+            :src="imagenFondo"
+            alt=""
+            class="w-full h-full object-cover object-right opacity-30 md:opacity-40 mix-blend-multiply transition-opacity duration-1000"
+            :class="visible ? 'opacity-30 md:opacity-40' : 'opacity-0'"
+          />
+        </div>
+
+        <div class="relative z-10 px-6 py-8 md:px-14 md:pt-12 md:pb-10 max-w-4xl">
+
+          <p class="font-bold text-[10px] tracking-[0.2em] uppercase mb-4
+                    flex items-center gap-2" :class="theme.text">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                       a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            DUALAB · Ficha de Reto
+          </p>
+
+          <h1 class="text-2xl sm:text-3xl md:text-5xl font-black text-azul-noche
+                     tracking-tight leading-tight mb-3">
+            {{ reto.titulo }}
+          </h1>
+          <h2 class="text-lg md:text-2xl text-gray-600 font-bold leading-snug mb-3">
+            {{ reto.pregunta_reto }}
+          </h2>
+          <h3 class="text-base md:text-xl text-gray-500 font-medium leading-relaxed mb-8">
+            {{ reto.subtitulo }}
+          </h3>
+          <p v-if="reto.creado_en" class="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">
+            Reto creado el {{ formatearFecha(reto.creado_en) }}
+          </p>
+
+          <div class="flex flex-wrap gap-2 md:gap-3">
+            <span class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-[#1F2937] text-white rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider shadow-sm">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5
+                         m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0
+                         011-1h2a1 1 0 011 1v5m-4 0h4"/>
+              </svg>
+              {{ reto.empresa_nombre }}
+            </span>
+
+            <span v-if="reto.empresa_es_simulada != null"
+                  :class="reto.empresa_es_simulada
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         border rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg v-if="reto.empresa_es_simulada" class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3
+                         m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374
+                         3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+              <svg v-else class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ reto.empresa_es_simulada ? 'Empresa ficticia' : 'Empresa real' }}
+            </span>
+            <AvisoEmpresaBorrada :estado="reto.empresa_estado" tamano="md" />
+
+            <span v-if="reto.es_simulado"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-rose-50 border border-rose-200 text-rose-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              Info simulada
+            </span>
+
+            <span v-if="reto.familia"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-sky-50 border border-sky-200 text-sky-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2-2H5a2 2 0 01-2-2v-6
+                         a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5
+                         a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+              {{ reto.familia }}
+            </span>
+
+            <span v-if="reto.nivel_grupo"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-violet-50 border border-violet-200 text-violet-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0
+                         002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2
+                         a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2
+                         2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              Nivel: {{ reto.nivel_grupo }}
+            </span>
+
+            <span v-if="reto.ciclo"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-teal-50 border border-teal-200 text-teal-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 14l9-5-9-5-9 5 9 5z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0
+                         0112 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0
+                         01.665-6.479L12 14z"/>
+              </svg>
+              {{ reto.ciclo }}
+            </span>
+
+            <span v-if="reto.curso"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-blue-50 border border-blue-200 text-blue-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13
+                         C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477
+                         14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247
+                         18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+              {{ reto.curso === 'ambos_cursos' ? 'Ambos Cursos: 1º y 2º' : reto.curso + 'º Curso' }}
+            </span>
+
+            <span v-if="reto.multimodulo"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Multi-módulo
+            </span>
+
+            <span v-if="reto.empresa?.sector"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-gray-50 border border-gray-200 text-gray-600 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              {{ reto.empresa.sector }}
+            </span>
+            <span v-if="reto.empresa?.tamano"
+                  class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2
+                         bg-gray-50 border border-gray-200 text-gray-600 rounded-full
+                         text-[10px] md:text-xs font-bold uppercase tracking-wider">
+              {{ reto.empresa.tamano }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Cuerpo ── -->
+      <div class="px-6 py-8 md:px-14 md:py-12 space-y-10 md:space-y-14">
+
+        <!-- Datos recogidos de la empresa: diagnóstico crudo, tal cual lo aportó el
+             docente/empresa — es la materia prima que la IA resume debajo. -->
+        <!-- Plegado por defecto: el texto crudo es largo y la atención debe ir al resumen. -->
+        <details v-if="tieneDatosRecogidos"
+             class="group bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200
+                    rounded-2xl p-5 md:p-7 shadow-sm">
+          <summary class="flex flex-wrap sm:flex-nowrap items-center gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shrink-0 shadow-sm">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                         a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-orange-700 font-black uppercase text-xs md:text-sm tracking-[0.15em]">
+                Datos recogidos de la empresa
+              </h3>
+              <p class="text-[11px] text-orange-400 font-medium">
+                <template v-if="reto.diagnostico_modificado_en_reto">Diagnóstico ajustado para este reto · no coincide con la ficha de la empresa</template>
+                <template v-else>Diagnóstico original, sin resumir por IA</template><template v-if="reto.diagnostico_recogido_en"> · recogido el {{ formatearFecha(reto.diagnostico_recogido_en) }}</template>
+              </p>
+            </div>
+            <!-- Pastilla "Ver más info"/"Ocultar info": el texto cambia según esté abierto -->
+            <span class="ml-auto inline-flex items-center gap-1.5 min-h-[36px] px-4 rounded-full bg-white border border-orange-300
+                         text-orange-600 text-xs font-bold whitespace-nowrap shrink-0 shadow-sm group-hover:bg-orange-50 transition-colors">
+              <span class="group-open:hidden">Ver más info</span>
+              <span class="hidden group-open:inline">Ocultar info</span>
+              <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-180" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+          </summary>
+          <div class="mt-5">
+            <!-- La empresa cambió su diagnóstico después de crear el reto (solo lo recibe el personal) -->
+            <div v-if="reto.diagnostico_desactualizado || reto.interes_desactualizado" role="note"
+                 class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+              <p class="text-xs text-amber-800 leading-relaxed">
+                <strong>La empresa ha actualizado {{ reto.diagnostico_desactualizado && reto.interes_desactualizado ? 'su diagnóstico y lo que busca con esta familia' : reto.diagnostico_desactualizado ? 'su diagnóstico' : 'lo que busca con esta familia' }} después de crear este reto.</strong>
+                Este reto se basa en la versión anterior, que es la que se muestra aquí.
+              </p>
+            </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Para qué quería la empresa al alumnado de esta familia cuando se generó el reto -->
+            <div v-if="reto.interes_familia" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">
+                Qué busca la empresa con {{ reto.familia ? `«${reto.familia}»` : 'esta familia' }}
+                <span v-if="reto.interes_modificado_en_reto" class="ml-1 normal-case tracking-normal font-bold text-amber-600">· ajustado para este reto</span>
+              </p>
+              <p class="text-sm text-gray-700 leading-relaxed break-words">{{ reto.interes_familia }}</p>
+            </div>
+            <div v-if="reto.empresa.dia_a_normal" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Su día a día</p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.dia_a_normal }}</p>
+            </div>
+            <div v-if="reto.empresa.friccion_area || reto.empresa.friccion_problema" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Fricciones de la empresa</p>
+              <p v-if="reto.empresa.friccion_area" class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.friccion_area }}</p>
+              <p v-if="reto.empresa.friccion_problema" class="text-sm text-gray-700 leading-relaxed mt-1">{{ reto.empresa.friccion_problema }}</p>
+            </div>
+            <div v-if="reto.empresa.consecuencias" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Consecuencias</p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.consecuencias }}</p>
+            </div>
+            <div v-if="reto.empresa.restricciones" class="bg-white/70 rounded-xl p-4 border border-orange-100">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Restricciones</p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.restricciones }}</p>
+            </div>
+            <div v-if="reto.empresa.lo_que_no_quieren" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Lo que no quieren</p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.lo_que_no_quieren }}</p>
+            </div>
+            <div v-if="reto.empresa.expectativas_alumno" class="bg-white/70 rounded-xl p-4 border border-orange-100 md:col-span-2">
+              <p class="text-[10px] font-black uppercase tracking-wider text-orange-500 mb-1">Qué esperan del alumnado</p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ reto.empresa.expectativas_alumno }}</p>
+            </div>
+          </div>
+          </div>
+        </details>
+
+        <!-- Resumen de diagnóstico: la lectura de la IA a partir de los datos de arriba. -->
+        <div class="space-y-10 md:space-y-14">
+          <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
+                     tracking-widest border-b-2 border-gray-200 pb-2">
+            <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                       a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Resumen de diagnóstico
+          </h3>
+
+        <!-- Quién es / Día a día -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
+          <div v-if="reto.quien_es">
+            <h3 class="section-title" :class="theme.text">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0
+                         00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0
+                         100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001
+                         3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+              </svg>
+              ¿Quién es {{ reto.empresa_nombre }}?
+            </h3>
+            <p class="text-gray-600 text-sm leading-relaxed">{{ reto.quien_es }}</p>
+          </div>
+          <div v-if="reto.dia_a_dia">
+            <h3 class="section-title" :class="theme.text">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Su día a día
+            </h3>
+            <p class="text-gray-600 text-sm leading-relaxed">{{ reto.dia_a_dia }}</p>
+          </div>
+        </div>
+
+        <!-- Dificultades -->
+        <div v-if="reto.dificultades?.length">
+          <h3 class="section-title text-yellow-600">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3
+                       L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            Dificultades
+          </h3>
+          <ul class="space-y-2 pl-1">
+            <li v-for="(item, i) in reto.dificultades" :key="i"
+                class="flex items-start gap-3 text-sm text-gray-700">
+              <span class="text-yellow-500 font-black mt-0.5 shrink-0">•</span>
+              <span>{{ item }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pregunta del reto -->
+        <div class="bg-gradient-to-r from-gray-50 to-white border-l-4
+                    p-6 md:p-8 rounded-r-2xl shadow-sm border-y border-r border-gray-100"
+             :class="theme.border">
+          <h3 class="font-black uppercase text-[10px] tracking-[0.2em] mb-3" :class="theme.text">
+            Este reto consiste en responder a:
+          </h3>
+          <p class="text-lg md:text-2xl font-bold text-[#1F2937] leading-snug">
+            {{ reto.pregunta_reto }}
+          </p>
+        </div>
+
+        <!-- Qué necesitan / Limitaciones -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
+          <div v-if="reto.que_necesitan?.length">
+            <h3 class="section-title" :class="theme.text">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
+                         00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              Qué necesitan
+            </h3>
+            <ul class="space-y-2 pl-1">
+              <li v-for="(item, i) in reto.que_necesitan" :key="i"
+                  class="flex items-start gap-3 text-sm text-gray-700">
+                <span class="font-black mt-0.5 shrink-0" :class="theme.text">•</span>
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="reto.limitaciones?.length">
+            <h3 class="section-title text-red-500">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0
+                         015.636 5.636m12.728 12.728L5.636 5.636"/>
+              </svg>
+              Limitaciones
+            </h3>
+            <ul class="space-y-2 pl-1">
+              <li v-for="(item, i) in reto.limitaciones" :key="i"
+                  class="flex items-start gap-3 text-sm text-gray-700">
+                <span class="text-red-500 font-black mt-0.5 shrink-0">•</span>
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        </div>
+
+        <!-- Prototipos / ODS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 lg:gap-10">
+          <div v-if="reto.prototipos?.length">
+            <h3 class="section-title" :class="theme.text">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+              Ejemplos de Prototipos
+            </h3>
+            <ul class="space-y-2 pl-1">
+              <li v-for="(item, i) in reto.prototipos" :key="i"
+                  class="flex items-start gap-3 text-sm text-gray-700">
+                <span class="font-black mt-0.5 shrink-0" :class="theme.text">•</span>
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="reto.ods_sugeridos?.length">
+            <h3 class="section-title text-blue-600">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064
+                         M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              ODS Sugeridos
+            </h3>
+            <ul class="space-y-2 pl-1">
+              <li v-for="ods in reto.ods_sugeridos" :key="ods"
+                  class="text-sm font-semibold text-[#1F2937]">{{ ods }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Soft skills -->
+        <div v-if="reto.soft_skills?.length">
+          <h3 class="flex items-center gap-2 text-purple-600 font-black text-[11px]
+                     uppercase tracking-[0.15em] mb-3">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283
+                       -.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283
+                       .356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Soft skills
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <span v-for="(skill, i) in reto.soft_skills" :key="i"
+                  class="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700
+                         rounded-full text-xs font-semibold">
+              {{ skill }}
+            </span>
+          </div>
+        </div>
+
+        <!-- RA / CE -->
+        <div v-if="reto.evaluacion_oficial?.length" class="pt-2">
+          <h3 class="flex items-center gap-2 text-azul-noche font-bold uppercase text-xs
+                     tracking-widest border-b-2 border-gray-200 pb-2 mb-6">
+            <svg class="w-5 h-5 shrink-0" :class="theme.text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 14l9-5-9-5-9 5 9 5z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0
+                       0112 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0
+                       01.665-6.479L12 14z"/>
+            </svg>
+            Módulos + RA/CE seleccionados
+          </h3>
+          <div class="flex items-start gap-2 text-amber-700 bg-amber-50 border border-amber-200
+                      rounded-2xl px-4 py-3 mb-6">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-xs font-semibold leading-relaxed">
+              Módulos, RA y CE que la IA considera que más encajan con este reto.
+              <template v-if="soloLectura">Si quieres cambiar alguno, dínoslo y lo ajustamos.</template>
+              <template v-else>
+                Podrás cambiarlos en el ajuste del reto: pulsa
+                <span class="underline underline-offset-2 decoration-amber-400 cursor-pointer hover:text-amber-900"
+                      @mouseenter="uiHighlight.setHighlight('generar-proyecto')"
+                      @mouseleave="uiHighlight.clearHighlight('generar-proyecto')"
+                      @click="emit('trabajar')">«Trabajar este reto»</span>
+                en esta ficha.
+              </template>
+              Cubre un mínimo de 3 módulos distintos (salvo que se forzaran módulos concretos)<template v-if="reto.curso === 'ambos_cursos'">, incluyendo al menos uno de 1º y uno de 2º</template>.
+            </p>
+          </div>
+          <div class="space-y-4 md:space-y-6">
+            <div v-for="evalObj in reto.evaluacion_oficial" :key="evalObj.modulo"
+                 class="bg-white border border-gray-200 p-5 md:p-6 rounded-2xl shadow-sm">
+              <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                <div>
+                  <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Módulo</p>
+                  <p class="font-black text-[#1F2937] text-base md:text-lg">{{ evalObj.modulo }}</p>
+                </div>
+                <span v-if="evalObj.curso" class="shrink-0 px-3 py-1 bg-blue-50 border border-blue-200
+                            text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  {{ evalObj.curso }}º Curso
+                </span>
+              </div>
+              <div class="mb-4">
+                <p class="text-[10px] uppercase font-bold mb-1 flex items-center gap-1" :class="theme.text">
+                  <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/>
+                  </svg>
+                  Resultado de Aprendizaje
+                </p>
+                <p class="text-sm font-semibold text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  {{ evalObj.ra }}
+                </p>
+              </div>
+              <div class="mb-4">
+                <p class="text-[10px] uppercase font-bold text-gray-500 mb-2">Criterios de Evaluación</p>
+                <ul class="space-y-1.5">
+                  <li v-for="(ce, i) in evalObj.ce" :key="i"
+                      class="text-sm text-gray-600 flex items-start gap-2">
+                    <span class="font-bold mt-0.5 shrink-0" :class="theme.text">✓</span>
+                    <span>{{ ce }}</span>
+                  </li>
+                </ul>
+              </div>
+              <div v-if="evalObj.aplicacion" class="mt-4 pt-4 border-t border-gray-100">
+                <p class="text-sm text-gray-500 italic">
+                  <span class="font-bold not-italic text-[#1F2937]">Aplicación: </span>
+                  {{ evalObj.aplicacion }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variantes -->
+        <div v-if="reto.variantes?.length" class="pt-2">
+          <h3 class="section-title" :class="theme.text">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+            </svg>
+            Variantes
+          </h3>
+          <ul class="space-y-3">
+            <li v-for="(varItem, i) in reto.variantes" :key="i"
+                class="text-sm text-gray-700 bg-gray-50 border border-gray-200 p-4 rounded-xl shadow-sm">
+              <template v-if="varItem.includes(':')">
+                <strong class="text-[#1F2937] block mb-1">{{ varItem.split(':')[0] }}</strong>
+                <span>{{ varItem.substring(varItem.indexOf(':') + 1).trim() }}</span>
+              </template>
+              <template v-else>{{ varItem }}</template>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GUÍA DOCENTE -->
+    <div v-if="reto.tips_profesorado?.length"
+         class="relative mt-10 bg-gray-50 rounded-[2rem] shadow-sm
+                border border-gray-200 px-6 py-8 md:px-14 md:py-12
+                transition-all duration-700 delay-200 ease-out"
+         :class="visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'">
+
+      <div class="absolute top-0 right-0 bg-white border-b border-l border-gray-200
+                  text-gray-400 px-5 py-2 font-black text-[9px] tracking-widest uppercase
+                  rounded-bl-2xl shadow-sm">
+        Uso Exclusivo Docente
+      </div>
+
+      <h2 class="text-xl md:text-2xl font-black text-azul-noche mb-1 mt-2 flex items-center gap-3">
+        <svg class="w-6 h-6 text-yellow-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0
+                   110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+        Guía de Implementación
+      </h2>
+      <p class="text-gray-500 text-sm mb-8">
+        Recomendaciones pedagógicas para dinamizar el reto.
+      </p>
+
+      <div class="grid grid-cols-1 gap-4 md:gap-6">
+        <div v-for="(tip, i) in reto.tips_profesorado" :key="i"
+             class="bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div class="text-sm text-gray-700 leading-relaxed">
+            <template v-if="tip.includes(':')">
+              <strong class="flex items-center gap-1.5 mb-2
+                             uppercase tracking-wider text-[10px]" :class="theme.text">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path v-if="i===0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
+                           M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002
+                           5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0
+                           014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                {{ tip.split(':')[0] }}
+              </strong>
+              <span class="block text-gray-600">
+                {{ tip.substring(tip.indexOf(':') + 1).trim() }}
+              </span>
+            </template>
+            <template v-else>
+              <span class="text-gray-600">{{ tip }}</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+</style>

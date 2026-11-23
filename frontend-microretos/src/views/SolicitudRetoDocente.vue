@@ -6,12 +6,16 @@
      DuaLab le avisa, el enlace del aviso muestra aquí los retos que le envió, en solo lectura.
      Campos y límites: EnviarSolicitudRetoRequest.
      Con `vistaPrevia` (DuaLab Central, «Ver cómo lo ve el docente»): mismo formulario sin enlace ni
-     llamadas que guarden; se recorre y «Enviar» muestra la pantalla final. -->
+     llamadas que guarden; se recorre y «Enviar» muestra la pantalla final. Con `retosPrevia`, la
+     pantalla de los retos tal como la verá el docente al avisarle. -->
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import BloqueSolicitudReto from '../components/BloqueSolicitudReto.vue'
+import FichaReto from '../components/FichaReto.vue'
+import { temaPorClave } from '../composables/useRoleTheme.js'
+import { usePdfExport } from '../composables/usePdfExport.js'
 import { getFamilias } from '../services/datosFPService.js'
 import {
   getSolicitudPublica, guardarSolicitud, enviarSolicitud, getRetosSolicitud,
@@ -22,6 +26,8 @@ const props = defineProps({
   vistaPrevia: { type: Boolean, default: false },
   // Nombre y centro con los que se ve la vista previa (los de la solicitud, si se abre desde su ficha)
   datosPrevia: { type: Object, default: () => ({}) },
+  // Fichas de los retos marcados en Central (vista previa del aviso)
+  retosPrevia: { type: Array, default: null },
 })
 
 const route = useRoute()
@@ -35,6 +41,8 @@ const error    = ref('')        // enlace inválido o caducado
 const datos    = ref(null)      // datosPublicos del backend
 const enviada  = ref(false)
 const retos    = ref([])
+const temaDocente = temaPorClave('centros')
+const { descargarPDF } = usePdfExport()
 
 const PASOS = ['Tú y tu centro', 'Qué quieres trabajar', 'Tu grupo y la sesión', 'Qué pretendes']
 const paso       = ref(1)
@@ -89,7 +97,13 @@ onMounted(async () => {
         texto: 'Aquí el docente lee el texto de protección de datos vigente (config/solicitudes_reto.php).' },
     }
     restaurar(datos.value)
-    await cargarCurriculo()
+    if (props.retosPrevia?.length) {
+      // Sin los avisos que solo recibe el personal de DuaLab: el docente no los ve
+      retos.value = props.retosPrevia.map(({ diagnostico_desactualizado, interes_desactualizado, ...r }) => r)
+      enviada.value = true
+    } else {
+      await cargarCurriculo()
+    }
     cargando.value = false
     return
   }
@@ -236,7 +250,7 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:py-10">
+    <main class="mx-auto w-full flex-1 px-4 py-6 sm:py-10" :class="retos.length ? 'max-w-6xl' : 'max-w-3xl'">
       <p v-if="cargando" class="py-16 text-center text-sm text-gray-500" role="status">Cargando tu solicitud…</p>
 
       <div v-else-if="error" class="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center" role="alert">
@@ -260,33 +274,21 @@ const fecha = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('es-
           <CabeceraSeccion antetitulo="Solicitud de retos" titulo="Tus" destacado="retos" color="text-centros"
                            :subtitulo="`${form.nombreDocente}, los hemos preparado a partir de lo que nos contaste. Si quieres cambiar algo, responde al correo.`" />
 
-          <article v-for="reto in retos" :key="reto.uuid" class="mt-5 rounded-[2rem] border border-gray-100 bg-white p-5 shadow-[0_20px_50px_rgb(0,0,0,0.05)] sm:p-7">
-            <p v-if="reto.empresa_nombre" class="text-xs font-bold uppercase tracking-widest text-empresas-dark break-words">{{ reto.empresa_nombre }}</p>
-            <h2 class="mt-1 text-lg font-black break-words sm:text-xl">{{ reto.titulo }}</h2>
-            <p v-if="reto.subtitulo" class="mt-1 text-sm text-gray-600 break-words">{{ reto.subtitulo }}</p>
-
-            <div v-if="reto.pregunta_reto" class="mt-4 rounded-xl bg-centros/5 p-4">
-              <p class="text-xs font-bold uppercase tracking-widest text-centros">El reto</p>
-              <p class="mt-1 text-sm break-words">{{ reto.pregunta_reto }}</p>
+          <!-- La misma ficha que en la biblioteca de retos, en solo lectura -->
+          <section v-for="reto in retos" :key="reto.uuid" class="mt-6 sm:mt-8">
+            <FichaReto :reto="reto" :theme="temaDocente" solo-lectura />
+            <div class="mt-6 flex justify-center">
+              <button type="button" @click="descargarPDF(reto)"
+                      class="inline-flex min-h-[44px] items-center gap-2 rounded-full border-2 border-centros bg-centros px-6 py-3
+                             text-xs font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-centros/90 active:scale-95">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Descargar PDF
+              </button>
             </div>
-
-            <details v-if="reto.quien_es || reto.dia_a_dia" class="mt-4">
-              <summary class="cursor-pointer text-sm font-bold text-gray-700">La empresa</summary>
-              <p v-if="reto.quien_es" class="mt-2 text-sm text-gray-600 break-words">{{ reto.quien_es }}</p>
-              <p v-if="reto.dia_a_dia" class="mt-2 text-sm text-gray-600 break-words">{{ reto.dia_a_dia }}</p>
-            </details>
-
-            <details v-if="reto.evaluacion_oficial?.length" class="mt-3">
-              <summary class="cursor-pointer text-sm font-bold text-gray-700">Resultados de aprendizaje y criterios</summary>
-              <div v-for="(ev, i) in reto.evaluacion_oficial" :key="i" class="mt-3 border-l-2 border-centros/30 pl-3">
-                <p class="text-xs font-bold text-gray-500 break-words">{{ ev.modulo }}</p>
-                <p class="text-sm font-semibold break-words">{{ ev.ra }}</p>
-                <ul class="mt-1 list-disc pl-5 text-sm text-gray-600">
-                  <li v-for="(ce, j) in ev.ce" :key="j" class="break-words">{{ ce }}</li>
-                </ul>
-              </div>
-            </details>
-          </article>
+          </section>
         </template>
       </template>
 
