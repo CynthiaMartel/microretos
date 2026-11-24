@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\EnviarCorreoInfoJob;
+use App\Support\EnvioAlResponder;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 
@@ -25,13 +26,14 @@ class CorreoInfoService
         }
 
         $contenido = $correo->content();
-        EnviarCorreoInfoJob::dispatch(
+        // Sin esperar al cron de la cola; si la web no responde, a la cola con sus reintentos
+        EnvioAlResponder::despachar(new EnviarCorreoInfoJob(
             $para,
             (string) $correo->envelope()->subject,
             view($contenido->text, $contenido->with)->render(),
             $correo->render(),
             $usuario,
-        );
+        ));
     }
 
     private function webConfigurada(): bool
