@@ -21,7 +21,9 @@ import { useRoleTheme } from '../composables/useRoleTheme.js';
 import FiltrosPanel from '../components/FiltrosPanel.vue';
 import FiltroSegmentado from '../components/FiltroSegmentado.vue';
 import FiltroSelect from '../components/FiltroSelect.vue';
+import { useFiltroEmpresaSector } from '../composables/useFiltroEmpresaSector.js';
 import TituloResultados from '../components/TituloResultados.vue';
+import { usePanelFiltros } from '../composables/usePanelFiltros.js';
 
 const router = useRouter();
 const route  = useRoute();
@@ -216,6 +218,10 @@ const filtroModulo    = ref('');
 const filtroCurso     = ref('');
 const filtroEstados   = ref(aLista((queryAntigua || route.query).estado).filter(e => e !== 'completado'));
 const filtroValidador = ref([]);
+const filtroEmpresa   = ref('');
+const filtroSector    = ref('');   // sector de la empresa
+// Empresa y Sector: la empresa ya entra con su enlace a lo suyo, así que no los ve
+const mostrarFiltroEmpresa = !authStore.isEmpresa;
 // «De quién»: el docente ve también los compartidos con él; el admin, los de su centro; el
 // superadmin, todos. Por defecto, los propios (es_mio lo marca el backend). La empresa no lo ve.
 const mostrarFiltroQuien = !authStore.isEmpresa;
@@ -227,8 +233,8 @@ const opcionesQuien = [
 ];
 const orden           = ref('recientes');  // 'recientes' | 'antiguos' | 'titulo' | 'nivel'
 const familiasExpandidas = ref(false);
-// «Filtros rápidos»: visible de entrada en escritorio y plegado en móvil; «Más filtros» lo alterna.
-const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024);
+// «Filtros rápidos»: abierto en escritorio, plegado en móvil; se reajusta al cambiar el ancho
+const panelFiltrosAbierto = usePanelFiltros();
 const columnasProyectos = computed(() => panelFiltrosAbierto.value
   ? 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
   : 'md:grid-cols-2 xl:grid-cols-3');
@@ -257,6 +263,7 @@ function aplicarComunes(lista) {
   if (filtroCiclo.value) out = out.filter(p => p.ciclo_nombre === filtroCiclo.value);
   if (filtroModulo.value) out = out.filter(p => modulosDeProyecto(p).includes(filtroModulo.value));
   if (filtroCurso.value) out = out.filter(p => String(p.curso) === String(filtroCurso.value));
+  if (filtroEmpresa.value || filtroSector.value) out = out.filter(cumpleEmpresaSector);
   const q = busqueda.value.trim().toLowerCase();
   if (q) {
     out = out.filter(p =>
@@ -331,6 +338,10 @@ const cursosDisponibles = computed(() =>
 // 'ambos_cursos' = vale para 1º y 2º (como «Ambos» en la Biblioteca de retos)
 const etiquetaNivel = cu => (cu === 'ambos_cursos' ? 'Ambos' : `${cu}º`);
 const opcionesNivel = computed(() => [{ value: '', label: 'Todos' }, ...cursosDisponibles.value.map(cu => ({ value: cu, label: etiquetaNivel(cu) }))]);
+// Empresa y Sector (juntos en la barra): cada uno acota las opciones del otro
+const { empresasDisponibles, sectoresDisponibles, cumpleEmpresaSector } = useFiltroEmpresaSector(baseFamilia, {
+  empresa: filtroEmpresa, sector: filtroSector,
+});
 
 // Niveles elegidos para el título de los resultados (TituloResultados): una sola familia →
 // ciclo → módulo. Quitar un nivel quita también los que dependen de él (watches de arriba).
@@ -355,7 +366,7 @@ function alternarValidador(key) { filtroValidador.value = alternar(filtroValidad
 const filtroPropioActivo = computed(() => ambito.value === 'completados' ? filtroValidador.value.length > 0 : filtroEstados.value.length > 0);
 const hayFiltrosActivos = computed(() => !!(busqueda.value.trim() || filtroFamilias.value.length || filtroCiclo.value
   || (mostrarFiltroQuien && filtroQuien.value !== 'mios')
-  || filtroModulo.value || filtroCurso.value || filtroPropioActivo.value));
+  || filtroModulo.value || filtroCurso.value || filtroEmpresa.value || filtroSector.value || filtroPropioActivo.value));
 
 // Proyectos de la pestaña que cumplen los filtros en otros cursos académicos (como en la
 // Biblioteca de retos): el curso se elige aparte y, si no, el filtro parece quedarse corto.
@@ -376,6 +387,8 @@ function limpiarFiltros() {
   filtroCiclo.value = '';
   filtroModulo.value = '';
   filtroCurso.value = '';
+  filtroEmpresa.value = '';
+  filtroSector.value = '';
   filtroEstados.value = [];
   filtroValidador.value = [];
   filtroQuien.value = mostrarFiltroQuien ? 'mios' : '';
@@ -601,6 +614,12 @@ function mostrarSnack(mensaje, accion = null) {
             title="Filtra por módulo profesional. Los retos ajustados de varios módulos aparecen en cada uno." />
           <FiltroSegmentado v-if="cursosDisponibles.length" label="Nivel" v-model="filtroCurso" :opciones="opcionesNivel"
             title="Nivel del ciclo: 1º (primer año) o 2º (segundo año). Ambos: retos ajustados que valen para 1º y 2º." />
+          <template v-if="mostrarFiltroEmpresa">
+            <FiltroSelect label="Empresa" v-model="filtroEmpresa" :opciones="empresasDisponibles" todos="Todas las empresas"
+              title="Filtra por la empresa del reto ajustado." />
+            <FiltroSelect label="Sector de la empresa" v-model="filtroSector" :opciones="sectoresDisponibles" todos="Todos los sectores"
+              title="Filtra por el sector de la empresa. Puede no coincidir con la familia del reto ajustado." />
+          </template>
         </FiltrosPanel>
       </div>
 

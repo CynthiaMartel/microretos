@@ -39,8 +39,8 @@ class EncuentroController extends Controller
         $query = Encuentro::with([
             'docente:id,name',
             'colaboradores:id,name',
-            'microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
-            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre',
+            'microproyecto:id,uuid,titulo,microreto_id,empresa_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
+            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre', 'microproyecto.empresa:id,nombre_comercial,sector',
             'equipos.miembros',
         ])->visiblesPara($user)->orderBy('created_at', 'desc')->take(self::MAX_LISTADO);
 
@@ -95,7 +95,7 @@ class EncuentroController extends Controller
             ? Carbon::parse($validated['fecha_fin'])->toDateString()
             : $encuentro->fechaFinSugerida(Carbon::parse($validated['fecha']))?->toDateString();
         $encuentro->save();
-        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,empresa_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre', 'microproyecto.empresa:id,nombre_comercial,sector']);
 
         return response()->json(new EncuentroResource($encuentro), 201);
     }
@@ -107,7 +107,7 @@ class EncuentroController extends Controller
             ->firstOrFail();
 
         $encuentro->update($request->validated());
-        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre']);
+        $encuentro->load(['microproyecto:id,uuid,titulo,microreto_id,empresa_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial', 'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre', 'microproyecto.empresa:id,nombre_comercial,sector']);
 
         return response()->json(new EncuentroResource($encuentro));
     }
@@ -135,8 +135,8 @@ class EncuentroController extends Controller
         $encuentro = Encuentro::with([
             'docente:id,name',
             'colaboradores:id,name',
-            'microproyecto:id,uuid,titulo,microreto_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
-            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre',
+            'microproyecto:id,uuid,titulo,microreto_id,empresa_id,estado,familia_id,modulos_seleccionados,evaluacion_oficial',
+            'microproyecto.microreto:id,titulo,empresa_nombre', 'microproyecto.familia:id,nombre', 'microproyecto.empresa:id,nombre_comercial,sector',
         ])
             ->where('id', $id)
             ->visiblesPara($request->user())

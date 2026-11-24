@@ -270,7 +270,10 @@ requisitos y lo que falta.
 
 ### 8.2 Explorador de Retos — `BibliotecaMicroretos.vue`
 - Cabecera con `CabeceraSeccion` ✅. Un solo buscador en `FiltrosPanel`, con etiqueta visible.
-- Filtros: ciclo, módulo, nivel, dificultad, empresa (real/ficticia) y tipo de información.
+- Filtros: ciclo, módulo, nivel, dificultad y, juntos, **Empresa** y **Sector** (desplegables de la
+  barra; cada uno acota las opciones del otro, `useFiltroEmpresaSector`). En «Filtros rápidos»: familia
+  y tipo (empresa real/ficticia, información simulada); el superadmin, además, «Mostrar los de la
+  recámara» (retos a medida aún sin publicar, ocultos por defecto y con la etiqueta «En la recámara»).
   Total de resultados, filtros activos como chips quitables y «Limpiar filtros». Filtros en la query
   de la URL.
 - Tarjeta: título, pregunta del reto, empresa, familia profesional, ciclo, curso, nivel y fecha.
@@ -285,7 +288,8 @@ requisitos y lo que falta.
   Completados; En proceso es `?ver=proceso`. `/proyectos/terminados` redirige a Completados
   conservando la familia. El recordatorio propuesta ≠ proyecto va a la derecha de las pestañas
   (debajo en móvil).
-- Barra común: buscador, curso académico, ciclo, módulo, nivel (1º · 2º · Ambos) y «Más filtros».
+- Barra común: buscador, curso académico, ciclo, módulo, nivel (1º · 2º · Ambos), Empresa y Sector
+  (juntos; no para el rol empresa) y «Más filtros».
 - Filtros rápidos: Estado (en proceso; los archivados solo si se marcan) o Validado por
   (completados), y familia profesional. Familia y estado en la URL.
 - Tarjeta compacta (`ProyectoCard`, con tokens): franja superior con el color del estado (verde
@@ -306,8 +310,8 @@ requisitos y lo que falta.
   en las dos pestañas y en el Detalle de grupos (`/mis-grupos/:id`).
 - Cabecera «Encuentros y **grupos**». Pestañas de ámbito (§7) **«Gestión | Seguimiento de grupos»**
   (`?ver=seguimiento`), con la línea que explica la activa. Misma lista de encuentros
-  (`GET /encuentros`) y misma barra de filtros: buscador, curso académico, ciclo, módulo, nivel y
-  clase. `/mis-grupos` redirige a la pestaña Seguimiento conservando la query (enlaces y
+  (`GET /encuentros`) y misma barra de filtros: buscador, curso académico, ciclo, módulo, nivel,
+  clase, Empresa y Sector (juntos). `/mis-grupos` redirige a la pestaña Seguimiento conservando la query (enlaces y
   notificaciones guardadas).
 - Filtros rápidos: lo propio de la pestaña primero —Gestión: «Acceso del alumnado»; Seguimiento:
   «Estado de los grupos» (cuenta grupos) con la casilla «Solo con diagnóstico listo»—, después
@@ -323,7 +327,9 @@ requisitos y lo que falta.
   grupos (N)», «Detalle de grupos» y «⋯» (más información del encuentro, desplegar todos, ver
   diagnósticos, copiar códigos). No se fusiona con la tarjeta de Gestión: en cuadrícula no cabe.
 - **Ficha del encuentro (modal):** cada alias lleva a su ficha en el Listado de alumnado; cada
-  grupo, «Ver detalle»; pie «Ver detalle de grupos».
+  grupo, «Ver detalle»; pie «Ver detalle de grupos». De la valoración de la empresa solo enseña el
+  estado y, si ya respondió, sus respuestas: el envío a la empresa lo hace DuaLab en Central
+  (Empresas y centros → «Enviar soluciones a las empresas», `central/views/EnvioSolucionesCentral.vue`).
 - **Detalle de grupos** (`MisGruposDetalle.vue`, `/mis-grupos/:id`): `?equipo=` abre y resalta ese
   grupo (`?ver=diagnostico`, su diagnóstico). «Volver al seguimiento de grupos» vuelve a la pestaña
   con el encuentro resaltado.

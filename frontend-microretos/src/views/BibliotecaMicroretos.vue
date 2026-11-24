@@ -19,10 +19,12 @@ import SelectorCurso from '../components/SelectorCurso.vue';
 import FiltrosPanel from '../components/FiltrosPanel.vue';
 import FiltroSegmentado from '../components/FiltroSegmentado.vue';
 import FiltroSelect from '../components/FiltroSelect.vue';
+import { useFiltroEmpresaSector } from '../composables/useFiltroEmpresaSector.js';
 import TituloResultados from '../components/TituloResultados.vue';
 import FamiliaModulos from '../components/FamiliaModulos.vue';
 import { usePdfExport } from '../composables/usePdfExport.js';
 import { useRoleTheme } from '../composables/useRoleTheme.js';
+import { usePanelFiltros } from '../composables/usePanelFiltros.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -56,9 +58,10 @@ const filtroCurso       = ref('');        // '' | '1' | '2'
 // 'simulada' (información simulada con IA). Se cumplen si el reto encaja en alguno.
 const filtroTipos       = ref([]);
 const filtroEmpresa     = ref('');
+const filtroSector      = ref('');        // sector de la empresa del reto
 const orden             = ref('cruzados');   // 'cruzados' | 'recientes' | 'antiguos' | 'titulo'
-// «Filtros rápidos»: visible de entrada en escritorio y plegado en móvil; «Más filtros» lo alterna.
-const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024);
+// «Filtros rápidos»: abierto en escritorio, plegado en móvil; se reajusta al cambiar el ancho
+const panelFiltrosAbierto = usePanelFiltros();
 // Columnas de tarjetas según el ancho que deja el panel lateral (abierto en lg+ le quita ~18rem).
 const columnasRetos = computed(() => panelFiltrosAbierto.value
   ? 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
@@ -91,7 +94,10 @@ const centrosDisponibles = computed(() => centros.value.map(c => c.nombre).sort(
 // Curso académico compartido (store): conteos, filtros, listado y PDFs salen de esta lista.
 // Las bajas siguen trabajando sobre `microretos` (la lista completa).
 const cursoStore      = useCursoAcademicoStore();
-const microretosCurso = computed(() => microretos.value.filter(r => cursoStore.coincide(cursoDeReto(r))));
+// Los de la recámara (retos a medida aún sin publicar) solo llegan al superadmin: ocultos salvo que los pida
+const verRecamara = ref(false);
+const enRecamara = computed(() => microretos.value.filter(r => r.en_recamara && cursoStore.coincide(cursoDeReto(r))).length);
+const microretosCurso = computed(() => microretos.value.filter(r => (verRecamara.value || !r.en_recamara) && cursoStore.coincide(cursoDeReto(r))));
 const cursosConDatos  = computed(() => [...new Set(microretos.value.map(cursoDeReto))]);
 
 const countCentroActual = computed(() => {
@@ -152,7 +158,7 @@ function cumpleFiltros(reto) {
     || (t.includes('simulada') && reto.es_simulado === true);
   return (
     (!filtroFamilias.value.length || filtroFamilias.value.includes(reto.familia)) &&
-    (!filtroEmpresa.value || reto.empresa_nombre === filtroEmpresa.value) &&
+    cumpleEmpresaSector(reto) &&
     (filtroCentro.value === '' || centro === filtroCentro.value) &&
     (filtroCiclo.value  === '' || reto.ciclo === filtroCiclo.value) &&
     (filtroModulo.value === '' || modulosDeReto(reto).includes(filtroModulo.value)) &&
@@ -182,7 +188,7 @@ const enOtrosCursos = computed(() => {
 });
 
 const hayFiltrosActivos = computed(() =>
-  !!(filtroFamilias.value.length || filtroTipos.value.length || filtroEmpresa.value
+  !!(filtroFamilias.value.length || filtroTipos.value.length || filtroEmpresa.value || filtroSector.value
      || filtroCiclo.value || filtroModulo.value || filtroNivel.value || filtroCurso.value || busqueda.value)
 );
 
@@ -221,12 +227,12 @@ const conteoTipos = computed(() => ({
   ficticia: baseFamilias.value.filter(m => m.empresa_es_simulada === true).length,
   simulada: baseFamilias.value.filter(m => m.es_simulado === true).length,
 }));
-// Con su sector: la familia del reto no tiene por qué ser la del sector (una empresa de
-// turismo puede pedir retos de Comercio y Marketing), y así se ve en el propio desplegable.
-const empresasDisponibles = computed(() => {
-  const mapa = new Map();
-  baseFamilias.value.forEach(m => { if (m.empresa_nombre && !mapa.has(m.empresa_nombre)) mapa.set(m.empresa_nombre, m.empresa?.sector || ''); });
-  return [...mapa].map(([nombre, sector]) => ({ nombre, sector })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+// Empresa y Sector (desplegables juntos en la barra): cada uno se acota por el otro. La familia
+// del reto no tiene por qué ser la del sector (una empresa de turismo puede pedir retos de
+// Comercio y Marketing), por eso el sector es un filtro aparte.
+const { empresasDisponibles, sectoresDisponibles, cumpleEmpresaSector } = useFiltroEmpresaSector(baseFamilias, {
+  empresa: filtroEmpresa, sector: filtroSector,
+  sectorDe: r => r.empresa_sector_actual ?? r.empresa?.sector,
 });
 // (En la plantilla los refs llegan desenvueltos: por eso una función por filtro.)
 const alternar = (lista, valor) => lista.includes(valor) ? lista.filter(v => v !== valor) : [...lista, valor];
@@ -359,6 +365,7 @@ const resetFiltrosDetalle = () => {
   filtroFamilias.value = [];
   filtroTipos.value = [];
   filtroEmpresa.value = '';
+  filtroSector.value = '';
   filtroCiclo.value = '';
   filtroModulo.value = '';
   filtroNivel.value = '';
@@ -432,6 +439,7 @@ const descargarGrupoFiltrado = () => {
     if (filtroCurso.value)        partes.push(`${filtroCurso.value}º curso`);
     if (filtroTipos.value.length) partes.push(`Tipo: ${filtroTipos.value.join(', ')}`);
     if (filtroEmpresa.value)      partes.push(`Empresa: ${filtroEmpresa.value}`);
+    if (filtroSector.value)       partes.push(`Sector de la empresa: ${filtroSector.value}`);
     const subtitulo = `${retos.length} micro-reto${retos.length !== 1 ? 's' : ''}${partes.length ? ' · ' + partes.join(' · ') : ''}`;
     descargarPDFGrupo(retos, titulo, subtitulo);
   });
@@ -557,13 +565,13 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           :model-value="filtroCentro" @update:model-value="seleccionarCentro"
           :opciones="centrosDisponibles" todos="Todos los centros"
           title="Filtra retos del centro de formación profesional seleccionado." />
-        <div v-else class="flex min-w-0 max-w-full items-end gap-2.5">
+        <div v-else class="flex w-full min-w-0 max-w-full items-end gap-2.5 sm:w-auto">
           <span aria-hidden="true" class="mb-px inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="iconoFiltro('Centro educativo')" /></svg>
           </span>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1 sm:flex-none">
             <p class="mb-1 text-xs font-semibold text-azul-noche">Centro educativo</p>
-            <p class="flex h-9 min-w-0 items-center rounded-xl border border-borde bg-gray-50 px-3 text-sm font-semibold text-azul-noche">
+            <p class="flex h-9 w-full min-w-0 items-center rounded-xl sm:w-48 lg:w-40 border border-borde bg-gray-50 px-3 text-sm font-semibold text-azul-noche">
               <span class="truncate">{{ authStore.userCentroNombre || filtroCentro }}</span>
             </p>
           </div>
@@ -577,6 +585,10 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           title="Nivel del ciclo: 1º (primer año) o 2º (segundo año). Ambos cursos: vale para 1º y 2º." />
         <FiltroSelect label="Dificultad" v-model="filtroNivel" :opciones="opcionesDificultadSelect" todos="Todas"
           title="Dificultad del reto: Bajo (introductorio), Medio (aplicado), Alto (avanzado)." />
+        <FiltroSelect label="Empresa" v-model="filtroEmpresa" :opciones="empresasDisponibles" todos="Todas las empresas"
+          title="Filtra por la empresa que plantea el reto." />
+        <FiltroSelect label="Sector de la empresa" v-model="filtroSector" :opciones="sectoresDisponibles" todos="Todos los sectores"
+          title="Filtra por el sector de la empresa. Puede no coincidir con la familia del reto." />
       </FiltrosPanel>
 
       <!-- Error de carga -->
@@ -630,17 +642,18 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
             </label>
           </div>
 
-          <details class="group mt-3 border-t border-borde pt-3" :open="!!filtroEmpresa">
-            <summary class="flex cursor-pointer list-none items-center justify-between py-1 text-sm font-semibold text-azul-noche">
-              Empresa colaboradora
-              <svg class="h-4 w-4 text-texto-secundario transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </summary>
-            <label for="filtro-empresa" class="sr-only">Empresa colaboradora</label>
-            <select id="filtro-empresa" v-model="filtroEmpresa" class="mt-2 h-10 w-full rounded-xl px-3 text-sm">
-              <option value="">Todas las empresas</option>
-              <option v-for="e in empresasDisponibles" :key="e.nombre" :value="e.nombre">{{ e.sector ? `${e.nombre} · ${e.sector}` : e.nombre }}</option>
-            </select>
-          </details>
+          <!-- Superadmin: retos a medida aún en la recámara (no los ve ningún centro) -->
+          <div v-if="authStore.isSuperAdmin && enRecamara" class="mt-3 border-t border-borde pt-3">
+            <label class="flex cursor-pointer items-start gap-2.5 rounded-lg px-1 py-2 hover:bg-gray-50">
+              <input v-model="verRecamara" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-rol-fuerte" />
+              <span class="min-w-0 flex-1 text-sm text-azul-noche">
+                Mostrar los de la recámara
+                <span class="block text-xs text-texto-secundario">Retos a medida aún sin publicar: no los ve ningún centro.</span>
+              </span>
+              <span class="shrink-0 text-xs text-texto-secundario">{{ enRecamara }}</span>
+            </label>
+          </div>
+
         </aside>
 
         <!-- ═══ Resultados ═══ -->
@@ -757,6 +770,8 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                       Info simulada
                     </span>
                     <AvisoEmpresaBorrada :estado="reto.empresa_estado" />
+                    <span v-if="reto.en_recamara" class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-texto-secundario"
+                          title="Reto a medida aún sin publicar: no lo ve ningún centro">En la recámara</span>
                   </div>
                   <h3 class="mt-1.5 line-clamp-2 font-heading text-base font-bold leading-snug text-azul-noche" :title="reto.titulo">
                     <button type="button" @click="irADetalle(reto)" class="text-left hover:text-rol-fuerte hover:underline">{{ reto.titulo }}</button>

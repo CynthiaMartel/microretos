@@ -60,6 +60,9 @@ class EncuentroResource extends JsonResource
             'proyecto_estado'    => $this->microproyecto?->estado,
             'microreto_id'       => $this->microproyecto?->microreto_id,
             'microreto_titulo'   => $this->microproyecto?->microreto?->titulo,
+            // Empresa del reto (filtros Empresa y Sector): solo nombre y sector, nunca datos de contacto
+            'empresa_nombre'     => $this->microproyecto?->empresa?->nombre_comercial ?? $this->microproyecto?->microreto?->empresa_nombre,
+            'empresa_sector'     => $this->microproyecto?->empresa?->sector,
             // Contexto curricular del proyecto (cards de la biblioteca de encuentros)
             'familia_nombre'     => $this->microproyecto?->familia?->nombre,
             'modulos'            => $this->microproyecto?->nombresModulos() ?? [],

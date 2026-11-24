@@ -2,7 +2,7 @@
      las prácticas, el alumnado seleccionado, y sus cronogramas (encuentros de tipo plan). La ficha y
      la edición de cada plan son las de la propuesta (/proyectos/:uuid). -->
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import ProyectoCard from '../components/ProyectoCard.vue'
@@ -17,7 +17,9 @@ import SelectorCurso from '../components/SelectorCurso.vue'
 import TituloResultados from '../components/TituloResultados.vue'
 import { modulosDeProyecto, modulosDisponibles as listarModulos } from '../utils/modulos.js'
 import { usePaginacion } from '../composables/usePaginacion.js'
+import { useFiltroEmpresaSector } from '../composables/useFiltroEmpresaSector.js'
 import { useCursoAcademicoStore, cursoDeProyecto } from '../stores/cursoAcademico.js'
+import { usePanelFiltros } from '../composables/usePanelFiltros.js'
 
 const router = useRouter()
 const planes = ref([])
@@ -107,15 +109,12 @@ const filtroModulo   = ref('')
 const filtroCurso    = ref('')
 const filtroEstados  = ref([])
 const filtroCronograma = ref([])   // 'con' | 'sin'
+const filtroEmpresa  = ref('')
+const filtroSector   = ref('')     // sector de la empresa
 const orden          = ref('recientes')
 const familiasExpandidas = ref(false)
-// «Filtros rápidos»: visible en escritorio y plegado en móvil; «Más filtros» lo alterna. Al cruzar
-// el ancho de escritorio (girar la tablet, redimensionar) se vuelve a abrir o plegar solo.
-const mqEscritorio = typeof window === 'undefined' ? null : window.matchMedia('(min-width: 1024px)')
-const panelFiltrosAbierto = ref(!mqEscritorio || mqEscritorio.matches)
-const alCambiarAncho = (e) => { panelFiltrosAbierto.value = e.matches }
-onMounted(() => mqEscritorio?.addEventListener('change', alCambiarAncho))
-onBeforeUnmount(() => mqEscritorio?.removeEventListener('change', alCambiarAncho))
+// «Filtros rápidos»: abierto en escritorio, plegado en móvil; se reajusta al cambiar el ancho
+const panelFiltrosAbierto = usePanelFiltros()
 const columnasPlanes = computed(() => panelFiltrosAbierto.value
   ? 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
   : 'md:grid-cols-2 xl:grid-cols-3')
@@ -151,6 +150,7 @@ function aplicarComunes(lista) {
   if (filtroCiclo.value) out = out.filter(p => p.ciclo_nombre === filtroCiclo.value)
   if (filtroModulo.value) out = out.filter(p => modulosDeProyecto(p).includes(filtroModulo.value))
   if (filtroCurso.value) out = out.filter(p => String(p.curso) === String(filtroCurso.value))
+  if (filtroEmpresa.value || filtroSector.value) out = out.filter(cumpleEmpresaSector)
   const q = busqueda.value.trim().toLowerCase()
   if (q) out = out.filter(p => [p.titulo, p.empresa_nombre, p.centro_nombre].some(t => t?.toLowerCase().includes(q)))
   return out
@@ -189,6 +189,10 @@ const cursosDisponibles = computed(() =>
   [...new Set(baseCiclo.value.map(p => p.curso).filter(v => v != null && v !== ''))].sort((a, b) => String(a).localeCompare(String(b))))
 const etiquetaNivel = cu => (cu === 'ambos_cursos' ? 'Ambos' : `${cu}º`)
 const opcionesNivel = computed(() => [{ value: '', label: 'Todos' }, ...cursosDisponibles.value.map(cu => ({ value: cu, label: etiquetaNivel(cu) }))])
+// Empresa y Sector (juntos en la barra): cada uno acota las opciones del otro
+const { empresasDisponibles, sectoresDisponibles, cumpleEmpresaSector } = useFiltroEmpresaSector(baseFamilia, {
+  empresa: filtroEmpresa, sector: filtroSector,
+})
 
 const nivelesTitulo = computed(() => {
   const niveles = []
@@ -209,13 +213,15 @@ function alternarCronograma(key) { filtroCronograma.value = alternar(filtroCrono
 
 const filtrosLateral = computed(() => filtroFamilias.value.length + filtroEstados.value.length + filtroCronograma.value.length)
 const hayFiltrosActivos = computed(() => !!(busqueda.value.trim() || filtroCiclo.value || filtroModulo.value
-  || filtroCurso.value || filtrosLateral.value))
+  || filtroCurso.value || filtroEmpresa.value || filtroSector.value || filtrosLateral.value))
 function limpiarFiltros() {
   busqueda.value = ''
   filtroFamilias.value = []
   filtroCiclo.value = ''
   filtroModulo.value = ''
   filtroCurso.value = ''
+  filtroEmpresa.value = ''
+  filtroSector.value = ''
   filtroEstados.value = []
   filtroCronograma.value = []
 }
@@ -278,6 +284,10 @@ function irAPagina(i) {
           title="Filtra por módulo profesional. Los planes de varios módulos aparecen en cada uno." />
         <FiltroSegmentado v-if="cursosDisponibles.length" label="Nivel" v-model="filtroCurso" :opciones="opcionesNivel"
           title="Nivel del ciclo: 1º (primer año) o 2º (segundo año)." />
+        <FiltroSelect label="Empresa" v-model="filtroEmpresa" :opciones="empresasDisponibles" todos="Todas las empresas"
+          title="Filtra por la empresa donde se desarrolla el plan." />
+        <FiltroSelect label="Sector de la empresa" v-model="filtroSector" :opciones="sectoresDisponibles" todos="Todos los sectores"
+          title="Filtra por el sector de la empresa. Puede no coincidir con la familia del plan." />
       </FiltrosPanel>
 
       <p v-if="error" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">{{ error }}</p>

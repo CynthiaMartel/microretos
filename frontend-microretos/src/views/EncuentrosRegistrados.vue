@@ -26,8 +26,9 @@ import SelectorCurso from '../components/SelectorCurso.vue'
 import FiltrosPanel from '../components/FiltrosPanel.vue'
 import FiltroSegmentado from '../components/FiltroSegmentado.vue'
 import FiltroSelect from '../components/FiltroSelect.vue'
+import { useFiltroEmpresaSector } from '../composables/useFiltroEmpresaSector.js'
 import { getEncuentros, getMisGrupos, actualizarEncuentro, crearCodigoAcceso, crearCodigoIa as crearCodigoIaApi,
-  getValoracionEmpresa, solicitarValoracionEmpresa, marcarValoracionEnviada } from '../services/encuentroService.js'
+  getValoracionEmpresa } from '../services/encuentroService.js'
 import { PREGUNTAS_VALORACION } from '../services/valoracionEmpresaService.js'
 import { marcarRetoAjustadoCompletado } from '../services/retoAjustadoService.js'
 import PlanificacionSesiones from '../components/PlanificacionSesiones.vue'
@@ -36,6 +37,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { FASES_PROYECTO, progresoPonderado, duracionPorFase } from '../config/fasesProyecto.js'
 import { formatCurso } from '../utils/formatCurso.js'
 import { nombreGrupo } from '../utils/nombreGrupo.js'
+import { usePanelFiltros } from '../composables/usePanelFiltros.js'
 
 // Grupos (equipos de alumnado) de un encuentro para la card. Usa los equipos reales si
 // vienen cargados; si no (encuentros antiguos), el reparto plano de `alumnados`.
@@ -148,12 +150,14 @@ const filtros = ref({
   ciclo:     '',
   modulo:    '',
   centro:    '',
+  empresa:   '',   // empresa del reto
+  sector:    '',   // sector de esa empresa
   acceso:    '',   // '' | 'con' (ya tiene código del alumnado) | 'sin'      — solo «Gestión»
   propiedad: '',   // '' | 'mios' | 'compartidos'
   estado:    '',   // '' | 'en_curso' | 'sin_iniciar' | 'completado' (de cada grupo) — solo «Seguimiento»
   diagnostico: false, // solo encuentros con algún diagnóstico listo           — solo «Seguimiento»
 })
-const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familias: [], ciclo: '', modulo: '', centro: '', acceso: '', propiedad: '', estado: '', diagnostico: false }
+const FILTROS_VACIOS = { titulo: '', desde: '', hasta: '', curso: '', grupo: '', familias: [], ciclo: '', modulo: '', centro: '', empresa: '', sector: '', acceso: '', propiedad: '', estado: '', diagnostico: false }
 
 // Encuentros cuyo proyecto no tiene familia: opción propia en el filtro
 const SIN_FAMILIA = '__sin_familia__'
@@ -205,6 +209,15 @@ const encuentrosUnicos = computed(() => {
   return { centros, familias, ciclos, modulos, familiasPanel, acceso, propiedad }
 })
 
+// Empresa y Sector (juntos en la barra): opciones del curso, centro y familias elegidos; cada
+// uno acota las del otro. Viven en `filtros` (así cuentan en hayFiltrosActivos y limpiarFiltros).
+const campoFiltro = (k) => computed({ get: () => filtros.value[k], set: (v) => { filtros.value[k] = v } })
+const baseEmpresa = computed(() => encuentrosCurso.value.filter(s => coincideFamilia(s)
+  && (!filtros.value.centro || s.centro_educativo === filtros.value.centro)))
+const { empresasDisponibles, sectoresDisponibles, cumpleEmpresaSector } = useFiltroEmpresaSector(baseEmpresa, {
+  empresa: campoFiltro('empresa'), sector: campoFiltro('sector'),
+})
+
 // Filtros comunes a las dos pestañas (barra superior, familia, propiedad y fechas)
 function aplicarComunes(base) {
   let lista = [...base].sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
@@ -229,6 +242,8 @@ function aplicarComunes(base) {
     lista = lista.filter(s => modulosDeEncuentro(s).includes(filtros.value.modulo))
   if (filtros.value.centro)
     lista = lista.filter(s => s.centro_educativo === filtros.value.centro)
+  if (filtros.value.empresa || filtros.value.sector)
+    lista = lista.filter(cumpleEmpresaSector)
   if (filtros.value.propiedad)
     lista = lista.filter(s => filtros.value.propiedad === 'mios' ? s.es_propietario : !s.es_propietario)
   return lista
@@ -403,7 +418,8 @@ const orden = ref('recientes')   // 'recientes' | 'antiguos' | 'titulo' | 'avanc
 const VISTA_KEY = 'dualab_encuentros_vista'
 const vista = ref((() => { try { return localStorage.getItem(VISTA_KEY) || 'cuadricula' } catch { return 'cuadricula' } })())
 watch(vista, v => { try { localStorage.setItem(VISTA_KEY, v) } catch { /* sin almacenamiento */ } })
-const panelFiltrosAbierto = ref(typeof window === 'undefined' || window.innerWidth >= 1024)
+// «Filtros rápidos»: abierto en escritorio, plegado en móvil; se reajusta al cambiar el ancho
+const panelFiltrosAbierto = usePanelFiltros()
 const columnasEncuentros = computed(() => panelFiltrosAbierto.value
   ? 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3'
   : 'md:grid-cols-2 xl:grid-cols-3')
@@ -460,15 +476,11 @@ async function verEncuentro(s) {
 }
 
 // ─── Valoración final de la empresa (P3) ──────────────────────────────────────
-// El docente la pide cuando sus grupos han entregado (F3): enlace con token que caduca.
+// Solo lectura en la ficha del encuentro: la envía DuaLab a la empresa desde Central (Empresas →
+// «Enviar soluciones a las empresas»). Aquí también decide si se puede marcar completado.
 const valoracion          = ref(null)
 const cargandoValoracion  = ref(false)
-const trabajandoValoracion = ref(false)
 const errorValoracion     = ref('')
-const valoracionCopiada   = ref(false)
-
-const enlaceValoracion = computed(() =>
-  valoracion.value?.token ? `${window.location.origin}/valoracion/${valoracion.value.token}` : '')
 
 async function cargarValoracion(id) {
   valoracion.value = null
@@ -483,17 +495,6 @@ async function cargarValoracion(id) {
   }
 }
 
-async function accionValoracion(llamada) {
-  trabajandoValoracion.value = true
-  errorValoracion.value = ''
-  try {
-    valoracion.value = (await llamada(encuentroAbierto.value.id)).data
-  } catch (e) {
-    errorValoracion.value = e.response?.data?.message || 'No se pudo completar la acción.'
-  } finally {
-    trabajandoValoracion.value = false
-  }
-}
 // Completado = el docente confirma que los grupos han terminado (con el primer encuentro que lo
 // confirme; el reto ajustado se puede seguir usando en encuentros nuevos). Es aparte de la valoración.
 const completandoReto = ref(false)
@@ -512,20 +513,6 @@ async function marcarRetoCompletado() {
     completandoReto.value = false
   }
 }
-const pedirValoracion   = () => accionValoracion(solicitarValoracionEmpresa)
-const marcarEnviadaVal  = () => accionValoracion(marcarValoracionEnviada)
-
-async function copiarEnlaceValoracion() {
-  try {
-    await navigator.clipboard.writeText(enlaceValoracion.value)
-    valoracionCopiada.value = true
-    setTimeout(() => { valoracionCopiada.value = false }, 2500)
-  } catch {
-    errorValoracion.value = 'No se pudo copiar el enlace. Selecciónalo y cópialo a mano.'
-  }
-}
-
-const fechaCorta = (iso) => iso ? new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
 function cerrarEncuentro()   { encuentroAbierto.value = null; editandoFechaFin.value = false; editandoPlanificacion.value = false }
 
@@ -764,7 +751,7 @@ function formatFecha(isoDate) {
     <BienvenidaModal :show="guiaBienvenida" @seleccionar="seleccionarOpcionBienvenida" />
 
     <!-- Fondo decorativo -->
-    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px]
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[min(600px,100vw)] h-[400px]
                 bg-rol-fuerte opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
 
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8" @keydown.esc="menuEncuentro = null; menuLlave = null">
@@ -857,6 +844,10 @@ function formatFecha(isoDate) {
                       todos="Todos los módulos" :opciones="encuentrosUnicos.modulos" />
         <FiltroSegmentado v-model="filtros.curso" label="Nivel" :opciones="OPCIONES_NIVEL" />
         <FiltroSegmentado v-model="filtros.grupo" label="Clase" :opciones="OPCIONES_CLASE" />
+        <FiltroSelect v-model="filtros.empresa" label="Empresa" todos="Todas las empresas" :opciones="empresasDisponibles"
+                      title="Filtra por la empresa del reto." />
+        <FiltroSelect v-model="filtros.sector" label="Sector de la empresa" todos="Todos los sectores" :opciones="sectoresDisponibles"
+                      title="Filtra por el sector de la empresa. Puede no coincidir con la familia del reto." />
       </FiltrosPanel>
 
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
@@ -1370,7 +1361,7 @@ function formatFecha(isoDate) {
                 <p class="text-sm font-bold text-azul-noche">{{ encuentroAbierto.num_alumnos }}</p>
               </div>
             </div>
-            <!-- Valoración final de la empresa sobre la propuesta (P3) -->
+            <!-- Valoración final de la empresa (P3): aquí solo el resumen; se envía desde Empresas -->
             <div v-if="encuentroAbierto.microproyecto_uuid" class="p-4 rounded-xl border border-empresas/25 bg-empresas/5" aria-live="polite">
               <p class="text-xs font-bold uppercase tracking-wider text-empresas-dark">Valoración de la empresa</p>
               <p v-if="cargandoValoracion" class="mt-1 text-sm text-texto-secundario">Cargando…</p>
@@ -1390,11 +1381,9 @@ function formatFecha(isoDate) {
                 </div>
                 <p v-else-if="encuentroAbierto.proyecto_estado === 'completado'" class="mt-2 text-sm font-semibold text-sky-700">✓ Reto ajustado completado</p>
 
-                <!-- Respondida -->
+                <!-- Solo lectura: DuaLab envía las soluciones a la empresa desde Central -->
                 <div v-if="valoracion.respondido_en" class="mt-3 space-y-2">
-                  <p class="text-sm font-bold text-empresas-dark">
-                    Valorada el {{ fechaCorta(valoracion.respondido_en) }} · {{ valoracion.valoracion_global }}/5
-                  </p>
+                  <p class="text-sm font-bold text-empresas-dark">Valorada por la empresa · {{ valoracion.valoracion_global }}/5</p>
                   <dl class="space-y-1.5 text-sm">
                     <div v-for="p in PREGUNTAS_VALORACION" :key="p.key" class="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
                       <dt class="min-w-0 text-texto-secundario sm:flex-1">{{ p.label }}</dt>
@@ -1403,38 +1392,10 @@ function formatFecha(isoDate) {
                   </dl>
                   <p v-if="valoracion.comentarios" class="whitespace-pre-line break-words rounded-xl bg-white px-3 py-2 text-sm italic text-azul-noche">«{{ valoracion.comentarios }}»</p>
                 </div>
-
-                <!-- Sin pedir, o enlace caducado sin respuesta -->
-                <template v-else-if="!valoracion.solicitada || valoracion.caducado">
-                  <p class="mt-1 text-sm text-texto-secundario">
-                    {{ valoracion.caducado ? 'El enlace caducó sin respuesta. Genera uno nuevo para volver a pedirla.'
-                       : 'Cuando tus grupos hayan entregado, pide a la empresa que valore el reto con las soluciones de los grupos.' }}
-                  </p>
-                  <button v-if="valoracion.puede_editar" type="button" @click="pedirValoracion" :disabled="trabajandoValoracion"
-                          class="mt-3 inline-flex min-h-9 items-center rounded-full bg-empresas-dark px-4 text-xs font-bold uppercase text-white disabled:opacity-50">
-                    {{ trabajandoValoracion ? 'Generando…' : (valoracion.caducado ? 'Generar enlace nuevo' : 'Pedir valoración a la empresa') }}
-                  </button>
-                </template>
-
-                <!-- Pedida, pendiente de respuesta -->
-                <template v-else>
-                  <template v-if="enlaceValoracion">
-                    <label for="enlace-valoracion" class="mt-3 block text-xs font-semibold text-azul-noche">Enlace para la empresa</label>
-                    <div class="mt-1 flex flex-col gap-2 sm:flex-row">
-                      <input id="enlace-valoracion" type="text" readonly :value="enlaceValoracion" @focus="$event.target.select()"
-                             class="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm text-texto-secundario" />
-                      <button type="button" @click="copiarEnlaceValoracion"
-                              class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-empresas-dark/40 bg-white px-4 text-xs font-bold uppercase text-empresas-dark">
-                        {{ valoracionCopiada ? 'Copiado' : 'Copiar' }}
-                      </button>
-                    </div>
-                  </template>
-                  <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-texto-secundario">
-                    <span>Caduca el {{ fechaCorta(valoracion.token_expira_en) }}<template v-if="valoracion.enviado_en"> · Enviado el {{ fechaCorta(valoracion.enviado_en) }}</template></span>
-                    <button v-if="valoracion.puede_editar && !valoracion.enviado_en" type="button" @click="marcarEnviadaVal" :disabled="trabajandoValoracion"
-                            class="inline-flex min-h-9 items-center rounded-full px-2 text-xs font-bold uppercase text-empresas-dark hover:underline disabled:opacity-50">Marcar como enviado</button>
-                  </div>
-                </template>
+                <p v-else class="mt-3 text-sm text-azul-noche">
+                  {{ valoracion.enviado_en && !valoracion.caducado ? 'DuaLab ya ha enviado las soluciones a la empresa: esperando su valoración.'
+                     : 'DuaLab enviará las soluciones a la empresa para que las valore cuando tus grupos hayan entregado.' }}
+                </p>
               </template>
               <p v-if="errorValoracion" class="mt-2 text-xs text-red-600" role="alert">{{ errorValoracion }}</p>
             </div>

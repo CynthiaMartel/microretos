@@ -34,7 +34,7 @@ class PlanProyectoController extends Controller
         $plan = Microproyecto::where('uuid', $uuid)->firstOrFail();
 
         $encuentro = $servicio->crear($plan, $request->user(), $request->validated());
-        $encuentro->load(['microproyecto.microreto', 'microproyecto.familia', 'colaboradores']);
+        $encuentro->load(['microproyecto.microreto', 'microproyecto.familia', 'microproyecto.empresa', 'colaboradores']);
 
         return response()->json(new EncuentroResource($encuentro), 201);
     }

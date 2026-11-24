@@ -1,5 +1,7 @@
 <!-- Filtro de lista larga o variable (familia, ciclo, centro, empresa…) dentro de FiltrosPanel.
-     `opciones`: strings o [{ value, label }] · `todos`: texto de la opción vacía ('' = sin filtro). -->
+     `opciones`: strings o [{ value, label }] · `todos`: texto de la opción vacía ('' = sin filtro).
+     Ancho fijo desde sm (el mismo en todos, aunque la fila salte de línea: los de abajo cuadran con
+     los de arriba); en móvil, todo el ancho. Las opciones largas las recorta el propio select. -->
 <script setup>
 import { computed } from 'vue'
 import { iconoFiltro } from '../config/iconosFiltro.js'
@@ -21,15 +23,15 @@ const normalizadas = computed(() =>
 </script>
 
 <template>
-  <div class="flex min-w-0 max-w-full items-end gap-2">
+  <div class="flex w-full min-w-0 max-w-full items-end gap-2 sm:w-auto">
     <span aria-hidden="true"
           class="mb-px inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte">
       <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="icono || iconoFiltro(label)" /></svg>
     </span>
-  <label class="block min-w-0 max-w-full">
+  <label class="block min-w-0 max-w-full flex-1 sm:flex-none">
     <span class="mb-1 block text-xs font-semibold text-azul-noche">{{ label }}</span>
     <select v-model="modelo" :disabled="!normalizadas.length"
-            class="h-9 w-full max-w-full rounded-xl border border-borde bg-white px-3 pr-8 text-sm font-medium text-azul-noche transition-colors focus:border-rol-fuerte focus:outline-none disabled:opacity-50 sm:w-auto sm:min-w-40 sm:max-w-56 [.filtros-separados_&]:lg:min-w-32 [.filtros-separados_&]:lg:max-w-40 [.filtros-separados_&]:lg:pl-2.5 [.filtros-separados_&]:lg:pr-7 [.filtros-separados_&]:lg:text-[13px]">
+            class="h-9 w-full max-w-full rounded-xl border border-borde bg-white px-3 pr-8 text-sm font-medium text-azul-noche transition-colors focus:border-rol-fuerte focus:outline-none disabled:opacity-50 sm:w-48 [.filtros-separados_&]:lg:w-40 [.filtros-separados_&]:lg:pl-2.5 [.filtros-separados_&]:lg:pr-7 [.filtros-separados_&]:lg:text-[13px]">
       <option value="">{{ todos }}</option>
       <option v-for="o in normalizadas" :key="String(o.value)" :value="o.value">{{ o.label }}</option>
     </select>
