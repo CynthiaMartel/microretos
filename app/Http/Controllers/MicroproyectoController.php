@@ -94,6 +94,12 @@ class MicroproyectoController extends Controller
 
         $data = $request->validated();
 
+        // Quien colabora recibe datos_empresa sin el contacto: al guardar, se conserva el que había
+        if (isset($data['datos_empresa']) && is_array($data['datos_empresa']) && !$this->veContactoEmpresa($proyecto)) {
+            $data['datos_empresa'] = array_merge($data['datos_empresa'],
+                array_intersect_key($proyecto->datos_empresa ?? [], array_flip(self::CONTACTO_EMPRESA)));
+        }
+
         // Un proyecto sin reto vinculado no puede avanzar más allá del paso 1 del
         // wizard (el reto es la fuente de contexto real de toda la propuesta).
         $pasoDestino = $data['paso_actual'] ?? $proyecto->paso_actual;
@@ -570,6 +576,25 @@ class MicroproyectoController extends Controller
 
     // --- Helper ---
 
+    // Contacto de la empresa en datos_empresa: solo para quien creó el reto ajustado, el admin de su
+    // centro, Gestión de prácticas y el superadmin; a un docente invitado a colaborar no le llega
+    private const CONTACTO_EMPRESA = ['cif', 'persona_contacto', 'email', 'telefono', 'web'];
+
+    private function veContactoEmpresa(Microproyecto $p): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ($p->user_id === $user->id || $user->isSuperAdmin() || $user->isAdmin() || $user->trabajaEnPracticas());
+    }
+
+    private function datosEmpresaVisibles(Microproyecto $p): ?array
+    {
+        $datos = $p->datos_empresa;
+        if (!is_array($datos) || $this->veContactoEmpresa($p)) return $datos;
+
+        return array_diff_key($datos, array_flip(self::CONTACTO_EMPRESA));
+    }
+
     private function formatProyecto(Microproyecto $p): array
     {
         return [
@@ -596,9 +621,10 @@ class MicroproyectoController extends Controller
             'empresa_no_valida_aun' => $p->empresa_no_valida_aun,
             'enviado_a_empresa_mail'=> $p->enviado_a_empresa_mail,
             'docente_validado'      => $p->docente_validado,
-            'token_empresa'         => $p->token_empresa,
+            // token_empresa no se devuelve: es la llave del enlace de la empresa y el frontend no la usa
             'empresa_id'       => $p->empresa_id,
             'empresa_nombre'   => $p->empresa?->nombre_comercial,
+            'empresa_sector'   => $p->empresa?->sector,   // filtro Sector de las bibliotecas
             'centro_id'        => $p->centro_id,
             'centro_nombre'    => $p->centroEducativo?->nombre,
             'ciclo_id'         => $p->ciclo_id,
@@ -616,7 +642,7 @@ class MicroproyectoController extends Controller
             'encuentro_fecha'  => array_key_exists('encuentros_min_fecha', $p->getAttributes())
                 ? ($p->getAttribute('encuentros_min_fecha') ? substr((string) $p->getAttribute('encuentros_min_fecha'), 0, 10) : null)
                 : (($f = $p->encuentros()->min('fecha')) ? substr((string) $f, 0, 10) : null),
-            'datos_empresa'    => $p->datos_empresa,
+            'datos_empresa'    => $this->datosEmpresaVisibles($p),
             'datos_centro'     => $p->datos_centro,
             'equipo'           => $p->equipo,
             'imagen_portada_url' => $p->imagenPortada?->url,

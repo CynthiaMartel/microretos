@@ -252,4 +252,28 @@ class VisibilidadAlumnadoTest extends TestCase
         Sanctum::actingAs($this->adminA);
         $this->assertFalse($mio());
     }
+
+    public function test_el_listado_no_da_la_llave_de_la_empresa_ni_su_contacto_a_quien_colabora(): void
+    {
+        DB::table('microproyectos')->where('id', $this->encuentro->microproyecto_id)->update([
+            'token_empresa' => Str::random(40),
+            'datos_empresa' => json_encode(['nombre' => 'Gestoría Sur', 'sector' => 'Servicios', 'email' => 'contacto@gestoria.test', 'persona_contacto' => 'Pepa']),
+        ]);
+        $fila = fn () => collect($this->getJson('/api/startup/proyectos')->assertOk()->json())->firstWhere('id', $this->encuentro->microproyecto_id);
+
+        $this->invitar($this->luis, true);
+        Sanctum::actingAs($this->luis);
+        $deAna = $fila();
+        $this->assertArrayNotHasKey('token_empresa', $deAna);
+        $this->assertSame(['nombre' => 'Gestoría Sur', 'sector' => 'Servicios'], $deAna['datos_empresa']);
+
+        // Si guarda el asistente con lo que recibió, el contacto no se pierde
+        $this->putJson("/api/startup/proyectos/{$deAna['uuid']}", ['datos_empresa' => $deAna['datos_empresa']])->assertOk();
+
+        // Quien lo creó sigue viendo el contacto (lo edita en el asistente), pero tampoco la llave
+        Sanctum::actingAs($this->ana);
+        $mio = $fila();
+        $this->assertArrayNotHasKey('token_empresa', $mio);
+        $this->assertSame('contacto@gestoria.test', $mio['datos_empresa']['email']);
+    }
 }
