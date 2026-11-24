@@ -181,14 +181,16 @@ class SolicitudRetoTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('retos');
         Mail::assertNotQueued(SolicitudRetoRetosListosMail::class);
 
-        $this->postJson("/api/central/solicitudes-reto/{$solicitud->id}/avisar", ['retos' => [$elegido]])
-            ->assertOk()->assertJsonPath('data.fase', 'avisada');
+        // Devuelve el mismo enlace del correo, para copiarlo y pasarlo por otro canal
+        $enlaceDevuelto = $this->postJson("/api/central/solicitudes-reto/{$solicitud->id}/avisar", ['retos' => [$elegido]])
+            ->assertOk()->assertJsonPath('data.fase', 'avisada')->json('enlace');
 
         $enlace = null;
         Mail::assertQueued(SolicitudRetoRetosListosMail::class, function ($m) use (&$enlace) {
             $enlace = $m->enlace;
             return $m->hasTo('profe@centro.test') && $m->titulos === ['Reto 1'];
         });
+        $this->assertSame($enlace, $enlaceDevuelto);
 
         $token = substr($enlace, -64);
         $this->getJson("/api/public/solicitud-reto/{$token}/retos")
@@ -554,6 +556,26 @@ class SolicitudRetoTest extends TestCase
         $this->assertTrue($historial->contains(fn ($h) => $h['accion'] === 'guardar_retos'));
         Sanctum::actingAs($this->usuario(User::ROLE_RED_DUALAB, 'red2@test.local'));
         $this->getJson('/api/central/historial')->assertForbidden();
+    }
+
+    public function test_publicado_en_un_centro_sale_en_su_biblioteca_aunque_la_empresa_no_tenga_ese_centro(): void
+    {
+        // Empresa sin centro, como las que se validan desde una captación
+        DB::table('empresas')->where('id', $this->empresaId)->update(['centro_id' => null]);
+        $otroCentro = DB::table('centro_educativo')->insertGetId(['nombre' => 'IES Otro Centro']);
+        $solicitud = $this->solicitudRespondida();
+        Sanctum::actingAs($this->superadmin);
+        $this->postJson('/api/guardar-microretos-lote', $this->lote($solicitud->id))->assertCreated();
+        $reto = Microreto::firstOrFail();
+
+        $this->postJson("/api/central/solicitudes-reto/{$solicitud->id}/publicar", ['retos' => [$reto->uuid], 'centro_id' => $otroCentro])->assertOk();
+
+        // La biblioteca agrupa por centro: el del reto, no el de la empresa (que no tiene)
+        $enBiblioteca = collect($this->getJson('/api/microretos')->assertOk()->json())->firstWhere('uuid', $reto->uuid);
+        $this->assertSame('IES Otro Centro', $enBiblioteca['centro_educativo']);
+        Sanctum::actingAs($this->usuario(User::ROLE_DOCENTE, 'docente-otro@test.local', $otroCentro));
+        $enBiblioteca = collect($this->getJson('/api/microretos')->assertOk()->json())->firstWhere('uuid', $reto->uuid);
+        $this->assertSame('IES Otro Centro', $enBiblioteca['centro_educativo']);
     }
 
     public function test_autorizar_a_trabajar_solo_si_el_docente_tiene_cuenta(): void

@@ -1,6 +1,8 @@
-<!-- Contactos → «Solicitudes de retos»: DuaLab envía a un docente un enlace para que cuente qué
-     quiere trabajar, y aquí se siguen hasta tener retos y encuentro. El enlace sale por correo y
-     además se puede copiar para pasarlo por otro canal. Backend: SolicitudRetoController. -->
+<!-- Contactos → Retos a medida → «Formularios de docentes» (solicitudes de retos): DuaLab envía a un
+     docente el formulario para que pida los retos que quiere trabajar, y aquí se siguen hasta tener
+     retos y encuentro. El enlace sale por correo y además se puede copiar para pasarlo por otro canal.
+     Los correos de los docentes están en el submenú del panel («Correos de docentes»).
+     Backend: SolicitudRetoController. -->
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -55,8 +57,8 @@ function sincronizarUrl() {
   } })
 }
 
-// Correos del profesorado sin leer (info@, «Correos de solicitudes»): el total va en el botón de la
-// cabecera y, por solicitud, en un chip de su tarjeta. Si la web no responde, no se muestran.
+// Correos del profesorado sin leer (info@, «Correos de docentes»): por solicitud, en un chip de su
+// tarjeta (el total va en el panel lateral). Si la web no responde, no se muestran.
 const correosNuevos = ref({ total: 0, porSolicitud: {} })
 async function cargarCorreosNuevos() {
   try {
@@ -120,6 +122,11 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', alPulsarFuera, true)
   document.removeEventListener('keydown', alPulsarTecla)
 })
+// Desde el modal de envío: el formulario con lo que ya se ha escrito (nombre y centro)
+function verFormularioNuevo() {
+  datosVistaPrevia.value = { nombreDocente: nueva.value.nombre_docente.trim(), centroNombre: nueva.value.centro_nombre.trim() }
+  viendoComoDocente.value = true
+}
 function verComoDocente(s) {
   cerrarMenu()
   datosVistaPrevia.value = { nombreDocente: s.nombre_docente, centroNombre: s.centro_nombre }
@@ -178,23 +185,25 @@ async function copiar() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Contactos" titulo="Solicitudes de" destacado="retos" color="text-rol"
+      <CabeceraSeccion antetitulo="Retos a medida" titulo="Formularios de" destacado="docentes" color="text-rol"
                        :volver="{ name: 'inicio' }" volver-label="Espacios"
-                       subtitulo="Envía a un docente el formulario para que cuente qué quiere trabajar; con sus respuestas generamos los retos."
+                       subtitulo="Envía a un docente el formulario para que nos pida los retos que quiere trabajar; con sus respuestas los preparamos."
                        acciones-debajo>
         <div class="flex flex-wrap gap-2 lg:justify-end">
-        <RouterLink :to="{ name: 'respuestas-solicitudes' }" class="accion-secundaria">
-          Correos de solicitudes
-          <span v-if="correosNuevos.total" class="ml-1.5 rounded-full bg-[#FF8920] px-1.5 text-xs font-extrabold text-azul-noche"
-                :aria-label="`${correosNuevos.total} sin leer`">{{ correosNuevos.total > 99 ? '99+' : correosNuevos.total }}</span>
-        </RouterLink>
-        <button type="button" class="accion-secundaria" @click="datosVistaPrevia = {}; viendoComoDocente = true">Ver cómo lo ve el docente</button>
-        <button type="button" class="accion-principal" @click="abrirNueva">Enviar solicitud</button>
+          <button type="button" class="accion-principal" @click="abrirNueva">Enviar formulario</button>
         </div>
       </CabeceraSeccion>
 
+      <!-- Correos sin leer de los docentes: aviso con enlace (el panel lateral también los cuenta) -->
+      <RouterLink v-if="correosNuevos.total" :to="{ name: 'respuestas-solicitudes' }"
+                  class="flex items-center gap-2 rounded-2xl border border-[#FF8920]/40 bg-[#FF8920]/10 px-4 py-3 text-sm font-semibold text-[#B45309] transition hover:bg-[#FF8920]/15">
+        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <span class="min-w-0 flex-1">{{ correosNuevos.total }} {{ correosNuevos.total === 1 ? 'correo de docente sin leer' : 'correos de docentes sin leer' }}</span>
+        <span aria-hidden="true">→</span>
+      </RouterLink>
+
       <FiltrosPanel v-model:busqueda="buscar" placeholder="Buscar por docente, email o centro…"
-                    :resultados="meta?.total ?? null" :unidad="['solicitud', 'solicitudes']"
+                    :resultados="meta?.total ?? null" :unidad="['formulario', 'formularios']"
                     :hay-activos="hayFiltros" @limpiar="limpiar">
         <FiltroSegmentado v-model="estado" label="Estado" :opciones="opcionesEstado" />
       </FiltrosPanel>
@@ -203,7 +212,7 @@ async function copiar() {
       <p v-if="avisoLista" class="rounded-2xl border border-borde bg-white px-4 py-3 text-sm font-semibold text-texto-secundario" role="status">{{ avisoLista }}</p>
       <p v-if="cargando && !items.length" class="py-10 text-center text-sm text-texto-secundario" role="status">Cargando…</p>
       <p v-else-if="!error && !items.length" class="rounded-2xl border border-borde bg-white px-4 py-8 text-center text-sm text-texto-secundario">
-        {{ hayFiltros ? 'No hay solicitudes con estos filtros.' : 'Aún no has enviado ninguna solicitud. Pulsa «Enviar solicitud» para empezar.' }}
+        {{ hayFiltros ? 'No hay formularios con estos filtros.' : 'Aún no has enviado ningún formulario. Pulsa «Enviar formulario» para empezar.' }}
       </p>
 
       <ul v-else class="space-y-2" :class="cargando && 'opacity-60'" :aria-busy="cargando">
@@ -261,14 +270,14 @@ async function copiar() {
     <VistaPreviaSolicitud :abierto="viendoComoDocente" :datos="datosVistaPrevia" @cerrar="viendoComoDocente = false" />
     <EliminarSolicitudModal :visible="!!aEliminar" :solicitud="aEliminar" @cerrar="aEliminar = null" @eliminada="eliminada" />
 
-    <!-- Modal: enviar solicitud -->
+    <!-- Modal: enviar el formulario a un docente -->
     <Teleport to="body">
       <div v-if="creando" class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
            @keydown.esc="creando = false" @click.self="creando = false">
         <section role="dialog" aria-modal="true" aria-labelledby="nueva-solicitud-titulo"
                  class="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:rounded-[2rem]">
           <header class="flex items-center gap-3 border-b border-borde px-4 py-3 sm:px-6 sm:py-4">
-            <h2 id="nueva-solicitud-titulo" class="min-w-0 flex-1 truncate font-heading text-lg font-bold">{{ enlace ? 'Solicitud enviada' : 'Enviar solicitud de retos' }}</h2>
+            <h2 id="nueva-solicitud-titulo" class="min-w-0 flex-1 truncate font-heading text-lg font-bold">{{ enlace ? 'Formulario enviado' : 'Enviar formulario a un docente' }}</h2>
             <button type="button" class="accion-icono" aria-label="Cerrar" @click="creando = false">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -284,7 +293,10 @@ async function copiar() {
           </div>
 
           <form v-else class="space-y-3 overflow-y-auto px-4 py-5 sm:px-6" novalidate @submit.prevent="enviarNueva">
-            <p class="text-xs text-texto-secundario">El docente recibirá un correo con el enlace al formulario (no necesita cuenta). La empresa la eliges tú después.</p>
+            <div class="flex flex-col gap-2 rounded-xl bg-[#F8FAFC] p-3 sm:flex-row sm:items-center">
+              <p class="min-w-0 flex-1 text-xs text-texto-secundario">El docente recibirá un correo con el enlace al formulario (no necesita cuenta). La empresa la eliges tú después.</p>
+              <button type="button" class="accion-secundaria self-start sm:self-auto" @click="verFormularioNuevo">Ver el formulario</button>
+            </div>
             <div v-for="campo in [
               { k: 'nombre_docente', t: 'Nombre del docente', tipo: 'text', max: 150 },
               { k: 'email_docente', t: 'Email', tipo: 'email', max: 255 },

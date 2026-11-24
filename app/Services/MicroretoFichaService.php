@@ -350,7 +350,11 @@ class MicroretoFichaService
         }
 
         if ($reto->empresa) {
-            $reto->centro_educativo = $reto->empresa->centroEducativo?->nombre
+            // El centro del reto manda (es el que decide quién lo ve, Microreto::scopeDelCentroDe): un
+            // reto publicado desde una solicitud de retos puede estar en un centro distinto del de su
+            // empresa, o la empresa no tener centro (las validadas desde una captación).
+            $reto->centro_educativo = self::nombreCentro($reto->centro_id)
+                ?? $reto->empresa->centroEducativo?->nombre
                 ?? $reto->empresa->centro_educativo
                 ?? 'Centro Desconocido';
 

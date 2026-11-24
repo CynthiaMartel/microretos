@@ -108,15 +108,18 @@ class SolicitudRetoController extends Controller
         return MicroretoFichaResource::collection($this->solicitudes->fichasRetos($solicitud, $request->validated('retos')));
     }
 
-    /** POST /central/solicitudes-reto/{id}/avisar — «tus retos están listos», con los retos elegidos */
-    public function avisar(AvisarSolicitudRetoRequest $request, int $id): SolicitudRetoResource
+    /**
+     * POST /central/solicitudes-reto/{id}/avisar — «tus retos están listos», con los retos elegidos.
+     * Devuelve también el enlace del correo, para copiarlo y pasarlo por otro canal (como reenviar).
+     */
+    public function avisar(AvisarSolicitudRetoRequest $request, int $id): JsonResponse
     {
         $datos = $request->validated();
         $solicitud = SolicitudReto::findOrFail($id);
-        $this->solicitudes->avisar($solicitud, $datos['retos'], $datos['mensaje'] ?? null, $request->user());
+        $enlace = $this->solicitudes->avisar($solicitud, $datos['retos'], $datos['mensaje'] ?? null, $request->user());
         $this->actividad->registrar($request->user(), 'solicitudes', 'avisar_docente', 'Avisó a ' . $solicitud->nombre_docente . ' de que sus retos están listos (' . count($datos['retos']) . ' retos).', $solicitud);
 
-        return new SolicitudRetoResource($this->ficha($id));
+        return response()->json(['data' => new SolicitudRetoResource($this->ficha($id)), 'enlace' => $enlace]);
     }
 
     /**

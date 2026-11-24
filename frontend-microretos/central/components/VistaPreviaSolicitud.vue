@@ -21,7 +21,7 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
 
 <template>
   <Teleport to="body">
-    <div v-if="abierto" class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+    <div v-if="abierto" class="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
          @keydown.esc="emit('cerrar')" @click.self="emit('cerrar')">
       <section role="dialog" aria-modal="true" aria-labelledby="vista-previa-titulo"
                class="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:rounded-[2rem]"

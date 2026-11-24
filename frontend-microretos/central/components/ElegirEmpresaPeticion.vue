@@ -75,21 +75,28 @@ const TIPOS = [{ v: '', t: 'Todas' }, { v: 'simulada', t: 'Ficticias' }, { v: 'r
     </p>
 
     <!-- Filtros, como en el generador -->
-    <div class="flex flex-col gap-2 lg:flex-row lg:items-center">
+    <!-- Tipo y familia en una fila (saltan de línea si no caben) y el buscador debajo, a todo el ancho:
+         en la columna de la ficha no hay sitio para los tres en fila -->
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-center gap-2">
       <div class="flex shrink-0 flex-wrap gap-1.5" role="group" aria-label="Tipo de empresa">
         <button v-for="o in TIPOS" :key="o.v" type="button" :aria-pressed="tipo === o.v" @click="tipo = o.v"
                 class="min-h-9 rounded-full border px-4 text-xs font-bold transition-colors"
                 :class="tipo === o.v ? 'border-azul-noche bg-azul-noche text-white' : 'border-borde bg-white text-texto-secundario hover:border-gray-400'">{{ o.t }}</button>
       </div>
       <label class="sr-only" :for="`emp-familia-${bloque.indice}`">Familia</label>
-      <select :id="`emp-familia-${bloque.indice}`" v-model="familia" class="field-input min-w-0 lg:w-56">
-        <option v-if="bloque.familia" :value="bloque.familia">{{ bloque.familia }} (la de la petición)</option>
-        <option value="">Todas las familias</option>
-        <option v-for="f in familias.filter(f => f !== bloque.familia)" :key="f" :value="f">{{ f }}</option>
-      </select>
+      <!-- .field-input fija width:100%: el ancho lo da este contenedor -->
+      <div class="w-full min-w-0 sm:w-64">
+        <select :id="`emp-familia-${bloque.indice}`" v-model="familia" class="field-input">
+          <option v-if="bloque.familia" :value="bloque.familia">{{ bloque.familia }} (la de la petición)</option>
+          <option value="">Todas las familias</option>
+          <option v-for="f in familias.filter(f => f !== bloque.familia)" :key="f" :value="f">{{ f }}</option>
+        </select>
+      </div>
+      </div>
       <label class="sr-only" :for="`emp-buscar-${bloque.indice}`">Buscar empresa</label>
       <input :id="`emp-buscar-${bloque.indice}`" v-model="buscar" type="search" autocomplete="off"
-             placeholder="Buscar por nombre, sector, familia o centro…" class="field-input min-w-0 flex-1" />
+             placeholder="Buscar por nombre, sector, familia o centro…" class="field-input" />
     </div>
 
     <!-- Resultados -->

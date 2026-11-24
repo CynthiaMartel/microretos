@@ -40,7 +40,7 @@ async function cargar() {
     empresaElegida.value = Object.fromEntries((s.value.bloques || []).map(b => [b.indice, b.empresa?.id ?? '']))
     retosElegidos.value = []
   } catch (e) {
-    error.value = e.response?.data?.error || 'No se ha podido abrir la solicitud.'
+    error.value = e.response?.data?.error || 'No se ha podido abrir el formulario.'
   }
 }
 onMounted(async () => {
@@ -96,21 +96,33 @@ const notas = ref('')
 // ── Retos y aviso ───────────────────────────────────────────────────────────
 const retosElegidos = ref([])
 const mensaje = ref('')
+// Mensaje junto a los botones de los retos (el de arriba queda lejos en móvil y con la ficha larga)
+const avisoRetos = ref('')
+// Enlace del último aviso: el mismo que le llega por correo, para pasarlo también por otro canal
+const enlaceAviso = ref('')
+const copiadoAviso = ref(false)
 async function avisar() {
   const n = retosElegidos.value.length
   if (!n || !confirm(`Se enviará a ${s.value.email_docente} el correo «Tus retos están listos» con ${n} ${n === 1 ? 'reto' : 'retos'}. ¿Enviar?`)) return
   guardando.value = true
-  aviso.value = ''
+  avisoRetos.value = ''
+  enlaceAviso.value = ''
+  copiadoAviso.value = false
   try {
-    s.value = (await avisarDocente(s.value.id, { retos: retosElegidos.value, mensaje: mensaje.value.trim() || null })).data.data
+    const { data } = await avisarDocente(s.value.id, { retos: retosElegidos.value, mensaje: mensaje.value.trim() || null })
+    s.value = data.data
+    enlaceAviso.value = data.enlace || ''
     retosElegidos.value = []
     mensaje.value = ''
-    aviso.value = 'Aviso enviado al docente.'
+    avisoRetos.value = 'Aviso en camino: el correo sale por info@ y puede tardar unos minutos en llegar.'
   } catch (e) {
-    aviso.value = e.response?.data?.message || 'No se ha podido enviar el aviso.'
+    avisoRetos.value = e.response?.data?.message || 'No se ha podido enviar el aviso.'
   } finally {
     guardando.value = false
   }
+}
+async function copiarEnlaceAviso() {
+  try { await navigator.clipboard.writeText(enlaceAviso.value); copiadoAviso.value = true } catch { copiadoAviso.value = false }
 }
 
 // «Autorizar a trabajarlos» (acción crítica): solo con cuenta del docente y retos que no estén en otro centro
@@ -155,7 +167,7 @@ async function quitarCorreo(c) {
   try {
     await cambiarEstadoCorreo(c.id, 'archivado')
     correos.value = correos.value.filter(x => x.id !== c.id)
-    aviso.value = 'Correo quitado de la lista. Sigue en info@: lo recuperas en «Correos de solicitudes» → Archivados.'
+    aviso.value = 'Correo quitado de la lista. Sigue en info@: lo recuperas en «Correos de docentes» → Archivados.'
   } catch (e) {
     aviso.value = e.response?.data?.error || 'No se ha podido quitar el correo. Inténtalo de nuevo.'
   } finally {
@@ -183,14 +195,22 @@ function verFormulario() {
   retosVistaPrevia.value = null
   viendoComoDocente.value = true
 }
+// Sin ninguno marcado, enseña todos los de la solicitud (hasta 20, el máximo de VerRetosSolicitudRequest)
+const retosParaVistaPrevia = computed(() => retosElegidos.value.length ? retosElegidos.value : (s.value?.retos ?? []).slice(0, 20).map(r => r.uuid))
 async function verRetosComoDocente() {
+  if (!retosParaVistaPrevia.value.length) return
   cargandoVistaPrevia.value = true
-  aviso.value = ''
+  avisoRetos.value = ''
   try {
-    retosVistaPrevia.value = (await getFichasRetosSolicitud(s.value.id, retosElegidos.value)).data.data
+    const fichas = (await getFichasRetosSolicitud(s.value.id, retosParaVistaPrevia.value)).data.data
+    if (!fichas?.length) {
+      avisoRetos.value = 'No se ha encontrado ninguno de estos retos: recarga la página.'
+      return
+    }
+    retosVistaPrevia.value = fichas
     viendoComoDocente.value = true
   } catch (e) {
-    aviso.value = e.response?.data?.message || 'No se ha podido preparar la vista previa de los retos.'
+    avisoRetos.value = e.response?.data?.message || 'No se ha podido preparar la vista previa de los retos.'
   } finally {
     cargandoVistaPrevia.value = false
   }
@@ -256,8 +276,8 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Solicitud de retos" :titulo="s ? s.nombre_docente : 'Solicitud'" color="text-rol"
-                       :volver="volver" volver-label="Solicitudes"
+      <CabeceraSeccion antetitulo="Retos a medida" :titulo="s ? s.nombre_docente : 'Formulario'" color="text-rol"
+                       :volver="volver" volver-label="Formularios"
                        :subtitulo="s ? `${s.centro_nombre} · ${s.email_docente}` : ''" />
 
       <p v-if="error" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">{{ error }}</p>
@@ -273,8 +293,8 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
           <div class="flex flex-wrap gap-2 sm:ml-auto">
             <button type="button" class="accion-secundaria" @click="verFormulario">Ver cómo lo ve el docente</button>
             <button v-if="s.estado === 'pendiente'" type="button" class="accion-secundaria" :disabled="guardando" @click="reenviar">Reenviar enlace</button>
-            <button v-if="s.estado !== 'descartada'" type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: true }, 'Solicitud descartada.')">Descartar</button>
-            <button v-else type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: false }, 'Solicitud recuperada.')">Recuperar</button>
+            <button v-if="s.estado !== 'descartada'" type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: true }, 'Formulario descartado.')">Descartar</button>
+            <button v-else type="button" class="accion-secundaria" :disabled="guardando" @click="guardar({ descartada: false }, 'Formulario recuperado.')">Recuperar</button>
           </div>
           <p v-if="aviso" class="w-full text-sm font-semibold text-texto-secundario" role="status">{{ aviso }}</p>
           <div v-if="enlace" class="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
@@ -287,10 +307,10 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
           </p>
         </section>
 
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div class="space-y-4 lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div class="space-y-4 xl:col-span-2">
             <p v-if="s.estado === 'pendiente'" class="rounded-2xl border border-borde bg-white p-5 text-sm text-texto-secundario shadow-sm">
-              El docente aún no ha enviado la solicitud. Sus respuestas aparecerán aquí.
+              El docente aún no ha enviado el formulario. Sus respuestas aparecerán aquí.
             </p>
 
             <template v-else>
@@ -381,12 +401,21 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                   <textarea id="sol-mensaje" v-model="mensaje" maxlength="1000" rows="3" class="field-input"></textarea>
                   <div class="mt-3 flex flex-wrap gap-2">
                     <button type="button" class="accion-principal" :disabled="guardando || !retosElegidos.length" @click="avisar">Avisar al docente</button>
-                    <button type="button" class="accion-secundaria" :disabled="cargandoVistaPrevia || !retosElegidos.length" @click="verRetosComoDocente">
-                      {{ cargandoVistaPrevia ? 'Preparando…' : 'Ver cómo los verá' }}
+                    <button type="button" class="accion-secundaria" :disabled="cargandoVistaPrevia" @click="verRetosComoDocente">
+                      {{ cargandoVistaPrevia ? 'Preparando…' : retosElegidos.length ? 'Ver cómo los verá' : 'Ver cómo los verá (todos)' }}
                     </button>
                   </div>
-                  <p class="mt-2 text-xs text-texto-secundario">Le llega «Tus retos están listos» con un enlace para leerlos, sin cuenta y sin poder trabajarlos.</p>
-                  <p v-if="s.avisado_at" class="mt-1 text-xs text-texto-secundario">Último aviso: {{ fechaHora(s.avisado_at) }}. Avisar de nuevo le envía un enlace nuevo con los retos que marques.</p>
+                  <p v-if="avisoRetos" class="mt-2 text-sm font-semibold text-texto-secundario" role="status">{{ avisoRetos }}</p>
+                  <div v-if="enlaceAviso" class="mt-2 rounded-xl bg-[#F8FAFC] p-3">
+                    <p class="text-xs font-semibold text-texto-secundario">O copia el enlace para acceder (es el mismo del correo):</p>
+                    <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <p class="min-w-0 flex-1 break-all rounded-xl bg-white px-3 py-2 font-mono text-xs">{{ enlaceAviso }}</p>
+                      <button type="button" class="accion-secundaria self-end sm:self-auto" @click="copiarEnlaceAviso">{{ copiadoAviso ? 'Copiado' : 'Copiar enlace' }}</button>
+                    </div>
+                    <a :href="enlaceAviso" target="_blank" rel="noopener" class="mt-2 inline-block text-xs font-bold text-rol underline">Abrir el enlace</a>
+                  </div>
+                  <p class="mt-2 text-xs text-texto-secundario">Le llega «Tus retos están listos» con un enlace para leerlos, sin cuenta y sin poder trabajarlos. Sin marcar ninguno, «Ver cómo los verá» enseña todos.</p>
+                  <p v-if="s.avisado_at" class="mt-1 text-xs text-texto-secundario">Último aviso: {{ fechaHora(s.avisado_at) }}. Avisar de nuevo le envía un enlace nuevo con los retos que marques (el anterior deja de funcionar).</p>
 
                   <!-- Autorizar a trabajarlos: solo si el docente tiene cuenta (acción crítica, con confirmación) -->
                   <div v-if="gestiona" class="mt-4 border-t border-borde pt-4">
@@ -470,7 +499,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                   </div>
                 </li>
               </ul>
-              <p class="mt-3 text-xs text-texto-secundario">Lo que escribas sale desde info@ con la referencia de esta solicitud, para que su respuesta vuelva aquí.</p>
+              <p class="mt-3 text-xs text-texto-secundario">Lo que escribas sale desde info@ con la referencia de este formulario, para que su respuesta vuelva aquí.</p>
             </section>
 
             <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-5" aria-labelledby="sol-notas">

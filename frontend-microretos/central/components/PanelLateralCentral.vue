@@ -6,7 +6,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getFormulariosWeb, getCorreos } from '../../src/services/primerContactoService.js'
-import { listarSolicitudes } from '../../src/services/solicitudRetoService.js'
+import { listarSolicitudes, getRespuestasSolicitudes } from '../../src/services/solicitudRetoService.js'
 import logo from '../../src/assets/logo_colores.png'
 import { ESPACIOS, ICONOS, espacioDe, puedeVerItem, conCandado } from '../espacios.js'
 import { avisoSuperadmin } from '../avisoSuperadmin.js'
@@ -31,7 +31,19 @@ const auth = useAuthStore()
 const GRUPOS = computed(() => [...(espacio.value?.grupos ?? []), GRUPO_COMUN]
   .map(g => ({ ...g, items: g.items.filter(i => puedeVerItem(auth.userRole, i) || conCandado(auth.userRole, i)) }))
   .filter(g => g.items.length))
-const activo = item => !!item.nombres?.includes(route.name)
+const activo = item => !!item.nombres?.includes(route.name) || !!item.hijos?.some(activo)
+
+// Items con `hijos` (p. ej. Retos a medida): submenú desplegable. Abierto si estás en uno de sus hijos o
+// si lo has abierto tú; al entrar en un hijo desde otro sitio se abre solo.
+const abiertos = ref({})
+const subAbierto = item => !!abiertos.value[item.key]
+watch(() => route.name, () => {
+  for (const item of GRUPOS.value.flatMap(g => g.items)) if (item.hijos?.some(activo)) abiertos.value[item.key] = true
+}, { immediate: true })
+// Plegado, el padre se marca si estás en uno de sus hijos; desplegado, se marca el hijo
+const padreActivo = item => activo(item) && !(item.hijos && subAbierto(item))
+// Plegado, el padre suma los contadores de sus hijos
+const contadorPadre = item => (item.hijos ?? []).reduce((n, h) => n + (pendientes.value[h.contador] ?? 0), 0)
 
 // «Cambiar de espacio» se despliega con los otros espacios (como en la barra superior)
 const espaciosAbierto = ref(false)
@@ -45,6 +57,7 @@ function irAEspacio(e) {
 
 function ir(item) {
   if (item.desplegable) { espaciosAbierto.value = !espaciosAbierto.value; return }
+  if (item.hijos) { abiertos.value[item.key] = !subAbierto(item); return }
   abierto.value = false
   // Solo superadmin (Admin Central DuaLab la ve con candado): aviso para iniciar sesión como superadmin
   if (conCandado(auth.userRole, item)) { avisoSuperadmin.value = { nombre: item.label, destino: item.ruta }; return }
@@ -67,15 +80,19 @@ const CONTADORES = {
     const { data } = await getCorreos({ per_page: 1 })
     return data.resumen?.por_estado?.nuevo ?? 0
   } },
-  solicitudes: { aria: 'solicitudes de retos por generar', cargar: async () => {
+  solicitudes: { aria: 'formularios de docentes por generar', cargar: async () => {
     const { data } = await listarSolicitudes({ per_page: 1 })
     return data.resumen?.por_trabajar ?? 0
+  } },
+  correosSolicitudes: { aria: 'correos de docentes sin leer', cargar: async () => {
+    const { data } = await getRespuestasSolicitudes({ estado: 'nuevo', per_page: 1 })
+    return data.meta?.total ?? 0
   } },
 }
 const pendientes = ref({})
 const ultima = {}
 async function refrescar() {
-  const claves = GRUPOS.value.flatMap(g => g.items).map(i => i.contador).filter(Boolean)
+  const claves = GRUPOS.value.flatMap(g => g.items).flatMap(i => [i, ...(i.hijos ?? [])]).map(i => i.contador).filter(Boolean)
   for (const clave of claves) {
     if (Date.now() - (ultima[clave] ?? 0) < 30000) continue
     ultima[clave] = Date.now()
@@ -107,9 +124,10 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
           <template v-for="item in grupo.items" :key="item.key">
           <div v-if="item.separadorAntes" class="mx-3 my-1.5 border-t border-white/10" role="separator" />
           <button type="button" class="nav-item w-full text-left"
-                  :class="activo(item) ? 'nav-item--activo' : 'nav-item--idle'"
-                  :aria-current="activo(item) ? 'page' : undefined"
-                  :aria-expanded="item.desplegable ? espaciosAbierto : undefined" @click="ir(item)">
+                  :class="padreActivo(item) ? 'nav-item--activo' : 'nav-item--idle'"
+                  :aria-current="padreActivo(item) && !item.hijos ? 'page' : undefined"
+                  :aria-expanded="item.desplegable ? espaciosAbierto : item.hijos ? subAbierto(item) : undefined"
+                  :aria-controls="item.hijos ? `sub-${item.key}` : undefined" @click="ir(item)">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path :d="item.icono" />
             </svg>
@@ -118,13 +136,24 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
               <span v-if="item.detalle" class="block whitespace-normal break-words text-[11px] font-semibold leading-tight opacity-60">{{ item.detalle }}</span>
             </span>
             <span v-if="item.contador && pendientes[item.contador]" class="nav-badge" :aria-label="`${pendientes[item.contador]} ${CONTADORES[item.contador].aria}`">{{ textoPendientes(item.contador) }}</span>
+            <span v-if="item.hijos && !subAbierto(item) && contadorPadre(item)" class="nav-badge" :aria-label="`${contadorPadre(item)} pendientes`">{{ contadorPadre(item) > 99 ? '99+' : contadorPadre(item) }}</span>
             <svg v-if="item.externo" class="h-3.5 w-3.5 shrink-0 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             <span v-if="item.externo" class="sr-only">(se abre en otra pestaña)</span>
             <span v-if="item.proximamente" class="text-[10px] font-bold uppercase tracking-wider text-white/40">Pronto</span>
             <svg v-if="conCandado(auth.userRole, item)" class="h-3.5 w-3.5 shrink-0 text-white/50" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             <span v-if="conCandado(auth.userRole, item)" class="sr-only">(solo superadmin)</span>
-            <svg v-if="item.desplegable" class="h-4 w-4 shrink-0 text-white/50 transition-transform" :class="espaciosAbierto && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            <svg v-if="item.desplegable || item.hijos" class="h-4 w-4 shrink-0 text-white/50 transition-transform" :class="(item.hijos ? subAbierto(item) : espaciosAbierto) && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
           </button>
+          <!-- Submenú de un item con hijos -->
+          <div v-if="item.hijos && subAbierto(item)" :id="`sub-${item.key}`" class="mb-1 ml-9 space-y-0.5 border-l border-white/10 pl-2">
+            <button v-for="h in item.hijos" :key="h.key" type="button" @click="ir(h)"
+                    :aria-current="activo(h) ? 'page' : undefined"
+                    class="flex min-h-10 w-full items-center gap-2 rounded-xl px-2.5 text-left text-sm font-semibold transition-colors"
+                    :class="activo(h) ? 'sub-item--activo' : 'text-white/70 hover:bg-white/5 hover:text-white'">
+              <span class="min-w-0 flex-1 truncate">{{ h.label }}</span>
+              <span v-if="h.contador && pendientes[h.contador]" class="nav-badge" :aria-label="`${pendientes[h.contador]} ${CONTADORES[h.contador].aria}`">{{ textoPendientes(h.contador) }}</span>
+            </button>
+          </div>
           <!-- Otros espacios (submenú) -->
           <div v-if="item.desplegable && espaciosAbierto" class="mb-1 ml-9 space-y-0.5 border-l border-white/10 pl-2">
             <button v-for="e in otrosEspacios" :key="e.clave" type="button" @click="irAEspacio(e)"
@@ -179,6 +208,10 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
   background: color-mix(in srgb, var(--color-rol-claro) 18%, transparent);
   color: var(--color-rol-claro);
   box-shadow: inset 3px 0 0 var(--color-rol-claro);
+}
+.sub-item--activo {
+  background: color-mix(in srgb, var(--color-rol-claro) 18%, transparent);
+  color: var(--color-rol-claro);
 }
 .nav-badge {
   min-width: 1.4rem;

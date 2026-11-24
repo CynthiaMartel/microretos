@@ -210,10 +210,11 @@ class SolicitudRetoService
     /**
      * Aviso manual «tus retos están listos»: DuaLab elige qué retos de la solicitud enviar. El
      * correo lleva un enlace nuevo (el anterior deja de valer) que muestra esos retos en solo lectura.
+     * Devuelve el enlace, para que DuaLab pueda pasarlo también por otro canal.
      *
      * @param array<int, string> $uuids
      */
-    public function avisar(SolicitudReto $solicitud, array $uuids, ?string $mensaje, User $autor): void
+    public function avisar(SolicitudReto $solicitud, array $uuids, ?string $mensaje, User $autor): string
     {
         if ($solicitud->estado !== SolicitudReto::ESTADO_RESPONDIDA) {
             throw ValidationException::withMessages(['retos' => 'Solo se puede avisar de una solicitud que el docente ha enviado.']);
@@ -224,12 +225,14 @@ class SolicitudRetoService
             throw ValidationException::withMessages(['retos' => 'Algún reto no es de esta solicitud o ya no existe.']);
         }
 
-        DB::transaction(function () use ($solicitud, $autor, $retos, $uuids, $mensaje) {
+        return DB::transaction(function () use ($solicitud, $autor, $retos, $uuids, $mensaje) {
             $enlace = $this->nuevoEnlace($solicitud, (int) config('solicitudes_reto.dias_validez_retos'));
             $solicitud->forceFill(['avisado_at' => now(), 'retos_avisados' => array_values($uuids)])->save();
             $this->correoInfo->enviar(new SolicitudRetoRetosListosMail(
                 $solicitud, $autor, $enlace, $retos->pluck('titulo')->filter()->values()->all(), $mensaje,
             ), $solicitud->email_docente, $autor->name);
+
+            return $enlace;
         });
     }
 

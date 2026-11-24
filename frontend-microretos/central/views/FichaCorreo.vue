@@ -72,7 +72,7 @@ const volver = computed(() => {
   if (desde === 'solicitud' && /^\d+$/.test(String(solicitud))) return { name: 'solicitud-reto-ficha', params: { id: solicitud } }
   return { name: 'correo', query: route.query }
 })
-const volverLabel = computed(() => ({ respuestas: 'Respuestas', solicitud: 'Solicitud' })[route.query.desde] ?? 'Correo')
+const volverLabel = computed(() => ({ respuestas: 'Correos de docentes', solicitud: 'Formulario' })[route.query.desde] ?? 'Correo')
 </script>
 
 <template>
