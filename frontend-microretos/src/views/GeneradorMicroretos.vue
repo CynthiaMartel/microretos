@@ -1,6 +1,6 @@
 <!-- Ruta: /retos/crear (name: microretos). Antes vivía en /microretos — ver router/index.js. -->
 <script setup>
-import { ref, unref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import { ref, unref, onMounted, onUnmounted, onActivated, onDeactivated, watch, computed, nextTick } from 'vue';
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { getFamilias, getCiclosDeFamilia, getModulosDeCiclo } from '../services/datosFPService.js';
@@ -172,11 +172,14 @@ const modulosSeleccionados = ref([]);
 const modulosSeleccionadosCurso1 = ref([]);
 const modulosSeleccionadosCurso2 = ref([]);
 
+// Solo módulos con RA y CE (con_ra_ce, de la API): forzar uno sin ellos no aporta nada al reto.
+// En la demo, sus datos propios, sin filtrar.
+const modulosConDatos = computed(() => esModoDemo.value ? modulos.value : modulos.value.filter(m => m.con_ra_ce !== false));
 const modulosDelCurso = computed(() => {
-  return modulos.value.filter(m => m.curso == seleccion.value.cursoSeleccionado);
+  return modulosConDatos.value.filter(m => m.curso == seleccion.value.cursoSeleccionado);
 });
-const modulosCurso1DelCiclo = computed(() => modulos.value.filter(m => m.curso == 1));
-const modulosCurso2DelCiclo = computed(() => modulos.value.filter(m => m.curso == 2));
+const modulosCurso1DelCiclo = computed(() => modulosConDatos.value.filter(m => m.curso == 1));
+const modulosCurso2DelCiclo = computed(() => modulosConDatos.value.filter(m => m.curso == 2));
 
 // El reto recién generado (aún no guardado) no trae `curso` en evaluacion_oficial —
 // ese enriquecido solo lo hace el backend al mostrar la ficha de un microreto ya persistido.
@@ -221,6 +224,12 @@ const modulosForzadosParaRaCe = computed(() => idsModulosForzados.value
   .filter(Boolean)
   .map(m => ({ id: m.id, nombre: nombreModuloVisible(m.nombre), curso: m.curso })));
 const hayRaCeFijados = computed(() => Object.keys(seleccionRaCe.value).length > 0);
+// Al marcar el primer RA/CE (una vez por visita) y al chocar con el límite, el toast señala la
+// sección: lo que se fija aquí se puede cambiar después al ajustar el reto.
+let raCeAvisado = false;
+watch(hayRaCeFijados, (hay) => {
+  if (hay && !raCeAvisado) { raCeAvisado = true; mostrarToastModulos('raCe', 8000); }
+});
 watch(idsModulosForzados, (ids) => {
   const podado = Object.fromEntries(Object.entries(seleccionRaCe.value).filter(([, s]) => ids.includes(s.moduloId)));
   if (Object.keys(podado).length !== Object.keys(seleccionRaCe.value).length) seleccionRaCe.value = podado;
@@ -244,8 +253,8 @@ let idAviso = 0;
 let avisoFlotanteTimer = null;
 // --- INTERÉS DE LA EMPRESA EN LA FAMILIA (paso 3) ---
 // Como el diagnóstico: se puede ajustar solo para estos retos (interesAjustado, se manda como
-// interesReto y el reto lo guarda marcado) o guardarlo en la empresa si es ficticia de tu centro
-// (o eres DUALAB): mismas reglas que EmpresaPolicy::actualizarDiagnostico.
+// interesReto y el reto lo guarda marcado) o, solo DUALAB (superadmin), guardarlo en la empresa:
+// EmpresaPolicy::actualizarInteres.
 const interesAjustado  = ref(null);   // null = se usa el guardado en la empresa
 const editandoInteres  = ref(false);
 const borradorInteres  = ref('');
@@ -265,7 +274,7 @@ const usarInteresSoloEnReto = () => {
   editandoInteres.value = false;
 };
 const guardarInteresEnEmpresa = async () => {
-  if (!seleccion.value.empresaId || !seleccion.value.familia || guardandoInteres.value) return;
+  if (!authStore.isSuperAdmin || !seleccion.value.empresaId || !seleccion.value.familia || guardandoInteres.value) return;
   guardandoInteres.value = true;
   const texto = borradorInteres.value.trim();
   try {
@@ -299,15 +308,21 @@ const TOASTS_MODULOS = {
   forzadoAmbos: { titulo: 'Has forzado módulos', texto: 'La IA solo usará los módulos que marques.', destacado: 'Recuerda: al menos uno de 1º y uno de 2º.' },
   auto: { titulo: 'Modo automático', texto: 'No hay módulos forzados: la IA elegirá los más adecuados de todo el currículo.' },
   ambos: { titulo: 'Reto entre 1º y 2º curso', texto: 'Sin forzar módulos, la IA cruzará RA/CE de todos los módulos de 1º y 2º (mínimo 3 módulos, al menos uno de cada curso).', destacado: 'Si fuerzas módulos, elige al menos uno de 1º y uno de 2º.' },
+  raCe: { titulo: 'RA y CE del reto', texto: 'Los RA y CE pueden modificarse cuando ajustes el reto en «Trabajar un reto».', destacado: 'Aquí fija solo los imprescindibles: máximo 8 RA y 24 CE por reto.' },
+  // El texto lo pone el selector (qué límite se ha alcanzado)
+  raCeLimite: { titulo: 'Has llegado al límite de RA/CE', texto: '', destacado: 'Podrás ampliarlos o modificarlos cuando ajustes el reto en «Trabajar un reto».' },
 };
-const mostrarToastModulos = (tipo, ms = 5000) => {
-  toastModulos.value = { tipo, ...TOASTS_MODULOS[tipo] };
+// ms = 0: el toast se queda hasta que se cierra con la X (aviso de límite de RA/CE)
+const mostrarToastModulos = (tipo, ms = 5000, texto = null) => {
+  // El aviso de límite no lo tapa ningún toast informativo: solo se va con la X
+  if (toastModulos.value?.tipo === 'raCeLimite' && tipo !== 'raCeLimite') return;
+  toastModulos.value = { tipo, ...TOASTS_MODULOS[tipo], ...(texto ? { texto } : {}) };
   clearTimeout(toastModulosTimer);
-  toastModulosTimer = setTimeout(() => { toastModulos.value = null; }, ms);
+  if (ms > 0) toastModulosTimer = setTimeout(() => { toastModulos.value = null; }, ms);
 };
 
 const elegirAmbosCursos = () => {
-  if (esModoDemo.value) return;
+  if (esModoDemo.value || !cursoTieneDatos('ambos_cursos')) return;
   const yaEstaba = esAmbosCursos.value;
   seleccion.value.cursoSeleccionado = 'ambos_cursos';
   if (!yaEstaba) mostrarToastModulos('ambos', 8000);
@@ -713,7 +728,10 @@ const descartarRecuperableIA = () => {
 };
 
 // Avisos antes de perder un borrador sin guardar (recarga/cierre de pestaña, otra pantalla).
-const avisoAntesDeSalir = (e) => { if (borradorIA.value) { e.preventDefault(); e.returnValue = ''; } };
+// También con retos generados sin guardar: el generador solo vive en memoria y una recarga los pierde.
+const avisoAntesDeSalir = (e) => {
+  if (borradorIA.value || microretosGenerados.value.some(r => !r._ui_guardado)) { e.preventDefault(); e.returnValue = ''; }
+};
 onBeforeRouteLeave(() => {
   if (!borradorIA.value) return true;
   if (!confirm('Tienes una empresa generada con IA sin guardar. Si sales, se descartará. ¿Salir igualmente?')) return false;
@@ -1236,6 +1254,49 @@ onMounted(async () => {
   }
 });
 
+// --- TRABAJO ANTERIOR AL VOLVER AL GENERADOR ---
+// App.vue mantiene el generador en memoria (KeepAlive) al ir a otra pantalla, p. ej. con
+// «Trabajar este reto»: al volver sigue todo como estaba y se pregunta si recuperarlo o
+// empezar de cero. Solo en memoria (nada en el navegador): con una recarga se pierde, y
+// avisoAntesDeSalir avisa antes. Por usuario: App.vue cambia la key al cambiar de sesión.
+defineOptions({ name: 'GeneradorMicroretos' });
+const hayTrabajoAnterior = computed(() =>
+  pasoMaxBloqueado.value > 0 || microretosGenerados.value.length > 0 || !!seleccion.value.empresaId);
+const retosSinGuardar = computed(() => microretosGenerados.value.filter(r => !r._ui_guardado).length);
+const avisoTrabajoAnterior = ref(false);
+let generadorActivado = false;
+
+onActivated(() => {
+  if (!generadorActivado) { generadorActivado = true; return; } // primera vez: es el montaje
+  document.addEventListener('click', cerrarDropdownFuera);
+  const solicitudNueva = route.query.solicitud && String(route.query.solicitud) !== String(solicitudActiva.value?.solicitud_id ?? '');
+  if (hayTrabajoAnterior.value) avisoTrabajoAnterior.value = true;
+  else if (solicitudNueva) cargarSolicitud(route.query.solicitud, Number(route.query.bloque) || 0);
+});
+onDeactivated(() => {
+  // Al volver se ve el paso donde se quedó, sin la ficha abierta ni avisos flotando
+  cerrarReto();
+  toastModulos.value = null;
+  avisoFlotante.value = null;
+  modoGuia.value = false;
+  document.removeEventListener('click', cerrarDropdownFuera);
+});
+
+const recuperarTrabajoAnterior = () => {
+  avisoTrabajoAnterior.value = false;
+  if (microretosGenerados.value.length > 0) {
+    pasoActual.value = totalPasos; // los retos generados quedan en el último paso
+    scrollAGaleriaRetos();
+  }
+};
+const empezarDeNuevo = async () => {
+  avisoTrabajoAnterior.value = false;
+  vaciarGenerador();
+  // Con una solicitud del profesorado en la URL, se carga sobre el generador vacío; si no, se suelta la anterior
+  if (route.query.solicitud) await cargarSolicitud(route.query.solicitud, Number(route.query.bloque) || 0);
+  else solicitudActiva.value = null;
+};
+
 onUnmounted(() => {
   clearTimeout(toastModulosTimer);
   clearTimeout(avisoFlotanteTimer);
@@ -1321,6 +1382,27 @@ const empresaSinFamiliasConDatos = computed(() =>
   !!seleccion.value.empresaId && familiasEmpresaCargadas.value && familiasFiltradas.value.length > 0
   && !familiasFiltradas.value.some(familiaTieneDatos));
 const ningunCicloConDatos = computed(() => ciclos.value.length > 0 && !ciclos.value.some(cicloTieneDatos));
+// Solo se listan los ciclos con RA y CE: los demás no se pueden usar para generar
+const ciclosVisibles = computed(() => ciclos.value.filter(cicloTieneDatos));
+// Cursos del ciclo elegido con RA y CE (cursos_con_datos, de la API). Sin ciclo o sin el dato, no se limita.
+const cursoTieneDatos = (curso) => {
+  if (esModoDemo.value) return true;
+  const cursos = ciclos.value.find(c => c.id === seleccion.value.cicloId)?.cursos_con_datos;
+  if (!Array.isArray(cursos)) return true;
+  return curso === 'ambos_cursos' ? cursos.includes(1) && cursos.includes(2) : cursos.includes(curso);
+};
+const elegirCurso = (curso) => {
+  if (esModoDemo.value || !cursoTieneDatos(curso)) return;
+  seleccion.value.cursoSeleccionado = curso;
+};
+// Al elegir ciclo, si el curso marcado no tiene RA/CE, se pasa a uno que sí tenga
+watch(() => seleccion.value.cicloId, () => {
+  if (!seleccion.value.cicloId || cursoTieneDatos(seleccion.value.cursoSeleccionado)) return;
+  const curso = [2, 1].find(cursoTieneDatos);
+  if (!curso) return;
+  seleccion.value.cursoSeleccionado = curso;
+  registrarAviso('Curso cambiado', `Este ciclo solo tiene RA y CE cargados de ${curso}º curso: se ha elegido ${curso}º.`);
+});
 
 const empresaSinFamilias = computed(() =>
   !!seleccion.value.empresaId && familiasEmpresaCargadas.value && familiasFiltradas.value.length === 0);
@@ -1892,8 +1974,8 @@ watch(modoGuia, async (v) => {
     <Transition name="toast-modulos">
       <div v-if="toastModulos" role="status" aria-live="polite"
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9995] w-[calc(100%-2rem)] max-w-md flex items-start gap-3 rounded-2xl border-2 px-5 py-4 shadow-2xl"
-        :class="toastModulos.tipo.startsWith('forzado') ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-white border-centros text-azul-noche'">
-        <svg v-if="toastModulos.tipo.startsWith('forzado')" class="w-6 h-6 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        :class="toastModulos.tipo.startsWith('forzado') || toastModulos.tipo === 'raCeLimite' ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-white border-centros text-azul-noche'">
+        <svg v-if="toastModulos.tipo.startsWith('forzado') || toastModulos.tipo === 'raCeLimite'" class="w-6 h-6 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
         <svg v-else class="w-6 h-6 shrink-0 text-centros" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         <div class="flex-1 text-xs leading-relaxed">
           <p class="font-black uppercase tracking-wide text-[11px]">{{ toastModulos.titulo }}</p>
@@ -3241,16 +3323,16 @@ watch(modoGuia, async (v) => {
                         :placeholder="`Ej: ${ejemploInteres(seleccion.familia)}`" :title="`Ej: ${ejemploInteres(seleccion.familia)}`"></textarea>
                       <p class="mt-1 text-[11px] text-gray-500">
                         «Usar solo en este reto» no cambia la empresa.
-                        <template v-if="puedeEditarDiagnostico">«Guardar en la empresa» lo usará también en sus próximos retos con esta familia.</template>
-                        <template v-else-if="empresaEsCatalogo">Es una empresa del catálogo de DUALAB: solo DUALAB puede guardarlo en ella.</template>
-                        <template v-else>Es una empresa real: solo DUALAB puede guardarlo en ella.</template>
+                        <template v-if="authStore.isSuperAdmin">«Guardar en la empresa» lo usará también en sus próximos retos con esta familia.</template>
+                        <template v-else>Solo DUALAB puede guardarlo en la empresa.</template>
                       </p>
                       <div class="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">
                         <button type="button" @click="usarInteresSoloEnReto()" :disabled="guardandoInteres"
                           class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-[#1F2937] text-white border-[#1F2937] hover:bg-[#1F2937]/90">
                           Usar solo en este reto
                         </button>
-                        <button v-if="puedeEditarDiagnostico" type="button" @click="guardarInteresEnEmpresa()" :disabled="guardandoInteres"
+                        <!-- Interés guardado en la empresa: dato sensible, solo superadmin (EmpresaPolicy::actualizarInteres) -->
+                        <button v-if="authStore.isSuperAdmin" type="button" @click="guardarInteresEnEmpresa()" :disabled="guardandoInteres"
                           class="min-h-[36px] px-3 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase border transition-all bg-amber-500 text-white border-amber-500 hover:bg-amber-600 disabled:opacity-50">
                           {{ guardandoInteres ? 'Guardando…' : 'Guardar en la empresa' }}
                         </button>
@@ -3358,8 +3440,8 @@ watch(modoGuia, async (v) => {
                   <label class="label-style !mb-4">Ciclo Formativo Implicado *</label>
 
                   <!-- Ciclos de BD -->
-                  <div v-if="ciclos.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                     <button v-for="c in ciclos" :key="c.id"
+                  <div v-if="ciclosVisibles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <button v-for="c in ciclosVisibles" :key="c.id"
                         @click="!esModoDemo && cicloTieneDatos(c) && (seleccion.cicloId = c.id)"
                         :disabled="esModoDemo || !cicloTieneDatos(c)"
                         :title="cicloTieneDatos(c) ? '' : 'Este ciclo no tiene módulos con RA y CE cargados: no se puede generar un reto con él'"
@@ -3404,25 +3486,31 @@ watch(modoGuia, async (v) => {
                      :class="{ 'tour-active': tourTargetActivo === 'refCursoAlumno' }">
                   <label class="label-style !mb-3">Curso del Alumnado *</label>
                   <div class="flex bg-[#1F2937] p-1.5 rounded-full w-full sm:max-w-md shadow-inner">
-                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 1)" 
-                      :disabled="esModoDemo" :title="tituloDemo"
-                      :class="seleccion.cursoSeleccionado === 1 ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'" 
+                    <button @click="elegirCurso(1)"
+                      :disabled="esModoDemo || !cursoTieneDatos(1)" :title="tituloDemo || (cursoTieneDatos(1) ? undefined : 'Este ciclo no tiene RA y CE cargados de 1º')"
+                      :class="seleccion.cursoSeleccionado === 1 ? 'bg-[#374151] text-white shadow font-black' : cursoTieneDatos(1) ? 'text-gray-400 hover:text-white' : 'text-gray-600 line-through cursor-not-allowed'"
                       class="flex-1 px-2 py-3 rounded-full text-xs sm:text-sm whitespace-nowrap transition-all">
                       1º Curso
                     </button>
-                    <button @click="!esModoDemo && (seleccion.cursoSeleccionado = 2)"
-                      :disabled="esModoDemo" :title="tituloDemo"
-                      :class="seleccion.cursoSeleccionado === 2 ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'"
+                    <button @click="elegirCurso(2)"
+                      :disabled="esModoDemo || !cursoTieneDatos(2)" :title="tituloDemo || (cursoTieneDatos(2) ? undefined : 'Este ciclo no tiene RA y CE cargados de 2º')"
+                      :class="seleccion.cursoSeleccionado === 2 ? 'bg-[#374151] text-white shadow font-black' : cursoTieneDatos(2) ? 'text-gray-400 hover:text-white' : 'text-gray-600 line-through cursor-not-allowed'"
                       class="flex-1 px-2 py-3 rounded-full text-xs sm:text-sm whitespace-nowrap transition-all">
                       2º Curso
                     </button>
                     <button @click="elegirAmbosCursos()"
-                      :disabled="esModoDemo" :title="tituloDemo"
-                      :class="seleccion.cursoSeleccionado === 'ambos_cursos' ? 'bg-[#374151] text-white shadow font-black' : 'text-gray-400 hover:text-white'"
+                      :disabled="esModoDemo || !cursoTieneDatos('ambos_cursos')" :title="tituloDemo || (cursoTieneDatos('ambos_cursos') ? undefined : 'Este ciclo no tiene RA y CE cargados de los dos cursos')"
+                      :class="seleccion.cursoSeleccionado === 'ambos_cursos' ? 'bg-[#374151] text-white shadow font-black' : cursoTieneDatos('ambos_cursos') ? 'text-gray-400 hover:text-white' : 'text-gray-600 line-through cursor-not-allowed'"
                       class="flex-1 px-2 py-3 rounded-full text-xs sm:text-sm whitespace-nowrap transition-all">
                       <span class="sm:hidden">Ambos</span><span class="hidden sm:inline">Ambos Cursos</span>
                     </button>
                   </div>
+                  <p v-if="seleccion.cicloId && !esModoDemo && !cursoTieneDatos('ambos_cursos')" class="mt-2 text-xs text-gray-500">
+                    <template v-if="cursoTieneDatos(1) !== cursoTieneDatos(2)">
+                      Este ciclo solo tiene RA y CE de {{ cursoTieneDatos(1) ? '1º' : '2º' }} curso: no hay de {{ cursoTieneDatos(1) ? '2º' : '1º' }}, así que no se puede elegir ese curso ni «Ambos cursos».
+                    </template>
+                    <template v-else>Este ciclo no tiene RA y CE cargados en ningún curso.</template>
+                  </p>
                 </div>
 
                 <div ref="refModulosSection" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
@@ -3430,10 +3518,10 @@ watch(modoGuia, async (v) => {
                   <div class="w-full bg-gray-50 p-4 sm:p-6 rounded-3xl border border-gray-200 relative">
                     <!-- Cabecera: switch "Elige la IA" ↔ "Manual" (por defecto, la IA) -->
                     <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                      <label class="label-style !mb-0 !ml-0">Módulos {{ esAmbosCursos ? 'de 1º y 2º' : 'del curso' }}</label>
+                      <label class="label-style !mb-0 !ml-0">Módulos y RA/CE {{ esAmbosCursos ? 'de 1º y 2º' : 'del curso' }}</label>
                       <div class="flex flex-wrap items-center gap-3">
                         <button v-if="modoModulosManual && !esModoDemo" type="button" @click="esAmbosCursos ? limpiarModulosAmbos() : limpiarModulos()"
-                          class="px-4 py-2 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-[10px] tracking-widest uppercase transition-all shadow-sm">
+                          class="min-h-[36px] px-4 py-2 bg-white text-red-500 hover:bg-red-50 hover:border-red-500 border border-gray-200 rounded-full font-bold text-[10px] tracking-widest uppercase transition-all shadow-sm">
                           Vaciar
                         </button>
                         <!-- Switch de dos lados: bola a la izquierda = "Elige la IA" (por defecto),
@@ -3442,7 +3530,7 @@ watch(modoGuia, async (v) => {
                           aria-label="Seleccionar módulos manualmente"
                           :disabled="!puedeElegirModulosManual"
                           @click="toggleModoModulosManual()"
-                          class="flex flex-nowrap items-center gap-2 sm:gap-2.5 select-none"
+                          class="flex flex-nowrap items-center gap-2 sm:gap-2.5 min-h-[36px] select-none"
                           :class="puedeElegirModulosManual ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'">
                           <span class="whitespace-nowrap text-[10px] font-black uppercase tracking-wide transition-colors"
                             :class="modulosEnManual ? 'text-gray-400' : 'text-centros'">Elige la IA</span>
@@ -3469,8 +3557,18 @@ watch(modoGuia, async (v) => {
                           <p class="font-black uppercase tracking-wide text-[11px]">Elige la IA · módulos y RA/CE automáticos <span class="ml-1 px-2 py-0.5 rounded-full bg-centros text-white text-[9px]">Recomendado</span></p>
                           <p v-if="esAmbosCursos" class="mt-0.5">La IA cruzará RA/CE de módulos de 1º y 2º (mínimo 3 módulos, al menos uno de cada curso), con RA/CE distintos en cada variante.</p>
                           <p v-else class="mt-0.5">La IA cruzará RA/CE de los módulos del curso (mínimo 3 módulos distintos si el ciclo tiene suficientes), con RA/CE distintos en cada variante.</p>
-                          <p class="mt-0.5">Pasa el interruptor a <strong>«Selección manual»</strong> solo si quieres limitar el reto a módulos concretos (y, si quieres, fijar sus RA/CE).</p>
                         </div>
+                      </div>
+                      <!-- Aviso visible de que los RA/CE también se pueden elegir (primero módulos, después RA/CE) -->
+                      <div v-if="!esModoDemo" class="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border-2 border-dashed border-amber-300 bg-white px-4 py-3">
+                        <p class="flex-1 min-w-0 text-xs leading-relaxed text-gray-600">
+                          <strong class="text-azul-noche">¿Quieres elegir tú los RA y CE?</strong>
+                          Primero elige los módulos y después marca sus RA y CE. Si no eliges nada, lo decide la IA.
+                        </p>
+                        <button type="button" @click="toggleModoModulosManual()" :disabled="!puedeElegirModulosManual"
+                          class="self-start sm:self-auto shrink-0 min-h-[36px] px-4 py-2 rounded-full border-2 border-amber-400 text-amber-700 hover:bg-amber-50 text-[11px] font-black uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                          Elegir módulos y RA/CE
+                        </button>
                       </div>
                     </template>
 
@@ -3483,12 +3581,13 @@ watch(modoGuia, async (v) => {
                         <div class="text-xs leading-relaxed">
                           <template v-if="!hayModulosForzados">
                             <p class="font-black uppercase tracking-wide text-[11px]">Modo manual · marca los módulos</p>
-                            <p class="mt-0.5">Mientras no marques ninguno, seguirá eligiendo la IA.<template v-if="esAmbosCursos"> Elige al menos uno de 1º y uno de 2º.</template></p>
+                            <p class="mt-0.5"><strong>1.</strong> Marca los módulos.<template v-if="esAmbosCursos"> Elige al menos uno de 1º y uno de 2º.</template> <strong>2.</strong> Debajo aparecerán sus RA y CE para elegirlos (opcional).</p>
+                            <p class="mt-0.5">Mientras no marques ningún módulo, módulos y RA/CE los sigue eligiendo la IA.</p>
                           </template>
                           <template v-else>
                             <p class="font-black uppercase tracking-wide text-[11px]">Módulos forzados a mano · la IA NO elegirá los módulos</p>
                             <p class="mt-0.5">El reto se limitará a: <strong>{{ nombresModulosForzados.join(', ') }}</strong>.</p>
-                            <p class="mt-0.5">Más abajo puedes fijar también los RA/CE; si no lo haces, los elegirá la IA dentro de estos módulos.</p>
+                            <p class="mt-0.5">Más abajo puedes elegir sus RA y CE; si no lo haces, los elegirá la IA dentro de estos módulos.</p>
                           </template>
                         </div>
                       </div>
@@ -3549,8 +3648,18 @@ watch(modoGuia, async (v) => {
                         <p v-if="!esModoDemo && modulosDelCurso.length === 0 && seleccion.cicloId" class="text-xs text-red-500 mt-2 italic">No hay módulos cargados para este curso.</p>
                       </template>
 
-                      <SelectorRaCeModulos v-if="hayModulosForzados && !esModoDemo"
-                        v-model="seleccionRaCe" :modulos="modulosForzadosParaRaCe" />
+                      <div v-if="hayModulosForzados && !esModoDemo" class="rounded-2xl transition-shadow"
+                        :class="{ 'ra-ce-senalado': toastModulos?.tipo.startsWith('raCe') }">
+                        <SelectorRaCeModulos v-model="seleccionRaCe" :modulos="modulosForzadosParaRaCe"
+                          @limite="(texto) => mostrarToastModulos('raCeLimite', 0, texto)" />
+                      </div>
+                      <!-- Hueco visible del paso 2 mientras no hay módulos: los RA/CE cuelgan de los módulos -->
+                      <div v-else-if="!esModoDemo" class="mt-5 pt-5 border-t border-gray-200">
+                        <p class="label-style !mb-1 !ml-0">Fijar RA y CE (Opcional)</p>
+                        <div class="rounded-2xl border-2 border-dashed border-gray-200 bg-white px-4 py-3 text-xs text-gray-500 leading-relaxed">
+                          Marca al menos un módulo arriba y aquí aparecerán sus RA y CE para elegirlos.
+                        </div>
+                      </div>
                     </template>
                   </div>
                 </div>
@@ -4186,6 +4295,28 @@ watch(modoGuia, async (v) => {
       </div>
     </template>
   </Modal>
+
+  <!-- Al volver al generador con trabajo hecho: recuperarlo o empezar de cero (hay que elegir) -->
+  <Modal :visible="avisoTrabajoAnterior" :closable="false" max-width="max-w-md" card-class="p-6 sm:p-8">
+    <div role="alertdialog" aria-labelledby="titulo-trabajo-anterior" class="text-center">
+      <div class="mx-auto mb-4 w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </div>
+      <h2 id="titulo-trabajo-anterior" class="text-lg sm:text-xl font-black text-azul-noche break-words">Hay información anterior en el generador</h2>
+      <p class="mt-2 text-sm text-gray-600 leading-relaxed break-words">
+        <template v-if="seleccion.empresaNombre">Estabas trabajando con <strong>{{ seleccion.empresaNombre }}</strong>. </template>
+        <template v-if="microretosGenerados.length">
+          Tienes {{ microretosGenerados.length === 1 ? '1 reto generado' : `${microretosGenerados.length} retos generados` }}<template v-if="retosSinGuardar">, {{ retosSinGuardar === 1 ? '1 sin guardar' : `${retosSinGuardar} sin guardar` }}</template>.
+        </template>
+        ¿Quieres recuperarlo o volver a empezar?
+      </p>
+      <p v-if="retosSinGuardar" class="mt-2 text-xs font-bold text-amber-700">Si vuelves a empezar, los retos sin guardar se perderán.</p>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <button type="button" class="accion-secundaria" @click="empezarDeNuevo">Volver a empezar</button>
+        <button type="button" class="accion-principal" @click="recuperarTrabajoAnterior">Recuperar</button>
+      </div>
+    </div>
+  </Modal>
   </Teleport>
 </template>
 
@@ -4282,6 +4413,10 @@ button.tour-active.rounded-full,
 @media (prefers-reduced-motion: reduce) {
   .toast-modulos-destacado { animation: none; }
 }
+/* Sección de RA/CE señalada mientras se ve su toast */
+.ra-ce-senalado { box-shadow: 0 0 0 3px #fbbf24, 0 0 0 8px rgba(251, 191, 36, 0.25); animation: ra-ce-pulso 1.6s ease-in-out infinite; }
+@keyframes ra-ce-pulso { 50% { box-shadow: 0 0 0 3px #fbbf24, 0 0 0 12px rgba(251, 191, 36, 0.1); } }
+@media (prefers-reduced-motion: reduce) { .ra-ce-senalado { animation: none; } }
 .toast-modulos-enter-active, .toast-modulos-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .toast-modulos-enter-from, .toast-modulos-leave-to { opacity: 0; transform: translate(-50%, 12px); }
 

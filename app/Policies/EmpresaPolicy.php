@@ -19,6 +19,16 @@ class EmpresaPolicy
             : Response::deny('Solo DUALAB puede modificar los datos de una empresa: los retos ya generados con ella los muestran. Ponte en contacto con DUALAB para cualquier cambio.');
     }
 
+    // Interés de la empresa en una familia (PATCH /empresas/{id}/interes): solo superadmin,
+    // también en ficticias. Es dato sensible de la empresa y los retos lo usan al generarse;
+    // el docente lo ajusta solo para su reto con «Usar solo en este reto» (interesReto).
+    public function actualizarInteres(User $user, Empresa $empresa): Response
+    {
+        return $user->isSuperAdmin()
+            ? Response::allow()
+            : Response::deny('Solo DUALAB puede guardar el interés en la empresa. Puedes usarlo solo en este reto.');
+    }
+
     // Diagnóstico (P1–P4) desde el Generador de Retos. Las empresas reales contienen
     // datos sensibles recogidos por DuaLab: solo superadmin (DuaLab) puede tocarlas.
     // Las ficticias las puede editar el docente/admin de su propio centro.

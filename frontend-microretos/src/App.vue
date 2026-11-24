@@ -248,7 +248,13 @@ const extenderDesdeToast = async () => {
   <!-- pb-12: hueco para el pie fijo de AppCredit (fixed bottom-0), que si no tapa el final
        de todas las vistas y parece que el scroll "se queda pillado" sin llegar abajo -->
   <div :class="showSidePanel ? 'lg:pl-72' : ''" class="relative pb-12" style="z-index: 1;">
-    <RouterView />
+    <!-- El generador de retos se queda en memoria al salir (KeepAlive) para no perder el trabajo:
+         al volver pregunta si recuperarlo. La key por usuario evita que otra sesión vea el anterior. -->
+    <RouterView v-slot="{ Component, route: ruta }">
+      <KeepAlive include="GeneradorMicroretos" :max="1">
+        <component :is="Component" :key="ruta.name === 'microretos' ? `generador-${authStore.userId}` : undefined" />
+      </KeepAlive>
+    </RouterView>
   </div>
   <AppCredit />
   <ComoFuncionaModal v-if="authStore.isAuthenticated" />

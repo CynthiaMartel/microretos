@@ -156,8 +156,9 @@ class MicroretoIAController extends Controller
                 // en BD (nunca se inventa nada, ver RaCeCatalogoService), solo se reduce
                 // cuánto currículo ve la IA en cada llamada. $minModulos (más abajo) exige
                 // igualmente cubrir varios de los módulos muestreados, no todos.
-                $idsCurso1 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 1)->pluck('id');
-                $idsCurso2 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 2)->pluck('id');
+                // Solo módulos con RA/CE: uno sin ellos ocuparía hueco en la muestra sin aportar currículo
+                $idsCurso1 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 1)->whereHas('ras.criteriosEvaluacion')->pluck('id');
+                $idsCurso2 = Modulo::where('idcicloformativo', $request->ciclo_id)->where('curso', 2)->whereHas('ras.criteriosEvaluacion')->pluck('id');
                 $idsMuestra = $idsCurso1->shuffle()->take(self::MODULOS_MUESTRA_POR_CURSO)
                     ->merge($idsCurso2->shuffle()->take(self::MODULOS_MUESTRA_POR_CURSO));
                 $query->whereIn('id', $idsMuestra);
@@ -401,7 +402,9 @@ class MicroretoIAController extends Controller
         // entre los N retos sale del enfoque y los prototipos — nunca de cambiar los RA/CE.
         $reglaSeleccionIA = "SELECCIONA únicamente ids de RA y CE que aparezcan literalmente en el currículo proporcionado (marcados como [RA id=...] y [CE id=...]). NUNCA inventes un id ni redactes tú el texto del RA o el CE — el sistema recupera el texto real de la base de datos a partir del id que elijas.";
         if ($raCeOrigen === 'ia') {
-            $reglaEvaluacion = "3. Para \"evaluacion_oficial\": {$reglaSeleccionIA} Si el currículo proporcionado no tiene RA/CE disponibles, devuelve evaluacion_oficial como array vacío []. Para lograr variedad entre retos, elige distintos RA/CE de la lista para cada uno. {$reglaCobertura}";
+            // El reto se construye sobre los RA/CE, no al revés: se eligen primero (por eso
+            // evaluacion_oficial va la primera en el JSON) y el reto se diseña para trabajarlos.
+            $reglaEvaluacion = "3. Para \"evaluacion_oficial\": ELIGE PRIMERO los RA/CE de cada reto (al menos 2 RA distintos si el currículo los tiene) y DISEÑA DESPUÉS el reto (problema, pregunta, necesidades y prototipos) para que el alumnado trabaje DE VERDAD esos CE dentro del problema de la empresa; elige RA/CE que encajen con ese problema. {$reglaSeleccionIA} Si el currículo proporcionado no tiene RA/CE disponibles, devuelve evaluacion_oficial como array vacío []. Para lograr variedad entre retos, elige distintos RA/CE de la lista para cada uno. {$reglaCobertura}";
         } else {
             $reglaEvaluacion = "3. Para \"evaluacion_oficial\": el docente ha FIJADO los RA/CE marcados en el currículo como (FIJADO POR EL DOCENTE) — ver la lista \"RA/CE FIJADOS\". CADA uno de los {$request->cantidad} microreto(s) DEBE incluir en evaluacion_oficial TODAS esas entradas, con exactamente esos ra_id y ce_ids: no quites ninguna, no cambies sus CE y no les añadas otros. Diseña cada reto (problema concreto, necesidades, prototipos) para que el alumnado trabaje DE VERDAD cada uno de esos CE, y escribe en \"aplicacion\" cómo se trabaja ese RA en ESE reto concreto (una aplicación distinta en cada reto). Para lograr variedad entre retos, cambia el enfoque, el problema abordado y los prototipos — NUNCA los RA/CE fijados. Las \"variantes\" de cada reto también deben seguir trabajando esos mismos RA/CE.";
             if ($raCeOrigen === 'mixto') {
@@ -472,6 +475,9 @@ class MicroretoIAController extends Controller
         {
             \"microretos\": [
                 {
+                    \"evaluacion_oficial\": [
+                        {$ejemploEvaluacion}
+                    ],
                     \"titulo\": \"Título corto y directo del reto\",
                     \"subtitulo\": \"Descripción de 1 línea del desafío (sin revelar la solución)\",
                     \"empresa_nombre\": \"{$request->empresaNombre}\",
@@ -483,9 +489,6 @@ class MicroretoIAController extends Controller
                     \"limitaciones\": [\"Restricción 1\", \"Restricción 2\"],
                     \"prototipos\": [\"{$prototiposHint} 1\", \"{$prototiposHint} 2\"],
                     \"ods_sugeridos\": [\"ODS X: Nombre completo del ODS\"],
-                    \"evaluacion_oficial\": [
-                        {$ejemploEvaluacion}
-                    ],
                     \"variantes\": [
                         \"Nombre de la Variante: Descripción de una modificación del reto adaptada a la Familia Profesional.\"
                     ],

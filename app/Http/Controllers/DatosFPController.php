@@ -149,19 +149,31 @@ class DatosFPController extends Controller
 
         // Ciclo con módulos y RA/CE: sin ellos el generador no puede completar el reto
         $conDatos = CicloFormativo::conDatosParaRetos()->whereIn('id', $ciclos->pluck('id'))->pluck('id')->flip();
-        $ciclos->each(fn ($c) => $c->setAttribute('con_datos_retos', $conDatos->has($c->id)));
+        // Y en qué cursos: hay ciclos con RA/CE cargados solo en 1º (el generador desactiva el otro)
+        $cursosConDatos = Modulo::whereIn('idcicloformativo', $ciclos->pluck('id'))
+            ->whereHas('ras.criteriosEvaluacion')
+            ->distinct()->get(['idcicloformativo', 'curso'])
+            ->groupBy('idcicloformativo');
+        $ciclos->each(function ($c) use ($conDatos, $cursosConDatos) {
+            $c->setAttribute('con_datos_retos', $conDatos->has($c->id));
+            $c->setAttribute('cursos_con_datos', ($cursosConDatos[$c->id] ?? collect())->pluck('curso')->map(fn ($n) => (int) $n)->sort()->values());
+        });
 
         return response()->json($ciclos);
     }
 
     public function getModulos($idCiclo)
     {
-        return response()->json(
-            Modulo::where('idcicloformativo', $idCiclo)
-                ->orderBy('curso')
-                ->orderBy('nombre')
-                ->get()
-        );
+        $modulos = Modulo::where('idcicloformativo', $idCiclo)
+            ->orderBy('curso')
+            ->orderBy('nombre')
+            ->get();
+
+        // Módulo con RA y CE cargados: los que no tienen no aportan nada al reto
+        $conRaCe = Modulo::whereIn('id', $modulos->pluck('id'))->whereHas('ras.criteriosEvaluacion')->pluck('id')->flip();
+        $modulos->each(fn ($m) => $m->setAttribute('con_ra_ce', $conRaCe->has($m->id)));
+
+        return response()->json($modulos);
     }
 
     public function getRaCe($idModulo)
@@ -827,7 +839,7 @@ class DatosFPController extends Controller
             return response()->json(['error' => 'Empresa no encontrada'], 404);
         }
 
-        $decision = Gate::inspect('actualizarDiagnostico', $empresa);
+        $decision = Gate::inspect('actualizarInteres', $empresa);
         if ($decision->denied()) {
             Log::warning('Edición de interés de empresa denegada.', [
                 'empresa_id' => $empresa->id,

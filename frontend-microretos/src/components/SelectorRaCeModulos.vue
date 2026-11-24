@@ -9,13 +9,14 @@ const props = defineProps({
   modulos:    { type: Array, required: true },   // [{ id, nombre, curso }]
   modelValue: { type: Object, default: () => ({}) },
   maxRa:      { type: Number, default: 8 },      // = GenerarMicroretoRequest::MAX_RA_SELECCIONADOS
-  maxCe:      { type: Number, default: 12 },     // = GenerarMicroretoRequest::MAX_CE_SELECCIONADOS
+  maxCe:      { type: Number, default: 24 },     // = GenerarMicroretoRequest::MAX_CE_SELECCIONADOS
   disabled:   { type: Boolean, default: false },
   // Título y ayuda: los del generador por defecto; el formulario de solicitud de retos pone los suyos
   titulo:     { type: String, default: 'Fijar RA y CE (Opcional)' },
   ayuda:      { type: String, default: '' },
 })
-const emit = defineEmits(['update:modelValue'])
+// limite: se ha intentado pasar de maxRa/maxCe (el generador lo usa para su toast)
+const emit = defineEmits(['update:modelValue', 'limite'])
 
 const rasPorModulo     = ref({})  // { moduloId: ras[] }
 const cargando         = ref({})  // { moduloId: true }
@@ -58,6 +59,7 @@ const ceMarcado = (ra, ceId) => props.modelValue[ra.id]?.ceIds.includes(ceId) ??
 
 const avisar = (texto) => {
   avisoLimite.value = texto
+  emit('limite', texto)
   setTimeout(() => { if (avisoLimite.value === texto) avisoLimite.value = '' }, 4000)
 }
 
@@ -73,7 +75,7 @@ const toggleCe = (moduloId, ra, ceId) => {
   const actuales = props.modelValue[ra.id]?.ceIds ?? []
   if (actuales.includes(ceId)) return aplicar(ra.id, moduloId, actuales.filter(id => id !== ceId))
   if (actuales.length === 0 && totalRa.value >= props.maxRa) return avisar(`Máximo ${props.maxRa} RA por reto.`)
-  if (totalCe.value >= props.maxCe) return avisar(`Máximo ${props.maxCe} criterios de evaluación por reto.`)
+  if (totalCe.value >= props.maxCe) return avisar(`Máximo ${props.maxCe} criterios de evaluación por reto. Para marcar este, desmarca CE de otros RA.`)
   aplicar(ra.id, moduloId, [...actuales, ceId])
 }
 
@@ -86,7 +88,7 @@ const toggleRa = (moduloId, ra) => {
   const faltan = ra.criterios.length - actuales.length
   if (totalCe.value + faltan > props.maxCe) {
     raExpandido.value = { ...raExpandido.value, [ra.id]: true }
-    return avisar(`No caben todos los CE de este RA (máximo ${props.maxCe}). Marca solo los que quieras trabajar.`)
+    return avisar(`No caben todos los CE de este RA (máximo ${props.maxCe}). Para añadirlo, desmarca CE de otros RA o marca solo algunos de este.`)
   }
   aplicar(ra.id, moduloId, ra.criterios.map(ce => ce.id))
   raExpandido.value = { ...raExpandido.value, [ra.id]: true }
@@ -173,7 +175,7 @@ const toggleRaExpandido = (raId) => {
                   </span>
                 </button>
                 <span class="shrink-0 mt-0.5 text-[9px] font-black uppercase tracking-widest text-centros bg-centros/10 px-2 py-0.5 rounded-full">RA{{ ra.orden }}</span>
-                <p class="flex-1 text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
+                <p class="flex-1 min-w-0 break-words text-[11px] font-semibold text-gray-700 leading-snug">{{ ra.descripcion }}</p>
                 <button type="button" @click="toggleRaExpandido(ra.id)"
                         class="shrink-0 -my-2 min-h-9 px-2 inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600">
                   {{ ra.criterios.length }} CE
@@ -184,8 +186,9 @@ const toggleRaExpandido = (raId) => {
                 </button>
               </div>
 
-              <div v-if="raExpandido[ra.id]" class="px-3 sm:px-4 pb-3 pl-8 sm:pl-11 space-y-1.5">
-                <label v-for="ce in ra.criterios" :key="ce.id" class="flex items-start gap-2.5 group"
+              <div v-if="raExpandido[ra.id]" class="px-3 sm:px-4 pb-3 pl-8 sm:pl-11">
+                <!-- min-h-9: cada CE se puede tocar con el dedo (36px), aunque su texto ocupe una línea -->
+                <label v-for="ce in ra.criterios" :key="ce.id" class="flex items-start gap-2.5 min-h-9 py-1.5 group"
                        :class="disabled ? 'cursor-default' : 'cursor-pointer'">
                   <input type="checkbox" class="sr-only" :checked="ceMarcado(ra, ce.id)" :disabled="disabled"
                          @change="toggleCe(mod.id, ra, ce.id)" />
@@ -195,7 +198,7 @@ const toggleRaExpandido = (raId) => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                     </svg>
                   </span>
-                  <span class="text-[11px] text-gray-600 leading-snug">
+                  <span class="min-w-0 break-words text-[11px] text-gray-600 leading-snug">
                     <span class="font-bold text-amber-500 mr-1">{{ ce.orden }}.</span>{{ ce.descripcion }}
                   </span>
                 </label>

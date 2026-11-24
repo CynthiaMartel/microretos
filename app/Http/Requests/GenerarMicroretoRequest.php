@@ -9,8 +9,10 @@ class GenerarMicroretoRequest extends FormRequest
 {
     // Techo pedagógico y de tokens para los RA/CE fijados a mano: un microreto que
     // pretende trabajar decenas de CE pierde coherencia y dispara el tamaño del prompt.
+    // 24 CE: caben 2 RA completos casi siempre (un RA tiene ~7,5 CE de media) y 3 en ~2/3 de
+    // los casos; ~1.000 tokens, menos que el currículo entero que ve la IA en modo automático.
     public const MAX_RA_SELECCIONADOS = 8;
-    public const MAX_CE_SELECCIONADOS = 12;
+    public const MAX_CE_SELECCIONADOS = 24;
 
     protected function prepareForValidation(): void
     {
