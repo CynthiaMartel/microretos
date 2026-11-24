@@ -13,37 +13,19 @@ use Illuminate\Http\Request;
 
 /**
  * Valoración final de la empresa sobre la propuesta de un encuentro creativo (P3).
- * Docente: /encuentros/{id}/valoracion-empresa (ver, pedir, marcar enviada).
+ * Docente: /encuentros/{id}/valoracion-empresa (solo ver el estado y la respuesta). Generar el enlace
+ * y enviarlo a la empresa es de DuaLab, en Central (ValoracionEmpresaCentralController).
  * Empresa (sin cuenta): /valoracion-empresa/{token} (ver y responder una vez).
  */
 class ValoracionEmpresaController extends Controller
 {
     public function __construct(private ValoracionEmpresaService $servicio) {}
 
-    // ── Docente ───────────────────────────────────────────────────────────────
+    // ── Docente: solo lectura (la envía DuaLab desde Central) ─────────────────
 
     public function show(Request $request, int $id): JsonResponse
     {
         $encuentro = Encuentro::visiblesPara($request->user())->with(self::CARGA_DOCENTE)->findOrFail($id);
-
-        return response()->json(new ValoracionEmpresaDocenteResource($encuentro));
-    }
-
-    public function solicitar(Request $request, int $id): JsonResponse
-    {
-        $encuentro = Encuentro::editablesPara($request->user())->with(self::CARGA_DOCENTE)->findOrFail($id);
-
-        $this->servicio->solicitar($encuentro);
-
-        return response()->json(new ValoracionEmpresaDocenteResource($encuentro->load('valoracionEmpresa')));
-    }
-
-    public function marcarEnviada(Request $request, int $id): JsonResponse
-    {
-        $encuentro = Encuentro::editablesPara($request->user())->with(self::CARGA_DOCENTE)->findOrFail($id);
-        abort_unless($encuentro->valoracionEmpresa, 404);
-
-        $this->servicio->marcarEnviada($encuentro->valoracionEmpresa);
 
         return response()->json(new ValoracionEmpresaDocenteResource($encuentro));
     }

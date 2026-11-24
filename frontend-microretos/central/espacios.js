@@ -40,7 +40,7 @@ export const ESPACIOS = [
   {
     clave: 'red',
     nombre: 'Red DuaLab',
-    texto: 'Formularios de dualab.es, correo de info@, solicitudes de retos al profesorado, captaciones por validar y soporte.',
+    texto: 'Formularios de dualab.es, correo de info@, retos a medida para el profesorado, captaciones por validar y soporte.',
     color: 'espacio-red',
     roles: [ROLE_RED_DUALAB, ROLE_ADMIN_CENTRAL_DUALAB, ROLE_SUPERADMIN],
     quien: 'Red DuaLab, Admin Central DuaLab o superadmin',
@@ -57,10 +57,14 @@ export const ESPACIOS = [
         { key: 'formularios', label: 'Formularios de la web', ruta: { name: 'primer-contacto' }, nombres: ['primer-contacto', 'formulario-web'], contador: 'formularios', icono: ICONOS.formularios },
         { key: 'correo', label: 'Correo (info@)', ruta: { name: 'correo' }, nombres: ['correo', 'correo-ficha'], contador: 'correo', icono: ICONOS.correo },
         { key: 'captaciones', label: 'Captaciones', separadorAntes: true, detalle: 'App comercial · empresas y centros', ruta: { name: 'captaciones' }, nombres: ['captaciones'], contador: 'captaciones', icono: ICONOS.captaciones },
-        // «Correos de solicitudes» (respuestas-solicitudes) se abre desde la cabecera de Solicitudes de retos
-        { key: 'solicitudes-reto', label: 'Solicitudes de retos', detalle: 'Docentes solicitantes', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha', 'respuestas-solicitudes'], contador: 'solicitudes', icono: ICONOS.solicitudes },
+        // Retos a medida (solicitudes de retos del profesorado): desplegable con los formularios enviados a
+        // docentes y los correos que nos escriben. `hijos`: submenú; se abre solo si estás en uno de ellos.
+        { key: 'retos-medida', label: 'Retos a medida', detalle: 'Los piden los docentes', icono: ICONOS.solicitudes, hijos: [
+          { key: 'solicitudes-reto', label: 'Formularios de docentes', ruta: { name: 'solicitudes-reto' }, nombres: ['solicitudes-reto', 'solicitud-reto-ficha'], contador: 'solicitudes' },
+          { key: 'respuestas-solicitudes', label: 'Correos de docentes', ruta: { name: 'respuestas-solicitudes' }, nombres: ['respuestas-solicitudes'], contador: 'correosSolicitudes' },
+        ] },
         // Consulta de solo lectura (editar es de Base de datos): una pantalla para elegir Empresas o Centros
-        { key: 'empresas-centros', label: 'Empresas y centros', detalle: 'Solo consulta', separadorAntes: true, ruta: { name: 'empresas-centros' }, nombres: ['empresas-centros', 'empresas-central', 'centros-central'], icono: ICONOS.empresas },
+        { key: 'empresas-centros', label: 'Empresas y centros', detalle: 'Consulta y envío de soluciones', separadorAntes: true, ruta: { name: 'empresas-centros' }, nombres: ['empresas-centros', 'empresas-central', 'centros-central', 'envio-soluciones'], icono: ICONOS.empresas },
       ] },
       { titulo: 'Soporte', items: [
         { key: 'soporte', label: 'Tickets', ruta: { name: 'soporte' }, nombres: ['soporte'], proximamente: true, icono: ICONOS.soporte },

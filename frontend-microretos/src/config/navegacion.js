@@ -305,7 +305,7 @@ export const SECCIONES = {
             { titulo: 'Sigue a tus grupos', conector: 'Cuando entreguen',
               desc: 'En Seguimiento de grupos ves el avance de cada grupo, fase a fase.' },
             { titulo: 'Pide la valoración',
-              desc: 'Desde el encuentro envías a la empresa un enlace para que valore el reto con las soluciones de tus grupos.' },
+              desc: 'Cuando tus grupos entregan, DuaLab envía a la empresa un enlace para que valore el reto con sus soluciones.' },
           ] },
       ],
     },
@@ -364,7 +364,7 @@ export const SECCIONES = {
       { color: 'empresas', segmentos: [
         { t: 'Una ' }, { t: 'EMPRESA COLABORADORA', b: true },
         { t: ' aporta la necesidad real de la que nace el reto y, al terminar, ' }, { t: 'valora', b: true },
-        { t: ' el reto con las soluciones de tus grupos y dice si le interesaría seguir con un proyecto en la empresa. No necesita cuenta: responde desde el enlace que le envías.' },
+        { t: ' el reto con las soluciones de tus grupos y dice si le interesaría seguir con un proyecto en la empresa. No necesita cuenta: responde desde el enlace que le envía DuaLab.' },
         { br: true },
         { t: 'Consulta sus datos de contacto en el ' },
         { t: 'directorio de empresas', ruta: '/empresas', routeName: 'empresas', tip: 'Ir al directorio de empresas' },
@@ -384,8 +384,8 @@ export const SECCIONES = {
           pasos: [
             { titulo: 'Lleva el reto al aula', conector: 'Entregan',
               desc: 'Lo validas tú y lo trabajas con tus grupos en un encuentro creativo.' },
-            { titulo: 'Pide la valoración',
-              desc: 'Desde el encuentro, cuando los grupos han entregado su solución.' },
+            { titulo: 'DuaLab envía las soluciones',
+              desc: 'Cuando los grupos han entregado, DuaLab le hace llegar a la empresa el enlace para valorarlas.' },
           ] },
         { nombre: 'Empresa', texto: 'text-empresas-dark', borde: 'border-empresas', halo: 'ring-empresas/20', conector: 'Si le interesa',
           pasos: [

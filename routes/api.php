@@ -32,6 +32,7 @@ use App\Http\Controllers\IntegracionFrontofficeController;
 use App\Http\Controllers\ComercialEmpresaController;
 use App\Http\Controllers\CaptacionAdminController;
 use App\Http\Controllers\ValoracionEmpresaController;
+use App\Http\Controllers\ValoracionEmpresaCentralController;
 use App\Http\Controllers\DestacadoCentralController;
 use App\Http\Controllers\PrimerContactoController;
 use App\Http\Controllers\PrimerContactoCorreoController;
@@ -381,10 +382,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/encuentros/{id}/reestructurar-equipos', [EncuentroController::class, 'reestructurarEquipos'])->whereNumber('id');
         Route::patch('/encuentros/{id}/miembros/{miembroId}/alias', [EncuentroController::class, 'actualizarAliasMiembro'])->whereNumber('id')->whereNumber('miembroId');
         Route::get('/encuentros/{id}/workspace',           [EncuentroController::class, 'workspace'])->whereNumber('id');
-        // Valoración final de la empresa (P3): ver estado, pedirla (genera/renueva el enlace) y marcarla enviada
+        // Valoración final de la empresa (P3): el docente solo ve el estado y la respuesta; la envía
+        // DuaLab desde Central (ValoracionEmpresaCentralController)
         Route::get('/encuentros/{id}/valoracion-empresa',           [ValoracionEmpresaController::class, 'show'])->whereNumber('id');
-        Route::post('/encuentros/{id}/valoracion-empresa',          [ValoracionEmpresaController::class, 'solicitar'])->whereNumber('id');
-        Route::patch('/encuentros/{id}/valoracion-empresa/enviada', [ValoracionEmpresaController::class, 'marcarEnviada'])->whereNumber('id');
         // Ruta específica antes de la paramétrica {id} de abajo
         Route::get('/encuentros/{id}/colaboradores/candidatos', [EncuentroColaboradorController::class, 'candidatos'])->whereNumber('id');
         Route::get('/encuentros/{id}/colaboradores',             [EncuentroColaboradorController::class, 'index'])->whereNumber('id');
@@ -553,6 +553,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['primer.contacto', 'throttle:60,1,central-consulta'])->prefix('central')->group(function () {
         Route::get('/empresas', [ConsultaCentralController::class, 'empresas']);
         Route::get('/centros',  [ConsultaCentralController::class, 'centros']);
+    });
+
+    // ── DuaLab Central → Red DuaLab → Empresas → «Enviar soluciones a las empresas»: DuaLab envía a la
+    //    empresa el enlace para valorar las soluciones de los grupos (red_dualab, central_dualab, superadmin) ──
+    Route::middleware(['primer.contacto', 'throttle:60,1,central-valoraciones'])->prefix('central/valoraciones-empresa')->group(function () {
+        Route::get('/',                 [ValoracionEmpresaCentralController::class, 'index']);
+        Route::post('/{id}',            [ValoracionEmpresaCentralController::class, 'solicitar'])->whereNumber('id');
+        Route::patch('/{id}/enviada',   [ValoracionEmpresaCentralController::class, 'marcarEnviada'])->whereNumber('id');
+        Route::post('/{id}/enviar',     [ValoracionEmpresaCentralController::class, 'enviar'])->whereNumber('id')->middleware('throttle:20,1,central-valoraciones-correo');
     });
 
     // ── DuaLab Central → Primer contacto → Solicitudes de retos de docentes (red_dualab, central_dualab

@@ -30,6 +30,7 @@ const router = createRouter({
     { path: '/red/empresas-centros', name: 'empresas-centros', component: () => import('./views/EmpresasCentrosCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/empresas', name: 'empresas-central', component: () => import('./views/EmpresasCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/centros', name: 'centros-central', component: () => import('./views/CentrosCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
+    { path: '/red/empresas/soluciones', name: 'envio-soluciones', component: () => import('./views/EnvioSolucionesCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/soporte', name: 'soporte', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     { path: '/red/soporte/correo', name: 'soporte-correo', component: () => import('./views/SoporteCentral.vue'), meta: { requiresAuth: true, espacio: 'red' } },
     // avisoSuperadmin: Admin Central DuaLab que entra por la URL ve el aviso para iniciar sesión como superadmin

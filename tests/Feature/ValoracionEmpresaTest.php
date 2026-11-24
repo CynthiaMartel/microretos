@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ValoracionEmpresaMail;
 use App\Models\Encuentro;
 use App\Models\EncuentroValoracionEmpresa;
 use App\Models\Equipo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -15,10 +17,11 @@ use Tests\TestCase;
 /**
  * Valoración final de la empresa (fase P3 en TAREAS_PENDIENTES.md).
  *
- * - El docente con edición pide la valoración (enlace con token que caduca) y la marca enviada.
+ * - DuaLab, desde Central, genera el enlace (token que caduca) y lo envía a la empresa por info@ o
+ *   lo marca enviado; el docente solo ve el estado y la respuesta, sin el enlace.
  * - La empresa ve la propuesta y las soluciones de los grupos, sin datos del alumnado, y
  *   responde una sola vez; el docente recibe un aviso.
- * - Enlace caducado → 410; un colaborador de solo lectura no ve el token.
+ * - Enlace caducado → 410.
  *
  * Usa la BD `testing` de Sail (MySQL: varias migraciones son SQL de MySQL).
  */
@@ -28,6 +31,7 @@ class ValoracionEmpresaTest extends TestCase
 
     private User $ana;
     private User $luis;
+    private User $red;      // Red DuaLab (Central)
     private Encuentro $encuentro;
 
     protected function setUp(): void
@@ -40,6 +44,8 @@ class ValoracionEmpresaTest extends TestCase
             'role' => User::ROLE_DOCENTE, 'centro_educativo_id' => $centro, 'email_verified_at' => now(),
         ]);
         $this->ana  = $crear('Ana');
+        $this->red  = User::forceCreate(['name' => 'Red', 'email' => 'red@test.local', 'password' => bcrypt('x'),
+            'role' => User::ROLE_RED_DUALAB, 'email_verified_at' => now()]);
         $this->luis = $crear('Luis');
 
         $propuesta = DB::table('microproyectos')->insertGetId([
@@ -64,12 +70,13 @@ class ValoracionEmpresaTest extends TestCase
         $g2->miembros()->create(['alias' => 'Mario Panda Azul']);
     }
 
+    // DuaLab genera el enlace desde Central
     private function pedir(): string
     {
-        Sanctum::actingAs($this->ana);
+        Sanctum::actingAs($this->red);
 
-        return $this->postJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa")
-            ->assertOk()->assertJsonPath('solicitada', true)->json('token');
+        return $this->postJson("/api/central/valoraciones-empresa/{$this->encuentro->id}")
+            ->assertOk()->assertJsonPath('data.solicitada', true)->json('data.token');
     }
 
     private function respuesta(): array
@@ -81,29 +88,48 @@ class ValoracionEmpresaTest extends TestCase
         ];
     }
 
-    public function test_el_docente_pide_la_valoracion_y_ve_el_progreso_de_los_grupos(): void
+    public function test_dualab_genera_el_enlace_y_el_docente_solo_ve_el_estado(): void
     {
         $token = $this->pedir();
         $this->assertNotEmpty($token);
 
+        // El docente ve el progreso y que está pedida, pero no el enlace ni puede generarlo
+        Sanctum::actingAs($this->ana);
         $this->getJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa")
-            ->assertOk()
-            ->assertJsonPath('grupos_total', 2)
-            ->assertJsonPath('grupos_con_entrega', 1)
-            ->assertJsonPath('token', $token);
-
-        $this->patchJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa/enviada")
-            ->assertOk()->assertJsonPath('enviado_en', fn ($v) => $v !== null);
+            ->assertOk()->assertJsonPath('grupos_total', 2)->assertJsonPath('grupos_con_entrega', 1)
+            ->assertJsonPath('solicitada', true)->assertJsonMissingPath('token');
+        $this->postJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa")->assertStatus(405);
+        $this->getJson('/api/central/valoraciones-empresa')->assertForbidden();
+        $this->postJson("/api/central/valoraciones-empresa/{$this->encuentro->id}")->assertForbidden();
     }
 
-    public function test_un_colaborador_de_solo_lectura_no_ve_el_token_ni_puede_pedirla(): void
+    public function test_dualab_envia_las_soluciones_a_la_empresa_por_correo(): void
     {
-        $this->pedir();
+        $empresa = DB::table('empresas')->insertGetId(['nombre_comercial' => 'Gestoría Sur', 'sector' => 'Servicios', 'email_contacto' => 'contacto@gestoria.test']);
+        DB::table('microproyectos')->where('id', $this->encuentro->microproyecto_id)->update(['empresa_id' => $empresa]);
+        Mail::fake();
+        Sanctum::actingAs($this->red);
 
-        Sanctum::actingAs($this->luis);
-        $this->getJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa")
-            ->assertOk()->assertJsonPath('token', null)->assertJsonPath('solicitada', true);
-        $this->postJson("/api/encuentros/{$this->encuentro->id}/valoracion-empresa")->assertNotFound();
+        $fila = collect($this->getJson('/api/central/valoraciones-empresa')->assertOk()->json('data'))
+            ->firstWhere('encuentro_id', $this->encuentro->id);
+        $this->assertSame(['Gestoría Sur', 'contacto@gestoria.test', 1, false], [$fila['empresa_nombre'], $fila['empresa_email'], $fila['grupos_con_entrega'], $fila['solicitada']]);
+
+        // Sin enlace todavía: se genera al enviar
+        $this->postJson("/api/central/valoraciones-empresa/{$this->encuentro->id}/enviar", ['email' => 'no-es-un-email'])->assertJsonValidationErrors('email');
+        $datos = $this->postJson("/api/central/valoraciones-empresa/{$this->encuentro->id}/enviar", ['email' => 'contacto@gestoria.test', 'mensaje' => 'Gracias'])
+            ->assertOk()->json('data');
+        $this->assertTrue($datos['solicitada']);
+        $this->assertNotNull($datos['enviado_en']);
+        Mail::assertQueued(ValoracionEmpresaMail::class, fn ($m) => $m->hasTo('contacto@gestoria.test')
+            && str_ends_with($m->enlace, '/valoracion/' . $datos['token']) && $m->empresa === 'Gestoría Sur');
+
+        // Queda en el historial de Central
+        $this->assertDatabaseHas('actividad_central', ['seccion' => 'empresas', 'accion' => 'enviar_soluciones']);
+
+        // Valorada: ya no se envía
+        $this->postJson("/api/valoracion-empresa/{$datos['token']}", $this->respuesta())->assertOk();
+        Sanctum::actingAs($this->red);
+        $this->postJson("/api/central/valoraciones-empresa/{$this->encuentro->id}/enviar", ['email' => 'contacto@gestoria.test'])->assertUnprocessable();
     }
 
     public function test_la_empresa_ve_las_soluciones_sin_datos_del_alumnado_ni_urls_peligrosas(): void

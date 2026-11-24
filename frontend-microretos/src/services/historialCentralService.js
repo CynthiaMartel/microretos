@@ -13,4 +13,5 @@ export const SECCIONES_HISTORIAL = [
   { valor: 'usuarios',    texto: 'Usuarios' },
   { valor: 'papelera',    texto: 'Papelera' },
   { valor: 'correo',      texto: 'Correo' },
+  { valor: 'empresas',    texto: 'Empresas' },
 ];

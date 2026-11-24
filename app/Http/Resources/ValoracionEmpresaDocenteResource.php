@@ -6,9 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Estado de la valoración final de la empresa de un encuentro, para el docente.
- * Recurso = Encuentro con 'valoracionEmpresa' y 'equipos.fases' cargados. El token (con el que
- * se arma el enlace) solo va a quien puede editar el encuentro, igual que los códigos de acceso.
+ * Estado de la valoración final de la empresa de un encuentro, para el docente (solo lectura).
+ * Recurso = Encuentro con 'valoracionEmpresa' y 'equipos.fases' cargados. Sin el token: el enlace
+ * lo genera y lo envía DuaLab desde Central (ValoracionEmpresaCentralResource).
  */
 class ValoracionEmpresaDocenteResource extends JsonResource
 {
@@ -26,7 +26,6 @@ class ValoracionEmpresaDocenteResource extends JsonResource
             'grupos_total'      => $equipos->count(),
             'grupos_con_entrega' => $conEntrega,
             'solicitada'        => (bool) $v,
-            'token'             => $v && $puedeEditar && !$v->caducado() ? $v->token : null,
             'token_expira_en'   => $v?->token_expira_en?->toIso8601String(),
             'caducado'          => $v ? $v->caducado() : false,
             'enviado_en'        => $v?->enviado_en?->toIso8601String(),

@@ -10,9 +10,8 @@ export const crearCodigoAcceso = (id) => api.post(`/encuentros/${id}/crear-codig
 export const crearCodigoIa = (id) => api.post(`/encuentros/${id}/codigo-ia`);
 
 // Valoración final de la empresa (P3): estado, pedirla (genera/renueva el enlace) y marcarla enviada
+// Valoración de la empresa: el docente solo la consulta; la envía DuaLab desde Central
 export const getValoracionEmpresa = (id) => api.get(`/encuentros/${id}/valoracion-empresa`);
-export const solicitarValoracionEmpresa = (id) => api.post(`/encuentros/${id}/valoracion-empresa`);
-export const marcarValoracionEnviada = (id) => api.patch(`/encuentros/${id}/valoracion-empresa/enviada`);
 
 // Detalle de grupos de un encuentro (seguimiento docente del trabajo de cada grupo)
 export const getWorkspaceEncuentro = (id) => api.get(`/encuentros/${id}/workspace`);
