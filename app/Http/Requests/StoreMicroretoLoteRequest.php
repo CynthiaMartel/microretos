@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 // Mismas reglas que StoreMicroretoRequest, aplicadas a cada elemento de `microretos`.
 // El saneado (strip_tags) se hace en MicroretoIAController::guardarLote tras validar.
@@ -11,6 +12,20 @@ class StoreMicroretoLoteRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user() !== null;
+    }
+
+    // `modulo` es solo el texto que se muestra («A y B y C…»): con varios módulos pasa de los 255 de la
+    // columna (Central lo une igual que el generador). Se recorta en lugar de rechazar el reto.
+    protected function prepareForValidation(): void
+    {
+        $retos = $this->input('microretos');
+        if (!is_array($retos)) return;
+        foreach ($retos as $i => $reto) {
+            if (is_array($reto) && is_string($reto['modulo'] ?? null)) {
+                $retos[$i]['modulo'] = Str::limit($reto['modulo'], 254, '…');
+            }
+        }
+        $this->merge(['microretos' => $retos]);
     }
 
     /** @return array<string, string> */

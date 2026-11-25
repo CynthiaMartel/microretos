@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 class StoreMicroretoRequest extends FormRequest
 {
@@ -24,6 +25,8 @@ class StoreMicroretoRequest extends FormRequest
                 $sanitized[$field] = strip_tags($this->input($field));
             }
         }
+        // `modulo` es solo el texto que se muestra («A y B y C…»): con varios módulos pasa de los 255 de la columna
+        if (isset($sanitized['modulo'])) $sanitized['modulo'] = Str::limit($sanitized['modulo'], 254, '…');
 
         foreach (['dificultades', 'que_necesitan', 'limitaciones', 'prototipos',
                   'ods_sugeridos', 'soft_skills', 'evaluacion_oficial', 'tips_profesorado', 'variantes'] as $field) {

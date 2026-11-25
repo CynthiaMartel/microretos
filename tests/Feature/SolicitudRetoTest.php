@@ -578,6 +578,45 @@ class SolicitudRetoTest extends TestCase
         $this->assertSame('IES Otro Centro', $enBiblioteca['centro_educativo']);
     }
 
+    public function test_central_guarda_en_la_recamara_un_reto_con_varios_modulos_de_nombre_largo(): void
+    {
+        // Cuatro módulos de 1.º con nombres largos, como los reales: el texto «A y B y C y D» pasa de 255
+        $ids = [$this->moduloId];
+        foreach (['Operaciones administrativas de compraventa y gestión de la documentación comercial',
+                  'Empresa y Administración: organización, documentación y trámites con las administraciones',
+                  'Tratamiento informático de la información y de la documentación administrativa'] as $nombre) {
+            $ids[] = DB::table('modulos')->insertGetId(['idcicloformativo' => $this->cicloId, 'nombre' => $nombre, 'curso' => 1]);
+        }
+        $token = $this->crearSolicitud();
+        $this->postJson("/api/public/solicitud-reto/{$token}/enviar", $this->respuestas([], ['moduloIds' => $ids]))->assertOk();
+        $solicitud = SolicitudReto::firstOrFail();
+        DB::table('empresas')->where('id', $this->empresaId)->update(['friccion_problema' => 'Se pierden cartas.', 'sector' => 'Servicios']);
+        $adminCentral = $this->usuario(User::ROLE_ADMIN_CENTRAL_DUALAB, 'admincentral@test.local');
+        Sanctum::actingAs($adminCentral);
+        $this->patchJson("/api/central/solicitudes-reto/{$solicitud->id}", ['bloque' => 0, 'empresa_id' => $this->empresaId])->assertOk();
+        $datos = $this->getJson("/api/central/solicitudes-reto/{$solicitud->id}/generacion")->assertOk()->json('data');
+
+        config(['services.openai.key' => 'clave-de-prueba']);
+        $reto = [
+            'titulo' => 'Cartas que no se pierden', 'subtitulo' => 'Registro de correspondencia', 'quien_es' => 'Una gestoría.',
+            'dia_a_dia' => 'Mucho papel.', 'pregunta_reto' => '¿Cómo registramos todo?', 'dificultades' => ['Se pierden cartas'],
+            'que_necesitan' => ['Un registro'], 'limitaciones' => ['Sin presupuesto'], 'prototipos' => ['Una plantilla'],
+            'ods_sugeridos' => ['ODS 8'], 'soft_skills' => ['Orden'], 'tips_profesorado' => ['Empieza por el registro'], 'variantes' => ['Con paquetería'],
+            'evaluacion_oficial' => [['ra_id' => $this->raId, 'ce_ids' => [$this->ceId], 'aplicacion' => 'Registran la correspondencia.']],
+        ];
+        Http::fake(['api.openai.com/*' => Http::response(['choices' => [['message' => ['content' => json_encode(['microretos' => [$reto]])]]]])]);
+        $generados = $this->postJson('/api/generar-microreto', $datos['peticion'] + $datos['editables'])->assertOk()->json('microretos');
+
+        // Lo mismo que envía GenerarRetosPeticion.vue al pulsar «Guardar en la recámara»
+        $lote = array_map(fn ($r) => array_merge($r, $datos['contexto'], ['nivel_grupo' => $datos['editables']['nivelGrupo']]), $generados);
+        $this->postJson('/api/guardar-microretos-lote', ['solicitud_reto_id' => $solicitud->id, 'microretos' => $lote])->assertCreated();
+        $guardado = Microreto::firstOrFail();
+        $this->assertTrue($guardado->en_recamara);
+        // El texto de los módulos se recorta a lo que cabe en la columna
+        $this->assertLessThanOrEqual(255, mb_strlen($guardado->modulo));
+        $this->assertStringStartsWith('Comunicación empresarial', $guardado->modulo);
+    }
+
     public function test_autorizar_a_trabajar_solo_si_el_docente_tiene_cuenta(): void
     {
         $solicitud = $this->solicitudRespondida();
