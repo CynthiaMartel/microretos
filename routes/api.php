@@ -583,6 +583,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/publicar',   [SolicitudRetoController::class, 'publicar'])->whereNumber('id');
             // A la papelera; restaurarla o borrarla del todo es de la Papelera, solo superadmin
             Route::delete('/{id}',          [SolicitudRetoController::class, 'destroy'])->whereNumber('id');
+            // Un reto de la recámara a la papelera (los publicados en un centro, no)
+            Route::delete('/{id}/retos/{uuid}', [SolicitudRetoController::class, 'eliminarReto'])->whereNumber('id')->whereUuid('uuid');
         });
         // Envían correo: cupo propio
         Route::middleware('throttle:20,1,central-solicitudes-reto-correo')->group(function () {

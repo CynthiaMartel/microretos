@@ -10,6 +10,7 @@ use App\Models\CentroEducativo;
 use App\Models\CicloFormativo;
 use App\Models\Empresa;
 use App\Models\Familia;
+use App\Models\Microreto;
 use App\Models\Modulo;
 use App\Models\ResultadoAprendizaje;
 use App\Models\SolicitudReto;
@@ -522,6 +523,21 @@ class SolicitudRetoService
         });
 
         return $retos->count();
+    }
+
+    /**
+     * Un reto de la recámara a la papelera (soft delete). Los publicados en un centro no: ya los usan sus
+     * docentes. Si se le había enviado al docente, desaparece de su enlace de lectura.
+     */
+    public function retoAPapelera(SolicitudReto $solicitud, string $uuid): Microreto
+    {
+        $reto = $solicitud->microretos()->where('uuid', $uuid)->firstOrFail();
+        if (!$reto->en_recamara) {
+            throw ValidationException::withMessages(['reto' => 'Este reto ya está en la biblioteca de un centro: no se puede enviar a la papelera desde aquí.']);
+        }
+        $reto->delete();
+
+        return $reto;
     }
 
     /**

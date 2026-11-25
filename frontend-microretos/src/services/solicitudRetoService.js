@@ -21,6 +21,8 @@ export const getFichasRetosSolicitud = (id, retos) => api.get(`/central/solicitu
 export const autorizarRetosSolicitud = (id, payload) => api.post(`/central/solicitudes-reto/${id}/autorizar`, payload);
 // A la papelera (solo superadmin); se restaura en Red DuaLab → Papelera
 export const eliminarSolicitud = (id) => api.delete(`/central/solicitudes-reto/${id}`);
+// Un reto de la recámara a la papelera (superadmin y Admin Central DuaLab); devuelve la ficha
+export const eliminarRetoSolicitud = (id, uuid) => api.delete(`/central/solicitudes-reto/${id}/retos/${uuid}`);
 // Respuestas de los docentes en info@ (por la referencia «Ref. SR-…» del asunto)
 export const getRespuestasSolicitudes = (params) => api.get('/central/solicitudes-reto/correos', { params });
 export const getCorreosSolicitud = (id) => api.get(`/central/solicitudes-reto/${id}/correos`);

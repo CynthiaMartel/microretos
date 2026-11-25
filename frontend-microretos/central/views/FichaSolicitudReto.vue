@@ -4,7 +4,7 @@
      docente» le envía un enlace para leerlos (sin cuenta) y «Autorizar a trabajarlos», si tiene
      cuenta, los pasa a la biblioteca de su centro y le avisa de que ya puede trabajarlos. -->
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import RedactarCorreo from '../components/RedactarCorreo.vue'
@@ -18,7 +18,7 @@ import { getCentros } from '../../src/services/datosFPService.js'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
 import {
   getSolicitud, actualizarSolicitud, reenviarSolicitud, avisarDocente, getFichasRetosSolicitud, autorizarRetosSolicitud, getCorreosSolicitud, publicarRetosSolicitud,
-  NIVELES, PUNTOS_TEMARIO,
+  eliminarRetoSolicitud, NIVELES, PUNTOS_TEMARIO,
 } from '../../src/services/solicitudRetoService.js'
 import { FASES_SOLICITUD, fechaHora, textoSesion, faltaEncuentro, urlApp } from '../primerContacto.js'
 
@@ -258,6 +258,51 @@ async function publicar() {
   }
 }
 
+// ── Menú «⋯» de los retos de la recámara: enviarlos a la papelera (acción crítica) ──
+// Como el menú de la bandeja: uno abierto a la vez; se cierra al pulsar fuera o con Escape.
+const menuReto = ref(null)        // uuid
+function alternarMenuReto(reto) { menuReto.value = menuReto.value === reto.uuid ? null : reto.uuid }
+function cerrarMenuReto(devolverFoco = false) {
+  const uuid = menuReto.value
+  menuReto.value = null
+  if (devolverFoco && uuid) document.getElementById(`menu-reto-${uuid}`)?.focus()
+}
+function alPulsarFueraReto(e) { if (!e.target.closest('[data-menu-reto]')) cerrarMenuReto() }
+function alPulsarTeclaReto(e) { if (e.key === 'Escape') cerrarMenuReto(true) }
+watch(menuReto, (uuid, anterior) => {
+  if (!!uuid === !!anterior) return
+  const metodo = uuid ? 'addEventListener' : 'removeEventListener'
+  document[metodo]('click', alPulsarFueraReto, true)
+  document[metodo]('keydown', alPulsarTeclaReto)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', alPulsarFueraReto, true)
+  document.removeEventListener('keydown', alPulsarTeclaReto)
+})
+
+const retoAEliminar = ref(null)
+const avisoRecamara = ref('')
+const eliminandoReto = ref(false)
+const errorEliminarReto = ref('')
+function pedirEliminarReto(reto) { cerrarMenuReto(); errorEliminarReto.value = ''; avisoRecamara.value = ''; retoAEliminar.value = reto }
+async function eliminarReto() {
+  if (eliminandoReto.value) return
+  eliminandoReto.value = true
+  errorEliminarReto.value = ''
+  try {
+    const titulo = retoAEliminar.value.titulo || 'Reto sin título'
+    s.value = (await eliminarRetoSolicitud(s.value.id, retoAEliminar.value.uuid)).data.data
+    retosElegidos.value = retosElegidos.value.filter(u => u !== retoAEliminar.value.uuid)
+    retoAEliminar.value = null
+    avisoRecamara.value = `«${titulo}» está en la papelera. El superadmin puede restaurarlo en Red DuaLab → Papelera; si nadie lo hace, se borra del todo solo cuando se cumple el plazo de la papelera.`
+  } catch (e) {
+    errorEliminarReto.value = e.response?.status === 403 ? 'Solo Admin Central DuaLab o el superadmin pueden enviar retos a la papelera.'
+      : e.response?.data?.message || 'No se ha podido enviar el reto a la papelera.'
+  } finally {
+    eliminandoReto.value = false
+  }
+}
+
 const enlaceGenerador = (indice) => `${urlApp()}/retos/crear?solicitud=${s.value.id}&bloque=${indice}`
 
 // ── Lectura de las respuestas ───────────────────────────────────────────────
@@ -394,8 +439,8 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
               <template v-else>
                 <p class="mb-3 text-xs text-texto-secundario">Los de la recámara solo los ve DuaLab. Al docente no le llega nada hasta que lo decidas: marca los retos y elige si solo los lee («Avisar al docente») o si además los puede trabajar («Autorizar a trabajarlos»).</p>
                 <ul class="space-y-2">
-                  <li v-for="reto in s.retos" :key="reto.uuid">
-                    <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-[#F8FAFC] px-3 py-2">
+                  <li v-for="reto in s.retos" :key="reto.uuid" class="relative" :class="{ 'z-10': menuReto === reto.uuid }">
+                    <label class="flex cursor-pointer items-start gap-3 rounded-xl bg-[#F8FAFC] px-3 py-2" :class="{ 'pr-14': gestiona && reto.en_recamara }">
                       <input v-model="retosElegidos" type="checkbox" :value="reto.uuid" class="mt-1 h-4 w-4 shrink-0" :disabled="s.estado !== 'respondida'" />
                       <span class="min-w-0">
                         <span class="block break-words text-sm font-semibold">{{ reto.titulo || 'Reto sin título' }}</span>
@@ -404,10 +449,28 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                               :class="reto.autorizado ? 'bg-centros/15 text-centros' : reto.en_recamara ? 'bg-gray-200 text-texto-secundario' : 'bg-empresas/15 text-empresas-dark'">
                           {{ reto.autorizado ? 'Autorizado a trabajarlo' : reto.en_recamara ? (reto.avisado ? 'Solo lectura' : 'En la recámara') : `En la biblioteca de ${reto.centro}` }}
                         </span>
+                        <!-- Aviso de antigüedad: nunca se borran solos, lo decide DuaLab -->
+                        <span v-if="reto.antiguo" class="ml-1 mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                          Lleva {{ reto.dias_recamara }} días en la recámara
+                        </span>
                       </span>
                     </label>
+                    <div v-if="gestiona && reto.en_recamara" data-menu-reto class="absolute right-2 top-2">
+                      <button :id="`menu-reto-${reto.uuid}`" type="button" @click="alternarMenuReto(reto)"
+                              :aria-expanded="menuReto === reto.uuid" aria-haspopup="menu" :aria-label="`Más acciones del reto ${reto.titulo || 'sin título'}`"
+                              class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde bg-white text-texto-secundario transition-colors hover:bg-gray-50"
+                              :class="{ 'bg-gray-50': menuReto === reto.uuid }">
+                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
+                      </button>
+                      <div v-if="menuReto === reto.uuid" role="menu"
+                           class="absolute right-0 top-full z-30 mt-1 w-[min(15rem,calc(100vw-3rem))] rounded-xl border border-borde bg-white py-1 shadow-lg">
+                        <button type="button" role="menuitem" @click="pedirEliminarReto(reto)"
+                                class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50">Enviar a la papelera</button>
+                      </div>
+                    </div>
                   </li>
                 </ul>
+                <p v-if="avisoRecamara" class="mt-2 text-sm font-semibold text-texto-secundario" role="status">{{ avisoRecamara }}</p>
                 <template v-if="s.estado === 'respondida'">
                   <label for="sol-mensaje" class="field-label mt-4">Unas líneas para el docente (opcional)</label>
                   <textarea id="sol-mensaje" v-model="mensaje" maxlength="1000" rows="3" class="field-input"></textarea>
@@ -529,6 +592,36 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
 
     <VistaPreviaSolicitud v-if="s" :abierto="viendoComoDocente" :datos="{ nombreDocente: s.nombre_docente, centroNombre: s.centro_nombre }" :retos="retosVistaPrevia"
                           @cerrar="viendoComoDocente = false" />
+    <!-- Confirmar: un reto de la recámara a la papelera (acción crítica) -->
+    <Teleport to="body">
+      <div v-if="retoAEliminar" class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+           @keydown.esc="retoAEliminar = null" @click.self="retoAEliminar = null">
+        <section role="dialog" aria-modal="true" aria-labelledby="reto-papelera-titulo"
+                 class="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl sm:rounded-[2rem]">
+          <header class="flex items-center gap-3 border-b border-borde px-4 py-3 sm:px-6 sm:py-4">
+            <h2 id="reto-papelera-titulo" class="min-w-0 flex-1 truncate font-heading text-lg font-bold">Enviar el reto a la papelera</h2>
+            <button type="button" class="accion-icono" aria-label="Cerrar" @click="retoAEliminar = null">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </header>
+          <div class="space-y-3 overflow-y-auto px-4 py-5 sm:px-6">
+            <p class="break-words text-sm font-semibold">{{ retoAEliminar.titulo || 'Reto sin título' }}</p>
+            <ul class="list-disc space-y-1 pl-5 text-sm text-texto-secundario">
+              <li>Sale de la recámara y de este formulario.</li>
+              <li v-if="retoAEliminar.avisado">Ya se lo enviaste al docente: desaparece del enlace de lectura que tiene en su correo.</li>
+              <li>El superadmin puede restaurarlo en Red DuaLab → Papelera. Si nadie lo restaura, se borra del todo cuando se cumple el plazo de la papelera.</li>
+            </ul>
+            <AvisoAccionCritica texto="Queda en el Historial de Central con tu nombre y la fecha." />
+            <p v-if="errorEliminarReto" class="text-sm font-semibold text-red-700" role="alert">{{ errorEliminarReto }}</p>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button type="button" class="accion-secundaria" :disabled="eliminandoReto" @click="retoAEliminar = null">Cancelar</button>
+              <button type="button" class="inline-flex items-center justify-center rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                      :disabled="eliminandoReto" @click="eliminarReto">{{ eliminandoReto ? 'Enviando…' : 'Sí, a la papelera' }}</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </Teleport>
     <RedactarCorreo v-if="s" :abierto="escribiendo" modo="nuevo" :contacto="contactoDocente"
                     @cerrar="escribiendo = false" @enviado="correoEnviado" />
     <AvisarDocenteModal v-if="s" :estado="estadoAviso" :docente="s.nombre_docente" :email="s.email_docente"

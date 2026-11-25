@@ -91,6 +91,19 @@ class SolicitudReto extends Model
         return $this->hasMany(Microreto::class);
     }
 
+    /**
+     * Al borrarla del todo (Papelera o purga automática): sus retos de la recámara, también los que ya
+     * estén en la papelera, se borran con ella. Sin solicitud nadie los vería ni los podría publicar.
+     * Los publicados en un centro se quedan (FK nullOnDelete).
+     */
+    public function borrarRetosRecamara(): int
+    {
+        $retos = $this->microretos()->withTrashed()->where('en_recamara', true)->get();
+        $retos->each->forceDelete();
+
+        return $retos->count();
+    }
+
     /** @return HasMany<Encuentro, $this> */
     public function encuentros(): HasMany
     {

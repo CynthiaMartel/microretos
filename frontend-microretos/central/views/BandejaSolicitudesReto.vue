@@ -5,7 +5,7 @@
      Backend: SolicitudRetoController. -->
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import CabeceraSeccion from '../../src/components/CabeceraSeccion.vue'
 import FiltrosPanel from '../../src/components/FiltrosPanel.vue'
 import FiltroSegmentado from '../../src/components/FiltroSegmentado.vue'
@@ -93,6 +93,20 @@ const datosVistaPrevia = ref({})
 const auth = useAuthStore()
 // Gestionan las solicitudes (empresa, generar, publicar, papelera): superadmin y Admin Central DuaLab
 const gestiona = computed(() => [ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB].includes(auth.userRole))
+
+// ── Avisos: retos antiguos en la recámara (nunca se borran solos) y lo que espera en la papelera,
+//    que la purga automática borra del todo pasado el plazo. La Papelera solo la abre el superadmin. ──
+const esSuperadmin = computed(() => auth.userRole === ROLE_SUPERADMIN)
+const recamara = computed(() => resumen.value?.recamara ?? null)
+const papelera = computed(() => resumen.value?.papelera ?? null)
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`
+const textoPapelera = computed(() => {
+  const p = papelera.value
+  if (!p || !(p.solicitudes || p.retos)) return ''
+  const partes = [p.solicitudes && plural(p.solicitudes, 'formulario', 'formularios'), p.retos && plural(p.retos, 'reto', 'retos')].filter(Boolean)
+  const proxima = p.proxima_purga ? new Date(p.proxima_purga).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : ''
+  return `En la papelera: ${partes.join(' y ')}. Se borran del todo solos a los ${p.dias} días${proxima ? ` (el primero, el ${proxima})` : ''}.`
+})
 
 // ── Menú «⋯» de cada tarjeta (como en las tarjetas de propuestas) ──
 // Uno abierto a la vez; se cierra al pulsar fuera o con Escape (el foco vuelve a su botón).
@@ -202,6 +216,22 @@ async function copiar() {
         <span aria-hidden="true">→</span>
       </RouterLink>
 
+      <!-- Retos que llevan tiempo en la recámara: solo aviso, la decisión es de DuaLab -->
+      <p v-if="recamara?.antiguos" class="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800" role="status">
+        <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="min-w-0 flex-1">
+          {{ plural(recamara.antiguos, 'reto lleva', 'retos llevan') }} más de {{ recamara.dias }} días en la recámara. No se borran solos: sus formularios llevan la marca «en la recámara +{{ recamara.dias }} días»; ábrelos y decide si publicarlos, avisar al docente o enviarlos a la papelera.
+        </span>
+      </p>
+      <!-- Lo que está en la papelera y cuándo lo borra la purga automática -->
+      <component :is="esSuperadmin ? RouterLink : 'p'" v-if="textoPapelera" v-bind="esSuperadmin ? { to: { name: 'papelera' } } : { role: 'status' }"
+                 class="flex items-start gap-2 rounded-2xl border border-borde bg-white px-4 py-3 text-sm font-semibold text-texto-secundario"
+                 :class="esSuperadmin && 'transition hover:border-rol/40'">
+        <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.9 12.1A2 2 0 0116.1 21H7.9a2 2 0 01-2-1.9L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        <span class="min-w-0 flex-1">{{ textoPapelera }} {{ esSuperadmin ? 'Ábrela para restaurar algo antes.' : 'Para restaurar algo antes, pídeselo al superadmin.' }}</span>
+        <span v-if="esSuperadmin" aria-hidden="true">→</span>
+      </component>
+
       <FiltrosPanel v-model:busqueda="buscar" placeholder="Buscar por docente, email o centro…"
                     :resultados="meta?.total ?? null" :unidad="['formulario', 'formularios']"
                     :hay-activos="hayFiltros" @limpiar="limpiar">
@@ -228,6 +258,7 @@ async function copiar() {
                 <span v-if="s.sesion?.fecha" class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-texto-secundario">Sesión {{ textoSesion(s.sesion) }}</span>
                 <span v-if="faltaEncuentro(s)" class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">Falta encuentro</span>
                 <span v-if="s.num_retos" class="rounded-full bg-centros/10 px-2.5 py-0.5 text-xs font-bold text-centros">{{ s.num_retos }} {{ s.num_retos === 1 ? 'reto' : 'retos' }}</span>
+                <span v-if="s.retos_recamara_antiguos" class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">{{ s.retos_recamara_antiguos }} en la recámara +{{ recamara?.dias ?? 60 }} días</span>
                 <span v-if="s.empresa" class="min-w-0 truncate rounded-full bg-empresas/10 px-2.5 py-0.5 text-xs font-bold text-empresas-dark">{{ s.empresa.nombre }}</span>
               </span>
             </span>

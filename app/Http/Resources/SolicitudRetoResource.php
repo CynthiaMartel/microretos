@@ -36,6 +36,8 @@ class SolicitudRetoResource extends JsonResource
             'fase'           => $this->fase($numRetos, $numEncuentros),
             'sesion'         => $servicio->sesion($this->resource),
             'num_retos'      => $numRetos,
+            // Solo en la lista: retos que llevan más de papelera.recamara_dias_aviso días en la recámara
+            'retos_recamara_antiguos' => $this->recamara_antiguos_count ?? null,
             'enviado_at'     => $this->enviado_at?->toIso8601String(),
             'expira_at'      => $this->expira_at?->toIso8601String(),
             'enlace_vigente' => $this->enlaceVigente(),
@@ -63,6 +65,9 @@ class SolicitudRetoResource extends JsonResource
                 'centro'     => $m->en_recamara ? null : $m->centro?->nombre,
                 // Publicado en el centro de la cuenta del docente: ya lo puede trabajar
                 'autorizado' => $cuenta !== null && !$m->en_recamara && $m->centro_id === $cuenta->centro_educativo_id,
+                // Aviso «lleva N días en la recámara» (nunca se borran solos)
+                'dias_recamara' => $m->en_recamara ? (int) $m->created_at?->diffInDays(now()) : null,
+                'antiguo'    => $m->en_recamara && $m->created_at?->lte(now()->subDays((int) config('papelera.recamara_dias_aviso', 60))),
                 'created_at' => $m->created_at?->toIso8601String(),
             ])->values()),
         ];

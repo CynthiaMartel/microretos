@@ -24,7 +24,8 @@ class PapeleraController extends Controller
         'centros'     => CentroEducativo::class,
         'proyectos'   => Microproyecto::class,
         'sesiones'    => Encuentro::class,
-        // Al borrarla del todo, sus retos y encuentros se quedan sin solicitud (FK nullOnDelete)
+        // Al borrarla del todo se borran sus retos de la recámara; los publicados y sus encuentros se
+        // quedan sin solicitud (FK nullOnDelete)
         'solicitudes' => SolicitudReto::class,
         // Central → Captaciones
         'captaciones_empresa' => \App\Models\EmpresaCaptacion::class,
@@ -55,6 +56,12 @@ class PapeleraController extends Controller
         return response()->json([
             'total'  => $totalItems,
             'items'  => $resultado,
+            // Purga automática (papelera:purgar, cada día): tras cuántos días y qué tipos. El resto se
+            // queda hasta que alguien lo borre a mano.
+            'purga'  => [
+                'dias'  => (int) config('papelera.dias_retencion', 30),
+                'tipos' => array_keys(\App\Console\Commands\PurgarPapelera::MODELOS),
+            ],
         ]);
     }
 
@@ -206,6 +213,7 @@ class PapeleraController extends Controller
             'empresas'  => $this->limpiarEmpresa($item),
             'centros'   => $this->limpiarCentro($item),
             'proyectos' => $this->limpiarProyecto($item),
+            'solicitudes' => $item->borrarRetosRecamara(),
             // 'sesiones' (Encuentro) no necesita limpieza manual: equipos.encuentro_id
             // ya tiene ON DELETE SET NULL, y microproyectos ya no apunta a encuentros
             // (ver 2026_07_16_000003_drop_sesion_id_from_microproyectos).

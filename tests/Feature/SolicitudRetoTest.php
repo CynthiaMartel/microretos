@@ -657,6 +657,68 @@ class SolicitudRetoTest extends TestCase
         $this->assertSame($otroCentro, $ajeno->fresh()->centro_id);
     }
 
+    public function test_un_reto_de_la_recamara_a_la_papelera_y_avisos_de_la_bandeja(): void
+    {
+        $solicitud = $this->solicitudRespondida();
+        $reto = Microreto::forceCreate(['titulo' => 'Reto viejo', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => true]);
+        $reto->forceFill(['created_at' => now()->subDays(61)])->save();
+        $publicado = Microreto::forceCreate(['titulo' => 'Publicado', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => false, 'centro_id' => $this->centroId]);
+        $url = "/api/central/solicitudes-reto/{$solicitud->id}";
+
+        // Aviso de antigüedad: en la lista, en el resumen y en la ficha
+        Sanctum::actingAs($this->superadmin);
+        $this->getJson('/api/central/solicitudes-reto')->assertOk()
+            ->assertJsonPath('data.0.retos_recamara_antiguos', 1)
+            ->assertJsonPath('resumen.recamara.antiguos', 1)
+            ->assertJsonPath('resumen.papelera.retos', 0);
+        $ficha = collect($this->getJson($url)->assertOk()->json('data.retos'))->keyBy('uuid');
+        $this->assertTrue($ficha[$reto->uuid]['antiguo']);
+        $this->assertSame(61, $ficha[$reto->uuid]['dias_recamara']);
+        $this->assertFalse($ficha[$publicado->uuid]['antiguo']);
+
+        // Red DuaLab no la envía a la papelera
+        Sanctum::actingAs($this->usuario(User::ROLE_RED_DUALAB, 'red@test.local'));
+        $this->deleteJson("{$url}/retos/{$reto->uuid}")->assertForbidden();
+
+        Sanctum::actingAs($this->usuario(User::ROLE_ADMIN_CENTRAL_DUALAB, 'admincentral@test.local'));
+        // Uno publicado en un centro, no
+        $this->deleteJson("{$url}/retos/{$publicado->uuid}")->assertUnprocessable()->assertJsonValidationErrors('reto');
+        $this->assertNotSoftDeleted($publicado);
+        $this->deleteJson("{$url}/retos/{$reto->uuid}")->assertOk()->assertJsonCount(1, 'data.retos');
+        $this->assertSoftDeleted($reto);
+        $this->getJson('/api/central/solicitudes-reto')->assertOk()
+            ->assertJsonPath('resumen.papelera.retos', 1)
+            ->assertJsonPath('resumen.recamara.antiguos', 0);
+
+        // En la Papelera (superadmin), con el plan de purga, y se restaura
+        Sanctum::actingAs($this->superadmin);
+        $papelera = $this->getJson('/api/papelera')->assertOk()->assertJsonPath('purga.dias', 30);
+        $this->assertContains('solicitudes', $papelera->json('purga.tipos'));
+        $this->assertContains('retos_borrador', $papelera->json('purga.tipos'));
+        $this->assertSame('Reto viejo', $papelera->json('items.microretos.0.nombre'));
+        $this->patchJson("/api/papelera/microretos/{$reto->id}/restaurar")->assertOk();
+        $this->assertTrue($reto->fresh()->en_recamara);
+    }
+
+    public function test_la_purga_borra_la_solicitud_con_sus_retos_de_la_recamara(): void
+    {
+        $solicitud = $this->solicitudRespondida();
+        $recamara = Microreto::forceCreate(['titulo' => 'En la recámara', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => true]);
+        $publicado = Microreto::forceCreate(['titulo' => 'Publicado', 'solicitud_reto_id' => $solicitud->id, 'en_recamara' => false, 'centro_id' => $this->centroId]);
+        $solicitud->delete();
+
+        // Aún dentro del plazo: no se toca
+        $this->artisan('papelera:purgar')->assertSuccessful();
+        $this->assertSoftDeleted($solicitud);
+
+        $solicitud->forceFill(['deleted_at' => now()->subDays(31)])->save();
+        $this->artisan('papelera:purgar')->assertSuccessful();
+        $this->assertDatabaseMissing('solicitudes_reto', ['id' => $solicitud->id]);
+        $this->assertDatabaseMissing('microretos', ['id' => $recamara->id]);
+        // El publicado sigue en la biblioteca de su centro, sin solicitud
+        $this->assertNull($publicado->fresh()->solicitud_reto_id);
+    }
+
     // ── Ayudantes ────────────────────────────────────────────────────────────
 
     private function usuario(int $rol, string $email, ?int $centroId = null): User

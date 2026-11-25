@@ -13,6 +13,8 @@ use App\Models\Familia;
 use App\Models\CentroEducativo;
 use App\Models\Microproyecto;
 use App\Models\Encuentro;
+use App\Models\MicroretoBorrador;
+use App\Models\SolicitudReto;
 use App\Models\User;
 
 class PurgarPapelera extends Command
@@ -23,7 +25,9 @@ class PurgarPapelera extends Command
 
     protected $description = 'Elimina permanentemente los elementos que llevan más de X días en la papelera';
 
-    private array $modelos = [
+    // Lo que se purga solo. Las captaciones no: las firmadas son evidencia legal y las demás se
+    // borran a mano. PapeleraController lo usa para avisar de cuándo se borra cada elemento.
+    public const MODELOS = [
         'empresas'   => Empresa::class,
         'microretos' => Microreto::class,
         'ciclos'     => CicloFormativo::class,
@@ -32,6 +36,9 @@ class PurgarPapelera extends Command
         'proyectos'  => Microproyecto::class,
         'sesiones'   => Encuentro::class,
         'usuarios'   => User::class,
+        // Retos a medida: la solicitud se lleva sus retos de la recámara (ver limpiarRelaciones)
+        'solicitudes'    => SolicitudReto::class,
+        'retos_borrador' => MicroretoBorrador::class,
     ];
 
     public function handle(): int
@@ -47,7 +54,7 @@ class PurgarPapelera extends Command
 
         $totalEliminados = 0;
 
-        foreach ($this->modelos as $tipo => $clase) {
+        foreach (self::MODELOS as $tipo => $clase) {
             $items = $clase::onlyTrashed()
                 ->where('deleted_at', '<=', $limite)
                 ->get();
@@ -90,6 +97,7 @@ class PurgarPapelera extends Command
             // ya tiene ON DELETE SET NULL, y microproyectos ya no apunta a encuentros
             // (ver 2026_07_16_000003_drop_sesion_id_from_microproyectos).
             'usuarios'  => $this->limpiarUsuario($item),
+            'solicitudes' => $item->borrarRetosRecamara(),
             default     => null,
         };
     }

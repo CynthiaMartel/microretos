@@ -13,6 +13,7 @@ use App\Http\Requests\VerRetosSolicitudRequest;
 use App\Http\Resources\MicroretoFichaResource;
 use App\Http\Resources\SolicitudRetoResource;
 use App\Models\CentroEducativo;
+use App\Models\Microreto;
 use App\Models\SolicitudReto;
 use App\Services\ActividadCentralService;
 use App\Services\SolicitudRetoService;
@@ -34,8 +35,16 @@ class SolicitudRetoController extends Controller
     public function index(ListarSolicitudesRetoRequest $request): AnonymousResourceCollection
     {
         $filtros = $request->validated();
+        $limiteRecamara = now()->subDays((int) config('papelera.recamara_dias_aviso', 60));
+        $diasPapelera = (int) config('papelera.dias_retencion', 30);
+        // La primera que borrará la purga: la que lleva más tiempo en la papelera
+        $masAntiguo = collect([
+            SolicitudReto::onlyTrashed()->min('deleted_at'),
+            Microreto::onlyTrashed()->whereNotNull('solicitud_reto_id')->min('deleted_at'),
+        ])->filter()->min();
         $query = SolicitudReto::with('empresa:id,nombre_comercial', 'creadaPor:id,name')
-            ->withCount(['microretos', 'encuentros'])
+            ->withCount(['microretos', 'encuentros',
+                'microretos as recamara_antiguos_count' => fn ($q) => $q->where('en_recamara', true)->where('created_at', '<=', $limiteRecamara)])
             ->latest();
 
         if (!empty($filtros['estado'])) $query->where('estado', $filtros['estado']);
@@ -51,6 +60,18 @@ class SolicitudRetoController extends Controller
                 'por_estado'  => SolicitudReto::selectRaw('estado, count(*) as total')->groupBy('estado')->pluck('total', 'estado'),
                 // Respondidas sin ningún reto todavía: lo que hay que trabajar (contador del panel)
                 'por_trabajar' => SolicitudReto::where('estado', SolicitudReto::ESTADO_RESPONDIDA)->doesntHave('microretos')->count(),
+                // Avisos: retos que llevan tiempo en la recámara (nunca se borran solos) y lo que hay en la
+                // papelera, que se borra del todo a los dias_retencion días (papelera:purgar)
+                'recamara' => [
+                    'dias'     => (int) config('papelera.recamara_dias_aviso', 60),
+                    'antiguos' => Microreto::where('en_recamara', true)->where('created_at', '<=', $limiteRecamara)->whereHas('solicitudReto')->count(),
+                ],
+                'papelera' => [
+                    'dias'          => $diasPapelera,
+                    'solicitudes'   => SolicitudReto::onlyTrashed()->count(),
+                    'retos'         => Microreto::onlyTrashed()->whereNotNull('solicitud_reto_id')->count(),
+                    'proxima_purga' => $masAntiguo ? \Illuminate\Support\Carbon::parse($masAntiguo)->addDays($diasPapelera)->toIso8601String() : null,
+                ],
             ]]);
     }
 
@@ -149,6 +170,20 @@ class SolicitudRetoController extends Controller
             "Envió a la papelera la solicitud de retos de {$solicitud->nombre_docente} ({$solicitud->centro_nombre}).", $solicitud, true);
 
         return response()->json(['data' => ['id' => $solicitud->id, 'en_papelera' => true]]);
+    }
+
+    /**
+     * DELETE /central/solicitudes-reto/{id}/retos/{uuid} — un reto de la recámara a la papelera
+     * (superadmin y Admin Central DuaLab, middleware de la ruta). Se restaura en Red DuaLab → Papelera.
+     */
+    public function eliminarReto(int $id, string $uuid): SolicitudRetoResource
+    {
+        $solicitud = SolicitudReto::findOrFail($id);
+        $reto = $this->solicitudes->retoAPapelera($solicitud, $uuid);
+        $this->actividad->registrar(request()->user(), 'retos', 'reto_papelera',
+            "Envió a la papelera el reto «{$reto->titulo}» de la solicitud de {$solicitud->nombre_docente}.", $solicitud, true);
+
+        return new SolicitudRetoResource($this->ficha($id));
     }
 
     /**
