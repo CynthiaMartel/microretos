@@ -26,13 +26,11 @@ dist-central
 *.sln
 *.sw?
 
-# Iconos generados por npm run iconos (se copian a public/); solo se versiona la imagen fuente
-pwa/*
+# Iconos generados por npm run iconos (se copian a public/); solo se versiona la imagen fuente.
+# El código de pwa/ (.mjs de las configuraciones de Vite) sí se versiona.
+pwa/*.png
+pwa/*.ico
 !pwa/icono-dualab.png
-!pwa/iconos-herramientas.mjs
-# Código de las configuraciones de Vite de las herramientas (no son iconos generados)
-!pwa/pwaHerramienta.mjs
-!pwa/versionarIconos.mjs
 
 # Carpeta temporal de npm run iconos:comercial
 .pwa-comercial/
