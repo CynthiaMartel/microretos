@@ -13,6 +13,7 @@ import VistaPreviaSolicitud from '../components/VistaPreviaSolicitud.vue'
 import GenerarRetosPeticion from '../components/GenerarRetosPeticion.vue'
 import ElegirEmpresaPeticion from '../components/ElegirEmpresaPeticion.vue'
 import AvisoAccionCritica from '../../src/components/AvisoAccionCritica.vue'
+import AvisarDocenteModal from '../components/AvisarDocenteModal.vue'
 import { getCentros } from '../../src/services/datosFPService.js'
 import { useAuthStore, ROLE_SUPERADMIN, ROLE_ADMIN_CENTRAL_DUALAB } from '../../src/stores/auth.js'
 import {
@@ -101,9 +102,17 @@ const avisoRetos = ref('')
 // Enlace del último aviso: el mismo que le llega por correo, para pasarlo también por otro canal
 const enlaceAviso = ref('')
 const copiadoAviso = ref(false)
+// «Avisar al docente»: modal de confirmación (por si se pulsa sin querer) y después el resultado
+const estadoAviso = ref(null)   // null · 'confirmar' · 'enviando' · 'ok' · 'error'
+const errorAviso = ref('')
+const titulosAvisar = computed(() => (s.value?.retos ?? []).filter(r => retosElegidos.value.includes(r.uuid)).map(r => r.titulo))
+function pedirAvisar() {
+  if (!retosElegidos.value.length) return
+  errorAviso.value = ''
+  estadoAviso.value = 'confirmar'
+}
 async function avisar() {
-  const n = retosElegidos.value.length
-  if (!n || !confirm(`Se enviará a ${s.value.email_docente} el correo «Tus retos están listos» con ${n} ${n === 1 ? 'reto' : 'retos'}. ¿Enviar?`)) return
+  estadoAviso.value = 'enviando'
   guardando.value = true
   avisoRetos.value = ''
   enlaceAviso.value = ''
@@ -115,8 +124,11 @@ async function avisar() {
     retosElegidos.value = []
     mensaje.value = ''
     avisoRetos.value = 'Aviso en camino: el correo sale por info@ y puede tardar unos minutos en llegar.'
+    estadoAviso.value = 'ok'
   } catch (e) {
     avisoRetos.value = e.response?.data?.message || 'No se ha podido enviar el aviso.'
+    errorAviso.value = e.response?.data?.message || e.response?.data?.error || ''
+    estadoAviso.value = 'error'
   } finally {
     guardando.value = false
   }
@@ -400,7 +412,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                   <label for="sol-mensaje" class="field-label mt-4">Unas líneas para el docente (opcional)</label>
                   <textarea id="sol-mensaje" v-model="mensaje" maxlength="1000" rows="3" class="field-input"></textarea>
                   <div class="mt-3 flex flex-wrap gap-2">
-                    <button type="button" class="accion-principal" :disabled="guardando || !retosElegidos.length" @click="avisar">Avisar al docente</button>
+                    <button type="button" class="accion-principal" :disabled="guardando || !retosElegidos.length" @click="pedirAvisar">Avisar al docente</button>
                     <button type="button" class="accion-secundaria" :disabled="cargandoVistaPrevia" @click="verRetosComoDocente">
                       {{ cargandoVistaPrevia ? 'Preparando…' : retosElegidos.length ? 'Ver cómo los verá' : 'Ver cómo los verá (todos)' }}
                     </button>
@@ -519,5 +531,7 @@ const volver = computed(() => ({ name: 'solicitudes-reto', query: route.query })
                           @cerrar="viendoComoDocente = false" />
     <RedactarCorreo v-if="s" :abierto="escribiendo" modo="nuevo" :contacto="contactoDocente"
                     @cerrar="escribiendo = false" @enviado="correoEnviado" />
+    <AvisarDocenteModal v-if="s" :estado="estadoAviso" :docente="s.nombre_docente" :email="s.email_docente"
+                        :retos="titulosAvisar" :error="errorAviso" @confirmar="avisar" @cerrar="estadoAviso = null" />
   </div>
 </template>
