@@ -323,6 +323,7 @@ onMounted(cargarPapelera)
           <!-- Vaciar papelera -->
           <button
             v-if="total > 0 && !cargando"
+            data-tour="pap-vaciar"
             @click="abrirModalVaciar"
             class="flex items-center gap-2 px-4 py-2 rounded-full
                    bg-red-50 border border-red-200 text-red-600
@@ -356,7 +357,6 @@ onMounted(cargarPapelera)
 
         </div>
         <!-- Un bloque por origen, separados por una línea -->
-            data-tour="pap-vaciar"
         <div v-for="g in GRUPOS" :key="g.clave" :data-tour="`pap-grupo-${g.clave}`" class="mt-3 border-t border-gray-100 pt-3">
           <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400">{{ g.titulo }}</p>
           <div class="flex flex-wrap gap-1.5">
@@ -427,6 +427,7 @@ onMounted(cargarPapelera)
         <div
           v-for="item in itemsFiltrados"
           :key="item.tipo + item.id"
+          :data-tour="item === itemsFiltrados[0] ? 'pap-item' : undefined"
           class="bg-white rounded-2xl border border-gray-100 shadow-sm
                  flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4
                  transition-all duration-150 hover:border-gray-200 hover:shadow"
@@ -465,7 +466,6 @@ onMounted(cargarPapelera)
                  class="w-4.5 h-4.5" :class="TIPOS[item.tipo]?.textColor"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round"
-          :data-tour="item === itemsFiltrados[0] ? 'pap-item' : undefined"
                 d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
             </svg>
             <!-- Centro -->
@@ -536,6 +536,7 @@ onMounted(cargarPapelera)
             <!-- Restaurar -->
             <button
               @click="restaurar(item)"
+              :data-tour="item === itemsFiltrados[0] ? 'pap-restaurar' : undefined"
               :disabled="restaurando === item.id + item.tipo"
               aria-label="Restaurar" title="Restaurar"
               class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
@@ -559,6 +560,7 @@ onMounted(cargarPapelera)
             <!-- Eliminar permanentemente -->
             <button
               @click="abrirModalEliminar(item)"
+              :data-tour="item === itemsFiltrados[0] ? 'pap-eliminar' : undefined"
               aria-label="Eliminar permanentemente" title="Eliminar permanentemente"
               class="flex items-center justify-center gap-1.5 w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 rounded-full
                      bg-red-50 border border-red-100 text-red-500
@@ -575,7 +577,6 @@ onMounted(cargarPapelera)
           </div>
         </div>
 
-              :data-tour="item === itemsFiltrados[0] ? 'pap-restaurar' : undefined"
       </div>
     </div>
 
@@ -599,7 +600,6 @@ onMounted(cargarPapelera)
               <h2 class="text-base font-black text-azul-noche">Eliminar permanentemente</h2>
               <p class="text-xs text-gray-400">Esta acción no se puede deshacer</p>
             </div>
-              :data-tour="item === itemsFiltrados[0] ? 'pap-eliminar' : undefined"
           </div>
 
           <p class="text-sm text-gray-600 mb-1">
