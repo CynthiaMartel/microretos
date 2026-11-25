@@ -2094,17 +2094,17 @@ watch(modoGuia, async (v) => {
     <div class="max-w-6xl mx-auto">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Generador de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
+      <CabeceraSeccion data-tour="gen-cabecera" titulo="Generador de" destacado="Retos" color="text-centros" volver="/seccion/retos-proyectos"
                        subtitulo="Convierte problemas empresariales reales en retos educativos clasificados por el currículo oficial."
                        class="mb-4 md:mb-5">
         <!-- Superadmin: rellenar el generador con lo que pidió un docente en su solicitud de retos -->
-        <button v-if="authStore.isSuperAdmin" type="button" class="accion-secundaria" :aria-expanded="panelSolicitudes"
+        <button v-if="authStore.isSuperAdmin" data-tour="gen-solicitudes" type="button" class="accion-secundaria" :aria-expanded="panelSolicitudes"
                 aria-controls="panel-solicitudes" @click="abrirPanelSolicitudes">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
           Solicitudes del profesorado
         </button>
         <!-- Ayuda: mismo botón y sitio en todas las vistas -->
-        <button type="button" ref="refBtnGuia" @click="modoGuia = true; pasoGuia = 1"
+        <button type="button" ref="refBtnGuia" data-tour="gen-ayuda" @click="modoGuia = true; pasoGuia = 1"
                 :class="tourTargetActivo === 'refBtnGuia' ? 'tour-active' : ''"
                 class="accion-secundaria" title="Guía paso a paso de esta pantalla">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -2150,7 +2150,7 @@ watch(modoGuia, async (v) => {
         </ul>
       </section>
 
-      <div class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
+      <div data-tour="gen-pasos" class="max-w-3xl mx-auto mb-5 md:mb-6 relative transition-all duration-1000 delay-500 ease-out transform"
            :class="isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'">
         <div class="flex justify-between items-center relative z-10">
           <button type="button" v-for="step in totalPasos" :key="step"
@@ -2231,7 +2231,7 @@ watch(modoGuia, async (v) => {
               <!-- FILA 1: Centro educativo + acciones generales (en la misma línea en escritorio) -->
               <div class="mb-4 flex flex-col xl:flex-row xl:items-end gap-3">
                 <!-- PASO 1: Centro educativo obligatorio -->
-                <div ref="refCentroEducativo"
+                <div ref="refCentroEducativo" data-tour="gen-centro"
                      class="w-full min-w-0 xl:max-w-sm rounded-2xl transition-all duration-300"
                      :class="[
                        !centroFiltro && !esModoDemo ? 'step-glow-active' : '',
@@ -2255,7 +2255,7 @@ watch(modoGuia, async (v) => {
                   </select>
                 </div>
 
-                <div class="flex flex-wrap xl:flex-nowrap xl:shrink-0 items-center gap-2"
+                <div data-tour="gen-demo" class="flex flex-wrap xl:flex-nowrap xl:shrink-0 items-center gap-2"
                      :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'acciones' }">
                   <!-- Cargar Demo -->
                   <div class="relative" ref="demoSelectorRef"
@@ -2305,7 +2305,7 @@ watch(modoGuia, async (v) => {
               </div>
 
               <!-- FILA 2: Elige empresa — a lo ancho del grid, coherente con las cards de resultados -->
-              <div class="mb-4 relative z-20 rounded-2xl transition-all duration-300" ref="buscadorRef"
+              <div class="mb-4 relative z-20 rounded-2xl transition-all duration-300" ref="buscadorRef" data-tour="gen-empresa"
                    :class="[
                      centroFiltro && !seleccion.empresaId && !esModoDemo ? 'step-glow-empresa' : '',
                      tourTargetActivo === 'refBuscadorEmpresa' ? 'tour-active' : '',
@@ -2354,7 +2354,7 @@ watch(modoGuia, async (v) => {
                     </div>
                   </div>
 
-                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && !borradorIA"
+                  <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) && !borradorIA" data-tour="gen-nueva-empresa"
                        class="mb-3 rounded-3xl border border-gray-100 bg-gray-50/60 p-3 sm:p-4">
                     <!-- Dos vías para AÑADIR una empresa nueva al centro (no son un filtro: lo que se
                          crea o copia aquí acaba en «Empresas de mi centro» con la etiqueta Ficticia).
@@ -2482,7 +2482,7 @@ watch(modoGuia, async (v) => {
 
                   <!-- Empresas del centro: ocultas mientras se crea con IA, se elige del catálogo o hay borrador -->
                   <template v-if="!ocultarEmpresasCentro">
-                  <div :class="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) ? 'rounded-3xl border border-gray-100 bg-gray-50/60 p-4 sm:p-6' : ''">
+                  <div data-tour="gen-empresas-centro" :class="centroFiltro && !esModoDemo && !estaPasoBloqueado(1) ? 'rounded-3xl border border-gray-100 bg-gray-50/60 p-4 sm:p-6' : ''">
                   <div v-if="centroFiltro && !esModoDemo && !estaPasoBloqueado(1)" class="flex items-center gap-2 min-w-0 mb-3">
                     <h3 class="text-sm font-black uppercase tracking-tight text-azul-noche">
                       Empresas de mi centro educativo
@@ -2920,7 +2920,7 @@ watch(modoGuia, async (v) => {
                 Entrevista de Diagnóstico
               </div>
               
-              <div ref="refEncabezadoProblema" class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 mt-4 xl:mt-0"
+              <div ref="refEncabezadoProblema" data-tour="gen-diagnostico" class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 mt-4 xl:mt-0"
                    :class="{ 'tour-active': tourTargetActivo === 'refEncabezadoProblema' }">
                 <div class="flex items-center gap-4">
                   <div class="w-12 h-12 rounded-2xl bg-primary-400/15 flex items-center justify-center text-centros">
@@ -2932,7 +2932,7 @@ watch(modoGuia, async (v) => {
                 <div class="flex flex-wrap items-center gap-2">
                   <!-- Generar diagnóstico con IA: solo con el diagnóstico editable (no hay uno previo
                        completo, o se ha abierto con «Editar empresa»). Rellena P1–P5 simulando la reunión. -->
-                  <button v-if="mostrarGenerarDiagnostico" ref="refInfoSimulada" type="button"
+                  <button v-if="mostrarGenerarDiagnostico" ref="refInfoSimulada" data-tour="gen-diag-ia" type="button"
                     @click="toggleInfoSimulada()"
                     :disabled="cargandoSimulacion"
                     :class="[
@@ -3185,7 +3185,7 @@ watch(modoGuia, async (v) => {
                 <!-- P5: obligatoria. Con el diagnóstico oculto se muestra si la empresa no la
                      tiene recogida (editable solo para este reto) o con «Ver más» (solo lectura). -->
                 <div v-if="!diagnosticoOculto || verDiagnostico || faltaP5"
-                     ref="refExpectativas" class="bg-gray-50 p-6 rounded-3xl border"
+                     ref="refExpectativas" data-tour="gen-p5" class="bg-gray-50 p-6 rounded-3xl border"
                      :class="[!seleccion.expectativasAlumno && !esModoDemo ? 'border-red-200' : 'border-gray-100', tourTargetActivo === 'refExpectativas' ? 'tour-active' : '']">
                   <p v-if="faltaP5" class="text-xs text-gray-500 mb-3">
                     Esta empresa no tiene recogida esta pregunta. Complétala para este reto
@@ -3256,7 +3256,7 @@ watch(modoGuia, async (v) => {
               <AvisoModoDemo v-if="esModoDemo" class="mb-6" @salir="limpiarFormulario" />
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div ref="refFamiliaSelect" class="min-w-0"
+                <div ref="refFamiliaSelect" data-tour="gen-familia" class="min-w-0"
                      :class="{ 'tour-active': tourTargetActivo === 'refFamiliaSelect' }">
                   <label class="label-style">Familia Profesional Asociada *</label>
                   <select v-model="seleccion.familia" :disabled="esModoDemo" :title="tituloDemo" class="input-style">
@@ -3371,7 +3371,7 @@ watch(modoGuia, async (v) => {
                   </template>
                 </div>
 
-                <div ref="refNivelExigencia" class="min-w-0"
+                <div ref="refNivelExigencia" data-tour="gen-nivel" class="min-w-0"
                      :class="{ 'tour-active': tourTargetActivo === 'refNivelExigencia' }">
                   <label class="label-style">Nivel de exigencia del reto *</label>
                   <select v-model="seleccion.nivelGrupo" :disabled="esModoDemo" :title="tituloDemo" class="input-style">
@@ -3435,7 +3435,7 @@ watch(modoGuia, async (v) => {
                   </div>
                 </div>
 
-                <div ref="refCicloGrid" class="md:col-span-2 min-w-0 mt-4"
+                <div ref="refCicloGrid" data-tour="gen-ciclo" class="md:col-span-2 min-w-0 mt-4"
                      :class="{ 'tour-active': tourTargetActivo === 'refCicloGrid' }">
                   <label class="label-style !mb-4">Ciclo Formativo Implicado *</label>
 
@@ -3513,7 +3513,7 @@ watch(modoGuia, async (v) => {
                   </p>
                 </div>
 
-                <div ref="refModulosSection" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
+                <div ref="refModulosSection" data-tour="gen-modulos" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
                      :class="{ 'tour-active': tourTargetActivo === 'refModulosSection' }">
                   <div class="w-full bg-gray-50 p-4 sm:p-6 rounded-3xl border border-gray-200 relative">
                     <!-- Cabecera: switch "Elige la IA" ↔ "Manual" (por defecto, la IA) -->
@@ -3664,7 +3664,7 @@ watch(modoGuia, async (v) => {
                   </div>
                 </div>
 
-                <div ref="refCantidadVariantes" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
+                <div ref="refCantidadVariantes" data-tour="gen-cantidad" class="md:col-span-2 min-w-0 mt-2 pt-6 border-t border-gray-100"
                      :class="{ 'tour-active': tourTargetActivo === 'refCantidadVariantes' }">
                   <div class="w-full md:w-1/3">
                     <label class="label-style !mb-3 text-[#1F2937]">Cantidad de Variantes a Generar *</label>
@@ -3726,13 +3726,13 @@ watch(modoGuia, async (v) => {
             VOLVER
           </button>
 
-          <button v-if="pasoActual < totalPasos" @click="avanzarPaso"
+          <button v-if="pasoActual < totalPasos" data-tour="gen-siguiente" @click="avanzarPaso"
             :disabled="!pasoActualValido"
             class="btn-paso">
             SIGUIENTE PASO
           </button>
 
-          <button ref="refBtnGenerar" v-if="pasoActual === totalPasos" @click="esModoDemo ? generarRetoDemo() : generarReto()" :disabled="!paso3Valido || cargando"
+          <button ref="refBtnGenerar" data-tour="gen-procesar" v-if="pasoActual === totalPasos" @click="esModoDemo ? generarRetoDemo() : generarReto()" :disabled="!paso3Valido || cargando"
             :class="[esModoDemo ? 'from-[#1F2937] to-[#374151] shadow-[0_10px_30px_rgba(31,41,55,0.3)] hover:shadow-[0_15px_40px_rgba(31,41,55,0.4)]' : 'from-centros to-primary-400 shadow-[0_10px_30px_rgba(48,114,170,0.3)] hover:shadow-[0_15px_40px_rgba(107,164,213,0.4)]', tourTargetActivo === 'refBtnGenerar' ? 'tour-active' : '']"
             class="btn-paso bg-gradient-to-r">
             <template v-if="!cargando">
@@ -3757,7 +3757,7 @@ watch(modoGuia, async (v) => {
       </div>
 
       <!-- Variantes generadas: miniaturas con lo esencial; la ficha completa se abre en un modal -->
-      <div v-if="microretosGenerados.length > 0" ref="refGaleriaRetos" class="mt-16 sm:mt-24 pb-20 font-sans scroll-mt-20">
+      <div v-if="microretosGenerados.length > 0" ref="refGaleriaRetos" data-tour="gen-galeria" class="mt-16 sm:mt-24 pb-20 font-sans scroll-mt-20">
         <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div class="min-w-0">
             <h3 class="text-xl sm:text-2xl font-black text-azul-noche">
@@ -3786,7 +3786,7 @@ watch(modoGuia, async (v) => {
 
         <!-- 3 columnas solo en 2xl: con SidePanel y columna de avisos, en xl quedan ~670px -->
         <div class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
-          <article v-for="(reto, index) in microretosGenerados" :key="index"
+          <article v-for="(reto, index) in microretosGenerados" :key="index" :data-tour="index === 0 ? 'gen-variante' : undefined"
             class="group flex flex-col min-w-0 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-centros/50 transition-all animate-in fade-in duration-500">
             <button type="button" @click="abrirReto(index)" class="flex-1 text-left p-5 sm:p-6 rounded-t-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-centros">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -3826,7 +3826,7 @@ watch(modoGuia, async (v) => {
                 <span v-else-if="reto._ui_guardado">✓ Guardado</span>
                 <span v-else>Guardar</span>
               </button>
-              <button v-if="puedeTrabajar(reto)" type="button" @click="trabajarReto(index)" :disabled="reto._ui_guardando"
+              <button v-if="puedeTrabajar(reto)" :data-tour="index === 0 ? 'gen-trabajar' : undefined" type="button" @click="trabajarReto(index)" :disabled="reto._ui_guardando"
                 class="min-h-[36px] px-4 py-2 rounded-full bg-centros text-white text-[11px] font-black uppercase tracking-widest hover:bg-[#1F2937] transition-colors disabled:opacity-50">
                 Trabajar este reto
               </button>
@@ -3893,7 +3893,7 @@ watch(modoGuia, async (v) => {
 
     <!-- Historial de avisos. A la derecha porque la izquierda ya la ocupa el menú lateral.
          xl: columna fija junto al formulario. < xl: botón flotante desplegable. -->
-    <aside aria-label="Historial de avisos"
+    <aside data-tour="gen-avisos" aria-label="Historial de avisos"
       class="fixed top-20 right-4 z-[60] flex flex-col items-end max-w-[calc(100vw-2rem)]
              xl:w-52 xl:items-stretch">
       <div class="flex items-center gap-1.5 xl:justify-between xl:mb-2">

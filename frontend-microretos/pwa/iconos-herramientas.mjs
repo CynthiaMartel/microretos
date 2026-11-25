@@ -23,9 +23,10 @@ const HERRAMIENTAS = {
     color: '#3072AA', letra: 'N', destino: 'nexo/public', pwa: true, barra: 'nexo/icono-barra.png',
     degradado: ['#3072AA', '#19A7A8', '#509928', '#FF8920'],
   },
-  // Misma build que la web pública: el router cambia el favicon al entrar en /gestion-web
+  // Misma build que la web pública: el router cambia el favicon y enlaza el manifest
+  // (gestion-web-icono/manifest.webmanifest) al entrar en /gestion-web
   'gestion-web': {
-    color: '#19A7A8', letra: 'W', destino: '../FRONTOFFICE/dualab_proyecto/frontend/public/gestion-web-icono', sinIco: true,
+    color: '#19A7A8', letra: 'W', destino: '../FRONTOFFICE/dualab_proyecto/frontend/public/gestion-web-icono', sinIco: true, pwa: true,
     barra: '../FRONTOFFICE/dualab_proyecto/frontend/src/assets/gestion-web-barra.png',
   },
 }

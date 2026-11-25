@@ -12,12 +12,12 @@ const router = useRouter()
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Plan de proyecto" titulo="Agenda de" destacado="prácticas" color="text-centros"
+      <CabeceraSeccion data-tour="agp-cabecera" antetitulo="Plan de proyecto" titulo="Agenda de" destacado="prácticas" color="text-centros"
 :volver="'/seccion/planes-proyecto'"
                        subtitulo="Cómo avanza en la empresa el alumnado de tus planes: hitos, fase de cada grupo y quién va con retraso.">
-        <AyudaVista titulo="Agenda de prácticas: el avance en la empresa" :textos="['El seguimiento del alumnado en las prácticas: en qué fase va cada grupo, quién va con retraso según los hitos y las horas anotadas.', 'Para saber cómo avanza el alumnado en la empresa. Lo que tienes cada día (encuentros, hitos, notas) está en el Calendario.']" />
+        <AyudaVista data-tour="agp-ayuda" titulo="Agenda de prácticas: el avance en la empresa" :textos="['El seguimiento del alumnado en las prácticas: en qué fase va cada grupo, quién va con retraso según los hitos y las horas anotadas.', 'Para saber cómo avanza el alumnado en la empresa. Lo que tienes cada día (encuentros, hitos, notas) está en el Calendario.']" />
       </CabeceraSeccion>
-      <AgendaPracticas @ver-grupos="id => router.push({ name: 'mis-grupos-detalle', params: { id } })" />
+      <AgendaPracticas data-tour="agp-agenda" @ver-grupos="id => router.push({ name: 'mis-grupos-detalle', params: { id } })" />
     </div>
   </div>
 </template>

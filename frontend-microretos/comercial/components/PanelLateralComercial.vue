@@ -6,6 +6,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import logo from '../../src/assets/logo_colores.png'
+import BotonInstalarApp from '../../src/components/BotonInstalarApp.vue'
 
 const abierto = defineModel('abierto', { type: Boolean, default: false })
 
@@ -94,7 +95,7 @@ watch(() => route.fullPath, () => { abierto.value = false })
         </div>
       </template>
 
-      <!-- «Instalar app» está en la cabecera (BotonInstalarApp); este hueco mantiene el banner abajo -->
+      <!-- Este hueco mantiene el banner abajo -->
       <div class="mt-auto shrink-0" aria-hidden="true"></div>
 
       <!-- Banner de marca al fondo del panel, como en el SidePanel de DuaLab: verde en empresas, azul en centros -->
@@ -111,6 +112,11 @@ watch(() => route.fullPath, () => { abierto.value = false })
         </div>
       </div>
     </nav>
+
+    <!-- Instalar como app: fijo al pie, fuera del scroll del nav, para verse siempre sin desplazarse -->
+    <div class="shrink-0 px-3 pb-3">
+      <BotonInstalarApp variante="panel" nombre="DuaLab Comercial" ruta-inicio="/" />
+    </div>
   </aside>
 
 </template>

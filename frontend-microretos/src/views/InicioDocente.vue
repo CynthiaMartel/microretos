@@ -512,7 +512,7 @@ const irA = (ruta) => router.push(ruta)
     <div class="@container/page mx-auto max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8">
 
       <!-- Sin «módulos que imparte»: modal la primera vez y franja mientras falten -->
-      <AvisoModulosDocente />
+      <AvisoModulosDocente data-tour="ini-aviso-modulos" />
 
 
 
@@ -532,7 +532,7 @@ const irA = (ruta) => router.push(ruta)
         <div class="contents @3xl/page:flex @3xl/page:min-w-0 @3xl/page:flex-col @3xl/page:gap-4">
           <!-- ══ Bienvenida (como idea_dashboard.png), sin recuadro: saludo y botones a la
                izquierda; foto real con cintas de los colores del logo y nota manuscrita a la derecha ══ -->
-          <section class="@container relative order-1 @3xl/page:order-none overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-transparent @3xl/page:min-h-[230px]">
+          <section data-tour="ini-bienvenida" class="@container relative order-1 @3xl/page:order-none overflow-hidden rounded-2xl bg-gradient-to-r from-[#E4EEF9] via-[#EDF3FA] to-transparent @3xl/page:min-h-[230px]">
             <!-- En ancho: la foto se funde suavemente hacia la izquierda (las cintas no, para conservar su color)
                  y todo el bloque (foto + cintas) se desvanece en el borde derecho para integrarse con la página -->
             <div class="relative h-36 sm:h-44 @lg:absolute @lg:inset-y-0 @lg:right-0 @lg:h-auto @lg:w-[52%] @lg:[mask-image:linear-gradient(to_right,black_82%,transparent)] @lg:[-webkit-mask-image:linear-gradient(to_right,black_82%,transparent)]">
@@ -586,12 +586,12 @@ const irA = (ruta) => router.push(ruta)
                 impulsar la colaboración con empresas y seguir el progreso de tu alumnado.
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
-                <button @click="irA('/proyectos/crear')"
+                <button data-tour="ini-trabajar-reto" @click="irA('/proyectos/crear')"
                         class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-centros px-4 text-sm font-semibold text-white shadow-md shadow-centros/25 hover:bg-centros/90">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
                   Trabajar un reto
                 </button>
-                <button @click="irA('/encuentros/crear')"
+                <button data-tour="ini-nuevo-encuentro" @click="irA('/encuentros/crear')"
                         class="flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-centros/30 bg-white px-4 text-sm font-semibold text-centros shadow-sm hover:bg-centros/5">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
                   Nuevo encuentro
@@ -602,7 +602,7 @@ const irA = (ruta) => router.push(ruta)
 
           <!-- Resumen del curso (como "Resumen del centro" en idea_dashboard.png): icono a la izquierda,
                título arriba y cifra debajo; sin porcentajes. Incluye el selector de curso. -->
-          <section class="card @container/resumen order-2 p-4 @3xl/page:order-none" aria-labelledby="titulo-resumen">
+          <section data-tour="ini-resumen" class="card @container/resumen order-2 p-4 @3xl/page:order-none" aria-labelledby="titulo-resumen">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 id="titulo-resumen" class="card-title">Resumen del curso</h2>
               <label class="sr-only" for="curso-sel">Curso académico</label>
@@ -699,7 +699,7 @@ const irA = (ruta) => router.push(ruta)
                 </template>
               </article>
 
-              <article class="card @container flex h-full min-w-0 flex-col p-4">
+              <article data-tour="ini-estado" class="card @container flex h-full min-w-0 flex-col p-4">
                 <div class="mb-4 flex items-center justify-between gap-3">
                   <h2 class="card-title">Estado de mis retos</h2>
                   <button class="link shrink-0" @click="irA('/proyectos')">Ver todos</button>
@@ -754,7 +754,7 @@ const irA = (ruta) => router.push(ruta)
           <!-- Proyectos | herramientas -->
           <div class="@container/fila order-6 @3xl/page:order-none @3xl/page:flex-1">
             <div class="grid h-full grid-cols-1 gap-4 @lg/fila:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-              <article class="card @container flex h-full min-w-0 flex-col p-4">
+              <article data-tour="ini-mis-retos" class="card @container flex h-full min-w-0 flex-col p-4">
                 <div class="mb-3 flex items-center justify-between gap-3">
                   <h2 class="card-title">Mis retos <span class="font-normal text-texto-secundario">(ajuste curricular)</span></h2>
                   <button class="link shrink-0" @click="verTodosProyectos">Ver todos</button>
@@ -819,7 +819,7 @@ const irA = (ruta) => router.push(ruta)
               </article>
 
               <!-- Herramientas: junto a Proyectos, botones tipo icono de app; la explicación sale al pasar el cursor -->
-              <article class="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#F6F9FD] to-white p-4 shadow-sm ring-1 ring-gray-200/70">
+              <article data-tour="ini-herramientas" class="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-[#F6F9FD] to-white p-4 shadow-sm ring-1 ring-gray-200/70">
                 <!-- Fondo casi blanco con un toque azul muy suave y una llave de marca de agua apenas visible;
                      barra superior con los colores del logo -->
                 <svg aria-hidden="true" class="pointer-events-none absolute -bottom-4 -right-4 h-32 w-32 -rotate-12 text-centros/5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg>
@@ -849,7 +849,7 @@ const irA = (ruta) => router.push(ruta)
         <!-- ══ Columna lateral (compacta): encuentros + calendario, tareas, empresas, reto destacado ══ -->
         <div class="contents @3xl/page:flex @3xl/page:min-w-0 @3xl/page:flex-col @3xl/page:gap-4">
           <!-- Próximos encuentros (los 2 más cercanos) + calendario en la misma tarjeta, compacta -->
-          <article class="order-4 @3xl/page:order-none card flex min-w-0 flex-col p-4">
+          <article data-tour="ini-encuentros" class="order-4 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
               <h2 class="card-title">Próximos encuentros</h2>
               <button class="link shrink-0" @click="irA('/encuentros')">Ver todos</button>
@@ -942,7 +942,7 @@ const irA = (ruta) => router.push(ruta)
             </div>
           </article>
 
-          <article class="order-5 @3xl/page:order-none card flex min-w-0 flex-col p-4">
+          <article data-tour="ini-tareas" class="order-5 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-2">
               <h2 class="card-title text-base">Tareas pendientes</h2>
               <div class="flex items-center gap-1">
@@ -1000,7 +1000,7 @@ const irA = (ruta) => router.push(ruta)
             </form>
           </article>
 
-          <article class="order-7 @3xl/page:order-none card flex min-w-0 flex-col p-4">
+          <article data-tour="ini-empresas" class="order-7 @3xl/page:order-none card flex min-w-0 flex-col p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
               <h2 class="card-title text-base">Empresas colaboradoras</h2>
               <button class="link shrink-0" @click="irA('/empresas')">Ver todas</button>
@@ -1029,7 +1029,7 @@ const irA = (ruta) => router.push(ruta)
           </article>
 
           <!-- Reto destacado de la semana: tarjeta cuadrada bajo Empresas colaboradoras (ocupa el alto restante) -->
-          <article v-if="retoDestacado" class="relative order-8 flex min-w-0 flex-col @3xl/page:order-none @3xl/page:max-h-[340px] @3xl/page:flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF1E2] via-[#FFF8F1] to-white p-4 shadow-sm ring-1 ring-alumnos/30">
+          <article v-if="retoDestacado" data-tour="ini-reto-destacado" class="relative order-8 flex min-w-0 flex-col @3xl/page:order-none @3xl/page:max-h-[340px] @3xl/page:flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-[#FFF1E2] via-[#FFF8F1] to-white p-4 shadow-sm ring-1 ring-alumnos/30">
             <!-- Destacado con el color de retos (naranja) en lugar de la barra del logo: fondo cálido,
                  borde naranja, pastilla y un rayo grande de marca de agua -->
             <svg aria-hidden="true" class="pointer-events-none absolute -right-5 -top-3 h-28 w-28 rotate-12 text-alumnos/10" fill="currentColor" viewBox="0 0 24 24"><path :d="ICONOS.chispa" /></svg>
@@ -1105,7 +1105,7 @@ const irA = (ruta) => router.push(ruta)
             </div>
           </section>
 
-          <article class="card order-1 h-full min-w-0 p-3 @3xl/page:order-none">
+          <article data-tour="ini-recursos" class="card order-1 h-full min-w-0 p-3 @3xl/page:order-none">
             <h2 class="card-title mb-2 text-base">Recursos destacados</h2>
             <ul class="space-y-1">
               <li>

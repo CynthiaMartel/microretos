@@ -289,7 +289,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Evaluación curricular" destacado="y diagnósticos" color="text-administraciones" volver="/seccion/encuentros-grupos"
+      <CabeceraSeccion data-tour="diag-cabecera" titulo="Evaluación curricular" destacado="y diagnósticos" color="text-administraciones" volver="/seccion/encuentros-grupos"
                        subtitulo="Evalúa los RA y CE de cada grupo y genera o consulta su diagnóstico final, sin entrar en cada encuentro." />
 
       <p v-if="avisoGuardado" role="status"
@@ -298,12 +298,12 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
       </p>
 
       <!-- Filtros principales (FiltrosPanel común) -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por grupo, reto ajustado, ciclo o módulo…">
+      <FiltrosPanel data-tour="diag-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar por grupo, reto ajustado, ciclo o módulo…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
             <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
-            <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+            <button type="button" data-tour="diag-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                     aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                     aria-label="Más filtros"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
@@ -331,7 +331,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="diag-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:overflow-y-auto xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -388,7 +388,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
 
         <!-- ═══ Resultados ═══ -->
         <section id="resultados-diagnosticos" class="min-w-0 flex-1 scroll-mt-24" aria-label="Grupos">
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tour="diag-resultados" class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
               <template v-if="cargando">Cargando grupos…</template>
               <template v-else>{{ filtrados.length }} {{ filtrados.length === 1 ? 'encuentro' : 'encuentros' }} <span class="font-normal text-texto-secundario">· {{ totalGruposVisibles }} {{ totalGruposVisibles === 1 ? 'grupo' : 'grupos' }}<template v-if="totalPendientes"> · {{ totalPendientes }} pendiente{{ totalPendientes === 1 ? '' : 's' }} de evaluar</template></span></template>
@@ -444,7 +444,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
           <!-- Tarjetas -->
           <!-- Sin items-start: las tarjetas de cada fila se estiran a la misma altura y el pie queda abajo -->
           <ul v-else-if="!error" class="grid grid-cols-1 gap-4" :class="columnas">
-            <li v-for="x in itemsPagina" :key="claveDe(x)"
+            <li v-for="(x, i) in itemsPagina" :key="claveDe(x)" :data-tour="i === 0 ? 'diag-tarjeta' : undefined"
                 class="relative flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                 :class="{ 'z-10': menuDiag === claveDe(x) }">
               <!-- Cabecera: el encuentro (título de su proyecto) y su nota media -->
@@ -475,8 +475,8 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
               <FamiliaModulos class="mt-3 min-h-[4.125rem]" :familia="etiquetaFamilia(familiaDe(x))" :modulos="modulosDe(x)" :modulo-activo="filtroModulo" />
 
               <!-- Grupos del encuentro: uno por fila, con su estado curricular y sus acciones -->
-              <ul class="mt-3 divide-y divide-borde rounded-xl border border-borde" :aria-label="`Grupos de ${tituloEncuentro(x)}`">
-                <li v-for="e in gruposMostrados(x)" :key="e.id" class="min-w-0 p-3">
+              <ul :data-tour="i === 0 ? 'diag-grupos' : undefined" class="mt-3 divide-y divide-borde rounded-xl border border-borde" :aria-label="`Grupos de ${tituloEncuentro(x)}`">
+                <li v-for="(e, j) in gruposMostrados(x)" :key="e.id" class="min-w-0 p-3">
                   <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="font-semibold text-azul-noche">{{ nombreGrupo(e) }}</span>
                     <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="ESTADOS.find(o => o.value === estadoDe(e)).chip">
@@ -491,7 +491,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
                   </p>
                   <p v-if="e.diagnostico_final?.resumen" class="mt-1 line-clamp-2 text-sm leading-snug text-azul-noche">{{ e.diagnostico_final.resumen }}</p>
                   <div class="mt-2 flex flex-wrap gap-2">
-                    <button type="button" @click="abrirGrupo(e, x.encuentro)"
+                    <button type="button" :data-tour="i === 0 && j === 0 ? 'diag-evaluar' : undefined" @click="abrirGrupo(e, x.encuentro)"
                             class="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors"
                             :class="pendienteEditable(e, x.encuentro)
                               ? 'bg-rol-fuerte text-white hover:bg-rol-fuerte/90'
@@ -506,7 +506,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
               <!-- Hueco fijo (también sin botón) para que todas las tarjetas plegadas midan lo mismo -->
               <div class="mt-2 flex min-h-9 items-start">
                 <!-- Más de un grupo: se ve el primero y el resto, desplegable (todas las tarjetas igual de altas) -->
-                <button v-if="gruposVisibles(x).length > 1" type="button" @click="alternarGrupos(x)"
+                <button v-if="gruposVisibles(x).length > 1" data-tour="diag-ver-mas-grupos" type="button" @click="alternarGrupos(x)"
                         :aria-expanded="gruposAbiertos.has(claveDe(x))"
                         class="inline-flex h-9 items-center gap-1.5 self-start rounded-full border border-rol-fuerte/30 bg-white px-3 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
                   <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': gruposAbiertos.has(claveDe(x)) }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
@@ -520,13 +520,13 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
                 <!-- Una sola línea (si saltara a dos, esa tarjeta sería más alta que las demás) -->
                 <span class="min-w-0 flex-1 truncate text-xs text-texto-secundario"
                       :title="`${x.totalGrupos - conGrupos(x, 'pendiente')} de ${x.totalGrupos} ${x.totalGrupos === 1 ? 'grupo evaluado' : 'grupos evaluados'}`">{{ x.totalGrupos - conGrupos(x, 'pendiente') }}/{{ x.totalGrupos }} evaluados</span>
-                <button type="button" @click="irAEncuentro(x)"
+                <button type="button" :data-tour="i === 0 ? 'diag-detalle' : undefined" @click="irAEncuentro(x)"
                         class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                   Detalle de grupos
                 </button>
                 <div class="relative shrink-0" data-menu-raiz>
-                  <button type="button" @click="menuDiag = menuDiag === claveDe(x) ? null : claveDe(x)"
+                  <button type="button" :data-tour="i === 0 ? 'diag-menu' : undefined" @click="menuDiag = menuDiag === claveDe(x) ? null : claveDe(x)"
                           :aria-expanded="menuDiag === claveDe(x)" aria-haspopup="menu" :aria-label="`Más acciones de «${tituloEncuentro(x)}»`"
                           class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -546,7 +546,7 @@ function descargarTodos(x) { conDiagnostico(x).forEach(e => descargarPDF({ equip
           </ul>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="diag-paginacion" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ itemsPagina.length }} de {{ filtrados.length }} encuentros</p>
             <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de diagnósticos">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"

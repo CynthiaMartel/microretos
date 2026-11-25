@@ -6,6 +6,7 @@ import { RouterView } from 'vue-router'
 import TopBar from './components/TopBar.vue'
 import SidePanel from './components/SidePanel.vue'
 import AppCredit from './components/AppCredit.vue'
+import TourGuiado from './components/TourGuiado.vue'
 import ComoFuncionaModal from './components/ComoFuncionaModal.vue'
 import LoginModal from './components/LoginModal.vue'
 import { useAuthStore, ROLE_EMPRESA, ROLE_COMERCIAL, ROLE_RED_DUALAB, ROLE_GESTION_PRACTICAS, ROLE_ADMIN_CENTRAL_DUALAB } from './stores/auth'
@@ -257,6 +258,7 @@ const extenderDesdeToast = async () => {
     </RouterView>
   </div>
   <AppCredit />
+  <TourGuiado v-if="authStore.isAuthenticated" />
   <ComoFuncionaModal v-if="authStore.isAuthenticated" />
   <!-- Superadmin: empresas captadas por comerciales sin centro y retos sin validar -->
   <AvisoCaptacionPendiente v-if="authStore.isSuperAdmin" />

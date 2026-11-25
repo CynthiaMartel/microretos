@@ -76,7 +76,7 @@ const seleccionarFamilia = (nombre) => {
 
     <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Más familias" destacado="profesionales" :color="theme.text"
+      <CabeceraSeccion data-tour="fam-cabecera" titulo="Más familias" destacado="profesionales" :color="theme.text"
                        :volver="{ name: 'biblioteca' }"
                        subtitulo="Selecciona una familia para explorar sus retos."
                        class="mb-8" />
@@ -85,11 +85,12 @@ const seleccionarFamilia = (nombre) => {
         Cargando familias…
       </div>
 
-      <div v-else-if="familiasOcultas.length > 0"
+      <div v-else-if="familiasOcultas.length > 0" data-tour="fam-lista"
            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div
           v-for="familia in familiasOcultas"
           :key="familia.nombre"
+          :data-tour="familia === familiasOcultas[0] ? 'fam-tarjeta' : undefined"
           @click="seleccionarFamilia(familia.nombre)"
           @keydown.enter.prevent="seleccionarFamilia(familia.nombre)"
           @keydown.space.prevent="seleccionarFamilia(familia.nombre)"
@@ -128,7 +129,7 @@ const seleccionarFamilia = (nombre) => {
         </div>
       </div>
 
-      <div v-else class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
+      <div v-else data-tour="fam-vacio" class="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-300 shadow-sm">
         <h3 class="text-azul-noche font-black text-2xl mb-2">No hay más familias</h3>
         <p class="text-gray-500 text-sm max-w-md mx-auto">Todas las familias ya se muestran en la Biblioteca.</p>
       </div>

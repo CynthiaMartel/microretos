@@ -1,5 +1,4 @@
 <script setup>
-import BotonInstalarApp from '../src/components/BotonInstalarApp.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '../src/stores/auth.js'
@@ -126,9 +125,6 @@ const salir = async () => {
       <span class="hidden min-w-0 truncate text-xs font-bold uppercase tracking-[0.15em] text-white/60 sm:inline">Comercial</span>
 
       <div class="flex-1" />
-
-      <!-- Instalar como app (en la barra superior, sin scroll en el panel lateral) -->
-      <BotonInstalarApp nombre="DuaLab Comercial" ruta-inicio="/" />
 
       <div ref="menuRef" class="relative">
         <button type="button" :aria-expanded="menuAbierto" aria-haspopup="menu" aria-label="Menú de usuario"

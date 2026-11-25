@@ -1,5 +1,5 @@
 <script setup>
-import BotonInstalarApp from './BotonInstalarApp.vue'
+import BotonGuia from './BotonGuia.vue'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -85,13 +85,14 @@ const cerrarSesion = async () => {
 
 <template>
   <header
-    class="fixed top-0 left-0 right-0 h-16 z-50 flex items-center gap-2 px-3
+    class="fixed top-0 left-0 right-0 h-16 z-50 flex items-center gap-1 sm:gap-2 px-3
            bg-azul-noche border-b border-azul-noche-border select-none"
   >
     <!-- Menú (cajón lateral) — solo visible en móvil/tablet con sesión iniciada -->
     <button
       v-if="authStore.isAuthenticated"
       @click="toggleMobilePanel"
+      data-tour="tb-menu"
       title="Menú"
       class="lg:hidden w-10 h-10 rounded-full flex items-center justify-center shrink-0
              text-white/60 hover:text-white hover:bg-white/10
@@ -129,9 +130,6 @@ const cerrarSesion = async () => {
     <!-- ── Sesión activa ── -->
     <template v-if="authStore.isAuthenticated">
 
-      <!-- Instalar como app (antes al final del panel lateral, había que hacer scroll) -->
-      <BotonInstalarApp class="mr-1" />
-
       <!-- Conoce DUALAB (bombilla): lleva a la sección Recursos (recorrido completo,
            «¿Qué es DUALAB?», guías). Solo para quien puede abrir las secciones (no empresa).
            En móvil solo la bombilla; desde md, con el texto. -->
@@ -139,6 +137,7 @@ const cerrarSesion = async () => {
         v-if="authStore.canAccess('seccion')"
         type="button"
         @click="irARecursos"
+        data-tour="tb-conoce"
         aria-label="Conoce DUALAB"
         title="Conoce DUALAB"
         :aria-current="enRecursos ? 'page' : undefined"
@@ -150,6 +149,9 @@ const cerrarSesion = async () => {
         <span class="hidden whitespace-nowrap text-[13px] font-bold md:inline">Conoce DUALAB</span>
       </button>
 
+      <!-- Guía paso a paso (tour del menú y de la pantalla). «Instalar app» está al pie del panel lateral -->
+      <BotonGuia v-if="authStore.canAccess('seccion')" />
+
       <span class="h-6 w-px shrink-0 bg-white/10" aria-hidden="true" />
 
       <!-- Usuario (como en la maqueta idea_dashboard): avatar + nombre + "Rol · Centro" y
@@ -158,6 +160,7 @@ const cerrarSesion = async () => {
         <button
           type="button"
           @click="menuAbierto = !menuAbierto"
+          data-tour="tb-usuario"
           :aria-expanded="menuAbierto"
           aria-haspopup="menu"
           title="Mi cuenta"

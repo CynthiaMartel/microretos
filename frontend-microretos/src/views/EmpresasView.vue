@@ -742,12 +742,12 @@ async function copiarEmail(email) {
     >
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) -->
-      <CabeceraSeccion titulo="Directorio de" destacado="Empresas" color="text-empresas" volver="/seccion/empresas"
+      <CabeceraSeccion data-tour="emp-cabecera" titulo="Directorio de" destacado="Empresas" color="text-empresas" volver="/seccion/empresas"
                        subtitulo="Consulta y contacta con las empresas registradas en la base de datos de DUALAB."
                        class="mb-5">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Guía: qué se puede hacer en esta pantalla -->
-          <button type="button" @click="mostrarBienvenida = true" class="accion-secundaria" title="¿Qué necesitas? Opciones y guía de esta pantalla">
+          <button type="button" data-tour="emp-ayuda" @click="mostrarBienvenida = true" class="accion-secundaria" title="¿Qué necesitas? Opciones y guía de esta pantalla">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -758,10 +758,10 @@ async function copiarEmail(email) {
       </CabeceraSeccion>
 
       <!-- Filtros principales (FiltrosPanel común): buscador + «Más filtros» · centro y provincia -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar empresa por nombre o razón social…" class="mb-5">
+      <FiltrosPanel data-tour="emp-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar empresa por nombre o razón social…" class="mb-5">
         <template #curso>
           <!-- «Más filtros» en la fila del buscador (como en las demás bibliotecas) -->
-          <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+          <button type="button" data-tour="emp-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                   aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                   class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
                   :class="panelFiltrosAbierto ? 'border-rol-fuerte/30 bg-rol/10 text-rol-fuerte' : 'border-rol-fuerte/30 bg-white text-rol-fuerte hover:bg-rol-fuerte/5'">
@@ -778,7 +778,7 @@ async function copiarEmail(email) {
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="emp-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:overflow-y-auto xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -846,7 +846,7 @@ async function copiarEmail(email) {
                 <span class="truncate">{{ nombreFamilia(id) }}</span><span aria-hidden="true">✕</span>
               </button>
             </div>
-            <label class="flex items-center gap-2 text-sm text-texto-secundario">
+            <label data-tour="emp-orden" class="flex items-center gap-2 text-sm text-texto-secundario">
               <span class="hidden sm:inline">Ordenar por</span>
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar empresas">
                 <option value="nombre">Nombre (A-Z)</option>
@@ -863,15 +863,15 @@ async function copiarEmail(email) {
           </div>
 
           <!-- Sin resultados -->
-          <div v-else-if="!empresasFiltradas.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+          <div v-else-if="!empresasFiltradas.length" data-tour="emp-vacio" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
             <h3 class="text-lg font-bold text-azul-noche">No hay empresas con estos filtros</h3>
             <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">Prueba a quitar algún filtro.</p>
             <button v-if="hayFiltrosActivos" type="button" @click="limpiarFiltros" class="accion-secundaria mt-4">Limpiar filtros</button>
           </div>
 
           <!-- Tarjetas (las de cada fila, misma altura; pie siempre abajo) -->
-          <ul v-else class="grid grid-cols-1 gap-4" :class="columnas">
-            <li v-for="empresa in itemsPagina" :key="empresa.id"
+          <ul v-else data-tour="emp-lista" class="grid grid-cols-1 gap-4" :class="columnas">
+            <li v-for="(empresa, i) in itemsPagina" :key="empresa.id" :data-tour="i === 0 ? 'emp-tarjeta' : undefined"
                 class="relative flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                 :class="{ 'z-10': menuEmpresa === empresa.id }">
               <div class="flex min-w-0 items-start gap-3">
@@ -929,13 +929,13 @@ async function copiarEmail(email) {
                 <span class="min-w-0 flex-1 truncate text-xs text-texto-secundario">
                   {{ proyectosDeEmpresa(empresa.id).length }} {{ proyectosDeEmpresa(empresa.id).length === 1 ? 'reto ajustado' : 'retos ajustados' }}
                 </span>
-                <button type="button" @click="abrirFicha(empresa)"
+                <button type="button" @click="abrirFicha(empresa)" :data-tour="i === 0 ? 'emp-ver-ficha' : undefined"
                         class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                   Ver ficha
                 </button>
                 <div class="relative shrink-0" data-menu-raiz>
-                  <button type="button" @click="menuEmpresa = menuEmpresa === empresa.id ? null : empresa.id"
+                  <button type="button" @click="menuEmpresa = menuEmpresa === empresa.id ? null : empresa.id" :data-tour="i === 0 ? 'emp-menu' : undefined"
                           :aria-expanded="menuEmpresa === empresa.id" aria-haspopup="menu" :aria-label="`Más acciones de «${empresa.nombre_comercial}»`"
                           class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -953,7 +953,7 @@ async function copiarEmail(email) {
           </ul>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="emp-paginacion" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ itemsPagina.length }} de {{ empresasFiltradas.length }} empresas</p>
             <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de empresas">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"

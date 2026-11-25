@@ -1,8 +1,8 @@
 <!-- Ruta: /encuentros/crear (name: dashboard-docente). El nombre del archivo quedó del naming antiguo (/dashboard) tras el rename de URLs — ver router/index.js. -->
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import CabeceraSeccion from '../components/CabeceraSeccion.vue'
-import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../api.js'
 import { crearCodigoAcceso } from '../services/encuentroService.js'
 import MicroretoModal from '../components/MicroretoModal.vue'
@@ -10,17 +10,16 @@ import ProyectoFichaModal from '../components/ProyectoFichaModal.vue'
 import TallerPasos from '../components/TallerPasos.vue'
 import MiniaturaReto from '../components/MiniaturaReto.vue'
 import EncuentroResumen from '../components/EncuentroResumen.vue'
-import TourPromptModal from '../components/TourPromptModal.vue'
 import RegenerarAliasButton from '../components/RegenerarAliasButton.vue'
 import AvisoSinNombresReales from '../components/AvisoSinNombresReales.vue'
 import PlanificacionSesiones from '../components/PlanificacionSesiones.vue'
 import { generarAliasAleatorio, errorNombrePila } from '../utils/alias.js'
 import { formatCurso, nivelCurso, CURSO_ENCUENTRO } from '../utils/formatCurso.js'
-import { useUIState } from '../composables/useUIState.js'
+import { useGuia } from '../composables/useGuia.js'
 import { useAuthStore } from '../stores/auth.js'
 import { fechaFinEstimada as calcularFechaFinEstimada, duracionPorFase, FASES_PROYECTO } from '../config/fasesProyecto.js'
 
-const { tourActivo } = useUIState()
+const { recorrerPantalla } = useGuia()
 const authStore = useAuthStore()
 const isLoaded = ref(false)
 onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
@@ -413,16 +412,6 @@ onMounted(async () => {
   } catch (e) {
     console.error('Error migrando encuentros desde localStorage:', e)
   }
-
-  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
-  // await nextTick()
-  // showTourPrompt.value = true
-})
-
-onUnmounted(() => {
-  tourActivo.value = false
-  window.removeEventListener('scroll', onScrollGuia)
-  window.removeEventListener('resize', onScrollGuia)
 })
 
 // ─── Guardar encuentro ─────────────────────────────────────────────────────────
@@ -448,140 +437,6 @@ async function guardarEncuentro() {
     guardando.value = false
   }
 }
-
-// ─── Tour guía paso a paso ────────────────────────────────────────────────────
-const modoGuia       = ref(false)
-const pasoGuia       = ref(1)
-const showTourPrompt = ref(false)
-
-function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true; pasoGuia.value = 1 }
-function omitirTourDesdeModal()  { showTourPrompt.value = false }
-
-// `paso`: paso del asistente donde está el elemento (la guía cambia de paso para enseñarlo).
-const guiaPasosData = [
-  { ref: 'refCampoFecha',    seccion: 'datos', paso: 1, texto: 'Indica la fecha en la que se realizará el encuentro.' },
-  { ref: 'refCampoCentro',   seccion: 'datos', paso: 1, texto: 'Indica el centro educativo.' },
-  { ref: 'refCampoAlumnado', seccion: 'datos', paso: 1, texto: 'Indica el curso y la clase del alumnado.' },
-  { ref: 'refCampoEquipos',  seccion: 'datos', paso: 2, texto: 'Configura los grupos y añade el alumnado asignado a cada uno.' },
-  { ref: 'refCampoNotas',    seccion: 'datos', paso: 3, texto: 'Indica cualquier nota relevante sobre el encuentro.' },
-  { ref: 'refBtnGuardar',    seccion: 'datos', paso: 3, texto: 'Pulsa «Guardar encuentro» para registrar la información.' },
-  { ref: 'refEncuentros',    seccion: 'encuentros', texto: 'Aquí ves el resumen del encuentro mientras lo completas.' },
-  { ref: 'refBtnGuia',       seccion: null,    texto: 'Pulsa «Ayuda» cuando quieras para volver a activar la guía.' },
-]
-
-const TOTAL_PASOS_GUIA = guiaPasosData.length
-
-// Template refs para el tour
-const refCampoFecha    = ref(null)
-const refCampoCentro   = ref(null)
-const refCampoAlumnado = ref(null)
-const refCampoEquipos  = ref(null)
-const refCampoNotas    = ref(null)
-const refBtnGuardar    = ref(null)
-const refEncuentros    = ref(null)
-const refBtnGuia       = ref(null)
-
-const tourRefs = { refCampoFecha, refCampoCentro, refCampoAlumnado, refCampoEquipos, refCampoNotas, refBtnGuardar, refEncuentros, refBtnGuia }
-
-const tourTargetActivo = computed(() => {
-  if (!modoGuia.value) return null
-  return guiaPasosData[pasoGuia.value - 1]?.ref ?? null
-})
-
-const seccionActiva = computed(() => {
-  if (!modoGuia.value) return null
-  return guiaPasosData[pasoGuia.value - 1]?.seccion ?? null
-})
-
-const bocadilloPos = ref({ top: 0, left: 0, arrowLeft: 130, dir: 'top' })
-
-function recalcularBocadillo() {
-  const paso = guiaPasosData[pasoGuia.value - 1]
-  if (!paso) return
-  const ref = tourRefs[paso.ref]?.value
-  const el = ref?.$el ?? ref
-  if (!el?.getBoundingClientRect) return
-  const rect = el.getBoundingClientRect()
-  const TOOLTIP_W = 272
-  const TOOLTIP_H = 155
-  const MARGIN    = 12
-  const WIN_W = window.innerWidth
-  const WIN_H = window.innerHeight
-
-  const visibleTop    = Math.max(0, rect.top)
-  const visibleBottom = Math.min(WIN_H, rect.bottom)
-  const centerX       = rect.left + rect.width / 2
-
-  let tooltipLeft = centerX - TOOLTIP_W / 2
-  tooltipLeft = Math.max(10, Math.min(tooltipLeft, WIN_W - TOOLTIP_W - 10))
-  const arrowLeft = Math.max(18, Math.min(centerX - tooltipLeft, TOOLTIP_W - 18))
-
-  let dir, tooltipTop
-  if (WIN_H - visibleBottom > TOOLTIP_H + MARGIN) {
-    dir = 'top'
-    tooltipTop = visibleBottom + MARGIN
-  } else if (visibleTop > TOOLTIP_H + MARGIN) {
-    dir = 'bottom'
-    tooltipTop = visibleTop - MARGIN - TOOLTIP_H
-  } else {
-    dir = 'top'
-    tooltipTop = WIN_H * 0.6
-  }
-  tooltipTop = Math.max(10, Math.min(tooltipTop, WIN_H - TOOLTIP_H - 10))
-
-  bocadilloPos.value = { top: tooltipTop, left: tooltipLeft, arrowLeft, dir }
-}
-
-function avanzarGuia() {
-  if (pasoGuia.value < TOTAL_PASOS_GUIA) {
-    pasoGuia.value++
-  } else {
-    modoGuia.value = false
-  }
-}
-
-function saltarGuia() {
-  modoGuia.value = false
-}
-
-function scrollYRecalcular() {
-  const paso = guiaPasosData[pasoGuia.value - 1]
-  const ref = tourRefs[paso?.ref]?.value
-  const el = ref?.$el ?? ref
-  if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'instant', block: 'nearest' })
-  requestAnimationFrame(() => requestAnimationFrame(recalcularBocadillo))
-}
-
-function onScrollGuia() {
-  if (modoGuia.value) requestAnimationFrame(recalcularBocadillo)
-}
-
-watch(pasoGuia, async (n) => {
-  const pasoDestino = guiaPasosData[n - 1]?.paso
-  if (pasoDestino && pasoDestino !== pasoEnc.value && pasoEnc.value < 4) pasoEnc.value = pasoDestino
-  await nextTick()
-  scrollYRecalcular()
-})
-
-watch(modoGuia, async (v) => {
-  tourActivo.value = v
-  if (v) {
-    const pasoDestino = guiaPasosData[pasoGuia.value - 1]?.paso
-    if (pasoDestino && pasoEnc.value < 4) pasoEnc.value = pasoDestino
-    window.addEventListener('scroll', onScrollGuia, { passive: true })
-    window.addEventListener('resize', onScrollGuia, { passive: true })
-    await nextTick()
-    scrollYRecalcular()
-  } else {
-    window.removeEventListener('scroll', onScrollGuia)
-    window.removeEventListener('resize', onScrollGuia)
-  }
-})
-
-onBeforeRouteUpdate(() => {
-  modoGuia.value = false
-  pasoGuia.value = 1
-})
 
 // ─── Modal ficha de microreto ─────────────────────────────────────────────────
 const microretoModalId = ref(null)
@@ -775,71 +630,6 @@ function formatFecha(isoDate) {
 <template>
   <div class="min-h-screen font-sans text-azul-noche pt-16">
 
-    <!-- ══════════ TOUR BOCADILLO - OVERLAY + TOOLTIP ════════════════════════ -->
-    <Transition name="sp-fade">
-      <div v-if="modoGuia" class="fixed inset-0 z-[9990] pointer-events-none">
-        <!-- Backdrop bloqueante transparente — bloquea interacción sin oscurecer el elemento activo -->
-        <div class="absolute inset-0 pointer-events-auto" />
-
-        <!-- Bocadillo flotante posicionado sobre el elemento activo -->
-        <div class="absolute pointer-events-auto"
-             :style="{ top: bocadilloPos.top + 'px', left: bocadilloPos.left + 'px', width: '272px', zIndex: 9992 }">
-
-          <!-- Flecha apuntando arriba (bocadillo debajo del elemento) -->
-          <div v-if="bocadilloPos.dir === 'top'"
-               class="absolute -top-[10px] w-0 h-0"
-               :style="{
-                 left: bocadilloPos.arrowLeft + 'px',
-                 transform: 'translateX(-50%)',
-                 borderLeft: '9px solid transparent',
-                 borderRight: '9px solid transparent',
-                 borderBottom: '10px solid #1a2332'
-               }" />
-
-          <!-- Contenido -->
-          <div class="bg-azul-noche border border-white/15 rounded-2xl shadow-2xl p-4 text-white">
-            <!-- Progreso -->
-            <div class="flex items-center justify-between mb-2.5">
-              <div class="flex gap-1 items-center">
-                <span v-for="i in TOTAL_PASOS_GUIA" :key="i"
-                      class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= pasoGuia ? 'bg-rol-fuerte w-5' : 'bg-white/20 w-3'" />
-              </div>
-              <span class="text-xs font-bold text-white/40">{{ pasoGuia }}/{{ TOTAL_PASOS_GUIA }}</span>
-            </div>
-
-            <p class="text-xs text-white/85 leading-relaxed mb-3">{{ guiaPasosData[pasoGuia - 1].texto }}</p>
-
-            <div class="flex items-center gap-2">
-              <button @click="avanzarGuia"
-                      class="flex-1 py-2.5 rounded-full bg-rol-fuerte text-white
-                             text-xs font-bold uppercase tracking-widest
-                             hover:bg-rol/90 transition-all">
-                {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
-              </button>
-              <button @click="saltarGuia"
-                      class="px-3 py-2.5 rounded-full bg-white/5 border border-white/10
-                             text-white/40 text-xs font-bold uppercase tracking-widest
-                             hover:text-white/60 transition-all">
-                Saltar
-              </button>
-            </div>
-          </div>
-
-          <!-- Flecha apuntando abajo (bocadillo encima del elemento) -->
-          <div v-if="bocadilloPos.dir === 'bottom'"
-               class="absolute -bottom-[10px] w-0 h-0"
-               :style="{
-                 left: bocadilloPos.arrowLeft + 'px',
-                 transform: 'translateX(-50%)',
-                 borderLeft: '9px solid transparent',
-                 borderRight: '9px solid transparent',
-                 borderTop: '10px solid #1a2332'
-               }" />
-        </div>
-      </div>
-    </Transition>
-
     <!-- Fondo decorativo -->
     <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[min(600px,100vw)] h-[400px]
                 bg-rol-fuerte opacity-5 blur-[120px] rounded-full pointer-events-none z-0" />
@@ -849,19 +639,19 @@ function formatFecha(isoDate) {
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-5 xl:gap-8">
       <div class="min-w-0 flex-1 space-y-5">
 
-      <CabeceraSeccion plano :titulo="desdeAjuste ? 'Llevar al' : 'Crear'" :destacado="desdeAjuste ? 'aula' : 'encuentro'" color="text-rol-fuerte"
+      <CabeceraSeccion data-tour="enc-cabecera" plano :titulo="desdeAjuste ? 'Llevar al' : 'Crear'" :destacado="desdeAjuste ? 'aula' : 'encuentro'" color="text-rol-fuerte"
                        :antetitulo="desdeAjuste ? 'Ajuste del reto · Encuentro' : undefined"
                        volver="/encuentros" volver-label="Volver a encuentros"
                        :subtitulo="desdeAjuste ? 'Pon la fecha, la clase y el alumnado: al terminar proyectas el QR para los grupos.' : 'Selecciona un reto y registra los datos de la clase.'">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Solo icono por debajo de 2xl: deja sitio al título «Crear encuentro» en una línea -->
-          <RouterLink to="/encuentros" class="accion-secundaria max-2xl:w-10 max-2xl:px-0" title="Ver todos tus encuentros"
+          <RouterLink to="/encuentros" data-tour="enc-ver-encuentros" class="accion-secundaria max-2xl:w-10 max-2xl:px-0" title="Ver todos tus encuentros"
                       aria-label="Ver todos tus encuentros">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             <span class="max-2xl:sr-only">Ver encuentros</span>
           </RouterLink>
-          <!-- Botón activar guía (paso del tour: refBtnGuia) -->
-          <button ref="refBtnGuia" type="button" @click="modoGuia = true; pasoGuia = 1"
+          <!-- Ayuda: abre la guía de esta pantalla (la misma que Guía → «Esta pantalla» de la barra superior) -->
+          <button type="button" @click="recorrerPantalla"
                   aria-label="Ayuda: guía paso a paso de esta pantalla"
                   class="accion-secundaria max-sm:w-10 max-sm:px-0" title="Guía paso a paso de esta pantalla">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -873,7 +663,7 @@ function formatFecha(isoDate) {
         </div>
       </CabeceraSeccion>
 
-      <TallerPasos variante="linea" etiqueta="Pasos para crear el encuentro"
+      <TallerPasos data-tour="enc-pasos" variante="linea" etiqueta="Pasos para crear el encuentro"
                    :pasos="pasosEncuentro" :actual="pasoEnc" :maximo="pasoEncMax" :puede-ir="puedeIrAPasoEnc"
                    @ir="pasoEnc = $event" />
 
@@ -881,7 +671,7 @@ function formatFecha(isoDate) {
       <template v-if="pasoEnc === 1">
 
         <!-- Reto y proyecto asociado -->
-        <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-proyecto-asociado">
+        <section data-tour="enc-reto" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-proyecto-asociado">
           <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
             <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
               <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol-fuerte text-white sm:h-12 sm:w-12" aria-hidden="true">
@@ -1097,7 +887,7 @@ function formatFecha(isoDate) {
                         class="font-semibold text-rol-fuerte underline hover:no-underline">Trabajar un reto</button>.
               </span>
             </p>
-            <button type="button" @click="abrirBuscadorProy"
+            <button type="button" data-tour="enc-buscar-reto" @click="abrirBuscadorProy"
                     class="inline-flex h-10 items-center gap-2 rounded-full bg-rol-fuerte px-5 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               Buscar reto ajustado
@@ -1106,8 +896,7 @@ function formatFecha(isoDate) {
         </section>
 
         <!-- Datos del encuentro -->
-        <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-datos-encuentro"
-                 :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'datos' }">
+        <section data-tour="enc-datos" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-datos-encuentro">
           <div class="mb-5 flex items-start gap-3 sm:gap-4">
             <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol-fuerte text-white sm:h-12 sm:w-12" aria-hidden="true">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -1119,7 +908,7 @@ function formatFecha(isoDate) {
           </div>
 
           <div class="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
-            <div ref="refCampoFecha" :class="{ 'tour-active': tourTargetActivo === 'refCampoFecha' }" class="min-w-0 rounded-xl transition-all">
+            <div class="min-w-0 rounded-xl transition-all">
               <label for="enc-fecha" class="field-label">Fecha de inicio <span class="text-red-600" aria-hidden="true">*</span></label>
               <input id="enc-fecha" v-model="form.fecha" type="date" class="field-input" :disabled="!proyectoAsociado" required />
               <p v-if="sesionSugerida?.fecha" class="mt-1.5 rounded-lg bg-alumnos/10 px-2.5 py-1.5 text-xs font-semibold text-alumnos-dark">
@@ -1149,7 +938,7 @@ function formatFecha(isoDate) {
               </p>
             </div>
 
-            <div ref="refCampoCentro" :class="{ 'tour-active': tourTargetActivo === 'refCampoCentro' }" class="min-w-0 rounded-xl transition-all">
+            <div class="min-w-0 rounded-xl transition-all">
               <label for="enc-centro" class="field-label">Centro educativo</label>
               <div v-if="authStore.userCentroNombre" id="enc-centro" class="field-input cursor-default select-none bg-gray-50 text-texto-secundario">
                 {{ authStore.userCentroNombre }}
@@ -1194,7 +983,7 @@ function formatFecha(isoDate) {
                 </button>
               </div>
             </fieldset>
-            <fieldset ref="refCampoAlumnado" class="min-w-0 rounded-xl transition-all" :class="{ 'tour-active': tourTargetActivo === 'refCampoAlumnado' }">
+            <fieldset data-tour="enc-clase" class="min-w-0 rounded-xl transition-all">
               <legend class="field-label">Clase <span class="text-red-600" aria-hidden="true">*</span></legend>
               <div class="grid grid-cols-4 gap-2">
                 <button v-for="g in ['A', 'B', 'C', 'D']" :key="g" type="button" @click="form.grupo = g"
@@ -1211,8 +1000,7 @@ function formatFecha(isoDate) {
         </section>
 
         <!-- Planificación de sesiones: qué fases se trabajan en cada sesión de este encuentro -->
-        <section v-if="proyectoAsociado" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-planificacion"
-                 :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'datos' }">
+        <section v-if="proyectoAsociado" data-tour="enc-planificacion" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-planificacion">
           <div class="mb-5 flex items-start gap-3 sm:gap-4">
             <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol-fuerte text-white sm:h-12 sm:w-12" aria-hidden="true">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -1239,7 +1027,7 @@ function formatFecha(isoDate) {
         </div>
         <div class="space-y-4">
                 <!-- Número de equipos -->
-                <div>
+                <div data-tour="enc-num-grupos">
                   <label class="field-label">Número de grupos <span class="text-red-400">*</span></label>
                   <div class="flex items-center gap-2 mt-1">
                     <button @click="form.num_equipos = Math.max(1, (form.num_equipos || 3) - 1)"
@@ -1262,8 +1050,7 @@ function formatFecha(isoDate) {
                 </p>
 
                 <!-- Alumnado por equipos — siempre visible -->
-                <div ref="refCampoEquipos" class="space-y-3 rounded-xl transition-all"
-                     :class="{ 'tour-active': tourTargetActivo === 'refCampoEquipos' }">
+                <div data-tour="enc-alumnado" class="space-y-3 rounded-xl transition-all">
 
                   <label class="field-label">
                     Alumnado por grupos <span class="text-red-400">*</span>
@@ -1303,7 +1090,7 @@ function formatFecha(isoDate) {
 
                   <!-- Pegar una lista de nombres: se reparten solos en los grupos -->
                   <div>
-                    <button v-if="!pegandoLista" type="button" @click="pegandoLista = true; mensajeLista = ''"
+                    <button v-if="!pegandoLista" data-tour="enc-pegar-lista" type="button" @click="pegandoLista = true; mensajeLista = ''"
                             :disabled="!fechaEstablecida || limiteAlcanzado"
                             class="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-rol/30 bg-white px-3 py-2
                                    text-xs font-bold text-rol-fuerte transition-all hover:bg-rol/5
@@ -1331,7 +1118,7 @@ function formatFecha(isoDate) {
 
                   <!-- Copiar alumnado de un encuentro anterior del mismo docente -->
                   <div v-if="encuentrosParaCopiar.length">
-                    <button v-if="!copiandoAlumnado" type="button" @click="copiandoAlumnado = true; mensajeCopiaAlumnado = ''"
+                    <button v-if="!copiandoAlumnado" data-tour="enc-copiar-alumnado" type="button" @click="copiandoAlumnado = true; mensajeCopiaAlumnado = ''"
                             :disabled="!fechaEstablecida"
                             class="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-rol/30 bg-white px-3 py-2
                                    text-xs font-bold text-rol-fuerte transition-all hover:bg-rol/5
@@ -1372,7 +1159,7 @@ function formatFecha(isoDate) {
                   </div>
 
                   <!-- Grid de equipos -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div data-tour="enc-grupos" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <!-- Tocar la tarjeta la selecciona como destino de «Añadir». La cabecera es el
                          botón accesible (teclado / lector); el clic en el resto de la tarjeta también
                          vale, salvo en sus propios controles (mover de grupo, dado, quitar). -->
@@ -1456,7 +1243,7 @@ function formatFecha(isoDate) {
           </div>
         </div>
 
-        <dl class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl bg-gray-50 p-4 sm:grid-cols-2">
+        <dl data-tour="enc-confirmacion" class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl bg-gray-50 p-4 sm:grid-cols-2">
           <div v-for="d in confirmacionEncuentro" :key="d.label" class="min-w-0" :class="d.ancho ? 'sm:col-span-2' : ''">
             <dt class="text-xs font-semibold uppercase tracking-wide text-texto-secundario">{{ d.label }}</dt>
             <dd class="mt-0.5 break-words text-sm font-semibold text-azul-noche">{{ d.valor }}</dd>
@@ -1467,7 +1254,7 @@ function formatFecha(isoDate) {
           Revisar grupos y alumnado
         </button>
 
-        <div ref="refCampoNotas" class="mt-4 rounded-xl transition-all" :class="{ 'tour-active': tourTargetActivo === 'refCampoNotas' }">
+        <div data-tour="enc-notas" class="mt-4 rounded-xl transition-all">
           <label for="enc-notas" class="field-label">Notas adicionales</label>
           <textarea id="enc-notas" v-model="form.notas" rows="3"
                     placeholder="Observaciones, adaptaciones realizadas, valoración… (sin nombres reales del alumnado)"
@@ -1501,7 +1288,7 @@ function formatFecha(isoDate) {
           Ya tienes los grupos listos. Proyecta el QR y los códigos para que el alumnado entre en su grupo; en «Seguimiento de grupos» seguirás su avance.
         </p>
         <!-- 1) Empezar ya: proyectar el acceso del alumnado -->
-        <div v-if="encuentroCreado?.microproyecto_uuid" class="mx-auto mt-6 max-w-md rounded-2xl border border-rol/25 bg-rol/5 p-4 sm:p-5">
+        <div v-if="encuentroCreado?.microproyecto_uuid" data-tour="enc-proyectar" class="mx-auto mt-6 max-w-md rounded-2xl border border-rol/25 bg-rol/5 p-4 sm:p-5">
           <p class="font-heading text-lg font-bold text-azul-noche">¿Empezáis ya?</p>
           <p class="mt-1 text-sm text-texto-secundario">Proyecta el QR y los códigos en clase: cada grupo entra con el suyo.</p>
           <button type="button" @click="proyectarAcceso" :disabled="abriendoProyeccion"
@@ -1511,7 +1298,7 @@ function formatFecha(isoDate) {
         </div>
         <!-- 2) Seguir a los grupos; 3) el resto, más discreto -->
         <div class="mt-4 flex flex-col items-center gap-3">
-          <RouterLink :to="{ name: 'encuentros-registrados', query: { ver: 'seguimiento' } }" class="accion-secundaria">Ir al seguimiento de grupos</RouterLink>
+          <RouterLink :to="{ name: 'encuentros-registrados', query: { ver: 'seguimiento' } }" data-tour="enc-ir-seguimiento" class="accion-secundaria">Ir al seguimiento de grupos</RouterLink>
           <div class="flex flex-wrap justify-center gap-2 border-t border-borde pt-3">
             <RouterLink to="/encuentros" class="accion-secundaria">Ver encuentros</RouterLink>
             <button type="button" @click="crearOtroEncuentro" class="accion-secundaria">Crear otro encuentro</button>
@@ -1531,8 +1318,7 @@ function formatFecha(isoDate) {
       </div>
 
       <!-- Botones de paso -->
-      <div v-if="pasoEnc < 4" ref="refBtnGuardar" class="fila-pasos rounded-xl transition-all"
-           :class="{ 'tour-active': tourTargetActivo === 'refBtnGuardar' }">
+      <div v-if="pasoEnc < 4" data-tour="enc-botones" class="fila-pasos rounded-xl transition-all">
         <button v-if="pasoEnc === 1" type="button" @click="salirSinEncuentro" class="btn-paso-atras">{{ desdeAjuste ? 'Ahora no' : 'Cancelar' }}</button>
         <button v-else type="button" @click="pasoEnc--" class="btn-paso-atras">← Anterior</button>
         <button v-if="pasoEnc < 3" type="button" @click="siguientePasoEnc" class="btn-paso">Siguiente →</button>
@@ -1544,7 +1330,7 @@ function formatFecha(isoDate) {
 
       </div><!-- /columna principal -->
 
-      <EncuentroResumen ref="refEncuentros"
+      <EncuentroResumen data-tour="enc-resumen"
                         :proyecto="proyectoSeleccionado"
                         :estado="proyectoSeleccionado ? estadoProyectoBadge(proyectoSeleccionado) : null"
                         :datos="datosResumenEncuentro"
@@ -1571,14 +1357,6 @@ function formatFecha(isoDate) {
     @close="cerrarProyectoModal"
   />
 
-  <!-- Modal: ¿Activar guía-tour? -->
-  <TourPromptModal
-    :show="showTourPrompt"
-    titulo="¿Quieres activar la guía-tour?"
-    descripcion="Explora el panel docente con una guía paso a paso que te muestra cada función."
-    @activar="activarTourDesdeModal"
-    @omitir="omitirTourDesdeModal"
-  />
 
 </template>
 
@@ -1635,24 +1413,6 @@ select.field-input { cursor: pointer; }
 .tag-lime  { background: rgba(107,164,213,0.12); color: #275d8a; }
 .tag-amber { background: rgba(251,191,36,0.12); color: #92400e; }
 
-/* Tour: sección activa */
-.tour-active {
-  box-shadow: 0 0 0 3px #3072AA, 0 0 0 8px rgba(48, 114, 170, 0.2), 0 4px 20px rgba(0,0,0,0.1) !important;
-  border-radius: 0.75rem;
-  transition: box-shadow 0.25s ease;
-}
-
-/* Tour: secciones inactivas se desvanecen y desenfocadas */
-.tour-seccion-blur {
-  filter: blur(2px);
-  opacity: 0.4;
-  pointer-events: none;
-  transition: filter 0.3s ease, opacity 0.3s ease;
-}
-
-/* sp-fade transition (overlay y bocadillo) */
-.sp-fade-enter-active, .sp-fade-leave-active { transition: opacity 200ms ease; }
-.sp-fade-enter-from, .sp-fade-leave-to { opacity: 0; }
 
 
 /* Modal animation */

@@ -6,6 +6,7 @@ import { useUiHighlightStore } from '../stores/uiHighlight'
 import { useUIState } from '../composables/useUIState.js'
 import { useSidePanel } from '../composables/useSidePanel.js'
 import ModalTaller from './ModalTaller.vue'
+import BotonInstalarApp from './BotonInstalarApp.vue'
 import { GRUPOS_NAV, ICONOS_NAV } from '../config/navegacion.js'
 import { useNotificaciones } from '../composables/useNotificaciones.js'
 
@@ -104,6 +105,7 @@ watch(() => route.fullPath, () => {
                 @click="item.ruta && irA(item.ruta)"
                 :disabled="item.proximamente"
                 :data-tip="item.tip"
+                :data-tour="`nav-${item.key}`"
                 class="nav-item w-full text-left"
                 @mouseenter="showTooltip"
                 @mouseleave="hideTooltip"
@@ -174,6 +176,7 @@ watch(() => route.fullPath, () => {
               <div v-if="authStore.canAccess('gestion-usuarios')" class="group/tip relative">
                 <button
                   @click="irA('/usuarios')"
+                  data-tour="nav-usuarios"
                   data-tip="Gestiona las cuentas de docentes y empresas"
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
@@ -195,6 +198,7 @@ watch(() => route.fullPath, () => {
               <div v-if="authStore.canAccess('base-datos')" class="group/tip relative">
                 <button
                   @click="irA('/base-datos')"
+                  data-tour="nav-base-datos"
                   data-tip="Empresas, centros educativos, familias y ciclos del ecosistema DUALAB"
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
@@ -216,6 +220,7 @@ watch(() => route.fullPath, () => {
               <div v-if="authStore.canAccess('papelera')" class="group/tip relative">
                 <button
                   @click="irA('/papelera')"
+                  data-tour="nav-papelera"
                   data-tip="Elementos eliminados — restáuralos o bórralos definitivamente"
                   class="nav-item w-full text-left"
                   @mouseenter="showTooltip"
@@ -237,8 +242,7 @@ watch(() => route.fullPath, () => {
           </div>
         </template>
 
-        <!-- «Instalar app» está ahora en la barra superior (BotonInstalarApp). Este hueco con mt-auto
-             mantiene el banner de marca al fondo del panel. -->
+        <!-- Este hueco con mt-auto mantiene el banner de marca al fondo del panel -->
         <div class="mt-auto shrink-0" aria-hidden="true"></div>
 
         <!-- Banner de marca (como en el moodboard): al fondo del nav, sobre el pie.
@@ -264,6 +268,11 @@ watch(() => route.fullPath, () => {
         </div>
 
       </nav>
+
+      <!-- Instalar como app: fijo al pie, fuera del scroll del nav, para verse siempre sin desplazarse -->
+      <div class="shrink-0 px-3 pb-3">
+        <BotonInstalarApp variante="panel" data-tour="nav-instalar" />
+      </div>
 
   </aside>
 

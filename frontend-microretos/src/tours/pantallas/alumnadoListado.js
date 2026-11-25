@@ -1,0 +1,30 @@
+// Listado de alumnado (/alumnado/listado → AlumnadoListado.vue): cada alumno (solo por su alias)
+// con los retos ajustados y encuentros en los que ha participado, su grupo, la fase y la nota.
+export default {
+  rutas: ['alumnado-listado'],
+  titulo: 'Listado de alumnado',
+  pasos: [
+    { el: 'alu-cabecera', titulo: 'Tu alumnado',
+      texto: 'Aquí ves a cada alumno de tus encuentros con su grupo, en qué fase va y la nota final de los retos terminados. Úsala para hacer el seguimiento durante y después del encuentro creativo.' },
+    { el: 'alu-filtros', titulo: 'Busca y filtra',
+      texto: 'Busca por alias (el alumnado nunca aparece con su nombre real) y acota por curso, ciclo formativo, módulo, nivel o Clase.' },
+    { el: 'alu-mas-filtros', titulo: '«Más filtros»',
+      texto: 'Muestra u oculta el panel de filtros rápidos. El número del botón te avisa de cuántos tienes activos aunque el panel esté cerrado.' },
+    { el: 'alu-filtros-rapidos', titulo: 'Filtros rápidos',
+      texto: 'Filtra por estado del reto ajustado (en curso, sin iniciar, completados), por seguimiento (con nota final, con diagnóstico del grupo, sin reflexión individual), por familia, por reto ajustado o por fechas. «Limpiar» los quita todos.' },
+    { el: 'alu-orden', titulo: 'Ordenar',
+      texto: 'Ordena la lista por alias, por nota media o por la participación más reciente.' },
+    { el: 'alu-lista', titulo: 'La lista de alumnos',
+      texto: 'Una fila por alumno. Si ha participado en varios encuentros, todas sus participaciones están dentro de su fila.' },
+    { el: 'alu-fila', titulo: 'Abre su ficha',
+      texto: 'Verás su Clase, el último reto ajustado y su estado, cuántos ha completado y su nota media. Púlsala para desplegar cada participación: fases F0–F4, rol en el grupo, compañeros, niveles de RA, reflexión y tareas.' },
+    { el: 'alu-ver-grupo', titulo: 'Ver detalle del grupo',
+      texto: 'Te lleva al grupo de su participación más reciente. Al desplegar la fila tienes también «Ver en workspace» (solo lectura), «Ver evaluación y diagnóstico» y «Ficha del reto».' },
+    { el: 'alu-paginacion', titulo: 'Más páginas',
+      texto: 'Si tienes mucho alumnado, la lista se reparte en páginas. Muévete con estos botones.' },
+    { el: 'alu-vacio', titulo: 'Aún no hay alumnado',
+      texto: 'El alumnado aparece aquí cuando lo repartes en grupos al crear un encuentro. Pulsa «Crear un encuentro» para empezar.' },
+    { titulo: '¿Y ahora?',
+      texto: 'Desde el detalle del grupo puedes evaluar sus fases y, al terminar, poner la nota final. Recuerda que en la plataforma solo hay alias: si DuaLab te pregunta quién es un alias, se lo dices fuera de la plataforma.' },
+  ],
+}

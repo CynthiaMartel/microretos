@@ -98,18 +98,18 @@ async function guardar() {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-10 pt-5 sm:px-6">
-      <CabeceraSeccion antetitulo="Plan de proyecto" titulo="Cronograma del" destacado="plan" color="text-rol"
+      <CabeceraSeccion data-tour="cron-cabecera" antetitulo="Plan de proyecto" titulo="Cronograma del" destacado="plan" color="text-rol"
                        :volver="{ name: 'planes' }"
                        :subtitulo="plan ? plan.titulo : 'Fechas, hitos y alumnado del plan en la empresa.'" />
 
       <p v-if="cargando" class="py-10 text-center text-sm text-texto-secundario" role="status">Cargando…</p>
       <template v-else-if="plan">
-        <p v-if="!planValidado" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="alert">
+        <p v-if="!planValidado" data-tour="cron-aviso" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="alert">
           Valida el plan antes de crear su cronograma.
         </p>
 
         <!-- Fechas -->
-        <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-fechas">
+        <section data-tour="cron-fechas" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-fechas">
           <h2 id="titulo-fechas" class="text-lg font-bold">Fechas de las prácticas</h2>
           <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="min-w-0">
@@ -125,20 +125,20 @@ async function guardar() {
         </section>
 
         <!-- Hitos -->
-        <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-hitos">
+        <section data-tour="cron-hitos" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-hitos">
           <h2 id="titulo-hitos" class="text-lg font-bold">Hitos del plan</h2>
           <p class="mt-0.5 mb-4 text-sm text-texto-secundario">Cada hito es un encuentro del cronograma: marca qué fases del workspace se trabajan en él.</p>
           <PlanificacionSesiones v-model="hitos" unidad="hito" unidades="hitos" con-fecha :fecha-minima="fecha" />
         </section>
 
         <!-- Alumnado -->
-        <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-alumnado">
+        <section data-tour="cron-alumnado" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-alumnado">
           <h2 id="titulo-alumnado" class="text-lg font-bold">Alumnado del plan</h2>
           <p class="mt-0.5 text-sm text-texto-secundario">Elige por alias, de uno o varios encuentros. La ★ marca al alumnado destacado por DuaLab.</p>
           <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <label for="cr-buscar" class="sr-only">Buscar encuentro</label>
             <input id="cr-buscar" v-model="buscar" type="search" placeholder="Buscar por reto ajustado o clase" class="field-input min-w-0 sm:w-72" />
-            <button type="button" @click="soloDestacados = !soloDestacados" :aria-pressed="soloDestacados"
+            <button type="button" data-tour="cron-destacados" @click="soloDestacados = !soloDestacados" :aria-pressed="soloDestacados"
                     class="inline-flex min-h-9 items-center self-start rounded-full border px-4 text-sm font-semibold transition-colors"
                     :class="soloDestacados ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-borde bg-white hover:bg-gray-50'">
               ★ Solo destacados
@@ -149,7 +149,7 @@ async function guardar() {
             {{ soloDestacados ? 'No hay alumnado destacado en tus encuentros. Quita el filtro para ver a todo el alumnado.' : 'No hay encuentros con alumnado.' }}
           </p>
           <ul v-else class="mt-3 max-h-96 space-y-3 overflow-y-auto">
-            <li v-for="e in visibles" :key="e.id" class="rounded-xl border border-borde p-3">
+            <li v-for="(e, i) in visibles" :key="e.id" :data-tour="i === 0 ? 'cron-encuentro' : undefined" class="rounded-xl border border-borde p-3">
               <p class="break-words text-sm font-bold">{{ e.proyecto_titulo || 'Sin reto ajustado' }}</p>
               <p class="text-xs text-texto-secundario">{{ e.curso }} · Clase {{ e.grupo }} · {{ e.fecha }}</p>
               <ul class="mt-2 flex flex-wrap gap-1.5">
@@ -166,7 +166,7 @@ async function guardar() {
           </ul>
 
           <!-- Seleccionados y su grupo -->
-          <div class="mt-4 border-t border-borde pt-4">
+          <div data-tour="cron-seleccion" class="mt-4 border-t border-borde pt-4">
             <div class="flex flex-wrap items-center gap-3">
               <p class="text-sm font-bold">{{ elegidos.length }} seleccionados</p>
               <label for="cr-grupos" class="text-sm text-texto-secundario">Grupos</label>
@@ -192,7 +192,7 @@ async function guardar() {
 
         <div class="fila-pasos">
           <button type="button" class="btn-paso-atras" @click="router.push({ name: 'planes' })">Cancelar</button>
-          <button type="button" class="btn-paso" :disabled="!valido || guardando" @click="guardar">
+          <button type="button" data-tour="cron-crear" class="btn-paso" :disabled="!valido || guardando" @click="guardar">
             {{ guardando ? 'Guardando…' : 'Crear cronograma' }}
           </button>
         </div>

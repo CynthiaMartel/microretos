@@ -70,10 +70,10 @@ const abrir = (card) => {
          sin este margen tapa el final del flujo y el scroll rebota sin llegar a verlo -->
     <div v-if="seccion" class="mx-auto max-w-[90rem] space-y-4 px-4 pb-20 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion :titulo="seccion.titulo" :destacado="seccion.destacado" :color="seccion.color" :subtitulo="seccion.subtitulo" />
+      <CabeceraSeccion data-tour="hub-cabecera" :titulo="seccion.titulo" :destacado="seccion.destacado" :color="seccion.color" :subtitulo="seccion.subtitulo" />
 
       <!-- Qué es cada concepto de la sección (reto, proyecto, encuentro…), con los textos de ComoFuncionaModal.vue -->
-      <div v-if="seccion.conceptos?.length" class="grid gap-3" :class="seccion.conceptos.length > 1 && 'md:grid-cols-2'">
+      <div v-if="seccion.conceptos?.length" data-tour="hub-conceptos" class="grid gap-3" :class="seccion.conceptos.length > 1 && 'md:grid-cols-2'">
         <ConceptoClave v-for="(c, i) in seccion.conceptos" :key="i" :color="c.color" :segmentos="c.segmentos" />
       </div>
 
@@ -84,7 +84,7 @@ const abrir = (card) => {
       <div class="grid auto-rows-fr gap-4 sm:grid-cols-2" :class="cards.length === 3 && 'xl:grid-cols-3'">
         <!-- `integrada`: la card entera es la acción (tintada, flecha a la derecha, sin CTA aparte);
              `ancho`: igual, pero ocupando la fila completa -->
-        <article v-for="(card, i) in cards" :key="card.titulo"
+        <article v-for="(card, i) in cards" :key="card.titulo" :data-tour="`hub-card-${card.titulo}`"
                  class="card group flex min-w-0 flex-col transition"
                  :class="[
                    card.proximamente ? 'opacity-60' : 'hover:-translate-y-0.5 hover:shadow-md cursor-pointer',
@@ -137,11 +137,11 @@ const abrir = (card) => {
 
       <!-- Acceso del alumnado: «Dar acceso al encuentro», bajo las herramientas de la sección, con los
            encuentros en curso hoy y, dentro, el botón para dar acceso a cualquier otro -->
-      <AccesoRapidoEncuentros v-if="seccion.accesoRapido" titulo="Dar acceso al encuentro" ver-todos :limite="3" />
+      <AccesoRapidoEncuentros v-if="seccion.accesoRapido" data-tour="hub-acceso" titulo="Dar acceso al encuentro" ver-todos :limite="3" />
 
       <!-- Bloque secundario: texto a la izquierda y botones pequeños a la derecha
            (Retos: de qué reto parte el proyecto · Alumnado: cómo lo ve el alumnado) -->
-      <section v-if="bloque?.cards.length" class="card p-4 sm:p-5">
+      <section v-if="bloque?.cards.length" data-tour="hub-bloque" class="card p-4 sm:p-5">
         <div class="grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)] md:items-center">
           <div>
             <h2 class="card-title flex items-center gap-2">
@@ -160,7 +160,7 @@ const abrir = (card) => {
             <template v-for="(card, i) in bloque.cards" :key="card.titulo">
               <span v-if="i > 0 && bloque.separador" aria-hidden="true"
                     class="flex items-center justify-center text-xs font-semibold uppercase tracking-widest text-texto-secundario">{{ bloque.separador }}</span>
-              <button type="button" @click="abrir(card)"
+              <button type="button" @click="abrir(card)" :data-tour="`hub-bloque-${card.titulo}`"
                       class="group flex min-w-0 flex-col rounded-xl text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-md"
                       :class="[card.compacta ? 'p-3 sm:self-center' : 'p-4', i === 0 && bloque.destacarPrimera ? 'bg-rol/5 ring-rol/25' : 'bg-white ring-gray-200/70', claseResalte(card)]">
                 <!-- `compacta`: botón secundario más pequeño (icono, título y texto reducidos) -->
@@ -187,7 +187,7 @@ const abrir = (card) => {
       <!-- Flujo explicativo de la sección (p. ej. Retos y proyectos): ver FlujoDiagrama.vue.
            Tarjeta que envuelve título y diagrama, sin halos: los halos y la franja de marca son
            de la cabecera (CabeceraSeccion) y aquí la harían parecer un segundo banner. -->
-      <section v-if="flujo" class="card p-4 sm:p-6" aria-labelledby="titulo-flujo">
+      <section v-if="flujo" data-tour="hub-flujo" class="card p-4 sm:p-6" aria-labelledby="titulo-flujo">
         <div class="flex flex-col gap-3 border-b border-borde pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex min-w-0 items-start gap-3">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte" aria-hidden="true">
@@ -198,7 +198,7 @@ const abrir = (card) => {
               <p class="mt-0.5 text-sm text-texto-secundario">{{ flujo.subtitulo || 'El recorrido de esta sección, paso a paso.' }}</p>
             </div>
           </div>
-          <button type="button" class="accion-secundaria self-start sm:self-auto" @click="abrirComoFunciona">
+          <button type="button" data-tour="hub-como-funciona" class="accion-secundaria self-start sm:self-auto" @click="abrirComoFunciona">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             ¿Cómo funciona DUALAB?
           </button>

@@ -80,7 +80,7 @@ async function copiar(codigo) {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Dar acceso al" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
+      <CabeceraSeccion data-tour="acc-cabecera" titulo="Dar acceso al" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
                        subtitulo="Proyecta en clase el QR y el código del encuentro para que el alumnado entre en su espacio de trabajo." />
 
       <!-- Error de carga -->
@@ -90,7 +90,7 @@ async function copiar(codigo) {
       </div>
 
       <!-- 1. En curso hoy: lo que normalmente se proyecta -->
-      <AccesoRapidoEncuentros v-if="!error" :encuentros="encuentros" :cargando-externo="cargando" />
+      <AccesoRapidoEncuentros data-tour="acc-hoy" v-if="!error" :encuentros="encuentros" :cargando-externo="cargando" />
 
       <!-- 2. El resto, en lista compacta -->
       <section v-if="!error" class="space-y-3" aria-labelledby="titulo-otros">
@@ -98,7 +98,7 @@ async function copiar(codigo) {
           Otros encuentros <span v-if="!cargando" class="font-sans text-base font-semibold text-texto-secundario">· {{ filtrados.length }}</span>
         </h2>
 
-        <FiltrosPanel v-model:busqueda="busqueda" placeholder="Buscar por proyecto, código o alumno…"
+        <FiltrosPanel data-tour="acc-filtros" v-model:busqueda="busqueda" placeholder="Buscar por proyecto, código o alumno…"
                       :hay-activos="hayFiltros" @limpiar="limpiar">
           <template #curso>
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
@@ -118,8 +118,8 @@ async function copiar(codigo) {
           {{ hayFiltros ? 'Ningún encuentro coincide con la búsqueda.' : 'No hay más encuentros en este curso.' }}
         </p>
 
-        <ul v-else class="divide-y divide-borde overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
-          <li v-for="e in visibles" :key="e.id" class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+        <ul v-else data-tour="acc-lista" class="divide-y divide-borde overflow-hidden rounded-2xl border border-borde bg-white shadow-sm">
+          <li v-for="(e, i) in visibles" :key="e.id" :data-tour="i === 0 ? 'acc-fila' : undefined" class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
             <div class="min-w-0 flex-1">
               <p class="truncate font-semibold text-azul-noche" :title="titulo(e)">{{ titulo(e) }}</p>
               <p class="truncate text-sm text-texto-secundario">
@@ -127,12 +127,12 @@ async function copiar(codigo) {
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <span class="rounded-lg bg-alumnos/5 px-2.5 py-1 font-heading text-base font-bold tracking-[0.12em] text-azul-noche" :title="`Código de la clase ${e.codigo_clase}`">{{ e.codigo_clase }}</span>
+              <span :data-tour="i === 0 ? 'acc-codigo' : undefined" class="rounded-lg bg-alumnos/5 px-2.5 py-1 font-heading text-base font-bold tracking-[0.12em] text-azul-noche" :title="`Código de la clase ${e.codigo_clase}`">{{ e.codigo_clase }}</span>
               <button type="button" @click="copiar(e.codigo_clase)" :aria-label="`Copiar el código ${e.codigo_clase}`" title="Copiar el código"
                       class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-white text-texto-secundario hover:text-azul-noche">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
               </button>
-              <button type="button" @click="proyectar(e)" :aria-label="`Proyectar el acceso de «${titulo(e)}»`"
+              <button type="button" :data-tour="i === 0 ? 'acc-proyectar' : undefined" @click="proyectar(e)" :aria-label="`Proyectar el acceso de «${titulo(e)}»`"
                       class="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5 sm:ml-0">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 Proyectar
@@ -142,7 +142,7 @@ async function copiar(codigo) {
         </ul>
 
         <div v-if="!cargando && filtrados.length > limite" class="text-center">
-          <button type="button" class="accion-secundaria" @click="limite += PASO">Ver más ({{ filtrados.length - limite }})</button>
+          <button type="button" data-tour="acc-ver-mas" class="accion-secundaria" @click="limite += PASO">Ver más ({{ filtrados.length - limite }})</button>
         </div>
       </section>
     </div>

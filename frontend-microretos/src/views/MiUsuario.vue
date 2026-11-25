@@ -109,7 +109,7 @@ async function guardar() {
          el formulario centrado y, si imparte, la tarjeta de módulos (más ancha) bajo él -->
     <div class="mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Mi" destacado="usuario" antetitulo="Mi cuenta" volver="/"
+      <CabeceraSeccion data-tour="usu-cabecera" titulo="Mi" destacado="usuario" antetitulo="Mi cuenta" volver="/"
                        subtitulo="Edita tu nombre o cambia la contraseña de acceso." class="mb-6" />
 
       <div class="space-y-6">
@@ -118,7 +118,7 @@ async function guardar() {
       <div class="mx-auto w-full max-w-lg bg-white border border-gray-200 rounded-[1.75rem] p-5 sm:p-8 shadow-sm space-y-5">
 
         <!-- Email (solo lectura) + recordatorio -->
-        <div>
+        <div data-tour="usu-email">
           <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
             Correo electrónico
           </label>
@@ -154,7 +154,7 @@ async function guardar() {
         </div>
 
         <!-- Nombre -->
-        <div>
+        <div data-tour="usu-nombre">
           <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">
             Nombre
           </label>
@@ -175,7 +175,7 @@ async function guardar() {
         </div>
 
         <!-- Nueva contraseña -->
-        <div>
+        <div data-tour="usu-password">
           <label class="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">
             Nueva contraseña
             <span class="normal-case text-gray-400 font-normal">(opcional)</span>
@@ -228,7 +228,7 @@ async function guardar() {
         </p>
 
         <!-- Guardar -->
-        <button @click="guardar" :disabled="guardando"
+        <button data-tour="usu-guardar" @click="guardar" :disabled="guardando"
           class="w-full py-3 rounded-full text-white font-black
                  text-xs uppercase tracking-widest transition-all
                  disabled:opacity-50 disabled:cursor-not-allowed"
@@ -239,7 +239,7 @@ async function guardar() {
       </div>
 
       <!-- Módulos que imparto (docentes y admins de centro) -->
-      <div v-if="imparte" class="mx-auto w-full max-w-3xl bg-white border border-gray-200 rounded-[1.75rem] p-5 sm:p-8 shadow-sm">
+      <div v-if="imparte" data-tour="usu-modulos" class="mx-auto w-full max-w-3xl bg-white border border-gray-200 rounded-[1.75rem] p-5 sm:p-8 shadow-sm">
         <PanelModulosDocente />
       </div>
       </div>

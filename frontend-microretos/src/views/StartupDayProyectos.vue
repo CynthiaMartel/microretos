@@ -506,13 +506,13 @@ function mostrarSnack(mensaje, accion = null) {
 
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Mis retos" destacado="ajustados" color="text-centros"
+      <CabeceraSeccion data-tour="sdp-cabecera" titulo="Mis retos" destacado="ajustados" color="text-centros"
                        :volver="authStore.isEmpresa ? null : '/seccion/retos-proyectos'"
                        subtitulo="Aquí adaptas los retos a tu alumnado y, cuando los validas, los llevas al aula.">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Ayuda: mismo botón y sitio en todas las vistas. Abre "¿Qué necesitas?", que
                incluye la opción de la guía (paso del tour: refBtnGuia) -->
-          <button ref="refBtnGuia" type="button" @click="guiaBienvenida = true"
+          <button ref="refBtnGuia" data-tour="sdp-ayuda" type="button" @click="guiaBienvenida = true"
                   :class="{ 'tour-active': pasoRefActivo === 'refBtnGuia' }"
                   class="accion-secundaria" title="¿Qué necesitas? Opciones y guía de esta pantalla">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -522,7 +522,7 @@ function mostrarSnack(mensaje, accion = null) {
             Ayuda
           </button>
           <!-- Papelera — la papelera de "Base de datos" es solo superadmin -->
-          <button v-if="authStore.isSuperAdmin" type="button"
+          <button v-if="authStore.isSuperAdmin" data-tour="sdp-papelera" type="button"
                   @click="router.push({ name: 'papelera' })"
                   class="accion-icono"
                   title="Ver retos ajustados eliminados en la papelera"
@@ -533,7 +533,7 @@ function mostrarSnack(mensaje, accion = null) {
             </svg>
           </button>
           <!-- Crear proyecto (acción principal; paso del tour: refBtnNuevo) -->
-          <button v-if="!authStore.isEmpresa" ref="refBtnNuevo" type="button"
+          <button v-if="!authStore.isEmpresa" ref="refBtnNuevo" data-tour="sdp-trabajar" type="button"
                   @click="router.push({ name: 'startup-day-crear' })"
                   :class="{
                     'tour-active': pasoRefActivo === 'refBtnNuevo',
@@ -554,7 +554,7 @@ function mostrarSnack(mensaje, accion = null) {
         <!-- ═══ Pestañas: Completados | En proceso (paso del tour: refFiltros) ═══
              Es la primera decisión, por eso va fuera de la barra de filtros. El número
              cuenta lo que se vería en cada pestaña con los filtros actuales. -->
-        <div ref="refFiltros"
+        <div ref="refFiltros" data-tour="sdp-pestanas"
              :class="{
                'tour-active': pasoRefActivo === 'refFiltros',
                'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'filtros'
@@ -574,13 +574,13 @@ function mostrarSnack(mensaje, accion = null) {
             </button>
           </div>
         </div>
-        <div class="min-w-0 empty:hidden lg:flex lg:justify-end">
+        <div data-tour="sdp-recordatorio" class="min-w-0 empty:hidden lg:flex lg:justify-end">
           <RecordatorioPropuestaFlotante />
         </div>
       </div>
 
       <!-- Filtros principales (FiltrosPanel común; paso del tour: refBusqueda) -->
-      <div ref="refBusqueda"
+      <div ref="refBusqueda" data-tour="sdp-filtros"
            :class="{
              'tour-active': pasoRefActivo === 'refBusqueda',
              'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'busqueda'
@@ -591,7 +591,7 @@ function mostrarSnack(mensaje, accion = null) {
             <div class="flex flex-wrap items-center gap-2">
               <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
               <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
-              <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+              <button type="button" data-tour="sdp-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                       aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                       aria-label="Más filtros"
                       class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
@@ -633,7 +633,7 @@ function mostrarSnack(mensaje, accion = null) {
 
         <!-- ═══ Filtros rápidos (panel lateral; en < lg se abre con «Más filtros») ═══
              Familia en las dos pestañas + un solo grupo propio de cada una. -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="sdp-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:w-64 xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -696,7 +696,7 @@ function mostrarSnack(mensaje, accion = null) {
                    'tour-active': pasoRefActivo === 'refGrid',
                    'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'grid'
                  }">
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tour="sdp-resultados" class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
               <template v-if="cargando">Cargando retos ajustados…</template>
               <template v-else>
@@ -741,7 +741,7 @@ function mostrarSnack(mensaje, accion = null) {
           </div>
 
           <!-- Con estos filtros también hay proyectos en otros cursos: el curso se elige arriba y no se ve aquí -->
-          <div v-if="!cargando && enOtrosCursos.length" role="status"
+          <div v-if="!cargando && enOtrosCursos.length" data-tour="sdp-otros-cursos" role="status"
                class="mb-3 flex flex-col gap-2 rounded-2xl border border-borde bg-gray-50 px-4 py-3 text-sm text-azul-noche sm:flex-row sm:flex-wrap sm:items-center">
             <span class="min-w-0 flex-1">
               También hay
@@ -770,7 +770,7 @@ function mostrarSnack(mensaje, accion = null) {
           </div>
 
           <!-- Vacío -->
-          <div v-else-if="!proyectosFiltrados.length && !errorCarga"
+          <div v-else-if="!proyectosFiltrados.length && !errorCarga" data-tour="sdp-vacio"
                class="rounded-2xl border border-dashed border-borde bg-white px-4 py-16 text-center shadow-sm">
             <span class="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-rol/10 text-rol-fuerte" aria-hidden="true">
               <svg class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -797,7 +797,8 @@ function mostrarSnack(mensaje, accion = null) {
           <!-- Tarjetas -->
           <div v-else class="grid grid-cols-1 items-start gap-4" :class="columnasProyectos">
             <ProyectoCard
-              v-for="p in proyectosPagina" :key="p.uuid"
+              v-for="(p, i) in proyectosPagina" :key="p.uuid"
+              :data-tour="i === 0 ? 'sdp-tarjeta' : undefined"
               :proyecto="p"
               :resaltar-editar="filtroEstados.length === 1 && filtroEstados[0] === 'en_edicion'"
               :modulo-activo="filtroModulo"
@@ -806,7 +807,7 @@ function mostrarSnack(mensaje, accion = null) {
           </div>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="sdp-paginacion" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">
               Mostrando {{ proyectosPagina.length }} de {{ proyectosFiltrados.length }} retos ajustados
             </p>

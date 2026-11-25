@@ -236,11 +236,11 @@ function enviarTarea() {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="@container/page relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Mi" destacado="calendario"
+      <CabeceraSeccion data-tour="cal-cabecera" titulo="Mi" destacado="calendario"
                        subtitulo="Qué tienes cada día: encuentros creativos, hitos de tus planes de proyecto, notas y tareas pendientes.">
         <div class="flex flex-wrap items-center gap-2">
         <AyudaVista titulo="Calendario: tu día a día" :textos="['Tu organización del día a día: encuentros creativos, cronogramas de planes con la fecha de cada hito, y tus notas y tareas.', 'Para ver qué tienes cada día. El avance del alumnado en las empresas está en la Agenda de prácticas (Planes de proyecto).']" />
-        <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal">
+        <button type="button" data-tour="cal-nuevo" @click="router.push('/encuentros/crear')" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
           Nuevo encuentro
         </button>
@@ -251,7 +251,7 @@ function enviarTarea() {
       <div class="grid grid-cols-1 gap-4 @4xl/page:grid-cols-[minmax(0,1fr)_360px]">
 
         <!-- ══ Calendario mensual ══ -->
-        <article class="card min-w-0 p-4">
+        <article data-tour="cal-mes" class="card min-w-0 p-4">
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-1">
               <button class="cal-nav" aria-label="Mes anterior" @click="moverMes(-1)">
@@ -268,7 +268,7 @@ function enviarTarea() {
               <span class="min-w-0 truncate text-gray-600"><strong class="font-semibold text-azul-noche">{{ tituloEnc(encActivo) }}</strong> · {{ rangoEnc(encActivo) }}</span>
               <button v-if="selEncId" type="button" class="-my-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Dejar de destacar el encuentro" @click="selEncId = null">×</button>
             </p>
-            <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+            <div v-else data-tour="cal-leyenda" class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-centros" />Encuentro creativo</span>
               <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-empresas" />Plan de prácticas</span>
               <span class="flex items-center gap-1.5"><span class="h-2 w-2 rotate-45 rounded-[1px] bg-empresas-dark" />Hito de plan</span>
@@ -327,7 +327,7 @@ function enviarTarea() {
              Tamaño fijo: en escritorio no aporta altura a la fila (h-0) y ocupa la del
              calendario (min-h-full); en pantallas estrechas, alto fijo. El contenido
              hace scroll dentro y el formulario queda siempre abajo. -->
-        <article class="card flex max-h-[min(26rem,80dvh)] min-w-0 flex-col p-4 @4xl/page:h-0 @4xl/page:max-h-none @4xl/page:min-h-full">
+        <article data-tour="cal-dia" class="card flex max-h-[min(26rem,80dvh)] min-w-0 flex-col p-4 @4xl/page:h-0 @4xl/page:max-h-none @4xl/page:min-h-full">
           <h2 class="card-title shrink-0 text-base capitalize">{{ fechaLarga(selDia) }}</h2>
           <div class="-mx-1 mt-3 min-h-0 flex-1 overflow-y-auto px-1">
             <!-- Encuentros del día agrupados por módulo, indicando la familia -->
@@ -396,7 +396,7 @@ function enviarTarea() {
             </ul>
             <p v-if="!encuentrosDia.length && !notasDia.length && !hitosDia.length" class="text-sm text-gray-500">Nada programado este día.</p>
           </div>
-            <form class="mt-3 flex shrink-0 gap-2" @submit.prevent="addNotaDia">
+            <form data-tour="cal-nota-dia" class="mt-3 flex shrink-0 gap-2" @submit.prevent="addNotaDia">
               <input v-model="textoDia" maxlength="1000" placeholder="Apuntar una nota en este día…"
                      class="h-9 min-w-0 flex-1 rounded-xl border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-centros/30" />
               <button class="h-9 shrink-0 rounded-full bg-centros/10 px-4 text-sm font-semibold text-centros hover:bg-centros/15 disabled:opacity-50" :disabled="!textoDia.trim() || guardando">Añadir</button>
@@ -408,7 +408,7 @@ function enviarTarea() {
       <div class="grid grid-cols-1 gap-4 @3xl/page:grid-cols-2">
 
           <!-- Tareas pendientes: mismas que en el panel docente -->
-          <article class="card flex min-w-0 flex-col p-4">
+          <article data-tour="cal-tareas" class="card flex min-w-0 flex-col p-4">
             <div class="mb-2 flex items-center justify-between gap-2">
               <h2 class="card-title text-base">Tareas pendientes</h2>
               <span v-if="pendientes" class="rounded-full bg-alumnos/15 px-2 py-0.5 text-xs font-bold text-alumnos-dark">{{ pendientes }}</span>
@@ -448,7 +448,7 @@ function enviarTarea() {
           </article>
 
           <!-- Notas: libres (sin fecha) y próximas con fecha -->
-          <article class="card flex min-w-0 flex-col p-4">
+          <article data-tour="cal-notas" class="card flex min-w-0 flex-col p-4">
             <h2 class="card-title text-base">Mis notas</h2>
             <p v-if="errorNotas" class="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorNotas }}</p>
 

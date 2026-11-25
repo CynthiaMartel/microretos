@@ -1,0 +1,25 @@
+// Detalle de grupos de un encuentro (/mis-grupos/:id → MisGruposDetalle.vue).
+export default {
+  rutas: ['mis-grupos-detalle'],
+  titulo: 'Detalle de grupos',
+  pasos: [
+    { el: 'gd-cabecera', titulo: 'Detalle de grupos',
+      texto: 'Todo lo que han hecho los grupos de este encuentro, fase a fase. Lo usas mientras trabajan y al terminar, para evaluarlos y generar su diagnóstico.' },
+    { el: 'gd-ver-reto', titulo: 'Ver reto ajustado',
+      texto: 'Abre tu reto ajustado: el documento con el curso, los módulos, los RA y CE y los objetivos que estáis trabajando.' },
+    { el: 'gd-resumen', titulo: 'Resumen',
+      texto: 'De un vistazo: cuántos grupos hay, cuántos van en curso, cuántos han terminado y el progreso medio del encuentro.' },
+    { el: 'gd-info', titulo: 'Encuentro y reto ajustado',
+      texto: 'La clase, el ciclo, la fecha y el número de alumnos del encuentro, junto al reto ajustado que trabajan y su estado.' },
+    { el: 'gd-fases', titulo: 'Las fases del trabajo',
+      texto: 'Las cinco fases que recorre cada grupo en su espacio. En la última se asigna la nota final.' },
+    { el: 'gd-leyenda', titulo: 'Cómo leer el avance',
+      texto: 'Los colores de cada fase en las tarjetas de grupo: en curso, completada, validada o pendiente.' },
+    { el: 'gd-grupo', titulo: 'Cada grupo',
+      texto: 'El porcentaje de avance, el alias de cada miembro con su rol y las fases. Pulsa la tarjeta para desplegar lo que han entregado en cada fase y su evaluación.' },
+    { el: 'gd-diagnostico', titulo: 'Diagnóstico final',
+      texto: 'Aparece cuando el grupo ha completado las cinco fases. Te lleva a evaluar los RA y CE y a generar (o consultar) su diagnóstico final.' },
+    { titulo: '¿Y al terminar?',
+      texto: 'Cuando los grupos entreguen su solución, DuaLab envía a la empresa un enlace para que valore el reto con las soluciones. Puedes evaluar a todos tus grupos juntos en «Evaluación curricular y diagnósticos».' },
+  ],
+}

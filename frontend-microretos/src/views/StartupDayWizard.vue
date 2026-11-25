@@ -1489,12 +1489,12 @@ onUnmounted(() => { tourActivo.value = false; });
       <div class="min-w-0 flex-1 space-y-5">
 
       <!-- Cabecera: misma pieza que el resto de vistas; título según el paso -->
-      <CabeceraSeccion plano :titulo="pasoInfo.titulo" :destacado="pasoInfo.destacado" color="text-rol-fuerte"
+      <CabeceraSeccion data-tour="sdw-cabecera" plano :titulo="pasoInfo.titulo" :destacado="pasoInfo.destacado" color="text-rol-fuerte"
                        :antetitulo="`${esPlan ? 'Plan de proyecto' : 'Ajuste del reto'} · Paso ${paso} de ${totalPasos}`"
                        :volver="esPlan ? { name: 'planes' } : { name: 'startup-day', query: { ver: 'proceso' } }" :volver-label="esPlan ? 'Volver a planes' : 'Volver a mis retos ajustados'" :subtitulo="subtituloEtapa">
         <div class="flex flex-wrap items-center gap-3">
           <!-- Ayuda: mismo botón y sitio en todas las vistas -->
-          <button type="button" @click="modoGuia = true" aria-label="Ayuda: guía de este paso"
+          <button type="button" data-tour="sdw-ayuda" @click="modoGuia = true" aria-label="Ayuda: guía de este paso"
                   class="accion-secundaria max-sm:w-10 max-sm:px-0" title="Guía de este paso">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1506,7 +1506,7 @@ onUnmounted(() => { tourActivo.value = false; });
       </CabeceraSeccion>
 
       <!-- Chips con datos reales + estado de guardado (diseño crear_proyecto.png) -->
-      <div class="flex flex-wrap items-center gap-2">
+      <div data-tour="sdw-chips" class="flex flex-wrap items-center gap-2">
         <span v-if="retoEmpresaNombre" class="chip-taller max-w-full">
           <svg class="h-4 w-4 shrink-0 text-empresas-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
           <span class="truncate">{{ retoEmpresaNombre }}</span>
@@ -1537,7 +1537,7 @@ onUnmounted(() => { tourActivo.value = false; });
         </span>
       </div>
 
-      <TallerPasos :pasos="pasos" :actual="paso" :maximo="pasoMaxAlcanzado" :puede-ir="puedeIrAPaso"
+      <TallerPasos data-tour="sdw-pasos" :pasos="pasos" :actual="paso" :maximo="pasoMaxAlcanzado" :puede-ir="puedeIrAPaso"
                    @ir="paso = $event" />
 
       <!-- Aviso: proyecto validado por empresa -->
@@ -1589,7 +1589,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 1">
 
             <!-- Ya tiene un ajuste de este reto: seguir con él o crear otro -->
-            <div v-if="ajusteExistente && !uuid" class="mb-4 flex flex-col gap-3 rounded-2xl border border-rol/25 bg-rol/5 p-4 sm:flex-row sm:items-center" role="status">
+            <div v-if="ajusteExistente && !uuid" data-tour="sdw-ajuste-existente" class="mb-4 flex flex-col gap-3 rounded-2xl border border-rol/25 bg-rol/5 p-4 sm:flex-row sm:items-center" role="status">
               <p class="min-w-0 flex-1 text-sm text-azul-noche">
                 Ya tienes un ajuste de este reto: <strong class="break-words">«{{ ajusteExistente.titulo }}»</strong>
                 ({{ estadoOpciones[ajusteExistente.estado]?.label || 'En edición' }}).
@@ -1601,7 +1601,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Reto elegido (diseño crear_encuentro.png) -->
-            <TarjetaRetoAsociado v-if="microretoVinculado" class="mb-8"
+            <TarjetaRetoAsociado v-if="microretoVinculado" data-tour="sdw-reto" class="mb-8"
                                  :titulo="microretoVinculado.titulo"
                                  :pregunta="microretoVinculado.pregunta_reto || ''"
                                  :empresa="retoEmpresaNombre"
@@ -1648,7 +1648,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Selector de reto (creación, mientras no hay reto elegido) -->
-            <div v-if="!uuid && !microretoVinculado"
+            <div v-if="!uuid && !microretoVinculado" data-tour="sdw-elegir-reto"
                  class="bg-rol/[0.04] rounded-2xl border-2 border-rol/25 shadow-sm
                         p-4 sm:p-6 space-y-4 mb-8">
 
@@ -1797,7 +1797,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
 
             <!-- Resto de campos básicos -->
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-5">
+            <div data-tour="sdw-datos" class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-5">
               <div class="pb-3 border-b border-borde">
                 <p class="text-xs font-bold text-azul-noche">Datos del reto ajustado</p>
                 <p class="text-xs text-texto-secundario mt-0.5">El título y el curso con los que lo vas a trabajar.</p>
@@ -1955,7 +1955,7 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
             </div>
 
-            <div class="fila-pasos mt-5">
+            <div data-tour="sdw-botones" class="fila-pasos mt-5">
               <button @click="guardar(2)"
                       :disabled="!form.titulo.trim() || !form.microreto_id || guardando"
                       class="btn-paso">
@@ -1981,7 +1981,7 @@ onUnmounted(() => { tourActivo.value = false; });
                   <template v-else>Marca un módulo y elige sus criterios de evaluación.</template>
                 </p>
               </div>
-              <button type="button" @click="sugerirRaCeConIa"
+              <button type="button" data-tour="sdw-ia-race" @click="sugerirRaCeConIa"
                       :disabled="cargandoIaRaCe || !form.modulos_seleccionados.length"
                       :title="form.modulos_seleccionados.length ? 'La IA propone RA y CE del catálogo oficial' : 'Marca al menos un módulo'"
                       class="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-alumnos/30 bg-alumnos/10 px-4 text-sm font-semibold text-azul-noche transition-colors hover:bg-alumnos/15 disabled:cursor-not-allowed disabled:opacity-50">
@@ -2023,7 +2023,7 @@ onUnmounted(() => { tourActivo.value = false; });
               </div>
 
               <!-- RA y CE originales del reto = selección de la propuesta (parte de ellos) -->
-              <div class="rounded-xl border border-rol/20 bg-rol/[0.03] p-3 sm:p-4">
+              <div data-tour="sdw-race" class="rounded-xl border border-rol/20 bg-rol/[0.03] p-3 sm:p-4">
                 <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
                     <h3 class="text-base font-bold text-azul-noche">RA y CE originales del reto</h3>
@@ -2057,7 +2057,7 @@ onUnmounted(() => { tourActivo.value = false; });
                 </p>
 
                 <!-- Ampliar la selección: en modal (la lista del catálogo es muy larga) -->
-                <div class="mt-4 flex flex-wrap gap-2 border-t border-rol/15 pt-4">
+                <div data-tour="sdw-race-ampliar" class="mt-4 flex flex-wrap gap-2 border-t border-rol/15 pt-4">
                   <button type="button" @click="abrirModalRaCe('catalogo')"
                           class="inline-flex h-10 items-center gap-2 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm hover:bg-rol-fuerte/90">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -2181,7 +2181,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </div>
           </ModalTaller>
 
-          <div class="fila-pasos mt-5">
+          <div data-tour="sdw-botones" class="fila-pasos mt-5">
             <button @click="paso = 1" class="btn-paso-atras">← Anterior</button>
             <button @click="guardar(3)" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
           </div>
@@ -2190,7 +2190,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <!-- ═══ PASO 3: Metodología y objetivos (las sesiones se planifican en el encuentro) ═══ -->
         <div v-if="paso === 3">
           <div class="space-y-4">
-            <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
+            <div data-tour="sdw-metodologia" class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario">Metodología y resumen ejecutivo</p>
                 <button @click="sugerirMetodologia" :disabled="sugiriendoMetodologia"
@@ -2223,7 +2223,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
 
             <!-- Plan de proyecto (etapa 2): datos propios de las prácticas en la empresa -->
-            <section v-if="esPlan" class="rounded-2xl border border-empresas/25 bg-empresas/5 p-4 shadow-sm sm:p-6" aria-labelledby="titulo-datos-plan">
+            <section v-if="esPlan" data-tour="sdw-plan" class="rounded-2xl border border-empresas/25 bg-empresas/5 p-4 shadow-sm sm:p-6" aria-labelledby="titulo-datos-plan">
               <h2 id="titulo-datos-plan" class="text-lg font-bold text-azul-noche">Plan de prácticas</h2>
               <p class="mt-0.5 text-sm text-texto-secundario">Lo propio del plan de proyecto que el alumnado desarrolla en la empresa.</p>
               <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -2240,7 +2240,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </section>
 
             <!-- Objetivos del proyecto -->
-            <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
+            <section data-tour="sdw-objetivos" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-objetivos">
               <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
                   <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rol/10 text-rol-fuerte sm:h-12 sm:w-12" aria-hidden="true">
@@ -2274,7 +2274,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </section>
 
             <!-- Indicadores de éxito -->
-            <section class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-kpis">
+            <section data-tour="sdw-kpis" class="rounded-2xl border border-borde bg-white p-4 shadow-sm sm:p-6" aria-labelledby="titulo-kpis">
               <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
                   <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-empresas/10 text-empresas-dark sm:h-12 sm:w-12" aria-hidden="true">
@@ -2314,7 +2314,7 @@ onUnmounted(() => { tourActivo.value = false; });
             </p>
           </div>
 
-          <div class="fila-pasos mt-5">
+          <div data-tour="sdw-botones" class="fila-pasos mt-5">
             <button @click="paso = 2" class="btn-paso-atras">← Anterior</button>
             <button @click="siguienteDesdePaso6" :disabled="guardando" class="btn-paso">{{ guardando ? 'Guardando…' : 'Siguiente →' }}</button>
           </div>
@@ -2324,7 +2324,7 @@ onUnmounted(() => { tourActivo.value = false; });
         <div v-if="paso === 4">
 
           <!-- ── Tras validar: «¿Quieres empezar ya?» → encuentro (flujo continuo) ── -->
-          <div v-if="publicadoExito" class="flex flex-col items-center text-center py-8 gap-6">
+          <div v-if="publicadoExito" data-tour="sdw-empezar" class="flex flex-col items-center text-center py-8 gap-6">
             <div class="w-20 h-20 rounded-full bg-rol/10 border-2 border-rol/20 flex items-center justify-center">
               <svg class="w-10 h-10 text-rol-fuerte" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -2384,7 +2384,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <!-- Resumen: datos básicos y, desplegables, módulos, objetivos y KPIs. El calendario de
                sesiones no va aquí: se planifica en cada encuentro. -->
-          <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
+          <div data-tour="sdw-resumen" class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
             <p class="text-xs font-bold uppercase tracking-[0.2em] text-texto-secundario mb-4">Resumen del reto ajustado</p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
               <div class="min-w-0 p-3 bg-gray-50 rounded-2xl">
@@ -2424,7 +2424,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
 
           <!-- Más ajustes (plegado): lo que viene del reto — empresa, fundamentación y diseño del reto -->
-          <section class="mb-4 rounded-2xl border border-borde bg-white shadow-sm">
+          <section data-tour="sdw-mas-ajustes" class="mb-4 rounded-2xl border border-borde bg-white shadow-sm">
             <button type="button" @click="masAjustes = !masAjustes" :aria-expanded="masAjustes" aria-controls="mas-ajustes"
                     class="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left sm:px-6">
               <span class="min-w-0">
@@ -2554,7 +2554,7 @@ onUnmounted(() => { tourActivo.value = false; });
 
           <!-- Imagen de portada (Cloudinary). Los vídeos y documentos ya no se suben aquí: los
                materiales para el alumnado irán en su workspace (2026-11-23) -->
-          <div class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
+          <div data-tour="sdw-portada" class="bg-white rounded-2xl border border-borde shadow-sm p-4 sm:p-6 mb-4">
             <div class="flex items-center gap-3 mb-1">
               <div class="w-8 h-8 rounded-xl bg-rol/10 border border-rol/20
                           flex items-center justify-center shrink-0">
@@ -2649,7 +2649,7 @@ onUnmounted(() => { tourActivo.value = false; });
           </div>
 
           <!-- Acciones de la propuesta (fila propia, encima de los botones de paso) -->
-          <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+          <div data-tour="sdw-estado" class="mb-4 flex flex-wrap items-center justify-end gap-2">
 
               <!-- ── Desplegable Estado de la propuesta ── -->
               <div class="relative">
@@ -2744,10 +2744,10 @@ onUnmounted(() => { tourActivo.value = false; });
 
           </div>
 
-          <div class="fila-pasos">
+          <div data-tour="sdw-botones" class="fila-pasos">
             <button @click="paso = 3" class="btn-paso-atras">← Anterior</button>
             <!-- Validar = «la he revisado y la quiero trabajar»; si ya lo está, solo guarda -->
-            <button v-if="!['validado', 'completado'].includes(form.estado)" @click="aprobarProyecto"
+            <button v-if="!['validado', 'completado'].includes(form.estado)" data-tour="sdw-validar" @click="aprobarProyecto"
                     :disabled="guardando || !form.titulo.trim()" class="btn-paso">
               <template v-if="guardando">Guardando…</template>
               <template v-else><span class="sm:hidden">Validar</span><span class="hidden sm:inline">Validar y terminar</span></template>
@@ -2763,7 +2763,7 @@ onUnmounted(() => { tourActivo.value = false; });
       </div><!-- /flex-1 wizard -->
 
       <!-- ── Panel lateral: resumen del proyecto + IA del paso (solo lg) ──────── -->
-      <TallerResumen :titulo="form.titulo || microretoVinculado?.titulo || ''"
+      <TallerResumen data-tour="sdw-resumen-lateral" :titulo="form.titulo || microretoVinculado?.titulo || ''"
                      :pregunta="form.diseno_reto.pregunta_reto || microretoVinculado?.pregunta_reto || ''"
                      :portada-url="portadaUrl"
                      :datos="datosResumen"

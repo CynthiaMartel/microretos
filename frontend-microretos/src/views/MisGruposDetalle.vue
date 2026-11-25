@@ -182,10 +182,10 @@ const tituloCabecera = computed(() =>
          proyecto como título, «Detalle de grupos» (y «solo lectura» si es un encuentro compartido)
          como antetítulo, volver al seguimiento de grupos y «Ver proyecto» como acción. -->
     <div class="mx-auto max-w-[90rem] px-4 pt-5 pb-4 sm:px-6 lg:px-8">
-      <CabeceraSeccion :titulo="tituloCabecera" :volver="{ name: 'encuentros-registrados', query: { ver: 'seguimiento', encuentro: route.params.id } }" volver-label="Volver al seguimiento de grupos"
+      <CabeceraSeccion data-tour="gd-cabecera" :titulo="tituloCabecera" :volver="{ name: 'encuentros-registrados', query: { ver: 'seguimiento', encuentro: route.params.id } }" volver-label="Volver al seguimiento de grupos"
                        :antetitulo="encuentro && encuentro.puede_editar === false ? 'Detalle de grupos · solo lectura' : 'Detalle de grupos'"
                        subtitulo="Avance de cada grupo del encuentro, fase a fase.">
-        <button v-if="proyecto?.uuid" type="button" class="accion-secundaria"
+        <button v-if="proyecto?.uuid" data-tour="gd-ver-reto" type="button" class="accion-secundaria"
                 @click="router.push({ name: 'startup-day-detalle', params: { uuid: proyecto.uuid } })">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           Ver reto ajustado
@@ -209,7 +209,7 @@ const tituloCabecera = computed(() =>
       <template v-else>
 
         <!-- Sección: Resumen -->
-        <section class="space-y-3">
+        <section data-tour="gd-resumen" class="space-y-3">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Resumen</p>
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -234,7 +234,7 @@ const tituloCabecera = computed(() =>
         </section>
 
         <!-- Sección: Información -->
-        <section class="space-y-3 pt-6 border-t border-gray-100">
+        <section data-tour="gd-info" class="space-y-3 pt-6 border-t border-gray-100">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Información</p>
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-2">
@@ -274,7 +274,7 @@ const tituloCabecera = computed(() =>
              (contadores) y en su tarjeta (ring/badges). -->
         <section class="space-y-3 pt-6 border-t border-gray-100">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Fases del trabajo en el aula</p>
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div data-tour="gd-fases" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div v-for="f in FASES" :key="f.num"
                  class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-1.5">
               <span :class="[FASE_COLORS[f.color].bg, FASE_COLORS[f.color].text,
@@ -293,7 +293,7 @@ const tituloCabecera = computed(() =>
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Grupos</p>
             <!-- Leyenda del stepper de fases de cada tarjeta (EquipoResolucionCard) -->
-            <div v-if="equipos.length" class="flex items-center gap-3 flex-wrap text-[10px] font-semibold text-gray-500">
+            <div v-if="equipos.length" data-tour="gd-leyenda" class="flex items-center gap-3 flex-wrap text-[10px] font-semibold text-gray-500">
               <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-blue-200" />En curso</span>
               <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-centros" />Completada</span>
               <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500" />Validada</span>
@@ -308,7 +308,8 @@ const tituloCabecera = computed(() =>
           </div>
 
           <EquipoResolucionCard
-            v-for="equipo in equipos" :key="equipo.id"
+            v-for="(equipo, i) in equipos" :key="equipo.id"
+            :data-tour="i === 0 ? 'gd-grupo' : undefined"
             :id="`equipo-${equipo.id}`"
             :class="['scroll-mt-24 transition-shadow duration-500', equipoResaltado === equipo.id ? 'ring-2 ring-rol-fuerte/50 ring-offset-4' : '']"
             :equipo="equipo"
@@ -322,7 +323,7 @@ const tituloCabecera = computed(() =>
                  (irADiagnostico: desplegar + scroll/foco a la sección); solo cambia el aviso
                  visual: claro = diagnóstico pendiente de generar, sólido = ya generado. -->
             <template #acciones-cabecera="{ equipo: eq }">
-              <button v-if="eq.fases_completas === 5"
+              <button v-if="eq.fases_completas === 5" data-tour="gd-diagnostico"
                       @click.stop="irADiagnostico(eq)"
                       :class="['shrink-0 inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-full transition-colors text-[10px] font-black uppercase tracking-wider',
                                eq.diagnostico_final

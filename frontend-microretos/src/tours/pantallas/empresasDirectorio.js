@@ -1,0 +1,32 @@
+// Directorio de empresas (/empresas → EmpresasView.vue). Se consulta libremente; la contraseña del
+// módulo Empresas solo se pide (una vez por sesión) al ir a escribir a una empresa desde su ficha.
+export default {
+  rutas: ['empresas'],
+  titulo: 'Directorio de empresas',
+  pasos: [
+    { el: 'emp-cabecera', titulo: 'Directorio de empresas',
+      texto: 'Aquí están las empresas colaboradoras de DUALAB: sus datos, su sector y los retos ajustados que tienen. Úsalo para conocerlas y, si lo necesitas, escribirles.' },
+    { el: 'emp-ayuda', titulo: '«Ayuda»',
+      texto: 'Abre un pequeño asistente con las dos cosas que puedes hacer aquí, contactar con una empresa o explorar el listado, y un ejemplo de cómo se hace.' },
+    { el: 'emp-filtros', titulo: 'Busca y filtra',
+      texto: 'Busca por nombre comercial o razón social y, si hay varios, acota por centro educativo o provincia.' },
+    { el: 'emp-mas-filtros', titulo: '«Más filtros»',
+      texto: 'Muestra u oculta los filtros rápidos. El número del botón indica cuántos tienes activos con el panel cerrado.' },
+    { el: 'emp-filtros-rapidos', titulo: 'Filtros rápidos',
+      texto: 'Filtra por estado de contacto, por sector y por familia profesional; cada opción indica cuántas empresas tiene. «Limpiar» los quita todos.' },
+    { el: 'emp-orden', titulo: 'Ordenar',
+      texto: 'Por nombre, por estado de contacto o primero las que tienen más retos ajustados.' },
+    { el: 'emp-tarjeta', titulo: 'Cada empresa',
+      texto: 'La tarjeta muestra su estado de contacto, el sector, las familias profesionales con las que encaja, la persona de contacto y cuántos retos ajustados tiene.' },
+    { el: 'emp-ver-ficha', titulo: '«Ver ficha»',
+      texto: 'Abre todos sus datos (contacto, dirección, actividad…) y los retos ajustados hechos con ella. Pulsa uno para ver su ficha.' },
+    { el: 'emp-menu', titulo: 'Más acciones',
+      texto: 'Atajos para «Enviar email» o «Copiar email» de la persona de contacto sin abrir la ficha entera.' },
+    { titulo: 'Contraseña para escribir',
+      texto: 'Consultar el directorio es libre, pero la primera vez que vayas a enviar un email a una empresa te pedirá la contraseña del módulo Empresas. Basta con ponerla una vez por sesión; si no la tienes, pídela a DuaLab.' },
+    { el: 'emp-paginacion', titulo: 'Más páginas',
+      texto: 'Si hay muchas empresas, el listado se reparte en páginas.' },
+    { el: 'emp-vacio', titulo: 'Sin resultados',
+      texto: 'Ninguna empresa coincide con los filtros. Pulsa «Limpiar filtros» para verlas todas.' },
+  ],
+}

@@ -255,18 +255,18 @@ function irAPagina(i) {
 <template>
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-6 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      <CabeceraSeccion antetitulo="Plan de proyecto" titulo="Biblioteca de" destacado="planes" color="text-centros"
+      <CabeceraSeccion data-tour="pp-cabecera" antetitulo="Plan de proyecto" titulo="Biblioteca de" destacado="planes" color="text-centros"
                        :volver="'/seccion/planes-proyecto'"
                        subtitulo="Los planes que desarrolla en la empresa, durante las prácticas, el alumnado seleccionado.">
-        <button type="button" class="accion-principal" @click="router.push({ name: 'planes-crear' })">Crear plan</button>
+        <button type="button" data-tour="pp-crear" class="accion-principal" @click="router.push({ name: 'planes-crear' })">Crear plan</button>
       </CabeceraSeccion>
 
       <!-- Filtros principales (FiltrosPanel común): buscador + curso + «Más filtros» · ciclo, módulo, nivel -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por título, empresa o centro…">
+      <FiltrosPanel data-tour="pp-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar por título, empresa o centro…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
-            <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+            <button type="button" data-tour="pp-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                     aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
                     :class="panelFiltrosAbierto ? 'border-rol-fuerte/30 bg-rol/10 text-rol-fuerte' : 'border-rol-fuerte/30 bg-white text-rol-fuerte hover:bg-rol-fuerte/5'">
@@ -295,7 +295,7 @@ function irAPagina(i) {
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos (panel lateral; en < lg se abre con «Más filtros») ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="pp-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:w-64 xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -352,13 +352,13 @@ function irAPagina(i) {
 
       <template v-else>
         <!-- Cronogramas -->
-        <section aria-labelledby="titulo-cronogramas">
+        <section data-tour="pp-cronogramas" aria-labelledby="titulo-cronogramas">
           <h2 id="titulo-cronogramas" class="mb-3 font-heading text-lg font-bold">Cronogramas en marcha</h2>
           <p v-if="!cronogramasFiltrados.length" class="rounded-2xl border border-borde bg-white px-4 py-6 text-center text-sm text-texto-secundario">
             {{ ordenados.length ? 'Ningún cronograma de los planes que cumplen estos filtros.' : 'Aún no hay cronogramas. Crea uno desde la ficha de un plan validado.' }}
           </p>
           <ul v-else class="grid grid-cols-1 gap-3" :class="columnasPlanes">
-            <li v-for="c in cronogramasFiltrados" :key="c.id" class="min-w-0 rounded-2xl border border-borde bg-white p-4 shadow-sm"
+            <li v-for="(c, i) in cronogramasFiltrados" :key="c.id" :data-tour="i === 0 ? 'pp-cronograma' : undefined" class="min-w-0 rounded-2xl border border-borde bg-white p-4 shadow-sm"
                 :class="editandoHitos === c.id && 'col-span-full'">
               <p class="break-words font-bold">{{ c.proyecto_titulo || 'Plan sin título' }}</p>
               <p class="mt-0.5 text-sm text-texto-secundario">
@@ -393,7 +393,7 @@ function irAPagina(i) {
 
         <!-- Planes -->
         <section id="resultados-planes" class="scroll-mt-24" aria-label="Planes">
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tour="pp-resultados" class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo">
               {{ planesFiltrados.length }} {{ planesFiltrados.length === 1 ? 'plan' : 'planes' }}
             </TituloResultados>
@@ -440,13 +440,13 @@ function irAPagina(i) {
             </div>
           </div>
           <div v-else class="grid grid-cols-1 items-start gap-4" :class="columnasPlanes">
-            <ProyectoCard v-for="p in planesPagina" :key="p.uuid" :proyecto="p" :modulo-activo="filtroModulo" @eliminar="planAEliminar = $event" />
+            <ProyectoCard v-for="(p, i) in planesPagina" :key="p.uuid" :data-tour="i === 0 ? 'pp-tarjeta' : undefined" :proyecto="p" :modulo-activo="filtroModulo" @eliminar="planAEliminar = $event" />
           </div>
 
           <!-- Paginación -->
           <div v-if="totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ planesPagina.length }} de {{ planesFiltrados.length }} planes</p>
-            <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de planes">
+            <nav data-tour="pp-paginacion" class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de planes">
               <button type="button" @click="irAPagina(pagina - 1)" :disabled="pagina === 0" aria-label="Página anterior"
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">‹</button>
               <button v-for="i in paginasVisibles" :key="i" type="button" @click="irAPagina(i)"

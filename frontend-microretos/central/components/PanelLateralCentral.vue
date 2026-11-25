@@ -8,6 +8,7 @@ import { getResumenCaptacion } from '../../src/services/captacionService.js'
 import { getFormulariosWeb, getCorreos } from '../../src/services/primerContactoService.js'
 import { listarSolicitudes, getRespuestasSolicitudes } from '../../src/services/solicitudRetoService.js'
 import logo from '../../src/assets/logo_colores.png'
+import BotonInstalarApp from '../../src/components/BotonInstalarApp.vue'
 import { ESPACIOS, ICONOS, espacioDe, puedeVerItem, conCandado } from '../espacios.js'
 import { avisoSuperadmin } from '../avisoSuperadmin.js'
 import { useAuthStore } from '../../src/stores/auth.js'
@@ -183,6 +184,11 @@ const textoPendientes = (clave) => (pendientes.value[clave] > 99 ? '99+' : Strin
         </div>
       </div>
     </nav>
+
+    <!-- Instalar como app: fijo al pie, fuera del scroll del nav, para verse siempre sin desplazarse -->
+    <div class="shrink-0 px-3 pb-3">
+      <BotonInstalarApp variante="panel" nombre="DuaLab Central" ruta-inicio="/" />
+    </div>
   </aside>
 </template>
 

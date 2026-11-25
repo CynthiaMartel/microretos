@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter, onBeforeRouteUpdate } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api.js'
 import InsertModifyEmpresa from '../components/InsertModifyEmpresa.vue'
@@ -12,13 +12,12 @@ import GestionFamiliasCiclosModal from '../components/GestionFamiliasCiclosModal
 import CatalogoBoeModal from '../components/CatalogoBoeModal.vue'
 import CatalogoBoeIntroModal from '../components/CatalogoBoeIntroModal.vue'
 import DbSecurityModal from '../components/DbSecurityModal.vue'
-import { useUIState } from '../composables/useUIState.js'
+import { useGuia } from '../composables/useGuia.js'
 import { useDbSecurity } from '../composables/useDbSecurity.js'
-import TourPromptModal from '../components/TourPromptModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
-const { tourActivo } = useUIState()
+const { recorrerPantalla } = useGuia()
 const dbSecurity = useDbSecurity()
 
 onMounted(() => {
@@ -220,9 +219,6 @@ onMounted(async () => {
     return
   }
   await cargarDatos()
-  // Tour prompt desactivado temporalmente — reactivar poniendo showTourPrompt.value = true cuando se necesite.
-  // await nextTick()
-  // showTourPrompt.value = true
 })
 
 async function cargarDatos() {
@@ -589,116 +585,6 @@ function onEmpresaEliminada(data) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  TOUR GUIADO
-// ═══════════════════════════════════════════════════════════
-const modoGuia = ref(false)
-const showTourPrompt = ref(false)
-function activarTourDesdeModal() { showTourPrompt.value = false; modoGuia.value = true; pasoGuia.value = 1 }
-function omitirTourDesdeModal()  { showTourPrompt.value = false }
-const pasoGuia = ref(1)
-
-const refContadores      = ref(null)
-const refBusqueda        = ref(null)
-const refFiltros         = ref(null)
-const refCentros         = ref(null)
-const refCrearNuevoCentro = ref(null)
-const refNuevaEmpresa    = ref(null)
-const refZonaPeligro     = ref(null)
-const refBtnInfoBoe      = ref(null)
-
-const tourRefs = {
-  refContadores, refBusqueda, refFiltros, refCentros,
-  refCrearNuevoCentro, refNuevaEmpresa, refZonaPeligro, refBtnInfoBoe,
-}
-
-const guiaPasosData = [
-  { ref: 'refContadores',       seccion: 'contadores', texto: 'Estos son los contadores para ver el volumen de nuestra base de datos.' },
-  { ref: 'refBusqueda',         seccion: 'filtros',    texto: 'Puedes buscar empresas, centros, familias o ciclos.' },
-  { ref: 'refFiltros',          seccion: 'filtros',    texto: 'Filtra la vista por centro educativo o familia profesional para acotar los resultados.' },
-  { ref: 'refCentros',          seccion: 'acordeon',   texto: 'Cada centro tiene guardadas las empresas asociadas. Despliega para ver toda la información.' },
-  { ref: 'refCrearNuevoCentro', seccion: 'acciones',   texto: 'Añade nueva información: pulsa aquí para registrar un nuevo centro educativo.' },
-  { ref: 'refNuevaEmpresa',     seccion: 'acciones',   texto: 'Añade una nueva empresa a la base de datos.' },
-  { ref: 'refZonaPeligro',      seccion: 'acciones',   texto: 'Cuidado con este botón: aquí puedes modificar información de familias y ciclos formativos. Si quieres ver información del BOE (RA y CE) pulsa el botón Catálogo FP.' },
-  { ref: 'refBtnInfoBoe',       seccion: 'contadores', texto: 'Pulsa aquí para consultar el catálogo del BOE: familias, ciclos, resultados de aprendizaje y criterios de evaluación — solo lectura.' },
-]
-
-const TOTAL_PASOS_GUIA = guiaPasosData.length
-const pasoActual    = computed(() => guiaPasosData[pasoGuia.value - 1])
-const seccionActiva = computed(() => modoGuia.value ? (pasoActual.value?.seccion ?? null) : null)
-
-const bocadilloPos = ref({ top: 60, left: 16, width: 300, dir: 'top', arrowLeft: 150 })
-
-function recalcularBocadillo() {
-  const el = tourRefs[pasoActual.value?.ref]?.value
-  if (!el) return
-  const rect      = el.getBoundingClientRect()
-  const WIN_W     = window.innerWidth
-  const WIN_H     = window.innerHeight
-  const TOOLTIP_W = Math.min(300, WIN_W - 32)
-  const TOOLTIP_H = 150
-  const GAP       = 12
-
-  const visibleTop    = Math.max(0, rect.top)
-  const visibleBottom = Math.min(WIN_H, rect.bottom)
-  const centerX       = rect.left + rect.width / 2
-
-  const dir = (WIN_H - visibleBottom - GAP) >= TOOLTIP_H + GAP ? 'top'
-    : visibleTop - GAP >= TOOLTIP_H + GAP ? 'bottom'
-    : 'top'
-
-  let tooltipTop = dir === 'top' ? visibleBottom + GAP : visibleTop - TOOLTIP_H - GAP
-  tooltipTop = Math.max(10, Math.min(tooltipTop, WIN_H - TOOLTIP_H - 10))
-
-  let tooltipLeft = centerX - TOOLTIP_W / 2
-  tooltipLeft = Math.max(16, Math.min(tooltipLeft, WIN_W - TOOLTIP_W - 16))
-
-  const arrowLeft = Math.max(16, Math.min(centerX - tooltipLeft, TOOLTIP_W - 16))
-  bocadilloPos.value = { top: tooltipTop, left: tooltipLeft, width: TOOLTIP_W, dir, arrowLeft }
-}
-
-function scrollYRecalcular() {
-  const el = tourRefs[pasoActual.value?.ref]?.value
-  if (el) el.scrollIntoView({ behavior: 'instant', block: 'nearest' })
-  requestAnimationFrame(() => requestAnimationFrame(recalcularBocadillo))
-}
-
-function onScrollGuia() {
-  if (modoGuia.value) requestAnimationFrame(recalcularBocadillo)
-}
-
-watch(pasoGuia, () => { if (modoGuia.value) nextTick(scrollYRecalcular) })
-watch(modoGuia, (val) => {
-  tourActivo.value = val
-  if (val) {
-    window.addEventListener('scroll', onScrollGuia, { passive: true })
-    window.addEventListener('resize', onScrollGuia, { passive: true })
-    nextTick(scrollYRecalcular)
-  } else {
-    window.removeEventListener('scroll', onScrollGuia)
-    window.removeEventListener('resize', onScrollGuia)
-  }
-})
-
-function avanzarPaso() {
-  if (pasoGuia.value < TOTAL_PASOS_GUIA) { pasoGuia.value++ }
-  else { modoGuia.value = false; pasoGuia.value = 1 }
-}
-function saltarGuia() { modoGuia.value = false; pasoGuia.value = 1 }
-
-onUnmounted(() => {
-  tourActivo.value = false
-  window.removeEventListener('scroll', onScrollGuia)
-  window.removeEventListener('resize', onScrollGuia)
-})
-
-onBeforeRouteUpdate(async () => {
-  modoGuia.value = false
-  pasoGuia.value = 1
-  await nextTick()
-  modoGuia.value = true
-})
-
-// ═══════════════════════════════════════════════════════════
 //  MODAL INFO BOE (solo lectura) — lógica en CatalogoBoeModal
 // ═══════════════════════════════════════════════════════════
 const mostrarIntroBoe = ref(false)
@@ -736,67 +622,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 <template>
   <div class="min-h-screen p-4 md:p-10 font-sans text-[#1F2937] overflow-x-hidden pt-16 md:pt-16">
 
-    <!-- ══════════ TOUR BOCADILLO ════════════════════════════ -->
-    <Transition name="modal-fade">
-      <div v-if="modoGuia" class="fixed inset-0 z-[9990] pointer-events-none">
-        <!-- Backdrop bloqueante transparente — bloquea interacción sin oscurecer el elemento activo -->
-        <div class="absolute inset-0 pointer-events-auto" />
-
-        <div class="absolute pointer-events-auto"
-             :style="{ top: bocadilloPos.top + 'px', left: bocadilloPos.left + 'px', width: bocadilloPos.width + 'px', zIndex: 9992 }">
-
-          <!-- Flecha hacia arriba (bocadillo debajo del elemento) -->
-          <div v-if="bocadilloPos.dir === 'top'"
-               class="absolute -top-[10px] w-0 h-0"
-               :style="{ left: bocadilloPos.arrowLeft + 'px', transform: 'translateX(-50%)',
-                         borderLeft: '9px solid transparent', borderRight: '9px solid transparent',
-                         borderBottom: '10px solid #1a2332' }" />
-
-          <div class="bg-[#1a2332] border border-white/15 rounded-2xl shadow-2xl p-4 text-white">
-            <!-- Progreso -->
-            <div class="flex items-center justify-between mb-2.5">
-              <div class="flex gap-1 items-center">
-                <span v-for="i in TOTAL_PASOS_GUIA" :key="i"
-                      class="h-[3px] rounded-full transition-all duration-300"
-                      :class="i <= pasoGuia ? 'bg-administraciones w-5' : 'bg-white/20 w-3'" />
-              </div>
-              <span class="text-[9px] font-bold text-white/40">{{ pasoGuia }}/{{ TOTAL_PASOS_GUIA }}</span>
-            </div>
-
-            <p class="text-[11px] text-white/85 leading-relaxed mb-3">{{ pasoActual.texto }}</p>
-
-            <div class="flex items-center justify-between gap-2">
-              <button @click="saltarGuia"
-                      class="relative before:absolute before:-inset-y-2 before:inset-x-0 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10
-                             text-white/40 text-[9px] font-black uppercase tracking-widest
-                             hover:text-white/60 transition-all">
-                Saltar
-              </button>
-              <button @click="avanzarPaso"
-                      class="relative before:absolute before:-inset-y-2 before:inset-x-0 px-4 py-1.5 rounded-full bg-administraciones text-white
-                             text-[9px] font-black uppercase tracking-widest
-                             hover:bg-administraciones/90 transition-all">
-                {{ pasoGuia < TOTAL_PASOS_GUIA ? 'Siguiente →' : 'Finalizar' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Flecha hacia abajo (bocadillo encima del elemento) -->
-          <div v-if="bocadilloPos.dir === 'bottom'"
-               class="absolute -bottom-[10px] w-0 h-0"
-               :style="{ left: bocadilloPos.arrowLeft + 'px', transform: 'translateX(-50%)',
-                         borderLeft: '9px solid transparent', borderRight: '9px solid transparent',
-                         borderTop: '10px solid #1a2332' }" />
-        </div>
-      </div>
-    </Transition>
-
 
     <!-- ══════════════════════ CABECERA ══════════════════════ -->
     <div class="max-w-7xl mx-auto">
       <header class="mb-8">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-          <div>
+          <div data-tour="bd-cabecera">
             <div class="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full
                         bg-administraciones/10 border border-administraciones/20">
               <span class="w-2 h-2 rounded-full bg-administraciones" />
@@ -809,12 +640,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           </div>
 
           <!-- Acciones de cabecera -->
-          <div class="flex flex-wrap items-center gap-2"
-               :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'acciones' }">
+          <div class="flex flex-wrap items-center gap-2">
 
             <!-- ── Zona de peligro — desplegable ── -->
-            <div ref="refZonaPeligro" class="relative">
+            <div class="relative">
               <button
+                data-tour="bd-zona-peligro"
                 @click="zonaPeligroAbierta = !zonaPeligroAbierta"
                 :disabled="cargando"
                 class="flex items-center gap-2 px-3.5 py-2 rounded-full font-black text-xs
@@ -893,7 +724,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <!-- Botón nuevo centro educativo -->
             <button
-              ref="refCrearNuevoCentro"
+              data-tour="bd-nuevo-centro"
               @click="pedirNuevoCentro"
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
@@ -910,7 +741,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <!-- Botón nueva empresa -->
             <button
-              ref="refNuevaEmpresa"
+              data-tour="bd-nueva-empresa"
               @click="pedirNuevaEmpresa"
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
@@ -927,6 +758,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <!-- Empresa ficticia con IA: centro o catálogo DuaLab, con revisión antes de guardar -->
             <button
+              data-tour="bd-ficticia"
               @click="pedirFicticiaIA"
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm
@@ -942,6 +774,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
             <!-- Botón recargar -->
             <button
+              data-tour="bd-actualizar"
               @click="cargarDatos"
               :disabled="cargando"
               class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm
@@ -961,11 +794,10 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
         <!-- Stats chips -->
         <div class="flex flex-wrap gap-3 items-center"
-             :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'contadores' }"
              v-if="!cargando && !errorCarga">
 
           <!-- ── Grupo de los 3 contadores principales (ref para el tour paso 1) ── -->
-          <div ref="refContadores"
+          <div data-tour="bd-contadores"
                class="flex flex-wrap gap-2 items-center
                       bg-white/70 rounded-[1.4rem] border border-gray-100 shadow-sm
                       px-2 py-1.5">
@@ -1009,7 +841,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
           <!-- Botón Info BOE (catálofo fp) (ref para el tour paso 8) -->
           <button
-            ref="refBtnInfoBoe"
+            data-tour="bd-catalogo-fp"
             @click="abrirCatalogoBoe"
             class="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-full border border-indigo-200
                    shadow-sm text-indigo-600 text-xs font-black uppercase tracking-wider
@@ -1022,9 +854,9 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
             Catálogo FP
           </button>
 
-          <!-- Botón Activar Guía -->
+          <!-- Botón Activar Guía: abre la guía de esta pantalla (la misma que Guía → «Esta pantalla») -->
           <button
-            @click="modoGuia = true; pasoGuia = 1"
+            @click="recorrerPantalla"
             class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full border border-blue-100
                    shadow-sm text-blue-500 text-xs font-black uppercase tracking-wider
                    hover:bg-blue-100 hover:border-blue-200 transition-all"
@@ -1038,6 +870,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
           <!-- Botón Papelera -->
           <button
+            data-tour="bd-papelera"
             @click="router.push({ name: 'papelera' })"
             class="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-full border border-amber-200
                    shadow-sm text-amber-600 text-xs font-black uppercase tracking-wider
@@ -1054,13 +887,12 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       </header>
 
       <!-- ══════════════════ FILTROS ══════════════════ -->
-      <div ref="refFiltros"
+      <div data-tour="bd-filtros"
            v-if="!cargando && !errorCarga"
            class="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm p-5 mb-6
-                  flex flex-col md:flex-row gap-3"
-           :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'filtros' }">
+                  flex flex-col md:flex-row gap-3">
         <!-- Buscador texto -->
-        <div ref="refBusqueda" class="relative flex-1">
+        <div data-tour="bd-buscador" class="relative flex-1">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1151,11 +983,11 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
       </div>
 
       <!-- ══════════════ ACORDEÓN PRINCIPAL ═══════════ -->
-      <div ref="refCentros" v-else class="space-y-4"
-           :class="{ 'tour-seccion-blur': modoGuia && seccionActiva !== null && seccionActiva !== 'acordeon' }">
+      <div v-else data-tour="bd-centros" class="space-y-4">
         <div
           v-for="centro in centrosOrdenados"
           :key="centro"
+          :data-tour="centro === centrosOrdenados[0] ? 'bd-centro' : undefined"
           class="bg-white rounded-[1.75rem] border shadow-sm overflow-hidden has-[[data-menu-estado]]:overflow-visible transition-all duration-500"
           :class="centrosResaltados.has(centro)
             ? 'border-administraciones/40 centro-resaltado'
@@ -1202,6 +1034,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <div class="relative group/edit-tip shrink-0">
                 <button
                   @click.stop="pedirEditarCentro(centro)"
+                  :data-tour="centro === centrosOrdenados[0] ? 'bd-centro-editar' : undefined"
                   aria-label="Editar centro, familias y ciclos"
                   class="w-9 h-9 rounded-full flex items-center justify-center
                          text-gray-300 hover:text-administraciones hover:bg-administraciones/10
@@ -1227,6 +1060,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
               <!-- Botón eliminar -->
               <button
                 @click.stop="pedirEliminarCentro(centro)"
+                :data-tour="centro === centrosOrdenados[0] ? 'bd-centro-eliminar' : undefined"
                 title="Eliminar centro educativo"
                 class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center
                        text-gray-300 hover:text-red-500 hover:bg-red-50
@@ -1242,7 +1076,7 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
           </div>
 
           <!-- Familias del centro -->
-          <div v-if="centrosExpandidos.has(centro)" class="border-t border-gray-100">
+          <div v-if="centrosExpandidos.has(centro)" :data-tour="centro === centrosOrdenados[0] ? 'bd-familias' : undefined" class="border-t border-gray-100">
             <div
               v-for="(familiaData, familia) in datosPorCentro[centro].familias"
               :key="familia"
@@ -2491,14 +2325,6 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 
   </div>
 
-  <!-- Modal: ¿Activar guía-tour? -->
-  <TourPromptModal
-    :show="showTourPrompt"
-    titulo="¿Quieres activar la guía-tour?"
-    descripcion="Explora la base de datos con una guía paso a paso que te muestra cada función."
-    @activar="activarTourDesdeModal"
-    @omitir="omitirTourDesdeModal"
-  />
 </template>
 
 <style scoped>
@@ -2527,21 +2353,6 @@ watch(zonaPeligroAbierta, (val) => { if (val) cargarResumen() })
 .snack-leave-active { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .snack-enter-from,
 .snack-leave-to     { opacity: 0; transform: translateY(12px) scale(0.95); }
-
-/* Tour spotlight — blur en secciones inactivas */
-.tour-seccion-blur {
-  filter: blur(2px);
-  opacity: 0.4;
-  pointer-events: none;
-  transition: filter 0.25s ease, opacity 0.25s ease;
-}
-
-/* Tour — elemento activo resaltado */
-.tour-active {
-  outline: 2px solid #19A7A8;
-  outline-offset: 4px;
-  border-radius: 1rem;
-}
 
 /* Highlight de búsqueda de empresa */
 @keyframes centro-pulse {

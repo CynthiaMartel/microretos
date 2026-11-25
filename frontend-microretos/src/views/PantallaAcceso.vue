@@ -69,12 +69,12 @@ onMounted(cargar)
   <div class="min-h-screen bg-[#0C1220] text-white px-6 py-8">
     <div class="max-w-6xl mx-auto">
 
-      <div class="flex items-center justify-between gap-3 mb-8">
+      <div data-tour="pqr-cabecera" class="flex items-center justify-between gap-3 mb-8">
         <div class="min-w-0">
           <p class="text-[10px] font-black uppercase tracking-[0.2em] text-centros mb-1">Pantalla de acceso — alumnado</p>
           <h1 class="text-2xl font-black break-words">{{ proyectoTitulo || 'Cargando...' }}</h1>
         </div>
-        <button @click="volver({ name: 'pantalla-acceso-lista' })"
+        <button data-tour="pqr-volver" @click="volver({ name: 'pantalla-acceso-lista' })"
                 class="shrink-0 inline-flex h-10 items-center px-4 rounded-full bg-white/10 hover:bg-white/20 transition-all text-xs font-black uppercase tracking-wider">
           ← Volver
         </button>
@@ -90,7 +90,7 @@ onMounted(cargar)
 
       <template v-else>
         <!-- Código de la clase: el mismo que enseñan las tarjetas de encuentro -->
-        <div v-if="clases.length" class="mb-6 flex flex-wrap gap-3">
+        <div v-if="clases.length" data-tour="pqr-codigo-clase" class="mb-6 flex flex-wrap gap-3">
           <div v-for="c in clases" :key="c.encuentro_id"
                class="min-w-0 rounded-2xl border border-white/10 bg-white/5 px-5 py-3">
             <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
@@ -100,7 +100,7 @@ onMounted(cargar)
           </div>
         </div>
 
-        <p class="text-sm text-gray-400 mb-6">
+        <p data-tour="pqr-instrucciones" class="text-sm text-gray-400 mb-6">
           La primera vez, entra en
           <strong class="text-white">{{ baseUrlSinProtocolo }}/unirse</strong>
           con el código de la clase y elige tu equipo. También puedes escanear el QR de tu equipo
@@ -111,8 +111,8 @@ onMounted(cargar)
           No hay equipos creados todavía para este proyecto.
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <div v-for="equipo in equipos" :key="equipo.id"
+        <div v-else data-tour="pqr-grupos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div v-for="(equipo, i) in equipos" :key="equipo.id" :data-tour="i === 0 ? 'pqr-grupo' : undefined"
                class="bg-white rounded-3xl p-5 flex flex-col items-center text-center gap-3">
             <p class="text-sm font-black text-[#1F2937]">{{ equipo.nombre }}</p>
             <canvas :ref="el => setCanvasRef(el, equipo.id)" class="rounded-xl"></canvas>

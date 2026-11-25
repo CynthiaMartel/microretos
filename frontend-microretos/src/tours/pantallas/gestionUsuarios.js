@@ -1,0 +1,36 @@
+// Gestión de cuentas (/usuarios → GestionUsuarios.vue): admin y superadmin crean, activan,
+// bloquean y eliminan cuentas. Pestañas Activas / Papelera; la tarjeta cambia según la pestaña.
+export default {
+  rutas: ['gestion-usuarios'],
+  titulo: 'Gestión de cuentas',
+  pasos: ({ auth }) => [
+    { el: 'usu-cabecera', titulo: 'Gestión de cuentas',
+      texto: auth?.isSuperAdmin
+        ? 'Aquí das de alta y controlas todas las cuentas de la plataforma: docentes, empresas y administración. Nadie puede entrar hasta que su cuenta esté activada.'
+        : 'Aquí das de alta y controlas las cuentas de los docentes de tu centro. Nadie puede entrar hasta que su cuenta esté activada.' },
+    { el: 'usu-nueva', titulo: 'Nueva cuenta',
+      texto: 'Crea una cuenta con una contraseña temporal. Queda «Sin activar» hasta que la actives tú desde su tarjeta.' },
+    { el: 'usu-pestanas', titulo: 'Activas y Papelera',
+      texto: '«Activas» son las cuentas en uso. En «Papelera» están las que has enviado allí: no pueden entrar, pero aún se pueden restaurar.' },
+    { el: 'usu-filtros', titulo: 'Busca una cuenta',
+      texto: 'Escribe un nombre, un email, un centro o una empresa y la lista se filtra al momento.' },
+    { el: 'usu-mas-filtros', titulo: 'Más filtros',
+      texto: 'Abre los filtros rápidos para ver solo un tipo de cuenta, un estado (activada, sin activar, bloqueada) o los docentes que aún no han indicado sus módulos.' },
+    { el: 'usu-filtros-rapidos', titulo: 'Filtros rápidos',
+      texto: 'Marca lo que quieras ver; el número de cada opción te dice cuántas cuentas hay. «Limpiar» los quita todos.' },
+    { el: 'usu-tipos', titulo: '¿Qué es cada tipo de cuenta?',
+      texto: 'Explica qué puede hacer cada tipo de cuenta. Consúltalo si dudas de cuál crear.' },
+    { el: 'usu-orden', titulo: 'Ordenar',
+      texto: 'Cambia el orden de la lista. «Sin activar primero» te deja a mano las cuentas pendientes.' },
+    { el: 'usu-tarjeta', titulo: 'Cada cuenta',
+      texto: 'Nombre, email, tipo de cuenta y estado, con su centro o empresa y la fecha de alta (o de borrado, en la papelera).' },
+    { el: 'usu-modulos', titulo: 'Módulos del docente',
+      texto: 'Despliega los módulos que imparte. Si pone «Sin módulos», ese docente no saldrá como candidato para colaborar con otros docentes.' },
+    { el: 'usu-acciones', titulo: 'Acción principal',
+      texto: 'En «Activas» verás «Activar» si la cuenta está pendiente o «Editar» si ya funciona. En la papelera, «Restaurar» la devuelve a «Activas».' },
+    { el: 'usu-menu', titulo: 'Más acciones',
+      texto: 'El botón «⋯» abre el resto: bloquear o desbloquear, cambiar el centro educativo o enviar a la papelera. En la papelera, «Eliminar definitivamente» borra la cuenta para siempre y no se puede deshacer.' },
+    { el: 'usu-paginacion', titulo: 'Páginas',
+      texto: 'Si hay muchas cuentas, la lista se reparte en páginas. Muévete con los números o las flechas.' },
+  ],
+}

@@ -114,16 +114,16 @@ const haceCuanto = (isoStr) => {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-4 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Notificaciones"
+      <CabeceraSeccion data-tour="notif-cabecera" titulo="Notificaciones"
                        subtitulo="Respuestas de empresas, retos ajustados que esperan tu validación, fases completadas por tus grupos e invitaciones a encuentros.">
-        <button v-if="noLeidas" type="button" @click="leerTodas" class="accion-secundaria">
+        <button v-if="noLeidas" type="button" data-tour="notif-leer-todas" @click="leerTodas" class="accion-secundaria">
           <svg aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
           Marcar todas como leídas
         </button>
       </CabeceraSeccion>
 
       <!-- Superadmin: avisos / captación comercial (carril y pestañas en píldora) -->
-      <div v-if="authStore.isSuperAdmin" class="inline-flex w-fit gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-gray-200/70" role="group" aria-label="Apartado">
+      <div v-if="authStore.isSuperAdmin" data-tour="notif-apartados" class="inline-flex w-fit gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-gray-200/70" role="group" aria-label="Apartado">
         <button type="button" :aria-pressed="!verCaptacion" @click="irApartado(false)"
                 class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
                 :class="!verCaptacion ? 'bg-centros text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'">Avisos</button>
@@ -133,13 +133,13 @@ const haceCuanto = (isoStr) => {
       </div>
 
       <div v-if="verCaptacion" class="space-y-4">
-        <PanelCaptacionComercial />
-        <PanelCaptacionCentros />
+        <PanelCaptacionComercial data-tour="notif-captacion-empresas" />
+        <PanelCaptacionCentros data-tour="notif-captacion-centros" />
       </div>
 
       <article v-else class="card p-4">
         <!-- Filtros en píldora (botones con estado pulsado: no son pestañas con panel) -->
-        <div class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar notificaciones">
+        <div data-tour="notif-filtros" class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar notificaciones">
           <button v-for="f in FILTROS" :key="f.key" type="button" :aria-pressed="filtro === f.key" @click="filtro = f.key"
                   class="inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition"
                   :class="filtro === f.key ? 'bg-centros text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
@@ -155,7 +155,7 @@ const haceCuanto = (isoStr) => {
           {{ filtro === 'no_leidas' ? 'No tienes notificaciones sin leer.' : 'No hay notificaciones por ahora.' }}
         </div>
         <ul v-else class="divide-y divide-gray-100">
-          <li v-for="n in visibles" :key="n.id">
+          <li v-for="(n, i) in visibles" :key="n.id" :data-tour="i === 0 ? 'notif-aviso' : undefined">
             <button class="flex w-full items-start gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-gray-50" @click="abrir(n)">
               <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm" :class="tipoDe(n).tile">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path :d="tipoDe(n).icon" /></svg>
@@ -172,7 +172,7 @@ const haceCuanto = (isoStr) => {
           </li>
         </ul>
 
-        <div v-if="pagina < ultima" class="mt-3 flex justify-center">
+        <div v-if="pagina < ultima" data-tour="notif-mas" class="mt-3 flex justify-center">
           <button type="button" class="accion-secundaria disabled:opacity-50" :disabled="cargando" @click="cargar()">{{ cargando ? 'Cargando…' : 'Cargar más' }}</button>
         </div>
       </article>

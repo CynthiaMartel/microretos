@@ -139,7 +139,7 @@ function accionMenu(fn) { menu.value = false; fn() }
 
     <!-- Pie: desplegar los grupos a la izquierda; «Detalle de grupos» y «⋯» a la derecha -->
     <div class="flex flex-wrap items-center gap-2 border-t border-borde px-4 py-2.5 sm:px-5">
-      <button type="button" @click="emit('toggle')" :aria-expanded="abierto"
+      <button type="button" data-tour="encr-seg-ver-grupos" @click="emit('toggle')" :aria-expanded="abierto"
               class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-azul-noche hover:bg-gray-100">
         <svg :class="['h-4 w-4 text-texto-secundario transition-transform', abierto ? 'rotate-180' : '']"
              fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -148,7 +148,7 @@ function accionMenu(fn) { menu.value = false; fn() }
         {{ abierto ? 'Ocultar los grupos' : `Ver los grupos (${equipos.length})` }}
       </button>
       <div class="ml-auto flex items-center gap-2">
-        <button type="button" @click="irADetalle()"
+        <button type="button" data-tour="encr-seg-detalle" @click="irADetalle()"
                 class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-rol-fuerte px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90">
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -157,7 +157,7 @@ function accionMenu(fn) { menu.value = false; fn() }
         </button>
         <!-- Menú «⋯»: el resto de acciones del encuentro -->
         <div ref="raizMenu" class="relative shrink-0">
-          <button type="button" @click="menu = !menu" :aria-expanded="menu" aria-haspopup="menu"
+          <button type="button" data-tour="encr-seg-menu" @click="menu = !menu" :aria-expanded="menu" aria-haspopup="menu"
                   :aria-label="`Más acciones de «${titulo}»`"
                   class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario transition-colors hover:bg-gray-50"
                   :class="{ 'bg-gray-50': menu }">

@@ -303,7 +303,7 @@ onMounted(cargarPapelera)
         <BotonVolver fallback="/base-datos" class="mb-3" />
         <div class="flex items-start justify-between gap-4 flex-wrap">
 
-          <div class="flex items-center gap-3">
+          <div data-tour="pap-cabecera" class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
               <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -342,7 +342,7 @@ onMounted(cargarPapelera)
         </div>
 
         <!-- Tabs de filtro -->
-        <div class="flex flex-wrap gap-1.5 mt-5">
+        <div data-tour="pap-todos" class="flex flex-wrap gap-1.5 mt-5">
           <button
             @click="filtroActivo = 'todos'"
             class="min-h-9 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150"
@@ -356,7 +356,8 @@ onMounted(cargarPapelera)
 
         </div>
         <!-- Un bloque por origen, separados por una línea -->
-        <div v-for="g in GRUPOS" :key="g.clave" class="mt-3 border-t border-gray-100 pt-3">
+            data-tour="pap-vaciar"
+        <div v-for="g in GRUPOS" :key="g.clave" :data-tour="`pap-grupo-${g.clave}`" class="mt-3 border-t border-gray-100 pt-3">
           <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400">{{ g.titulo }}</p>
           <div class="flex flex-wrap gap-1.5">
             <button
@@ -402,7 +403,7 @@ onMounted(cargarPapelera)
       </div>
 
       <!-- Estado vacío -->
-      <div v-else-if="itemsFiltrados.length === 0" class="flex flex-col items-center justify-center py-20 gap-4">
+      <div v-else-if="itemsFiltrados.length === 0" data-tour="pap-vacia" class="flex flex-col items-center justify-center py-20 gap-4">
         <div class="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
           <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <polyline points="3 6 5 6 21 6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -420,7 +421,7 @@ onMounted(cargarPapelera)
       </div>
 
       <!-- Lista de items -->
-      <div v-else class="space-y-2">
+      <div v-else data-tour="pap-lista" class="space-y-2">
 
         <!-- Item card -->
         <div
@@ -464,6 +465,7 @@ onMounted(cargarPapelera)
                  class="w-4.5 h-4.5" :class="TIPOS[item.tipo]?.textColor"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round"
+          :data-tour="item === itemsFiltrados[0] ? 'pap-item' : undefined"
                 d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
             </svg>
             <!-- Centro -->
@@ -573,6 +575,7 @@ onMounted(cargarPapelera)
           </div>
         </div>
 
+              :data-tour="item === itemsFiltrados[0] ? 'pap-restaurar' : undefined"
       </div>
     </div>
 
@@ -596,6 +599,7 @@ onMounted(cargarPapelera)
               <h2 class="text-base font-black text-azul-noche">Eliminar permanentemente</h2>
               <p class="text-xs text-gray-400">Esta acción no se puede deshacer</p>
             </div>
+              :data-tour="item === itemsFiltrados[0] ? 'pap-eliminar' : undefined"
           </div>
 
           <p class="text-sm text-gray-600 mb-1">

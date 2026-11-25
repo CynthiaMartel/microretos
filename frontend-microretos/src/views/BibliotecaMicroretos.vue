@@ -506,7 +506,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche" @keydown.esc="menuReto = null">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion plano cinta halos antetitulo="Retos" titulo="Explorador de" destacado="Retos" color="text-centros"
+      <CabeceraSeccion data-tour="bib-cabecera" plano cinta halos antetitulo="Retos" titulo="Explorador de" destacado="Retos" color="text-centros"
                        :volver="authStore.isEmpresa ? null : '/seccion/retos-proyectos'"
                        subtitulo="Encuentra, filtra y reutiliza los desafíos generados por la Inteligencia Artificial para tus alumnos.">
         <div class="flex flex-wrap items-start gap-2">
@@ -540,16 +540,16 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
       </CabeceraSeccion>
 
       <!-- Filtros principales (FiltrosPanel común): buscador + curso + Generar · fila de filtros -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por título, empresa, ciclo o pregunta del reto…">
+      <FiltrosPanel data-tour="bib-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar por título, empresa, ciclo o pregunta del reto…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
-            <RouterLink v-if="!authStore.isEmpresa" :to="{ name: 'microretos' }" class="accion-principal">
+            <RouterLink v-if="!authStore.isEmpresa" data-tour="bib-generar" :to="{ name: 'microretos' }" class="accion-principal">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
               Generar con IA
             </RouterLink>
             <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
-            <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+            <button type="button" data-tour="bib-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                     aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                     :aria-label="'Más filtros'"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
@@ -600,7 +600,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos (panel lateral; en < lg se abre con «Más filtros») ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="bib-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:w-64 xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -658,7 +658,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
 
         <!-- ═══ Resultados ═══ -->
         <section id="resultados-retos" class="min-w-0 flex-1 scroll-mt-24" aria-label="Retos">
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tour="bib-resultados" class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
               <template v-if="cargando">Cargando retos…</template>
               <template v-else>{{ microretosFiltrados.length }} {{ microretosFiltrados.length === 1 ? 'reto encontrado' : 'retos encontrados' }}</template>
@@ -677,7 +677,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                 {{ { real: 'Empresa real', ficticia: 'Empresa ficticia', simulada: 'Información simulada' }[t] }}<span aria-hidden="true">✕</span>
               </button>
             </div>
-            <button v-if="microretosFiltrados.length && !authStore.isEmpresa" type="button" @click="descargarGrupoFiltrado" :disabled="generandoPDFGrupo"
+            <button v-if="microretosFiltrados.length && !authStore.isEmpresa" data-tour="bib-pdf" type="button" @click="descargarGrupoFiltrado" :disabled="generandoPDFGrupo"
                     class="inline-flex h-9 items-center gap-1.5 rounded-full border border-rol-fuerte/30 bg-white px-3 text-sm font-semibold text-rol-fuerte hover:bg-rol-fuerte/5 disabled:cursor-wait disabled:opacity-60"
                     :title="hayFiltrosActivos ? 'Descargar los retos con los filtros actuales' : 'Descargar todos los retos listados'">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2"/></svg>
@@ -707,7 +707,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           </div>
 
           <!-- Con estos filtros también hay retos en otros cursos: el curso se elige arriba y no se ve aquí -->
-          <div v-if="!cargando && enOtrosCursos.length" role="status"
+          <div v-if="!cargando && enOtrosCursos.length" data-tour="bib-otros-cursos" role="status"
                class="mb-3 flex flex-col gap-2 rounded-2xl border border-borde bg-gray-50 px-4 py-3 text-sm text-azul-noche sm:flex-row sm:flex-wrap sm:items-center">
             <span class="min-w-0 flex-1">
               También hay
@@ -752,7 +752,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           <!-- Tarjetas -->
           <ul v-else-if="microretosFiltrados.length"
               :class="vista === 'cuadricula' ? ['grid grid-cols-1 gap-4', columnasRetos] : 'space-y-3'">
-            <li v-for="reto in retosPagina" :key="reto.id"
+            <li v-for="reto in retosPagina" :key="reto.id" :data-tour="reto === retosPagina[0] ? 'bib-tarjeta' : undefined"
                 class="group flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
               <div class="flex min-w-0 gap-3" :class="vista === 'lista' ? 'sm:items-center' : ''">
                 <MiniaturaReto class="flex shrink-0" :class="vista === 'lista' ? 'h-16 w-20' : 'h-20 w-20 sm:h-24 sm:w-24'" />
@@ -807,14 +807,14 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
                   <span v-if="reto.empresa?.sector" class="block truncate text-xs text-texto-secundario">{{ reto.empresa.sector }}</span>
                 </span>
                 <!-- En móvil solo el icono: deja sitio a empresa y sector -->
-                <button type="button" @click="irADetalle(reto)" :aria-label="`Ver reto «${reto.titulo}»`"
+                <button type="button" :data-tour="reto === retosPagina[0] ? 'bib-ver-reto' : undefined" @click="irADetalle(reto)" :aria-label="`Ver reto «${reto.titulo}»`"
                         class="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-0 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5 sm:w-auto sm:px-4">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                   <span class="hidden sm:inline">Ver reto</span>
                 </button>
                 <!-- Menú «⋯»: PDF; escaparate y eliminar solo para quien puede gestionar -->
                 <div class="relative shrink-0" data-menu-raiz>
-                  <button type="button" @click="menuReto = menuReto === reto.id ? null : reto.id"
+                  <button type="button" :data-tour="reto === retosPagina[0] ? 'bib-menu' : undefined" @click="menuReto = menuReto === reto.id ? null : reto.id"
                           :aria-expanded="menuReto === reto.id" aria-haspopup="menu" :aria-label="`Más acciones de «${reto.titulo}»`"
                           class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -864,7 +864,7 @@ function mostrarSnack(mensaje, tipo = 'ok', accion = null) {
           </ul>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="bib-paginacion" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">
               Mostrando {{ retosPagina.length }} de {{ microretosFiltrados.length }} retos
             </p>

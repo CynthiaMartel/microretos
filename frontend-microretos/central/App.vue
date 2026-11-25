@@ -134,8 +134,8 @@ const salir = async () => {
 
       <div class="flex-1" />
 
-      <!-- Instalar como app (en la barra superior, sin scroll en el panel lateral) -->
-      <BotonInstalarApp nombre="DuaLab Central" ruta-inicio="/" />
+      <!-- Instalar como app: con panel lateral va al pie del panel; aquí solo en las pantallas sin él -->
+      <BotonInstalarApp v-if="!conPanel" nombre="DuaLab Central" ruta-inicio="/" />
 
       <div ref="menuRef" class="relative">
         <button type="button" :aria-expanded="menuAbierto" aria-haspopup="menu" aria-label="Menú de usuario"

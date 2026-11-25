@@ -34,17 +34,17 @@ onMounted(() => { setTimeout(() => { isLoaded.value = true }, 80) })
          :class="isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
          style="transition: opacity 0.4s ease, transform 0.4s ease">
 
-      <CabeceraSeccion :titulo="config.titulo" :volver="{ name: 'inicio-docente' }"
+      <CabeceraSeccion data-tour="not-cabecera" :titulo="config.titulo" :volver="{ name: 'inicio-docente' }"
                        :subtitulo="config.descripcion" class="mb-8" />
 
       <!-- Estado vacío -->
-      <div v-if="!config.items.length" class="text-center py-16">
+      <div v-if="!config.items.length" data-tour="not-vacio" class="text-center py-16">
         <p class="text-gray-400 text-sm font-medium">Todavía no hay noticias en esta sección.</p>
       </div>
 
       <!-- Grid de tarjetas -->
-      <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="item in config.items" :key="item.id"
+      <div v-else data-tour="not-lista" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="(item, i) in config.items" :key="item.id" :data-tour="i === 0 ? 'not-tarjeta' : undefined"
              class="rounded-2xl overflow-hidden shadow-sm border border-white/50 bg-white cursor-default">
           <div class="relative h-44 overflow-hidden">
             <img :src="item.imagen" :alt="item.alt" class="w-full h-full object-cover" loading="lazy" />

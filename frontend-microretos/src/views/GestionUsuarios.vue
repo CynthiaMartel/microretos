@@ -750,9 +750,9 @@ onMounted(async () => {
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Gestión de" destacado="cuentas" color="text-rol" antetitulo="Administración"
+      <CabeceraSeccion data-tour="usu-cabecera" titulo="Gestión de" destacado="cuentas" color="text-rol" antetitulo="Administración"
                        subtitulo="Crea, activa, bloquea y elimina cuentas de docentes y empresas." class="mb-5">
-        <button type="button" @click="abrirModalCrear()" class="accion-principal">
+        <button type="button" data-tour="usu-nueva" @click="abrirModalCrear()" class="accion-principal">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14"/></svg>
           Nueva cuenta
         </button>
@@ -760,7 +760,7 @@ onMounted(async () => {
 
       <!-- Pestañas: Activas | Papelera (primera decisión, fuera de la barra de filtros) -->
       <div class="mb-4 flex max-w-full rounded-full sm:w-fit">
-        <div class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué cuentas ver">
+        <div data-tour="usu-pestanas" class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué cuentas ver">
           <button v-for="t in [
                     { v: 'activos', label: 'Activas', n: totalActivos, icono: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
                     { v: 'papelera', label: 'Papelera', n: totalPapelera, icono: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
@@ -775,9 +775,9 @@ onMounted(async () => {
       </div>
 
       <!-- Filtros principales: buscador + «Más filtros» · centro (superadmin, si hay varios) -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar por nombre, email, centro o empresa…" class="mb-3">
+      <FiltrosPanel data-tour="usu-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar por nombre, email, centro o empresa…" class="mb-3">
         <template #curso>
-          <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+          <button type="button" data-tour="usu-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                   aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                   class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
                   :class="panelFiltrosAbierto ? 'border-rol-fuerte/30 bg-rol/10 text-rol-fuerte' : 'border-rol-fuerte/30 bg-white text-rol-fuerte hover:bg-rol-fuerte/5'">
@@ -795,7 +795,7 @@ onMounted(async () => {
 
       <!-- Qué es cada tipo de cuenta: siempre a mano bajo los filtros (también en el formulario de crear/editar) -->
       <div class="mb-5">
-        <button type="button" @click="modalTipos = true"
+        <button type="button" data-tour="usu-tipos" @click="modalTipos = true"
                 class="inline-flex min-h-9 items-center gap-2 rounded-full border border-borde bg-white px-4 text-sm font-semibold text-texto-secundario transition-colors hover:bg-gray-50 hover:text-azul-noche">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           ¿Qué es cada tipo de cuenta?
@@ -805,7 +805,7 @@ onMounted(async () => {
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="usu-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:overflow-y-auto xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -870,7 +870,7 @@ onMounted(async () => {
                 {{ etiquetaEstado(e) }}<span aria-hidden="true">✕</span>
               </button>
             </div>
-            <label class="flex items-center gap-2 text-sm text-texto-secundario">
+            <label data-tour="usu-orden" class="flex items-center gap-2 text-sm text-texto-secundario">
               <span class="hidden sm:inline">Ordenar por</span>
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar cuentas">
                 <option value="recientes">{{ vista === 'papelera' ? 'Eliminadas hace menos' : 'Más recientes' }}</option>
@@ -900,8 +900,8 @@ onMounted(async () => {
           <!-- Tarjetas horizontales, una por fila: identidad | centro y fecha | acciones.
                Pasan a fila cuando la lista mide ≥ 36rem (container query): así se adaptan solas
                con el menú lateral y los filtros abiertos o cerrados. Más estrecha, se apilan. -->
-          <ul v-else class="flex flex-col gap-3">
-            <li v-for="u in itemsPagina" :key="u.id"
+          <ul v-else data-tour="usu-lista" class="flex flex-col gap-3">
+            <li v-for="u in itemsPagina" :key="u.id" :data-tour="u === itemsPagina[0] ? 'usu-tarjeta' : undefined"
                 class="relative flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md @xl/lista:flex-row @xl/lista:flex-wrap @xl/lista:items-center @xl/lista:gap-5"
                 :class="[u.is_blocked ? 'border-red-200' : 'border-borde', { 'z-10': menuUsuario === u.id || highlightId === u.id }]">
               <div class="flex min-w-0 items-start gap-3 @xl/lista:flex-1 @xl/lista:items-center">
@@ -931,7 +931,7 @@ onMounted(async () => {
                       Sin activar
                     </span>
                     <!-- Docente: desplegable con sus módulos (misma ficha que «Mi usuario») -->
-                    <button v-if="vista === 'activos' && u.role === 2 && u.num_modulos != null" type="button"
+                    <button v-if="vista === 'activos' && u.role === 2 && u.num_modulos != null" type="button" :data-tour="u === itemsPagina[0] ? 'usu-modulos' : undefined"
                             @click="alternarModulos(u.id)" :aria-expanded="modulosAbiertos.has(u.id)" :aria-controls="`modulos-fila-${u.id}`"
                             class="relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors
                                    before:absolute before:-inset-x-1 before:-inset-y-2 before:content-['']"
@@ -962,7 +962,7 @@ onMounted(async () => {
               </dl>
 
               <!-- Acción principal + «⋯» (en móvil, pie con separador; en fila, a la derecha) -->
-              <div class="flex items-center justify-end gap-2 border-t border-borde pt-3 @xl/lista:shrink-0 @xl/lista:border-0 @xl/lista:pt-0">
+              <div :data-tour="u === itemsPagina[0] ? 'usu-acciones' : undefined" class="flex items-center justify-end gap-2 border-t border-borde pt-3 @xl/lista:shrink-0 @xl/lista:border-0 @xl/lista:pt-0">
                 <template v-if="vista === 'activos'">
                   <!-- Sin activar: «Activar» es lo principal (con el puntero tras crear la cuenta) -->
                   <div v-if="!u.is_active" class="relative shrink-0">
@@ -993,7 +993,7 @@ onMounted(async () => {
                 </button>
 
                 <div class="relative shrink-0" data-menu-raiz>
-                  <button type="button" @click="menuUsuario = menuUsuario === u.id ? null : u.id"
+                  <button type="button" :data-tour="u === itemsPagina[0] ? 'usu-menu' : undefined" @click="menuUsuario = menuUsuario === u.id ? null : u.id"
                           :aria-expanded="menuUsuario === u.id" aria-haspopup="menu" :aria-label="`Más acciones de la cuenta de ${u.name}`"
                           class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -1041,7 +1041,7 @@ onMounted(async () => {
           <!-- Paginación -->
           <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ itemsPagina.length }} de {{ usuariosFiltrados.length }} cuentas</p>
-            <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de cuentas">
+            <nav data-tour="usu-paginacion" class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de cuentas">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full text-texto-secundario hover:bg-gray-100 disabled:opacity-40">«</button>
               <button type="button" @click="irAPagina(pagina - 1)" :disabled="pagina === 0" aria-label="Página anterior"

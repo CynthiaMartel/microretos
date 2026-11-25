@@ -757,7 +757,7 @@ function formatFecha(isoDate) {
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8" @keydown.esc="menuEncuentro = null; menuLlave = null">
 
       <!-- Cabecera de sección (mismo estilo que Retos y proyectos) + acciones de la vista -->
-      <CabeceraSeccion titulo="Encuentros y" destacado="grupos" color="text-centros" volver="/seccion/encuentros-grupos"
+      <CabeceraSeccion data-tour="encr-cabecera" titulo="Encuentros y" destacado="grupos" color="text-centros" volver="/seccion/encuentros-grupos"
                        subtitulo="Gestiona tus encuentros con el alumnado y sigue el avance de sus grupos, fase a fase."
                        class="mb-6">
         <div class="flex flex-wrap items-center gap-2">
@@ -781,7 +781,7 @@ function formatFecha(isoDate) {
             </svg>
           </button>
           <!-- Nuevo encuentro (acción principal) -->
-          <button type="button" @click="router.push('/encuentros/crear')" class="accion-principal"
+          <button type="button" data-tour="encr-nuevo" @click="router.push('/encuentros/crear')" class="accion-principal"
                   title="Ir al formulario para registrar un nuevo encuentro">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
@@ -797,7 +797,7 @@ function formatFecha(isoDate) {
            en qué pestaña se está, no solo por la píldora resaltada. -->
       <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div class="flex max-w-full rounded-full sm:w-fit">
-          <div class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué ver de los encuentros">
+          <div data-tour="encr-pestanas" class="flex w-full gap-1 rounded-full border border-borde bg-white p-1 shadow-sm" role="group" aria-label="Qué ver de los encuentros">
             <button v-for="t in [
                       { v: 'gestion', label: 'Gestión', corta: 'Gestión', n: encuentrosFiltrados.length, icono: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
                       { v: 'seguimiento', label: 'Seguimiento de grupos', corta: 'Seguimiento', n: seguimientoFiltrados.length, icono: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
@@ -819,13 +819,13 @@ function formatFecha(isoDate) {
       </div>
 
       <!-- ─── Filtros (mismo panel que el explorador de retos) ─────────────── -->
-      <FiltrosPanel separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del reto ajustado…">
+      <FiltrosPanel data-tour="encr-filtros" separadores v-model:busqueda="filtros.titulo" placeholder="Buscar por título del reto ajustado…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
             <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
             <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
-                    aria-controls="filtros-rapidos-encuentros" aria-label="Más filtros"
+                    aria-controls="filtros-rapidos-encuentros" aria-label="Más filtros" data-tour="encr-mas-filtros"
                     :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
                     :class="panelFiltrosAbierto ? 'border-rol-fuerte/30 bg-rol/10 text-rol-fuerte' : 'border-rol-fuerte/30 bg-white text-rol-fuerte hover:bg-rol-fuerte/5'">
@@ -853,7 +853,7 @@ function formatFecha(isoDate) {
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos ═══ -->
-        <aside id="filtros-rapidos-encuentros" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos-encuentros" data-tour="encr-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:w-64 xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -944,7 +944,7 @@ function formatFecha(isoDate) {
 
         <!-- ═══ Resultados ═══ -->
         <section id="resultados-encuentros" class="min-w-0 flex-1 scroll-mt-24" aria-label="Encuentros">
-          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tour="encr-resultados" class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <TituloResultados :niveles="nivelesTitulo" :cargando="cargando">
               <template v-if="cargando">Cargando encuentros…</template>
               <template v-else-if="ver === 'seguimiento'">
@@ -1033,7 +1033,7 @@ function formatFecha(isoDate) {
 
           <!-- Tarjetas -->
           <ul v-else-if="ver === 'gestion'" :class="vista === 'cuadricula' ? ['grid grid-cols-1 gap-4', columnasEncuentros] : 'space-y-3'">
-            <li v-for="s in encuentrosPagina" :key="s.id"
+            <li v-for="(s, idxS) in encuentrosPagina" :key="s.id" :data-tour="idxS === 0 ? 'encr-tarjeta' : undefined"
                 class="group flex min-w-0 flex-col rounded-2xl border border-borde bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
               <div class="flex min-w-0 gap-3">
                 <MiniaturaReto class="flex shrink-0" :class="vista === 'lista' ? 'h-16 w-20' : 'h-20 w-20'" />
@@ -1078,7 +1078,7 @@ function formatFecha(isoDate) {
               <!-- Grupos con su fase -->
               <!-- Cada etiqueta con grupo real lleva a ese grupo en la pestaña Seguimiento. Área táctil de 36px
                    con un ::before invisible, sin agrandar la etiqueta ni la tarjeta. -->
-              <ul v-if="gruposDe(s).length" class="mt-2 flex flex-wrap gap-1.5" :aria-label="`${gruposDe(s).length} grupos`">
+              <ul v-if="gruposDe(s).length" :data-tour="idxS === 0 ? 'encr-grupos' : undefined" class="mt-2 flex flex-wrap gap-1.5" :aria-label="`${gruposDe(s).length} grupos`">
                 <li v-for="g in gruposDe(s).slice(0, 4)" :key="g.clave" class="max-w-full">
                   <button v-if="g.equipoId" type="button" @click="verSeguimiento(s, g.equipoId)"
                           :title="`Ver el seguimiento de ${g.nombre}`"
@@ -1101,13 +1101,13 @@ function formatFecha(isoDate) {
                      corto para que quepan en 300px: workspace (icono) + Más información + llave + ⋯ -->
                 <div class="relative flex items-center justify-end gap-1.5 border-t border-borde pt-3">
                   <!-- Avance de los grupos del encuentro (pestaña Seguimiento); en tarjetas estrechas, solo icono -->
-                  <button v-if="s.equipos?.length" type="button" @click="verSeguimiento(s)"
+                  <button v-if="s.equipos?.length" :data-tour="idxS === 0 ? 'encr-ver-seguimiento' : undefined" type="button" @click="verSeguimiento(s)"
                           :aria-label="`Ver el seguimiento de los grupos de «${s.proyecto_titulo || 'encuentro'}»`" title="Ver seguimiento"
                           class="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @md:w-auto @md:px-4">
                     <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="hidden @md:inline">Ver seguimiento</span>
                   </button>
-                  <button type="button" @click="verEncuentro(s)"
+                  <button type="button" :data-tour="idxS === 0 ? 'encr-mas-info' : undefined" @click="verEncuentro(s)"
                           class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-rol-fuerte/40 bg-white px-4 text-sm font-semibold text-rol-fuerte transition-colors hover:bg-rol-fuerte/5">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Más información
@@ -1117,7 +1117,7 @@ function formatFecha(isoDate) {
                        El menú se alinea con el borde derecho de la tarjeta (la fila es la referencia),
                        no con la llave, para que en móvil no se salga por la izquierda. -->
                   <div class="shrink-0" data-menu-raiz>
-                    <button type="button" @click="menuEncuentro = null; menuLlave = menuLlave === s.id ? null : s.id"
+                    <button type="button" :data-tour="idxS === 0 ? 'encr-llave' : undefined" @click="menuEncuentro = null; menuLlave = menuLlave === s.id ? null : s.id"
                             :aria-expanded="menuLlave === s.id" aria-haspopup="menu" :aria-label="`Códigos del alumnado de «${s.proyecto_titulo || 'encuentro'}»`"
                             title="Códigos del alumnado"
                             class="relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors"
@@ -1193,7 +1193,7 @@ function formatFecha(isoDate) {
                     </div>
                   </div>
                   <div class="relative shrink-0" data-menu-raiz>
-                    <button type="button" @click="menuLlave = null; menuEncuentro = menuEncuentro === s.id ? null : s.id"
+                    <button type="button" :data-tour="idxS === 0 ? 'encr-menu' : undefined" @click="menuLlave = null; menuEncuentro = menuEncuentro === s.id ? null : s.id"
                             :aria-expanded="menuEncuentro === s.id" aria-haspopup="menu" :aria-label="`Más acciones de «${s.proyecto_titulo || 'encuentro'}»`"
                             class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borde text-texto-secundario hover:bg-gray-50">
                       <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -1225,6 +1225,7 @@ function formatFecha(isoDate) {
                 {{ grupoCompletado(s) ? `Completados (${numCompletados})` : `En progreso (${numEnProgreso})` }}
               </h3>
               <TarjetaSeguimientoEncuentro
+                :data-tour="idx === 0 ? 'encr-seg-tarjeta' : undefined"
                 :encuentro="s"
                 :equipos="equiposVisibles(s)"
                 :abierto="encuentrosAbiertos.has(s.id)"
@@ -1241,7 +1242,7 @@ function formatFecha(isoDate) {
           </div>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="encr-paginacion" class="mt-5 flex flex-col flex-wrap items-center justify-between gap-3 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ encuentrosPagina.length }} de {{ listaActiva.length }} encuentros</p>
             <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación de encuentros">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"

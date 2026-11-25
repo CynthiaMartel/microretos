@@ -179,7 +179,7 @@ async function completar() {
     <div class="relative z-10 mx-auto mb-6 max-w-[90rem]">
       <!-- Volver con historial y no push a la lista: la ficha se abre desde varios sitios
            (lista de proyectos, wizard, "Ver proyecto" en mis-grupos/:id...) -->
-      <CabeceraSeccion titulo="Ficha del" :destacado="esPlan ? 'plan' : 'reto ajustado'" :color="theme.text"
+      <CabeceraSeccion data-tour="sdd-cabecera" titulo="Ficha del" :destacado="esPlan ? 'plan' : 'reto ajustado'" :color="theme.text"
                        :volver="esPlan ? { name: 'planes' } : { name: 'startup-day' }"
                        subtitulo="Consulta el detalle completo, el estado de validación y el progreso del grupo." />
     </div>
@@ -207,7 +207,7 @@ async function completar() {
 
         <!-- Barra de navegación y acciones (fuera del cuaderno) -->
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <div class="flex flex-wrap items-center gap-2">
+          <div data-tour="sdd-estado" class="flex flex-wrap items-center gap-2">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border shrink-0"
                  :class="[theme.bg5, theme.border20]">
               <span class="w-2 h-2 rounded-full" :class="theme.bg" />
@@ -220,8 +220,9 @@ async function completar() {
             </span>
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div data-tour="sdd-acciones" class="flex flex-wrap gap-2">
             <button
+              data-tour="sdd-pdf"
               @click="descargarPDF(proyecto)"
               class="px-4 py-2 rounded-full text-xs font-black
                      uppercase tracking-widest text-white shadow-sm
@@ -240,6 +241,7 @@ async function completar() {
                  En naranja "alumnos" (color de la sección a la que lleva), no del tema de rol. -->
             <button
               v-if="proyecto.estado === 'completado'"
+              data-tour="sdd-ir-resolucion"
               @click="irAResolucionAlumnado"
               class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider
                      px-3.5 py-2 rounded-full border transition-all
@@ -258,6 +260,7 @@ async function completar() {
             </button>
             <button
               v-if="proyecto.microreto_id"
+              data-tour="sdd-reto-original"
               @click="microretoModalId = proyecto.microreto_id"
               class="px-4 py-2 border-2 rounded-full text-xs font-black
                      uppercase tracking-widest shadow-sm
@@ -273,6 +276,7 @@ async function completar() {
             </button>
             <button
               v-if="!authStore.isEmpresa && ['en_edicion','propuesta','validado'].includes(proyecto.estado) && !proyecto.docente_validado"
+              data-tour="sdd-validar"
               @click="modalValidarDocente = true"
               class="px-4 py-2 bg-centros/10 border border-centros/25 rounded-full text-xs font-black
                      uppercase tracking-widest text-centros shadow-sm
@@ -286,6 +290,7 @@ async function completar() {
             <!-- Plan de proyecto (etapa 2): su cronograma en vez de un encuentro creativo -->
             <button
               v-if="!authStore.isEmpresa && esPlan && proyecto.estado === 'validado'"
+              data-tour="sdd-cronograma"
               @click="router.push({ name: 'plan-cronograma', params: { uuid: proyecto.uuid } })"
               class="px-4 py-2 bg-empresas/10 border border-empresas/30 rounded-full text-xs font-black
                      uppercase tracking-widest text-empresas-dark shadow-sm
@@ -297,6 +302,7 @@ async function completar() {
             <!-- Propuesta validada o completada: se puede ampliar en un plan de proyecto -->
             <button
               v-if="!authStore.isEmpresa && !esPlan && ['validado', 'completado'].includes(proyecto.estado)"
+              data-tour="sdd-ampliar"
               @click="router.push({ name: 'planes-crear', query: { origen: proyecto.uuid } })"
               class="px-4 py-2 bg-white border border-empresas/30 rounded-full text-xs font-black
                      uppercase tracking-widest text-empresas-dark shadow-sm
@@ -307,6 +313,7 @@ async function completar() {
             </button>
             <button
               v-if="!authStore.isEmpresa && !esPlan && proyecto.estado === 'validado'"
+              data-tour="sdd-encuentro"
               @click="router.push({ name: 'dashboard-docente', query: { microproyecto_id: proyecto.id } })"
               class="px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-blue-700 shadow-sm
@@ -321,6 +328,7 @@ async function completar() {
             </button>
             <button
               v-if="!authStore.isEmpresa"
+              data-tour="sdd-editar"
               @click="router.push({ name: 'startup-day-editar', params: { uuid: proyecto.uuid } })"
               class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-gray-500 shadow-sm
@@ -331,6 +339,7 @@ async function completar() {
             </button>
             <button
               v-if="proyecto.estado === 'validado' && !authStore.isEmpresa"
+              data-tour="sdd-completar"
               @click="completar"
               class="px-4 py-2 bg-sky-50 border border-sky-200 rounded-full text-xs font-black
                      uppercase tracking-widest text-sky-700 shadow-sm
@@ -343,6 +352,7 @@ async function completar() {
               Marcar completado
             </button>
             <button v-if="!['archivado', 'validado', 'completado'].includes(proyecto.estado) && !authStore.isEmpresa"
+                    data-tour="sdd-archivar"
                     @click="archivar"
                     class="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black
                            uppercase tracking-widest text-gray-400 shadow-sm
@@ -367,7 +377,7 @@ async function completar() {
           </div>
 
           <!-- Título del proyecto -->
-          <h1 class="text-2xl md:text-3xl font-black tracking-tight text-azul-noche mb-2 leading-tight">
+          <h1 data-tour="sdd-titulo" class="text-2xl md:text-3xl font-black tracking-tight text-azul-noche mb-2 leading-tight">
             {{ proyecto.titulo }}
           </h1>
           <p v-if="proyecto.diseno_reto?.pregunta_reto" class="text-base md:text-lg font-bold italic mb-5 leading-snug" :class="theme.text">
@@ -427,7 +437,7 @@ async function completar() {
 
         <!-- ── Validación (docente). La empresa ya no valida al inicio: se conserva el aviso de
              las que validó antes con el enlace (2026-11-23). ── -->
-        <div v-if="['en_edicion', 'propuesta', 'validado'].includes(proyecto.estado)" class="mb-6 space-y-3">
+        <div v-if="['en_edicion', 'propuesta', 'validado'].includes(proyecto.estado)" data-tour="sdd-validacion" class="mb-6 space-y-3">
 
           <!-- Validada antes por la empresa (flujo anterior) -->
           <div v-if="proyecto.empresa_validado"
@@ -489,7 +499,7 @@ async function completar() {
         <!-- Secciones del proyecto — agrupadas igual que los pasos del wizard -->
 
         <!-- ═══ Empresa ═══ -->
-        <p class="group-header-empresa">Empresa</p>
+        <p data-tour="sdd-empresa" class="group-header-empresa">Empresa</p>
         <div class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Empresa -->
           <div v-if="proyecto.datos_empresa?.nombre" class="card-section">
@@ -532,7 +542,7 @@ async function completar() {
 
         <!-- ═══ Currículo ═══ -->
         <p v-if="proyecto.modulos_seleccionados?.length || raCeBlocks.length || proyecto.ra_ce?.trim()"
-           class="group-header">Currículo</p>
+           data-tour="sdd-curriculo" class="group-header">Currículo</p>
         <div v-if="proyecto.modulos_seleccionados?.length || raCeBlocks.length || proyecto.ra_ce?.trim()"
              class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Módulos -->
@@ -580,7 +590,7 @@ async function completar() {
         <!-- ═══ El reto ═══ -->
         <div v-if="proyecto.diseno_reto?.descripcion || proyecto.fundamentacion?.contexto"
              class="flex flex-wrap items-center justify-between gap-2">
-          <p class="group-header !mb-0">El reto</p>
+          <p data-tour="sdd-reto" class="group-header !mb-0">El reto</p>
           <button v-if="proyecto.microreto_id" @click="microretoModalId = proyecto.microreto_id"
                   class="px-3 py-1.5 rounded-full border-2 text-[10px] font-black
                          uppercase tracking-wider hover:text-white transition-all mb-3"
@@ -630,7 +640,7 @@ async function completar() {
 
         <!-- ═══ Propuesta ═══ -->
         <p v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
-           class="group-header">Metodología y fases</p>
+           data-tour="sdd-fases" class="group-header">Metodología y fases</p>
         <div v-if="proyecto.diseno_microproyecto?.fases?.length || proyecto.diseno_microproyecto?.metodologia"
              class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Fases — duración siempre visible, no desplegable -->
@@ -690,7 +700,7 @@ async function completar() {
         </div>
 
         <!-- ═══ Objetivos ═══ -->
-        <p v-if="proyecto.objetivos?.lista?.length || proyecto.kpis?.lista?.length" class="group-header">Objetivos</p>
+        <p v-if="proyecto.objetivos?.lista?.length || proyecto.kpis?.lista?.length" data-tour="sdd-objetivos" class="group-header">Objetivos</p>
         <div v-if="proyecto.objetivos?.lista?.length || proyecto.kpis?.lista?.length"
              class="grid gap-4 sm:grid-cols-2 mb-6">
           <!-- Objetivos — siempre visibles -->
@@ -728,7 +738,7 @@ async function completar() {
           </div>
 
           <!-- ── Recursos adjuntos ───────────────────────────────────────── -->
-          <div v-if="videos.length || documentos.length" class="sm:col-span-2">
+          <div v-if="videos.length || documentos.length" data-tour="sdd-recursos" class="sm:col-span-2">
             <button
               @click="recursosAbierto = !recursosAbierto"
               class="w-full flex items-center justify-between px-5 py-4
@@ -832,7 +842,7 @@ async function completar() {
              dentro de la propia ficha (a diferencia de "Resolución del alumnado", este
              bloque no sale de la hoja de cuaderno: sigue siendo parte del expediente del
              proyecto, solo que su origen es externo). ══════════════════════════════ -->
-        <div v-if="proyecto.validacion_empresa?.respuestas" class="mt-6 empresa-diferenciada">
+        <div v-if="proyecto.validacion_empresa?.respuestas" data-tour="sdd-valoracion-empresa" class="mt-6 empresa-diferenciada">
 
           <!-- Cabecera del bloque -->
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -949,7 +959,7 @@ async function completar() {
         </div><!-- /notebook-page -->
 
         <!-- ══ FICHA APARTE — Resolución del alumnado (siempre la última sección, siempre desplegada) ══ -->
-        <div v-if="proyecto.estado === 'completado'" ref="refResolucionAlumnado" class="ficha-recortable">
+        <div v-if="proyecto.estado === 'completado'" ref="refResolucionAlumnado" data-tour="sdd-resolucion" class="ficha-recortable">
           <div class="ficha-recortable__corte" aria-hidden="true"></div>
           <div class="ficha-recortable__card">
             <div class="flex items-center gap-3 px-5 py-4">

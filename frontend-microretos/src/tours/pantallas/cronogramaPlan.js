@@ -1,0 +1,27 @@
+// Cronograma de un plan de proyecto (/planes/:uuid/cronograma → CronogramaPlan.vue).
+export default {
+  rutas: ['plan-cronograma'],
+  titulo: 'Cronograma del plan',
+  pasos: [
+    { el: 'cron-cabecera', titulo: 'Cronograma del plan',
+      texto: 'Organiza las prácticas en la empresa: cuándo empiezan, qué hitos tienen y qué alumnado participa. Es el paso siguiente a validar el plan.' },
+    { el: 'cron-aviso', titulo: 'Primero, valida el plan',
+      texto: 'Este plan aún no está validado. Valídalo desde su ficha para poder crear el cronograma.' },
+    { el: 'cron-fechas', titulo: 'Fechas de las prácticas',
+      texto: 'El inicio es obligatorio. Si no pones fecha de fin, se toma la del último hito.' },
+    { el: 'cron-hitos', titulo: 'Hitos del plan',
+      texto: 'Cada hito es una cita del cronograma: ponle fecha y marca qué fases del workspace se trabajan en él. Las fechas tienen que ir en orden y dentro de las prácticas.' },
+    { el: 'cron-alumnado', titulo: 'Alumnado del plan',
+      texto: 'Elige al alumnado por su alias, de uno o varios encuentros creativos. Busca por reto ajustado o por Clase.' },
+    { el: 'cron-destacados', titulo: 'Solo destacados',
+      texto: 'La ★ marca al alumnado que DuaLab ha destacado. Con este botón ves solo a esas personas; quítalo para ver a todo el alumnado de tus encuentros.' },
+    { el: 'cron-encuentro', titulo: 'Cada encuentro',
+      texto: 'El reto ajustado, el curso y la Clase del encuentro, con sus alias. Pulsa un alias para añadirlo al plan; vuelve a pulsarlo para quitarlo.' },
+    { el: 'cron-seleccion', titulo: 'Seleccionados y grupos',
+      texto: 'Elige cuántos grupos habrá (normalmente uno) y asigna cada alias a su grupo.' },
+    { el: 'cron-crear', titulo: 'Crear cronograma',
+      texto: 'Se activa cuando el plan está validado, hay alumnado elegido y los hitos tienen fechas correctas. Al guardarlo vuelves a la biblioteca de planes.' },
+    { titulo: '¿Y ahora?',
+      texto: 'En la biblioteca de planes, pulsa «Generar grupos y códigos» en el cronograma para que el alumnado pueda entrar a su workspace.' },
+  ],
+}

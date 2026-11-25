@@ -193,16 +193,16 @@ async function copiarUrl() {
 
     <div class="relative z-10 mx-auto max-w-[90rem] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Ficha del" destacado="reto" :color="theme.text"
+      <CabeceraSeccion data-tour="det-cabecera" titulo="Ficha del" destacado="reto" :color="theme.text"
                        :volver="{ name: 'biblioteca' }"
                        subtitulo="Consulta el reto completo, descárgalo o empieza a trabajarlo con tu alumnado."
                        class="mb-6" />
 
       <!-- ── Acciones del reto (descargar, QR, trabajar) ── -->
-      <div class="mb-8 flex flex-wrap items-center gap-2 transition-all duration-700 ease-out"
+      <div data-tour="det-acciones" class="mb-8 flex flex-wrap items-center gap-2 transition-all duration-700 ease-out"
            :class="isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'">
 
-        <button v-if="reto" @click="handleDescargarPDF"
+        <button v-if="reto" data-tour="det-pdf" @click="handleDescargarPDF"
                 class="inline-flex items-center gap-2 px-5 py-2.5
                        bg-white border border-gray-200 rounded-full
                        text-xs font-black uppercase tracking-widest text-[#1F2937]
@@ -216,7 +216,7 @@ async function copiarUrl() {
         </button>
 
         <!-- Botón QR — oculto para empresa -->
-        <button v-if="reto && authStore.isAuthenticated && !authStore.isEmpresa" @click="abrirQR"
+        <button v-if="reto && authStore.isAuthenticated && !authStore.isEmpresa" data-tour="det-qr" @click="abrirQR"
                 class="inline-flex items-center gap-2 px-5 py-2.5
                        bg-white border border-gray-200 rounded-full
                        text-xs font-black uppercase tracking-widest text-[#1F2937]
@@ -232,7 +232,7 @@ async function copiarUrl() {
           Generar QR
         </button>
 
-        <button v-if="reto && authStore.isAuthenticated && !authStore.isEmpresa" @click="trabajarMicroreto"
+        <button v-if="reto && authStore.isAuthenticated && !authStore.isEmpresa" data-tour="det-trabajar" @click="trabajarMicroreto"
                 class="btn-trabajar-reto inline-flex items-center gap-2 px-5 py-2.5
                        rounded-full
                        text-xs font-black uppercase tracking-widest text-white
@@ -284,7 +284,7 @@ async function copiarUrl() {
       <!-- ── FICHA TÉCNICA ── -->
       <template v-else-if="reto">
 
-        <FichaReto :reto="reto" :theme="theme" :visible="isLoaded" @trabajar="trabajarMicroreto" />
+        <FichaReto data-tour="det-ficha" :reto="reto" :theme="theme" :visible="isLoaded" @trabajar="trabajarMicroreto" />
 
         <!-- Descargar (pie) -->
         <div class="flex flex-wrap justify-center gap-4 mt-10 pb-8">

@@ -323,16 +323,16 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
   <div class="relative min-h-screen pt-16 font-sans text-azul-noche">
     <div class="relative z-10 mx-auto max-w-[90rem] space-y-5 px-4 pb-10 pt-5 sm:px-6 lg:px-8">
 
-      <CabeceraSeccion titulo="Listado de" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
+      <CabeceraSeccion data-tour="alu-cabecera" titulo="Listado de" destacado="alumnado" color="text-alumnos" volver="/seccion/alumnado"
                        subtitulo="Cada alumno con los retos ajustados y encuentros en los que ha participado, su grupo, en qué fase va y la nota final de los retos terminados." />
 
       <!-- Filtros principales (FiltrosPanel común) -->
-      <FiltrosPanel separadores v-model:busqueda="busqueda" placeholder="Buscar alumno por alias…">
+      <FiltrosPanel data-tour="alu-filtros" separadores v-model:busqueda="busqueda" placeholder="Buscar alumno por alias…">
         <template #curso>
           <div class="flex flex-wrap items-center gap-2">
             <SelectorCurso permitir-todos :cursos-con-datos="cursosConDatos" />
             <!-- «Más filtros» en la fila del buscador (en la de filtros, con 4 o más, bajaba solo a otra fila) -->
-            <button type="button" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
+            <button type="button" data-tour="alu-mas-filtros" @click="panelFiltrosAbierto = !panelFiltrosAbierto" :aria-expanded="panelFiltrosAbierto"
                     aria-controls="filtros-rapidos" :title="panelFiltrosAbierto ? 'Ocultar los filtros rápidos' : 'Mostrar los filtros rápidos'"
                     aria-label="Más filtros"
                     class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors"
@@ -362,7 +362,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
       <div class="flex flex-col gap-5 lg:flex-row lg:items-start">
 
         <!-- ═══ Filtros rápidos (panel lateral; en < lg se abre con «Más filtros») ═══ -->
-        <aside id="filtros-rapidos" aria-label="Filtros rápidos"
+        <aside id="filtros-rapidos" data-tour="alu-filtros-rapidos" aria-label="Filtros rápidos"
                class="w-full shrink-0 rounded-2xl border border-borde bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:overflow-y-auto xl:w-72"
                :class="panelFiltrosAbierto ? 'block' : 'hidden'">
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -467,7 +467,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 <span class="truncate">{{ etiquetaFamilia(f) }}</span><span aria-hidden="true">✕</span>
               </button>
             </div>
-            <label class="flex items-center gap-2 text-sm text-texto-secundario">
+            <label data-tour="alu-orden" class="flex items-center gap-2 text-sm text-texto-secundario">
               <span class="hidden sm:inline">Ordenar por</span>
               <select v-model="orden" class="h-9 rounded-xl px-3 text-sm text-azul-noche" aria-label="Ordenar alumnado">
                 <option value="nombre">Alias (A-Z)</option>
@@ -484,7 +484,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
           </div>
 
           <!-- Vacíos -->
-          <div v-else-if="!error && !participaciones.length" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
+          <div v-else-if="!error && !participaciones.length" data-tour="alu-vacio" class="rounded-2xl border border-dashed border-borde bg-white px-6 py-14 text-center">
             <h3 class="text-lg font-bold text-azul-noche">Todavía no hay alumnado en tus encuentros</h3>
             <p class="mx-auto mt-1 max-w-md text-sm text-texto-secundario">El alumnado aparece aquí al repartirlo en grupos al crear un encuentro.</p>
             <button type="button" class="accion-secundaria mt-4" @click="router.push('/encuentros/crear')">Crear un encuentro</button>
@@ -495,14 +495,14 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
             <button v-if="hayFiltros" type="button" @click="limpiarFiltros" class="accion-secundaria mt-4">Limpiar filtros</button>
           </div>
 
-          <ul v-else-if="!error" class="space-y-2">
-            <li v-for="a in visibles" :key="a.clave" :data-alumno="a.clave"
+          <ul v-else-if="!error" data-tour="alu-lista" class="space-y-2">
+            <li v-for="(a, i) in visibles" :key="a.clave" :data-alumno="a.clave" :data-tour="i === 0 ? 'alu-alumno' : undefined"
                 :class="['@container scroll-mt-24 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow duration-500',
                          resaltado?.clave === a.clave ? 'border-rol-fuerte/50 ring-4 ring-rol/30' : 'border-borde']">
               <!-- Fila del alumno: desplegable + «Ver detalle del grupo» del grupo de su participación más
                    reciente (fuera del botón desplegable: no se pueden anidar botones) -->
               <div class="flex items-center transition-colors hover:bg-gray-50">
-              <button type="button" @click="toggle(a.clave)" :aria-expanded="abiertos.has(a.clave)"
+              <button type="button" @click="toggle(a.clave)" :aria-expanded="abiertos.has(a.clave)" :data-tour="i === 0 ? 'alu-fila' : undefined"
                       class="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 text-left">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-alumnos/15 text-sm font-bold text-alumnos-dark" aria-hidden="true">
                   {{ iniciales(a.alias) }}
@@ -536,7 +536,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
                 </svg>
               </button>
               <!-- Solo icono en filas estrechas; con texto cuando la fila tiene sitio (@container del li) -->
-              <button type="button" @click="irAGrupo(a.reciente)"
+              <button type="button" @click="irAGrupo(a.reciente)" :data-tour="i === 0 ? 'alu-ver-grupo' : undefined"
                       :aria-label="`Ver el detalle del ${nombreGrupo(a.reciente.equipo)} de ${a.alias}`"
                       :title="`Ver detalle del grupo: ${nombreGrupo(a.reciente.equipo)} · ${a.reciente.proyecto?.titulo || 'sin reto ajustado'}`"
                       class="mr-3 inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-rol-fuerte text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rol-fuerte/90 @4xl:w-auto @4xl:px-4">
@@ -673,7 +673,7 @@ const irAProyecto    = (p) => router.push({ name: 'startup-day-detalle', params:
           </ul>
 
           <!-- Paginación -->
-          <div v-if="!cargando && totalPaginas > 1" class="flex flex-col flex-wrap items-center justify-between gap-3 pt-2 sm:flex-row">
+          <div v-if="!cargando && totalPaginas > 1" data-tour="alu-paginacion" class="flex flex-col flex-wrap items-center justify-between gap-3 pt-2 sm:flex-row">
             <p class="text-sm text-texto-secundario">Mostrando {{ visibles.length }} de {{ alumnos.length }} alumnos</p>
             <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="Paginación del alumnado">
               <button type="button" @click="irAPagina(0)" :disabled="pagina === 0" aria-label="Primera página"

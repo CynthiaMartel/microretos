@@ -1,0 +1,27 @@
+// Crear un plan de proyecto (/planes/crear → CrearPlan.vue). Tras crearlo se completa en el asistente.
+export default {
+  rutas: ['planes-crear'],
+  titulo: 'Crear plan',
+  pasos: [
+    { el: 'cplan-cabecera', titulo: 'Crear un plan de proyecto',
+      texto: 'El plan es el trabajo ampliado que el alumnado seleccionado por DuaLab hará en la empresa durante las prácticas. Aquí eliges de dónde parte y sus datos básicos; lo completas después en el asistente.' },
+    { el: 'cplan-origen', titulo: '¿De dónde parte?',
+      texto: '«Ampliar un reto ajustado» hereda la empresa, los módulos, los RA y CE y los objetivos que ya trabajaste en el taller. «Otro reto» parte de un reto de la biblioteca y completarás lo curricular después.' },
+    { el: 'cplan-buscar', titulo: 'Busca',
+      texto: 'Escribe parte del título o el nombre de la empresa para encontrarlo. Solo salen los retos ajustados validados o completados.' },
+    { el: 'cplan-opcion', titulo: 'Elige uno',
+      texto: 'Pulsa en el que quieras usar: queda marcado con ✓. Solo puedes elegir uno.' },
+    { el: 'cplan-ficha', titulo: 'Ver la ficha',
+      texto: 'El ojo abre la ficha completa para revisarla antes de decidir, sin elegirla.' },
+    { el: 'cplan-titulo', titulo: 'Título del plan',
+      texto: 'Opcional. Si lo dejas vacío, el plan toma el título del reto del que parte.' },
+    { el: 'cplan-horas', titulo: 'Horas estimadas',
+      texto: 'Las horas que calculas que dedicará cada alumno o alumna al plan en la empresa. Sirven de referencia al anotar las horas de prácticas.' },
+    { el: 'cplan-expectativas', titulo: 'Qué espera la empresa',
+      texto: 'Lo que la empresa espera del alumnado en este plan. Lo verá el alumnado en su workspace; puedes completarlo más adelante.' },
+    { el: 'cplan-crear', titulo: 'Crear plan',
+      texto: 'Se activa cuando has elegido de dónde parte. Al pulsarlo se crea el plan y se abre el asistente para completarlo.' },
+    { titulo: '¿Y después?',
+      texto: 'Completa el plan en el asistente y valídalo. Con el plan validado, crea su cronograma desde la ficha: fechas, hitos y alumnado.' },
+  ],
+}
